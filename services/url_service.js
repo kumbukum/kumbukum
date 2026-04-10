@@ -1,5 +1,5 @@
 import { Url } from '../model/url.js';
-import { searchCollection } from '../modules/typesense.js';
+import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { extractUrlContent } from '../modules/url_content_extractor.js';
 import { emitToTenant } from '../modules/socket.js';
 
@@ -28,7 +28,7 @@ export async function saveUrl(userId, host_id, data) {
 }
 
 export async function listUrls(host_id, projectId, { page = 1, limit = 50 } = {}) {
-	const query = { host_id };
+	const query = { host_id, in_trash: { $ne: true } };
 	if (projectId) query.project = projectId;
 
 	return Url.find(query)
@@ -63,8 +63,13 @@ export async function updateUrl(host_id, urlId, data) {
 }
 
 export async function deleteUrl(host_id, urlId) {
-	const urlDoc = await Url.findOneAndDelete({ _id: urlId, host_id });
+	const urlDoc = await Url.findOneAndUpdate(
+		{ _id: urlId, host_id, in_trash: { $ne: true } },
+		{ $set: { in_trash: true, trashed_at: new Date() } },
+		{ new: true },
+	);
 	if (urlDoc) {
+		removeDocument(host_id, 'urls', urlId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'url:deleted', { _id: urlId });
 	}
 	return urlDoc;

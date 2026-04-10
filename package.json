@@ -2,19 +2,43 @@
   "name": "kumbukum",
   "version": "0.1.0",
   "private": true,
-  "description": "Personal Knowledge Management — Notes, Memory, URLs, AI Chat",
+  "description": "Everything your AI needs to remember — Notes, Memory, URLs, AI Chat",
   "license": "AGPL-3.0",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
-    "dev": "node --watch app.js",
+    "dev": "nodemon",
     "start": "node app.js",
     "build": "node build.js"
   },
+  "nodemonConfig": {
+    "watch": [
+      "app.js",
+      "config.js",
+      "db.js",
+      "ws-server.js",
+      "routes/",
+      "middleware/",
+      "model/",
+      "modules/",
+      "services/",
+      "views/",
+      "src/",
+      "public/css/app.css",
+      "public/js/auth.js"
+    ],
+    "ext": "js,pug,css",
+    "ignore": [
+      "public/js/vendor.js",
+      "public/js/editor.js",
+      "public/css/vendor.css"
+    ],
+    "exec": "node build.js && node app.js"
+  },
   "dependencies": {
-    "@simplewebauthn/server": "^13.1.0",
+    "@simplewebauthn/server": "^13.3.0",
     "@socket.io/redis-streams-adapter": "^0.3.1",
     "@tiptap/core": "^3.22.3",
     "@tiptap/extension-blockquote": "^3.22.3",
@@ -29,32 +53,33 @@
     "@tiptap/extension-task-list": "^3.22.3",
     "@tiptap/pm": "^3.22.3",
     "@tiptap/starter-kit": "^3.22.3",
-    "axios": "^1.7.9",
+    "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.11.3",
-    "cheerio": "^1.0.0",
-    "connect-mongo": "^5.1.0",
+    "bootstrap-icons": "^1.13.1",
+    "cheerio": "^1.2.0",
+    "connect-mongo": "^6.0.0",
     "cookie-parser": "^1.4.7",
-    "crawlee": "^3.12.0",
+    "crawlee": "^3.16.0",
     "croner": "^10.0.1",
-    "express": "^5.1.0",
-    "express-session": "^1.18.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
     "huebee": "^2.1.1",
-    "ioredis": "^5.4.1",
-    "jsonwebtoken": "^9.0.2",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.3",
+    "jsurl": "^0.1.5",
     "mongodb": "^7.1.1",
-    "mongoose": "^8.9.0",
-    "nodemailer": "^6.9.16",
-    "novel": "^1.0.0",
-    "otplib": "^12.0.1",
-    "pug": "^3.0.3",
-    "socket.io": "^4.8.0",
+    "mongoose": "^9.4.1",
+    "nodemailer": "^8.0.5",
+    "novel": "^1.0.2",
+    "otplib": "^13.4.0",
+    "pug": "^3.0.4",
+    "socket.io": "^4.8.3",
     "sweetalert2": "^11.26.24",
-    "typesense": "^2.0.0",
-    "uuid": "^11.1.0"
+    "typesense": "^3.0.5"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.28.0",
+    "nodemon": "^3.1.14"
   }
 }

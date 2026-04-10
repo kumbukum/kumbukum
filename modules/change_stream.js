@@ -15,7 +15,6 @@ let healthInterval = null;
 function toTypesenseDoc(type, doc) {
 	const base = {
 		id: doc._id.toString(),
-		host_id: doc.host_id,
 		project_id: doc.project?.toString() || '',
 		created_at: Math.floor(new Date(doc.createdAt || Date.now()).getTime() / 1000),
 		updated_at: Math.floor(new Date(doc.updatedAt || Date.now()).getTime() / 1000),
@@ -23,11 +22,11 @@ function toTypesenseDoc(type, doc) {
 
 	switch (type) {
 		case 'notes':
-			return { ...base, title: doc.title || '', content: doc.text_content || '', tags: doc.tags || [] };
-		case 'memories':
+			return { ...base, title: doc.title || '', text_content: doc.text_content || '', tags: doc.tags || [] };
+		case 'memory':
 			return { ...base, title: doc.title || '', content: doc.content || '', tags: doc.tags || [], source: doc.source || '' };
 		case 'urls':
-			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', content: doc.text_content || '' };
+			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', text_content: doc.text_content || '' };
 		default:
 			return base;
 	}
@@ -44,6 +43,12 @@ function watchCollection(db, collectionName, typesenseType) {
 			if ((operationType === 'insert' || operationType === 'update' || operationType === 'replace') && fullDocument) {
 				const host_id = fullDocument.host_id;
 				if (!host_id) return;
+
+				// If trashed, remove from Typesense instead of indexing
+				if (fullDocument.in_trash) {
+					await removeDocument(host_id, typesenseType, fullDocument._id.toString()).catch(() => {});
+					return;
+				}
 
 				await ensureCollections(host_id);
 				const tsDoc = toTypesenseDoc(typesenseType, fullDocument);

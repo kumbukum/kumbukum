@@ -1,11 +1,83 @@
 document.addEventListener('DOMContentLoaded', () => {
+	const Swal = window.Swal;
 	const loginForm = document.querySelector('#login-form form');
 	const totpForm = document.getElementById('form-2fa');
 	const magicLinkBtn = document.getElementById('magic-link-btn');
 	const passkeyBtn = document.getElementById('passkey-btn');
+	const signupForm = document.getElementById('signup-form');
+	const forgotForm = document.getElementById('forgot-password-form');
 
 	let tempToken = null;
 
+	// ---- Signup ----
+	if (signupForm) {
+		signupForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const name = signupForm.querySelector('#name').value.trim();
+			const email = signupForm.querySelector('#email').value.trim();
+			if (!name || !email) return;
+
+			try {
+				const res = await fetch('/signup', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ name, email }),
+				});
+				const data = await res.json();
+
+				if (res.status === 409) {
+					Swal.fire({
+						icon: 'warning',
+						title: 'Email already registered',
+						text: data.error || 'An account with this email already exists.',
+						confirmButtonText: 'Go to login',
+						showCancelButton: true,
+						cancelButtonText: 'Try another email',
+					}).then((result) => {
+						if (result.isConfirmed) window.location.href = '/login';
+					});
+					return;
+				}
+
+				if (!res.ok) {
+					Swal.fire({ icon: 'error', title: 'Signup failed', text: data.error || 'Please try again.' });
+					return;
+				}
+
+				signupForm.classList.add('d-none');
+				const html = await fetch('/ajax/signup-success').then(r => r.text());
+				document.getElementById('signup-result').innerHTML = html;
+			} catch (err) {
+				Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+			}
+		});
+	}
+
+	// ---- Forgot Password ----
+	if (forgotForm) {
+		forgotForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const email = forgotForm.querySelector('#email').value.trim();
+			if (!email) return;
+
+			try {
+				const res = await fetch('/forgot-password', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ email }),
+				});
+				const data = await res.json();
+
+				forgotForm.classList.add('d-none');
+				const html = await fetch('/ajax/forgot-password-success').then(r => r.text());
+				forgotForm.insertAdjacentHTML('afterend', html);
+			} catch (err) {
+				Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+			}
+		});
+	}
+
+	// ---- Login ----
 	if (loginForm) {
 		loginForm.addEventListener('submit', async (e) => {
 			e.preventDefault();
@@ -28,10 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
 				} else if (data.token) {
 					window.location.href = '/dashboard';
 				} else {
-					alert(data.error || 'Login failed');
+					Swal.fire({ icon: 'error', title: 'Login failed', text: data.error || 'Invalid credentials' });
 				}
 			} catch (err) {
-				alert('Login error: ' + err.message);
+				Swal.fire({ icon: 'error', title: 'Login error', text: err.message });
 			}
 		});
 	}
@@ -50,17 +122,17 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (data.token) {
 					window.location.href = '/dashboard';
 				} else {
-					alert(data.error || '2FA verification failed');
+					Swal.fire({ icon: 'error', title: '2FA failed', text: data.error || '2FA verification failed' });
 				}
 			} catch (err) {
-				alert('2FA error: ' + err.message);
+				Swal.fire({ icon: 'error', title: '2FA error', text: err.message });
 			}
 		});
 	}
 
 	magicLinkBtn?.addEventListener('click', async () => {
 		const email = document.getElementById('email').value;
-		if (!email) return alert('Enter your email first');
+		if (!email) return Swal.fire({ icon: 'info', title: 'Email required', text: 'Enter your email first' });
 
 		const res = await fetch('/magic-link', {
 			method: 'POST',
@@ -68,12 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			body: JSON.stringify({ email }),
 		});
 		const data = await res.json();
-		alert(data.message || 'Check your email for a login link');
+		Swal.fire({ icon: 'success', title: 'Magic link sent', text: data.message || 'Check your email for a login link' });
 	});
 
 	passkeyBtn?.addEventListener('click', async () => {
 		const email = document.getElementById('email').value;
-		if (!email) return alert('Enter your email first');
+		if (!email) return Swal.fire({ icon: 'info', title: 'Email required', text: 'Enter your email first' });
 
 		try {
 			const optRes = await fetch('/passkey/login/options', {
@@ -94,10 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (data.token) {
 				window.location.href = '/dashboard';
 			} else {
-				alert(data.error || 'Passkey login failed');
+				Swal.fire({ icon: 'error', title: 'Passkey login failed', text: data.error || 'Passkey login failed' });
 			}
 		} catch (err) {
-			alert('Passkey error: ' + err.message);
+			Swal.fire({ icon: 'error', title: 'Passkey error', text: err.message });
 		}
 	});
 });

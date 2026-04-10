@@ -1,5 +1,5 @@
 import { Note } from '../model/note.js';
-import { searchCollection } from '../modules/typesense.js';
+import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 
 export async function createNote(userId, host_id, data) {
@@ -18,7 +18,7 @@ export async function createNote(userId, host_id, data) {
 }
 
 export async function listNotes(host_id, projectId, { page = 1, limit = 50 } = {}) {
-	const query = { host_id };
+	const query = { host_id, in_trash: { $ne: true } };
 	if (projectId) query.project = projectId;
 
 	return Note.find(query)
@@ -54,8 +54,13 @@ export async function updateNote(host_id, noteId, data) {
 }
 
 export async function deleteNote(host_id, noteId) {
-	const note = await Note.findOneAndDelete({ _id: noteId, host_id });
+	const note = await Note.findOneAndUpdate(
+		{ _id: noteId, host_id, in_trash: { $ne: true } },
+		{ $set: { in_trash: true, trashed_at: new Date() } },
+		{ new: true },
+	);
 	if (note) {
+		removeDocument(host_id, 'notes', noteId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'note:deleted', { _id: noteId });
 	}
 	return note;

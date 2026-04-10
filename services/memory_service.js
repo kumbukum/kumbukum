@@ -1,5 +1,5 @@
 import { Memory } from '../model/memory.js';
-import { searchCollection } from '../modules/typesense.js';
+import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 
 export async function storeMemory(userId, host_id, data) {
@@ -8,6 +8,7 @@ export async function storeMemory(userId, host_id, data) {
 		content: data.content || '',
 		tags: data.tags || [],
 		source: data.source || '',
+		relationships: data.relationships || [],
 		project: data.project,
 		owner: userId,
 		host_id,
@@ -18,7 +19,7 @@ export async function storeMemory(userId, host_id, data) {
 }
 
 export async function listMemories(host_id, projectId, { page = 1, limit = 50 } = {}) {
-	const query = { host_id };
+	const query = { host_id, in_trash: { $ne: true } };
 	if (projectId) query.project = projectId;
 
 	return Memory.find(query)
@@ -37,6 +38,7 @@ export async function updateMemory(host_id, memoryId, data) {
 	if (data.content !== undefined) update.content = data.content;
 	if (data.tags !== undefined) update.tags = data.tags;
 	if (data.source !== undefined) update.source = data.source;
+	if (data.relationships !== undefined) update.relationships = data.relationships;
 	if (data.project !== undefined) update.project = data.project;
 
 	const mem = await Memory.findOneAndUpdate(
@@ -53,8 +55,13 @@ export async function updateMemory(host_id, memoryId, data) {
 }
 
 export async function deleteMemory(host_id, memoryId) {
-	const mem = await Memory.findOneAndDelete({ _id: memoryId, host_id });
+	const mem = await Memory.findOneAndUpdate(
+		{ _id: memoryId, host_id, in_trash: { $ne: true } },
+		{ $set: { in_trash: true, trashed_at: new Date() } },
+		{ new: true },
+	);
 	if (mem) {
+		removeDocument(host_id, 'memory', memoryId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'memory:deleted', { _id: memoryId });
 	}
 	return mem;

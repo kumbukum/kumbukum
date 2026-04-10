@@ -9,9 +9,8 @@ block body
 			.col-md-5
 				.card.shadow
 					.card-body.p-4
-						h3.text-center.mb-4
-							i.bi.bi-lightbulb.me-2
-							| Kumbukum
+						.text-center.mb-4.logo-form
+							include ../includes/logo_black
 
 						#login-form
 							if error
@@ -23,6 +22,8 @@ block body
 								.mb-3
 									label.form-label(for="password") Password
 									input.form-control#password(type="password" name="password" required)
+								.mb-2.text-end
+									a.small(href="/forgot-password") Forgot password?
 								button.btn.btn-primary.w-100(type="submit") Sign In
 
 							hr

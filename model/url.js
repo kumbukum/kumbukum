@@ -12,11 +12,14 @@ const urlSchema = new mongoose.Schema(
 		project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
 		owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 		host_id: { type: String, required: true, index: true },
+		in_trash: { type: Boolean, default: false },
+		trashed_at: { type: Date, default: null },
 	},
 	{ timestamps: true },
 );
 
-urlSchema.index({ host_id: 1, project: 1 });
+urlSchema.index({ host_id: 1, in_trash: 1, project: 1 });
 urlSchema.index({ crawl_enabled: 1, last_crawled: 1 });
+urlSchema.index({ trashed_at: 1 }, { expireAfterSeconds: 2592000, partialFilterExpression: { trashed_at: { $type: 'date' }, in_trash: true } });
 
 export const Url = mongoose.model('Url', urlSchema);

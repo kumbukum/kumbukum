@@ -10,20 +10,42 @@ block content
 			| Add URL
 
 	#url-inline-form.d-none.mb-4.border.rounded.p-3.bg-white
-		.mb-2
-			input.form-control#url-input(type="url" placeholder="https://...")
-		.mb-2
-			input.form-control#url-title(type="text" placeholder="Title (optional)")
-		.mb-2
-			input.form-control#url-description(type="text" placeholder="Description (optional)")
-		.mb-2.form-check
+		.mb-3
+			.form-text Enter complete URL (including http:// or https://)
+			input.form-control#url-input(type="url")
+		.mb-3
+			.form-text Title (optional)
+			input.form-control#url-title(type="text")
+		.mb-3
+			.form-text Description (optional)
+			input.form-control#url-description(type="text")
+		.mb-4.form-check
 			input.form-check-input#url-crawl(type="checkbox")
-			label.form-check-label(for="url-crawl") Enable full-site crawling
-		div
-			button.btn.btn-primary.btn-sm#save-url-btn Save
-			button.btn.btn-outline-secondary.btn-sm.ms-2#cancel-url-btn Cancel
+			label.form-check-label.form-text.mb-0(for="url-crawl") Enable full-site crawling
+			.form-text.fs-7 If enabled, Kumbukum will attempt to crawl the entire website and save all discovered URLs in the index and rescan them every 24 hours to keep the data up to date. Great for knowledge bases and documentation sites that your AI agents can learn from. 
+		.d-flex.align-items-center
+			button.btn.btn-outline-secondary.btn-sm#cancel-url-btn Cancel
+			.ms-auto
+				button.btn.btn-primary.btn-sm#save-url-btn Save
+
+	.d-flex.align-items-center.mb-2.gap-2#batch-toolbar(data-type="urls")
+		.form-check
+			input.form-check-input#select-all-cb(type="checkbox")
+			label.form-check-label.small(for="select-all-cb") Select all
+		.batch-actions.d-none.d-flex.align-items-center.gap-2#batch-actions
+			span.badge.bg-secondary#batch-count 0 selected
+			button.btn.btn-outline-danger.btn-sm#batch-delete-btn
+				i.bi.bi-trash.me-1
+				| Delete
+			button.btn.btn-outline-primary.btn-sm#batch-move-btn
+				i.bi.bi-arrow-right-circle.me-1
+				| Move
+			button.btn.btn-outline-secondary.btn-sm#batch-copy-btn
+				i.bi.bi-copy.me-1
+				| Copy
 
 	#urls-list.list-group
 
 block scripts
 	script(src="/static/js/urls.js")
+	script(src="/static/js/batch.js")

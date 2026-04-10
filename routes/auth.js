@@ -1,18 +1,19 @@
 import { Router } from 'express';
 import crypto from 'node:crypto';
-import { authenticator } from 'otplib';
+import { generateSecret, verifySync, generateURI } from 'otplib';
 import { User } from '../model/user.js';
 import { createTenant } from '../modules/tenancy.js';
 import { ensureCollections } from '../modules/typesense.js';
 import { generateToken } from '../middleware/auth.js';
-import { sendVerificationEmail } from '../services/email_service.js';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email_service.js';
 import { sendMagicLink, verifyMagicLink } from '../services/magic_link_service.js';
 import * as passkeyService from '../services/passkey_service.js';
 import { createDefaultProject } from '../services/project_service.js';
+import { PendingSignup } from '../model/pending_signup.js';
 
 const router = Router();
 
-// ---- Registration (no password — auto-generated) ----
+// ---- Registration (email confirmation required before account creation) ----
 
 router.post('/signup', async (req, res) => {
 	try {
@@ -30,15 +31,55 @@ router.post('/signup', async (req, res) => {
 		const password = crypto.randomBytes(24).toString('base64url');
 		const verificationToken = crypto.randomBytes(32).toString('hex');
 
-		const user = await User.create({
+		// Remove any existing pending signup for this email
+		await PendingSignup.deleteMany({ email });
+
+		// Store pending signup (expires in 24 hours)
+		await PendingSignup.create({
 			email,
-			password,
 			name,
-			verification_token: verificationToken,
+			password,
+			token: verificationToken,
+			expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
 		});
 
-		// Create tenant + default project
-		const tenant = await createTenant(user._id, name);
+		await sendVerificationEmail(email, verificationToken);
+
+		res.status(200).json({
+			message: 'We sent a confirmation link to your email. Please verify to activate your account.',
+		});
+	} catch (err) {
+		console.error('Registration error:', err);
+		res.status(500).json({ error: 'Registration failed' });
+	}
+});
+
+// ---- Email Verification (creates the account) ----
+
+router.get('/verify', async (req, res) => {
+	try {
+		const { token } = req.query;
+		if (!token) return res.status(400).json({ error: 'Token required' });
+
+		const pending = await PendingSignup.findOne({ token, expires_at: { $gt: new Date() } });
+		if (!pending) return res.status(404).send('Invalid or expired verification link.');
+
+		// Check again if email was taken in the meantime
+		const existing = await User.findOne({ email: pending.email });
+		if (existing) {
+			await PendingSignup.deleteOne({ _id: pending._id });
+			return res.redirect('/login?already_verified=true');
+		}
+
+		// Create the actual account
+		const user = await User.create({
+			email: pending.email,
+			password: pending.password,
+			name: pending.name,
+			is_verified: true,
+		});
+
+		const tenant = await createTenant(user._id, pending.name);
 		user.tenant = tenant._id;
 		user.host_id = tenant.host_id;
 		user.is_active = true;
@@ -50,44 +91,15 @@ router.post('/signup', async (req, res) => {
 
 		await createDefaultProject(user._id, tenant.host_id);
 
-		sendVerificationEmail(email, verificationToken).catch((e) =>
-			console.warn('Verification email failed:', e.message),
-		);
+		// Clean up pending signup
+		await PendingSignup.deleteOne({ _id: pending._id });
 
-		// Set session for immediate login
+		// Sign the user in directly
 		req.session.userId = user._id.toString();
 		req.session.tenantId = tenant._id.toString();
 		req.session.host_id = tenant.host_id;
 
-		if (req.accepts('html')) {
-			return res.redirect('/dashboard');
-		}
-
-		res.status(201).json({
-			message: 'Registration successful. Check your email to verify your account.',
-			token: generateToken(user._id.toString(), tenant.host_id),
-		});
-	} catch (err) {
-		console.error('Registration error:', err);
-		res.status(500).json({ error: 'Registration failed' });
-	}
-});
-
-// ---- Email Verification ----
-
-router.get('/verify', async (req, res) => {
-	try {
-		const { token } = req.query;
-		if (!token) return res.status(400).json({ error: 'Token required' });
-
-		const user = await User.findOne({ verification_token: token }).select('+verification_token');
-		if (!user) return res.status(404).json({ error: 'Invalid or expired token' });
-
-		user.is_verified = true;
-		user.verification_token = undefined;
-		await user.save();
-
-		res.redirect('/login?verified=true');
+		res.redirect('/dashboard');
 	} catch (err) {
 		console.error('Verification error:', err);
 		res.status(500).json({ error: 'Verification failed' });
@@ -154,6 +166,90 @@ router.post('/reset-password', async (req, res) => {
 	}
 });
 
+// ---- Forgot Password (public, unauthenticated) ----
+
+router.post('/forgot-password', async (req, res) => {
+	try {
+		const { email } = req.body;
+		if (!email) return res.status(400).json({ error: 'email is required' });
+
+		const user = await User.findOne({ email, is_active: true });
+		if (user) {
+			const resetToken = crypto.randomBytes(32).toString('hex');
+			user.password_reset_token = resetToken;
+			user.password_reset_expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+			await user.save();
+			sendPasswordResetEmail(email, resetToken).catch((e) =>
+				console.warn('Password reset email failed:', e.message),
+			);
+		}
+
+		// Always return success to prevent email enumeration
+		res.json({ message: 'If an account exists with that email, a password reset link has been sent.' });
+	} catch (err) {
+		console.error('Forgot password error:', err);
+		res.status(500).json({ error: 'Failed to send reset email' });
+	}
+});
+
+router.get('/reset-password', async (req, res) => {
+	try {
+		const { token } = req.query;
+		if (!token) return res.redirect('/forgot-password');
+
+		const user = await User.findOne({
+			password_reset_token: token,
+			password_reset_expires: { $gt: new Date() },
+		}).select('+password_reset_token +password_reset_expires');
+
+		if (!user) {
+			return res.render('auth/reset_password', { error: 'Invalid or expired reset link.' });
+		}
+
+		// Generate and show the new random password (user must click Continue)
+		const newPassword = crypto.randomBytes(16).toString('base64url');
+
+		// Store temporarily — will be applied on confirm
+		req.session.pendingReset = {
+			userId: user._id.toString(),
+			token,
+			newPassword,
+		};
+
+		res.render('auth/reset_password', { password: newPassword, token });
+	} catch (err) {
+		console.error('Reset password page error:', err);
+		res.render('auth/reset_password', { error: 'Something went wrong. Please try again.' });
+	}
+});
+
+router.post('/reset-password/confirm', async (req, res) => {
+	try {
+		const { token } = req.body;
+		const pending = req.session.pendingReset;
+
+		if (!pending || pending.token !== token) {
+			return res.render('auth/reset_password', { error: 'Invalid reset session. Please request a new link.' });
+		}
+
+		const user = await User.findById(pending.userId).select('+password +password_reset_token +password_reset_expires');
+		if (!user || user.password_reset_token !== token || user.password_reset_expires < new Date()) {
+			return res.render('auth/reset_password', { error: 'Reset link has expired.' });
+		}
+
+		user.password = pending.newPassword;
+		user.password_reset_token = undefined;
+		user.password_reset_expires = undefined;
+		await user.save();
+
+		delete req.session.pendingReset;
+		res.redirect('/login?reset=true');
+	} catch (err) {
+		console.error('Reset password confirm error:', err);
+		res.render('auth/reset_password', { error: 'Password reset failed. Please try again.' });
+	}
+});
+
 // ---- 2FA Verify ----
 
 router.post('/2fa/verify', async (req, res) => {
@@ -168,8 +264,8 @@ router.post('/2fa/verify', async (req, res) => {
 		const user = await User.findById(pending.userId).select('+totp_secret');
 		if (!user) return res.status(401).json({ error: 'User not found' });
 
-		const isValid = authenticator.verify({ token: code, secret: user.totp_secret });
-		if (!isValid) return res.status(401).json({ error: 'Invalid 2FA code' });
+		const result = verifySync({ token: code, secret: user.totp_secret });
+		if (!result.valid) return res.status(401).json({ error: 'Invalid 2FA code' });
 
 		delete req.session.pending2FA;
 		req.session.userId = user._id.toString();
@@ -195,8 +291,8 @@ router.post('/2fa/setup', async (req, res) => {
 		const user = await User.findById(req.session.userId).select('+totp_secret');
 		if (!user) return res.status(404).json({ error: 'User not found' });
 
-		const secret = authenticator.generateSecret();
-		const otpauth = authenticator.keyuri(user.email, 'Kumbukum', secret);
+		const secret = generateSecret();
+		const otpauth = generateURI({ issuer: 'Kumbukum', label: user.email, secret });
 
 		user.totp_secret = secret;
 		await user.save();
@@ -216,8 +312,8 @@ router.post('/2fa/confirm', async (req, res) => {
 		const user = await User.findById(req.session.userId).select('+totp_secret');
 		if (!user) return res.status(404).json({ error: 'User not found' });
 
-		const isValid = authenticator.verify({ token: code, secret: user.totp_secret });
-		if (!isValid) return res.status(400).json({ error: 'Invalid code — try again' });
+		const result = verifySync({ token: code, secret: user.totp_secret });
+		if (!result.valid) return res.status(400).json({ error: 'Invalid code — try again' });
 
 		user.totp_enabled = true;
 		await user.save();
@@ -356,5 +452,11 @@ router.post('/logout', (req, res) => {
 
 router.get('/login', (req, res) => res.render('auth/login'));
 router.get('/signup', (req, res) => res.render('auth/register'));
+router.get('/forgot-password', (req, res) => res.render('auth/forgot_password'));
+
+// ---- Ajax partials ----
+
+router.get('/ajax/signup-success', (req, res) => res.render('ajax/signup_success'));
+router.get('/ajax/forgot-password-success', (req, res) => res.render('ajax/forgot_password_success'));
 
 export default router;

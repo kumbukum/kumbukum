@@ -29,22 +29,27 @@ app.use(cookieParser());
 
 app.use('/static', express.static(path.join(__dirname, 'public')));
 
+var _90_days_in_ms = 90 * 24 * 60 * 60 * 1000;
+
 const sessionMiddleware = session({
-	secret: config.sessionSecret,
-	resave: false,
-	saveUninitialized: false,
-	store: MongoStore.create({
-		mongoUrl: config.mongoUri,
-		collectionName: 'sessions',
-		ttl: 14 * 24 * 60 * 60,
+	'secret': config.sessionSecret,
+	'resave': true,
+	'saveUninitialized': false,
+	'proxy': process.env.NODE_ENV === 'production' ? true : false,
+	'store': MongoStore.create({
+		'mongoUrl': config.mongoUri,
+		'collectionName': 'sessions',
+		'ttl': _90_days_in_ms,
+		'createTTLIndex': true,
 	}),
-	cookie: {
-		secure: config.env === 'production',
-		httpOnly: true,
-		maxAge: 14 * 24 * 60 * 60 * 1000,
-		sameSite: 'lax',
+	'cookie': {
+		'maxAge': _90_days_in_ms,
+		'sameSite': process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+		'secure': process.env.NODE_ENV === 'production' ? true : false 
 	},
 });
+
+
 app.use(sessionMiddleware);
 
 app.use(resolveTenant);
@@ -70,7 +75,7 @@ async function start() {
 		console.log(`Kumbukum running on port ${config.port} [${config.env}]`);
 	});
 
-	setupSocketIO(server, sessionMiddleware);
+	await setupSocketIO(server, sessionMiddleware);
 	startScheduler();
 	startChangeStreams().catch((err) =>
 		console.error('Change streams failed to start:', err.message),

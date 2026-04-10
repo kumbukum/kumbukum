@@ -22,10 +22,6 @@ const SLASH_COMMANDS = [
 	{ label: 'Code Block', icon: 'bi-code-square', command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
 	{ label: 'Blockquote', icon: 'bi-chat-quote', command: (editor) => editor.chain().focus().toggleBlockquote().run() },
 	{ label: 'Horizontal Rule', icon: 'bi-dash-lg', command: (editor) => editor.chain().focus().setHorizontalRule().run() },
-	{ label: 'Image', icon: 'bi-image', command: (editor) => {
-		const url = prompt('Image URL:');
-		if (url) editor.chain().focus().setImage({ src: url }).run();
-	}},
 ];
 
 function createSlashMenu() {
@@ -179,14 +175,15 @@ const SlashCommands = Extension.create({
 // ---- Editor Factory ----
 
 export function createEditor(element, { content = '', onUpdate = null } = {}) {
-	const editor = new Editor({
+	const editorOptions = {
 		element,
 		extensions: [
 			StarterKit.configure({
 				codeBlock: false,
+				horizontalRule: false,
 			}),
 			Placeholder.configure({
-				placeholder: 'Type "/" for commands...',
+				placeholder: 'Type "/" for commands, or start typing...',
 			}),
 			CodeBlock,
 			HorizontalRule,
@@ -198,8 +195,13 @@ export function createEditor(element, { content = '', onUpdate = null } = {}) {
 			SlashCommands,
 		],
 		content,
-		onUpdate: onUpdate ? ({ editor: ed }) => onUpdate(ed) : undefined,
-	});
+	};
+
+	if (onUpdate) {
+		editorOptions.onUpdate = ({ editor: ed }) => onUpdate(ed);
+	}
+
+	const editor = new Editor(editorOptions);
 
 	return editor;
 }

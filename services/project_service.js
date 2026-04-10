@@ -1,4 +1,7 @@
 import { Project } from '../model/project.js';
+import { Note } from '../model/note.js';
+import { Memory } from '../model/memory.js';
+import { Url } from '../model/url.js';
 import { emitToTenant } from '../modules/socket.js';
 
 export async function createDefaultProject(userId, host_id) {
@@ -48,4 +51,44 @@ export async function deleteProject(host_id, projectId) {
 	await project.save();
 	emitToTenant(host_id, 'project:deleted', { _id: projectId });
 	return project;
+}
+
+/**
+ * Get per-project document counts from MongoDB.
+ * Returns { projectId: { notes: N, memory: N, urls: N }, ... }
+ */
+export async function getProjectCounts(host_id) {
+	const [noteCounts, memoryCounts, urlCounts] = await Promise.all([
+		Note.aggregate([
+			{ $match: { host_id, in_trash: { $ne: true } } },
+			{ $group: { _id: '$project', count: { $sum: 1 } } },
+		]),
+		Memory.aggregate([
+			{ $match: { host_id, in_trash: { $ne: true } } },
+			{ $group: { _id: '$project', count: { $sum: 1 } } },
+		]),
+		Url.aggregate([
+			{ $match: { host_id, in_trash: { $ne: true } } },
+			{ $group: { _id: '$project', count: { $sum: 1 } } },
+		]),
+	]);
+
+	const counts = {};
+	for (const { _id, count } of noteCounts) {
+		const pid = _id.toString();
+		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0 };
+		counts[pid].notes = count;
+	}
+	for (const { _id, count } of memoryCounts) {
+		const pid = _id.toString();
+		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0 };
+		counts[pid].memory = count;
+	}
+	for (const { _id, count } of urlCounts) {
+		const pid = _id.toString();
+		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0 };
+		counts[pid].urls = count;
+	}
+
+	return counts;
 }

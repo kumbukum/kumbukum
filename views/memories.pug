@@ -3,26 +3,58 @@ extends layout
 block content
 	.d-flex.justify-content-between.align-items-center.mb-3
 		h4
-			i.bi.bi-brain.me-2
-			| Memory
+			i.bi.bi-lightbulb
+			span.ms-2 Memories
 		button.btn.btn-primary#new-memory-btn
-			i.bi.bi-plus-lg.me-1
-			| Store Memory
+			i.bi.bi-plus-lg
+			span.ms-1 New Memory
 
-	#memory-inline-form.d-none.mb-4.border.rounded.p-3.bg-white
-		.mb-2
-			input.form-control#memory-title(type="text" placeholder="Title")
-		.mb-2
-			textarea.form-control#memory-content(rows="3" placeholder="Content")
-		.mb-2
-			input.form-control.form-control-sm#memory-tags(type="text" placeholder="Tags (comma separated)")
-		.mb-2
-			input.form-control.form-control-sm#memory-source(type="text" placeholder="Source (optional)")
-		div
-			button.btn.btn-primary.btn-sm#save-memory-btn Save
-			button.btn.btn-outline-secondary.btn-sm.ms-2#cancel-memory-btn Cancel
+	.d-flex.align-items-center.mb-2.gap-2#batch-toolbar(data-type="memories")
+		.form-check
+			input.form-check-input#select-all-cb(type="checkbox")
+			label.form-check-label.small(for="select-all-cb") Select all
+		.batch-actions.d-none.d-flex.align-items-center.gap-2#batch-actions
+			span.badge.bg-secondary#batch-count 0 selected
+			button.btn.btn-outline-danger.btn-sm#batch-delete-btn
+				i.bi.bi-trash.me-1
+				| Delete
+			button.btn.btn-outline-primary.btn-sm#batch-move-btn
+				i.bi.bi-arrow-right-circle.me-1
+				| Move
+			button.btn.btn-outline-secondary.btn-sm#batch-copy-btn
+				i.bi.bi-copy.me-1
+				| Copy
 
 	#memories-list.list-group
 
+	#memory-editor.d-none
+		.mb-3
+			.form-text Title
+			input.form-control#memory-title(type="text")
+		.mb-3
+			.form-text Tags
+			input.form-control#memory-tags(type="text")
+		.mb-3
+			.form-text Source
+			input.form-control#memory-source(type="text" autocomplete="off")
+		.mb-3.position-relative
+			.form-text Relationships
+			.source-search-wrap
+				i.bi.bi-search.source-search-icon
+				input.form-control#relationship-search(type="text" placeholder="Type to search..." autocomplete="off")
+			#relationship-tags.d-flex.flex-wrap.gap-1.mt-2
+		#memory-editor-container.border-0.rounded.p-0(style="min-height: 400px")
+		.d-flex.align-items-center.mt-3
+			button.btn.btn-outline-secondary.me-2#back-to-memories-btn Cancel
+			button.btn.btn-outline-danger.ms-2#delete-memory-btn.d-none
+				i.bi.bi-trash.me-1
+				span.ms-1 Delete
+			.ms-auto
+				button.btn.btn-primary#save-memory-btn
+					i.bi.bi-check-lg
+					span.ms-1 Save
+
 block scripts
+	script(src="/static/js/editor.js" type="module")
 	script(src="/static/js/memories.js")
+	script(src="/static/js/batch.js")

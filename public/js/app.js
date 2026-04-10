@@ -45,45 +45,47 @@ let currentProjectId = null;
 // Load projects sidebar with counts
 async function loadProjects() {
 	try {
-		const [{ projects }, counts] = await Promise.all([
-			api('GET', '/projects'),
-			api('GET', '/counts').catch(() => ({ notes: 0, memory: 0, urls: 0 })),
-		]);
 		const list = document.getElementById('project-list');
 		if (!list) return;
 
-		list.innerHTML = projects
-			.map(
-				(p) => `
-			<div class="project-item ${p._id === currentProjectId ? 'active' : ''}" data-id="${p._id}">
-				<div class="d-flex align-items-center mb-1">
-					<span class="project-color" style="background:${p.color}"></span>
-					<span class="fw-medium">${p.name}</span>
-					${p.is_default ? '<i class="bi bi-star-fill text-warning ms-auto" style="font-size:0.7rem"></i>' : ''}
-				</div>
-				<a href="/notes" class="section-link"><i class="bi bi-journal-text me-2"></i>Notes<span class="section-count">${counts.notes || 0}</span></a>
-				<a href="/memories" class="section-link"><i class="bi bi-brain me-2"></i>Memories<span class="section-count">${counts.memory || 0}</span></a>
-				<a href="/urls" class="section-link"><i class="bi bi-link-45deg me-2"></i>URLs<span class="section-count">${counts.urls || 0}</span></a>
-			</div>`,
-			)
-			.join('');
+		const html = await fetch(`/ajax/project-list?active=${currentProjectId || ''}`).then(r => r.text());
+		list.innerHTML = html;
 
 		list.querySelectorAll('.project-item').forEach((el) => {
+			// Clicking project name -> dashboard with ?g=
 			el.addEventListener('click', (e) => {
 				if (e.target.closest('a')) return;
 				currentProjectId = el.dataset.id;
 				document.querySelectorAll('.project-item').forEach((e) => e.classList.remove('active'));
 				el.classList.add('active');
 				window.dispatchEvent(new CustomEvent('project-changed', { detail: currentProjectId }));
-				loadProjectOverview(currentProjectId);
+				if (document.getElementById('project-overview')) {
+					const g = JSURL.stringify({ project_id: currentProjectId });
+					history.replaceState(null, '', `/dashboard?g=${g}`);
+					loadProjectOverview(currentProjectId);
+				} else {
+					const g = JSURL.stringify({ project_id: currentProjectId });
+					window.location.href = `/dashboard?g=${g}`;
+				}
+			});
+
+			// Intercept section links (Notes, Memories, URLs) to pass ?g=
+			el.querySelectorAll('.project-item-section a').forEach((link) => {
+				link.addEventListener('click', (e) => {
+					e.preventDefault();
+					const projectId = el.dataset.id;
+					const g = JSURL.stringify({ project_id: projectId });
+					window.location.href = `${link.getAttribute('href')}?g=${g}`;
+				});
 			});
 		});
 
-		if (!currentProjectId && projects.length) {
-			const def = projects.find((p) => p.is_default) || projects[0];
-			currentProjectId = def._id;
-			list.querySelector(`[data-id="${def._id}"]`)?.classList.add('active');
-			loadProjectOverview(currentProjectId);
+		if (!currentProjectId) {
+			const first = list.querySelector('.project-item');
+			if (first) {
+				currentProjectId = first.dataset.id;
+				first.classList.add('active');
+			}
 		}
 	} catch (err) {
 		console.error('Failed to load projects:', err);
@@ -96,67 +98,21 @@ async function loadProjectOverview(projectId) {
 	if (!container) return;
 
 	try {
-		const [{ project }, counts] = await Promise.all([
-			api('GET', `/projects/${projectId}`),
-			api('GET', '/counts').catch(() => ({ notes: 0, memory: 0, urls: 0 })),
-		]);
-
-		const createdAt = new Date(project.createdAt).toLocaleDateString('en-US', {
-			year: 'numeric', month: 'long', day: 'numeric',
+		const html = await fetch(`/ajax/project-overview/${projectId}`).then(r => {
+			if (!r.ok) throw new Error('Failed to load');
+			return r.text();
 		});
+		container.innerHTML = html;
 
-		container.innerHTML = `
-			<div class="d-flex justify-content-between align-items-center mb-4">
-				<div class="d-flex align-items-center gap-2">
-					<span class="project-color" style="background:${project.color}; width:16px; height:16px"></span>
-					<h4 class="mb-0">${project.name}</h4>
-					${project.is_default ? '<span class="badge bg-warning text-dark">Default</span>' : ''}
-				</div>
-				<div class="d-flex gap-2">
-					<button class="btn btn-sm btn-outline-secondary" onclick="editProject('${project._id}')">
-						<i class="bi bi-pencil me-1"></i>Edit
-					</button>
-					${!project.is_default ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteProject('${project._id}')">
-						<i class="bi bi-trash me-1"></i>Delete
-					</button>` : ''}
-				</div>
-			</div>
-			<p class="text-muted small">Created ${createdAt}</p>
-			<div class="row g-3 mt-2">
-				<div class="col-md-4">
-					<a href="/notes" class="text-decoration-none">
-						<div class="card h-100">
-							<div class="card-body text-center">
-								<i class="bi bi-journal-text d-block mb-2" style="font-size:1.5rem; color:#0d6efd"></i>
-								<div class="fs-3 fw-bold">${counts.notes || 0}</div>
-								<div class="text-muted">Notes</div>
-							</div>
-						</div>
-					</a>
-				</div>
-				<div class="col-md-4">
-					<a href="/memories" class="text-decoration-none">
-						<div class="card h-100">
-							<div class="card-body text-center">
-								<i class="bi bi-brain d-block mb-2" style="font-size:1.5rem; color:#6f42c1"></i>
-								<div class="fs-3 fw-bold">${counts.memory || 0}</div>
-								<div class="text-muted">Memories</div>
-							</div>
-						</div>
-					</a>
-				</div>
-				<div class="col-md-4">
-					<a href="/urls" class="text-decoration-none">
-						<div class="card h-100">
-							<div class="card-body text-center">
-								<i class="bi bi-link-45deg d-block mb-2" style="font-size:1.5rem; color:#198754"></i>
-								<div class="fs-3 fw-bold">${counts.urls || 0}</div>
-								<div class="text-muted">URLs</div>
-							</div>
-						</div>
-					</a>
-				</div>
-			</div>`;
+		// Intercept overview card links to pass ?g=
+		container.querySelectorAll('.project-section-link').forEach((link) => {
+			link.addEventListener('click', (e) => {
+				e.preventDefault();
+				const pid = link.dataset.project;
+				const g = JSURL.stringify({ project_id: pid });
+				window.location.href = `${link.getAttribute('href')}?g=${g}`;
+			});
+		});
 	} catch (err) {
 		container.innerHTML = '<div class="text-danger">Failed to load project</div>';
 		console.error('Failed to load project overview:', err);
@@ -168,25 +124,24 @@ async function editProject(projectId) {
 	const { Swal, Huebee } = await import('/static/js/vendor.js');
 	const { project } = await api('GET', `/projects/${projectId}`);
 
+	let selectedColor = project.color;
 	const { value: formValues } = await Swal.fire({
 		title: 'Edit Project',
 		html: `
 			<input id="swal-name" class="swal2-input" placeholder="Project name" value="${project.name}">
-			<div class="mt-3"><label class="form-label">Color</label><input id="swal-color" class="form-control form-control-sm" value="${project.color}" readonly style="width:80px; cursor:pointer"></div>
+			<div class="mt-3"><label class="form-label">Color</label><div id="swal-color-container"><input id="swal-color" value="${project.color}"></div></div>
 		`,
 		showCancelButton: true,
 		focusConfirm: false,
 		didOpen: () => {
 			const colorInput = document.getElementById('swal-color');
-			colorInput.style.backgroundColor = project.color;
-			colorInput.style.color = 'transparent';
-			const hueb = new Huebee(colorInput, { notation: 'hex', saturations: 2, shades: 3, customColors: ['#6c757d'] });
-			hueb.on('change', (color) => { colorInput.value = color; colorInput.style.backgroundColor = color; });
+			const hueb = new Huebee(colorInput, huebeeOptions);
+			hueb.on('change', (color) => { selectedColor = color; });
 		},
 		preConfirm: () => {
 			const name = document.getElementById('swal-name').value.trim();
 			if (!name) { Swal.showValidationMessage('Name is required'); return false; }
-			return { name, color: document.getElementById('swal-color').value };
+			return { name, color: selectedColor };
 		},
 	});
 
@@ -213,6 +168,16 @@ async function deleteProject(projectId) {
 	}
 }
 
+// Project color picker options
+const huebeeOptions = {
+	notation: 'hex',
+	hues: 12,
+	saturations: 3,
+	shades: 5,
+	staticOpen: true,
+	customColors: ['#C25', '#E62', '#EA0', '#19F', '#2D2', '#6c757d', '#333', '#F8F'],
+};
+
 // New project — inline
 document.getElementById('new-project-btn')?.addEventListener('click', async () => {
 	const { Swal, Huebee } = await import('/static/js/vendor.js');
@@ -221,14 +186,14 @@ document.getElementById('new-project-btn')?.addEventListener('click', async () =
 		title: 'New Project',
 		html: `
 			<input id="swal-name" class="swal2-input" placeholder="Project name">
-			<div class="mt-3"><label class="form-label">Color</label><input id="swal-color" class="form-control form-control-sm" value="${selectedColor}" readonly style="width:80px; cursor:pointer; background:${selectedColor}; color:transparent"></div>
+			<div class="mt-3"><label class="form-label">Color</label><div id="swal-color-container"><input id="swal-color" value="${selectedColor}"></div></div>
 		`,
 		showCancelButton: true,
 		focusConfirm: false,
 		didOpen: () => {
 			const colorInput = document.getElementById('swal-color');
-			const hueb = new Huebee(colorInput, { notation: 'hex', saturations: 2, shades: 3, customColors: ['#6c757d'] });
-			hueb.on('change', (color) => { selectedColor = color; colorInput.value = color; colorInput.style.backgroundColor = color; });
+			const hueb = new Huebee(colorInput, huebeeOptions);
+			hueb.on('change', (color) => { selectedColor = color; });
 		},
 		preConfirm: () => {
 			const name = document.getElementById('swal-name').value.trim();
@@ -248,7 +213,78 @@ function logout() {
 }
 
 // Init
-document.addEventListener('DOMContentLoaded', () => {
-	loadProjects();
+document.addEventListener('DOMContentLoaded', async () => {
+	const params = new URLSearchParams(window.location.search);
+	const g = params.get('g');
+	const hasExplicitProject = !!(g && JSURL.tryParse(g, {}).project_id);
+	if (hasExplicitProject) {
+		currentProjectId = JSURL.tryParse(g, {}).project_id;
+	}
+	await loadProjects();
+	loadTrashCount();
+	if (hasExplicitProject && currentProjectId) loadProjectOverview(currentProjectId);
 	if (typeof initChat === 'function') initChat();
+
+	// ── Socket.IO: live count updates ──
+	if (typeof io === 'function' && typeof __host_id === 'string' && __host_id) {
+		const socket = io({ transports: ['websocket'] });
+		socket.on('connect', () => {
+			socket.emit('subscribe', `tenant:${__host_id}`);
+		});
+		const crudEvents = [
+			'note:created', 'note:deleted',
+			'memory:created', 'memory:deleted',
+			'url:created', 'url:deleted',
+			'counts:refresh',
+		];
+		for (const evt of crudEvents) {
+			socket.on(evt, () => {
+				refreshCounts();
+				loadTrashCount();
+			});
+		}
+	}
 });
+
+// Refresh sidebar counts via API
+let countDebounce = null;
+async function refreshCounts() {
+	clearTimeout(countDebounce);
+	countDebounce = setTimeout(async () => {
+		try {
+			const counts = await api('GET', '/counts');
+			document.querySelectorAll('.project-item').forEach(el => {
+				const pid = el.dataset.id;
+				const pc = counts[pid] || { notes: 0, memory: 0, urls: 0 };
+				const sectionCounts = el.querySelectorAll('.section-count');
+				if (sectionCounts[0]) sectionCounts[0].textContent = pc.notes;
+				if (sectionCounts[1]) sectionCounts[1].textContent = pc.memory;
+				if (sectionCounts[2]) sectionCounts[2].textContent = pc.urls;
+			});
+			// Also update overview cards if visible
+			const overview = document.getElementById('project-overview');
+			if (overview && currentProjectId) {
+				const pc = counts[currentProjectId] || { notes: 0, memory: 0, urls: 0 };
+				const cards = overview.querySelectorAll('.fw-bold');
+				if (cards[0]) cards[0].textContent = pc.notes;
+				if (cards[1]) cards[1].textContent = pc.memory;
+				if (cards[2]) cards[2].textContent = pc.urls;
+			}
+		} catch (err) {
+			console.error('Failed to refresh counts:', err);
+		}
+	}, 300);
+}
+
+async function loadTrashCount() {
+	try {
+		const { count } = await api('GET', '/trash/count');
+		const badge = document.getElementById('trash-count-badge');
+		if (badge) {
+			badge.textContent = count || '';
+			badge.classList.toggle('d-none', !count);
+		}
+	} catch (e) {
+		// ignore
+	}
+}

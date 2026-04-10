@@ -22138,7 +22138,7 @@ RopeSequence.from = function from(values) {
   }
   return values && values.length ? new Leaf(values) : RopeSequence.empty;
 };
-var Leaf = /* @__PURE__ */ function(RopeSequence3) {
+var Leaf = /* @__PURE__ */ (function(RopeSequence3) {
   function Leaf2(values) {
     RopeSequence3.call(this);
     this.values = values;
@@ -22191,9 +22191,9 @@ var Leaf = /* @__PURE__ */ function(RopeSequence3) {
   };
   Object.defineProperties(Leaf2.prototype, prototypeAccessors);
   return Leaf2;
-}(RopeSequence);
+})(RopeSequence);
 RopeSequence.empty = new Leaf([]);
-var Append = /* @__PURE__ */ function(RopeSequence3) {
+var Append = /* @__PURE__ */ (function(RopeSequence3) {
   function Append2(left, right) {
     RopeSequence3.call(this);
     this.left = left;
@@ -22260,7 +22260,7 @@ var Append = /* @__PURE__ */ function(RopeSequence3) {
     return new Append2(this, other);
   };
   return Append2;
-}(RopeSequence);
+})(RopeSequence);
 var dist_default2 = RopeSequence;
 
 // node_modules/.pnpm/prosemirror-history@1.5.0/node_modules/prosemirror-history/dist/index.js
@@ -23225,11 +23225,7 @@ var SLASH_COMMANDS = [
   { label: "Task List", icon: "bi-check2-square", command: (editor) => editor.chain().focus().toggleTaskList().run() },
   { label: "Code Block", icon: "bi-code-square", command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
   { label: "Blockquote", icon: "bi-chat-quote", command: (editor) => editor.chain().focus().toggleBlockquote().run() },
-  { label: "Horizontal Rule", icon: "bi-dash-lg", command: (editor) => editor.chain().focus().setHorizontalRule().run() },
-  { label: "Image", icon: "bi-image", command: (editor) => {
-    const url = prompt("Image URL:");
-    if (url) editor.chain().focus().setImage({ src: url }).run();
-  } }
+  { label: "Horizontal Rule", icon: "bi-dash-lg", command: (editor) => editor.chain().focus().setHorizontalRule().run() }
 ];
 function createSlashMenu() {
   const menu = document.createElement("div");
@@ -23368,14 +23364,15 @@ var SlashCommands = Extension.create({
   }
 });
 function createEditor(element, { content = "", onUpdate = null } = {}) {
-  const editor = new Editor({
+  const editorOptions = {
     element,
     extensions: [
       index_default3.configure({
-        codeBlock: false
+        codeBlock: false,
+        horizontalRule: false
       }),
       index_default4.configure({
-        placeholder: 'Type "/" for commands...'
+        placeholder: 'Type "/" for commands, or start typing...'
       }),
       index_default,
       index_default2,
@@ -23386,9 +23383,12 @@ function createEditor(element, { content = "", onUpdate = null } = {}) {
       index_default7,
       SlashCommands
     ],
-    content,
-    onUpdate: onUpdate ? ({ editor: ed }) => onUpdate(ed) : void 0
-  });
+    content
+  };
+  if (onUpdate) {
+    editorOptions.onUpdate = ({ editor: ed }) => onUpdate(ed);
+  }
+  const editor = new Editor(editorOptions);
   return editor;
 }
 window.KumbukumEditor = { createEditor };

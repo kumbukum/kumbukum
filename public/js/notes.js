@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	const deleteBtn = document.getElementById('delete-note-btn');
 	const backBtn = document.getElementById('back-to-list-btn');
 
+	const batchToolbar = document.getElementById('batch-toolbar');
+
 	let currentNoteId = null;
 	let tiptapEditor = null;
 
@@ -47,8 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
 			? notes
 				.map(
 					(n) => `
-				<div class="list-group-item list-group-item-action note-item d-flex justify-content-between" data-id="${n._id}">
-					<div>
+				<div class="list-group-item list-group-item-action note-item d-flex justify-content-between align-items-center" data-id="${n._id}">
+					<div class="batch-cb-wrap me-2">
+						<input type="checkbox" class="form-check-input batch-cb" value="${n._id}">
+					</div>
+					<div class="flex-grow-1">
 						<strong>${n.title}</strong>
 						<div class="text-muted small">${n.tags?.map((t) => `<span class="badge bg-secondary tag-badge me-1">${t}</span>`).join('') || ''}</div>
 					</div>
@@ -71,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		initEditor(note.content || '');
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
+		if (batchToolbar) batchToolbar.classList.add('d-none');
 		editorEl.classList.remove('d-none');
 		deleteBtn.classList.remove('d-none');
 	}
@@ -82,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		initEditor('');
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
+		if (batchToolbar) batchToolbar.classList.add('d-none');
 		editorEl.classList.remove('d-none');
 		deleteBtn.classList.add('d-none');
 	});
@@ -94,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		editorEl.classList.add('d-none');
 		listEl.classList.remove('d-none');
 		newBtn.classList.remove('d-none');
+		if (batchToolbar) batchToolbar.classList.remove('d-none');
 		loadNotes();
 	});
 
@@ -121,14 +129,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	deleteBtn?.addEventListener('click', async () => {
 		if (!currentNoteId) return;
-		const confirmed = await confirmAction('Delete Note', 'This note will be permanently deleted.');
+		const confirmed = await confirmAction('Move to Trash', 'This note will be moved to trash.');
 		if (!confirmed) return;
 
 		await api('DELETE', `/notes/${currentNoteId}`);
-		showSuccess('Note deleted');
+		showSuccess('Moved to trash');
 		backBtn.click();
 	});
 
 	window.addEventListener('project-changed', loadNotes);
+	window.addEventListener('batch-done', loadNotes);
 	loadNotes();
 });

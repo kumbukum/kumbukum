@@ -19,8 +19,8 @@ services:
             TYPESENSE_NODES: ""
             SESSION_SECRET: dev-session-secret-change-me
             JWT_SECRET: dev-jwt-secret-change-me
-            SMTP_HOST: ""
-            SMTP_PORT: 587
+            SMTP_HOST: "mailpit"
+            SMTP_PORT: 1025
             SMTP_USER: ""
             SMTP_PASS: ""
             SMTP_FROM: "noreply@localhost"
@@ -68,6 +68,15 @@ services:
         volumes:
             - typesense_data:/data
         command: --data-dir /data --api-key=kumbukum-dev-key
+
+    # ── Mailpit (dev mail catcher) ──────────────────────────────
+    mailpit:
+        image: axllent/mailpit:latest
+        restart: unless-stopped
+        ports:
+            - "8025:8025"   # Web UI
+        expose:
+            - "1025"        # SMTP
 
 volumes:
     mongo_data:

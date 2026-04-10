@@ -12,6 +12,9 @@ const userSchema = new mongoose.Schema(
 		is_active: { type: Boolean, default: false },
 		is_verified: { type: Boolean, default: false },
 		verification_token: { type: String, select: false },
+		// Password reset
+		password_reset_token: { type: String, select: false },
+		password_reset_expires: { type: Date, select: false },
 		// 2FA
 		totp_secret: { type: String, select: false },
 		totp_enabled: { type: Boolean, default: false },
@@ -27,10 +30,9 @@ const userSchema = new mongoose.Schema(
 	{ timestamps: true },
 );
 
-userSchema.pre('save', async function (next) {
-	if (!this.isModified('password')) return next();
+userSchema.pre('save', async function () {
+	if (!this.isModified('password')) return;
 	this.password = await bcrypt.hash(this.password, 12);
-	next();
 });
 
 userSchema.methods.comparePassword = async function (candidate) {

@@ -9,38 +9,38 @@ export function getIO() {
 	return io;
 }
 
-export function setupSocketIO(httpServer, sessionMiddleware) {
+export async function setupSocketIO(httpServer, sessionMiddleware) {
 	io = new Server(httpServer, {
+		cookie: false,
+		transports: ['websocket'],
 		cors: {
 			origin: config.env === 'development' ? '*' : config.appUrl,
 			credentials: true,
 		},
 	});
 
-	// Redis streams adapter for horizontal scaling
-	const redisClient = new Redis(config.redisUrl);
-
-	redisClient.on('connect', () => {
-		io.adapter(createAdapter(redisClient));
-		console.log('Socket.IO Redis streams adapter connected');
-	});
-	redisClient.on('error', (err) => {
-		console.warn('Socket.IO Redis streams adapter failed, using in-memory:', err.message);
-	});
-
-	// Share session with Socket.IO
-	io.engine.use(sessionMiddleware);
+	// Redis streams adapter for horizontal scaling (multi-server only)
+	if (config.socketRedis) {
+		try {
+			const redisClient = new Redis(config.redisUrl);
+			await new Promise((resolve, reject) => {
+				redisClient.once('ready', resolve);
+				redisClient.once('error', reject);
+				setTimeout(() => reject(new Error('timeout')), 5000);
+			});
+			io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000 }));
+			console.log('Socket.IO Redis streams adapter connected');
+		} catch (err) {
+			console.warn('Socket.IO Redis adapter failed, using in-memory:', err.message);
+		}
+	}
 
 	io.on('connection', (socket) => {
-		const session = socket.request.session;
-		if (!session?.userId) {
-			socket.disconnect(true);
-			return;
-		}
-
-		// Join tenant room for scoped broadcasts
-		const room = `tenant:${session.host_id}`;
-		socket.join(room);
+		// Client subscribes to a tenant room
+		socket.on('subscribe', (room) => {
+			if (!room) return;
+			socket.join(room);
+		});
 
 		socket.on('disconnect', () => {
 			// cleanup if needed

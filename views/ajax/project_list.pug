@@ -1,0 +1,30 @@
+each p in projects
+	- const pc = counts[p._id.toString()] || { notes: 0, memory: 0, urls: 0 }
+	.card.project-item.mb-3(data-id=p._id class=(p._id.toString() === activeProjectId ? 'active' : ''))
+		.card-body.p-0.pb-3
+			.d-flex.align-items-center.py-2.p-3.bg-hover-light
+				span.project-color(style=`background:${p.color}`)
+				span.project-item-name #{p.name}
+				if p.is_default
+					i.bi.bi-star-fill.text-warning.ms-auto(style="font-size:0.7rem")
+			.d-flex.align-items-center.mt-1.py-1.px-3.bg-hover-light.project-item-section.position-relative
+				a.stretched-link(href="/notes")
+				.pe-2.section-link
+					i.bi.bi-journal-text
+					span.ps-2 Notes
+				.ms-auto.section-link
+					span.section-count= pc.notes
+			.d-flex.align-items-center.py-1.px-3.bg-hover-light.project-item-section.position-relative
+				a.stretched-link(href="/memories")
+				.pe-2.section-link
+					i.bi.bi-lightbulb
+					span.ps-2 Memories
+				.ms-auto.section-link
+					span.section-count= pc.memory
+			.d-flex.align-items-center.py-1.px-3.bg-hover-light.project-item-section.position-relative
+				a.stretched-link(href="/urls")
+				.pe-2.section-link
+					i.bi.bi-link-45deg
+					span.ps-2 URLs
+				.ms-auto.section-link
+					span.section-count= pc.urls

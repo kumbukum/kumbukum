@@ -4,6 +4,7 @@ html(lang="en")
 		meta(charset="UTF-8")
 		meta(name="viewport" content="width=device-width, initial-scale=1")
 		title #{title || 'Kumbukum'}
+		link(href='/static/images/favicon.ico' rel="shortcut icon")
 		link(href="/static/css/vendor.css" rel="stylesheet")
 		link(href="/static/css/app.css" rel="stylesheet")
 		block head
@@ -12,8 +13,7 @@ html(lang="en")
 			nav.navbar.navbar-expand-lg.navbar-dark.bg-dark.sticky-top
 				.container-fluid
 					a.navbar-brand(href="/dashboard")
-						i.bi.bi-lightbulb.me-2
-						| Kumbukum
+						include includes/logo_white
 					.d-flex.align-items-center
 						if user
 							.dropdown
@@ -25,6 +25,8 @@ html(lang="en")
 									li: a.dropdown-item(href="/settings/security") Security
 									li: a.dropdown-item(href="/settings/tokens") Access Tokens
 									li: hr.dropdown-divider
+									li: a.dropdown-item(href="/settings/tokens") API Docs
+									li: hr.dropdown-divider
 									li: a.dropdown-item(href="#" onclick="logout()") Logout
 
 			.container-fluid
@@ -32,18 +34,26 @@ html(lang="en")
 					aside.col-md-2.bg-light.vh-100.p-3.sidebar#sidebar
 						block sidebar
 							.d-flex.justify-content-between.align-items-center.mb-3
-								h6.mb-0 Projects
+								h6.mb-0 Your projects
 								button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
 									i.bi.bi-plus
 							#project-list
+							hr.my-3
+							a.d-flex.align-items-center.text-decoration-none.text-muted.small(href="/trash")
+								i.bi.bi-trash.me-2
+								| Trash
+								span.badge.bg-danger.ms-auto.d-none#trash-count-badge
 
 					main.col-md-7.p-4#main-content
 						block content
 
 					aside.col-md-3.bg-light.vh-100.p-3.border-start#chat-sidebar
 						block chat
-							include partials/chat_sidebar
+							include includes/chat_sidebar
 
+		script(src="/socket.io/socket.io.js")
+		script.
+			var __host_id = "#{host_id}";
 		script(src="/static/js/vendor.js" type="module")
 		script(src="/static/js/chat.js")
 		script(src="/static/js/app.js")

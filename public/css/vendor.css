@@ -11514,11 +11514,11 @@ fieldset:disabled .btn {
   }
 }
 
-/* node_modules/.pnpm/bootstrap-icons@1.11.3/node_modules/bootstrap-icons/font/bootstrap-icons.css */
+/* node_modules/.pnpm/bootstrap-icons@1.13.1/node_modules/bootstrap-icons/font/bootstrap-icons.css */
 @font-face {
   font-display: block;
   font-family: "bootstrap-icons";
-  src: url("./bootstrap-icons-X6UQXWUS.woff2?dd67030699838ea613ee6dbda90effa6") format("woff2"), url("./bootstrap-icons-OCU552PF.woff?dd67030699838ea613ee6dbda90effa6") format("woff");
+  src: url("./bootstrap-icons-CVBWLLHT.woff2?e34853135f9e39acf64315236852cd5a") format("woff2"), url("./bootstrap-icons-VQNJTM6Q.woff?e34853135f9e39acf64315236852cd5a") format("woff");
 }
 .bi::before,
 [class^=bi-]::before,
@@ -17684,6 +17684,90 @@ fieldset:disabled .btn {
 .bi-vignette::before {
   content: "\f903";
 }
+.bi-bluesky::before {
+  content: "\f7f9";
+}
+.bi-tux::before {
+  content: "\f904";
+}
+.bi-beaker-fill::before {
+  content: "\f905";
+}
+.bi-beaker::before {
+  content: "\f906";
+}
+.bi-flask-fill::before {
+  content: "\f907";
+}
+.bi-flask-florence-fill::before {
+  content: "\f908";
+}
+.bi-flask-florence::before {
+  content: "\f909";
+}
+.bi-flask::before {
+  content: "\f90a";
+}
+.bi-leaf-fill::before {
+  content: "\f90b";
+}
+.bi-leaf::before {
+  content: "\f90c";
+}
+.bi-measuring-cup-fill::before {
+  content: "\f90d";
+}
+.bi-measuring-cup::before {
+  content: "\f90e";
+}
+.bi-unlock2-fill::before {
+  content: "\f90f";
+}
+.bi-unlock2::before {
+  content: "\f910";
+}
+.bi-battery-low::before {
+  content: "\f911";
+}
+.bi-anthropic::before {
+  content: "\f912";
+}
+.bi-apple-music::before {
+  content: "\f913";
+}
+.bi-claude::before {
+  content: "\f914";
+}
+.bi-openai::before {
+  content: "\f915";
+}
+.bi-perplexity::before {
+  content: "\f916";
+}
+.bi-css::before {
+  content: "\f917";
+}
+.bi-javascript::before {
+  content: "\f918";
+}
+.bi-typescript::before {
+  content: "\f919";
+}
+.bi-fork-knife::before {
+  content: "\f91a";
+}
+.bi-globe-americas-fill::before {
+  content: "\f91b";
+}
+.bi-globe-asia-australia-fill::before {
+  content: "\f91c";
+}
+.bi-globe-central-south-asia-fill::before {
+  content: "\f91d";
+}
+.bi-globe-europe-africa-fill::before {
+  content: "\f91e";
+}
 
 /* node_modules/.pnpm/huebee@2.1.1/node_modules/huebee/huebee.css */
 .huebee {
@@ -17769,7 +17853,7 @@ bootstrap/dist/css/bootstrap.css:
 
 bootstrap-icons/font/bootstrap-icons.css:
   (*!
-   * Bootstrap Icons v1.11.3 (https://icons.getbootstrap.com/)
+   * Bootstrap Icons v1.13.1 (https://icons.getbootstrap.com/)
    * Copyright 2019-2024 The Bootstrap Authors
    * Licensed under MIT (https://github.com/twbs/icons/blob/main/LICENSE)
    *)

@@ -21,6 +21,7 @@ const config = {
 	port: parseInt(process.env.PORT, 10) || 3000,
 	mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/kumbukum?replicaSet=rs0',
 	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+	socketRedis: process.env.SOCKET_REDIS === 'true',
 	sessionSecret: process.env.SESSION_SECRET || 'change-me',
 	jwtSecret: process.env.JWT_SECRET || 'change-me',
 	appUrl: process.env.APP_URL || 'http://localhost:3000',

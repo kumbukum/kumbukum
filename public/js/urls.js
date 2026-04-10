@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const newBtn = document.getElementById('new-url-btn');
 	const saveBtn = document.getElementById('save-url-btn');
 	const cancelBtn = document.getElementById('cancel-url-btn');
+	const batchToolbar = document.getElementById('batch-toolbar');
 
 	let currentUrlId = null;
 
@@ -14,12 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
 		document.getElementById('url-crawl').checked = data.crawl_enabled || false;
 		document.getElementById('url-input').readOnly = !!data.url;
 		formEl.classList.remove('d-none');
+		if (batchToolbar) batchToolbar.classList.add('d-none');
 	}
 
 	function hideForm() {
 		currentUrlId = null;
 		document.getElementById('url-input').readOnly = false;
 		formEl.classList.add('d-none');
+		if (batchToolbar) batchToolbar.classList.remove('d-none');
 	}
 
 	async function loadUrls() {
@@ -32,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
 				.map(
 					(u) => `
 				<div class="list-group-item url-item d-flex justify-content-between align-items-start" data-id="${u._id}">
+					<div class="batch-cb-wrap me-2 pt-1">
+						<input type="checkbox" class="form-check-input batch-cb" value="${u._id}">
+					</div>
 					<div class="flex-grow-1">
 						${u.og_image ? `<img src="${u.og_image}" class="og-image rounded mb-2 d-block" alt="">` : ''}
 						<strong>${u.title || u.url}</strong>
@@ -60,10 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
 		listEl.querySelectorAll('.delete-url-btn').forEach((btn) => {
 			btn.addEventListener('click', async () => {
 				const id = btn.closest('.url-item').dataset.id;
-				const confirmed = await confirmAction('Delete URL', 'This URL will be permanently deleted.');
+				const confirmed = await confirmAction('Move to Trash', 'This URL will be moved to trash.');
 				if (!confirmed) return;
 				await api('DELETE', `/urls/${id}`);
-				showSuccess('URL deleted');
+				showSuccess('Moved to trash');
 				loadUrls();
 			});
 		});
@@ -98,5 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 	window.addEventListener('project-changed', loadUrls);
+	window.addEventListener('batch-done', loadUrls);
 	loadUrls();
 });
