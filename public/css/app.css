@@ -1,0 +1,141 @@
+/* Kumbukum — App Styles */
+
+:root {
+	--sidebar-bg: #f8f9fa;
+	--chat-bg: #f8f9fa;
+}
+
+body {
+	min-height: 100vh;
+}
+
+.sidebar {
+	position: sticky;
+	top: 56px;
+	overflow-y: auto;
+}
+
+#chat-sidebar {
+	position: sticky;
+	top: 56px;
+	overflow-y: auto;
+}
+
+/* Chat messages */
+.chat-message {
+	margin-bottom: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.5rem;
+	max-width: 90%;
+}
+
+.chat-message.user {
+	background: #0d6efd;
+	color: white;
+	margin-left: auto;
+}
+
+.chat-message.assistant {
+	background: #e9ecef;
+	color: #212529;
+}
+
+/* Note list items */
+.note-item {
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.note-item:hover {
+	background: #f0f0f0;
+}
+
+/* Project list */
+.project-item {
+	cursor: pointer;
+	padding: 0.5rem 0.6rem;
+	border-radius: 0.375rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	margin-bottom: 0.25rem;
+}
+
+.project-item:hover {
+	background: #dee2e6;
+}
+
+.project-item.active {
+	background: #0d6efd;
+	color: white;
+}
+
+.project-item.active .section-link {
+	color: rgba(255, 255, 255, 0.85);
+}
+
+.project-item.active .section-link:hover {
+	background: rgba(255, 255, 255, 0.15);
+	color: white;
+}
+
+.project-item.active .section-count {
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.project-color {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	display: inline-block;
+}
+
+/* Section links in sidebar */
+.section-link {
+	display: flex;
+	align-items: center;
+	padding: 0.3rem 0.5rem;
+	margin-left: 0.25rem;
+	border-radius: 0.25rem;
+	font-size: 0.85rem;
+	color: #495057;
+	text-decoration: none;
+}
+
+.section-link:hover {
+	background: rgba(0, 0, 0, 0.05);
+	color: #212529;
+	text-decoration: none;
+}
+
+.section-count {
+	margin-left: auto;
+	font-size: 0.75rem;
+	color: #6c757d;
+	font-weight: 500;
+}
+
+/* URL cards */
+.url-card .og-image {
+	max-height: 120px;
+	object-fit: cover;
+}
+
+/* Memory tags */
+.tag-badge {
+	font-size: 0.75rem;
+}
+
+/* Editor container */
+#editor-container .ProseMirror {
+	min-height: 350px;
+	padding: 1rem;
+	border: 1px solid #dee2e6;
+	border-radius: 0.375rem;
+	outline: none;
+}
+
+#editor-container .ProseMirror:focus {
+	border-color: #86b7fe;
+	box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}

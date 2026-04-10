@@ -1,0 +1,32 @@
+extends layout
+
+block content
+	.d-flex.justify-content-between.align-items-center.mb-3
+		h4
+			i.bi.bi-journal-text.me-2
+			| Notes
+		button.btn.btn-primary#new-note-btn
+			i.bi.bi-plus-lg.me-1
+			| New Note
+
+	#notes-list.list-group
+
+	#note-editor.d-none
+		.mb-3
+			input.form-control.form-control-lg#note-title(type="text" placeholder="Note title")
+		.mb-3
+			.form-text Tags
+			input.form-control#note-tags(type="text" placeholder="tag1, tag2, ...")
+		#editor-container.border.rounded.p-3(style="min-height: 400px")
+		.mt-3
+			button.btn.btn-primary#save-note-btn
+				i.bi.bi-check-lg.me-1
+				| Save
+			button.btn.btn-outline-danger.ms-2#delete-note-btn.d-none
+				i.bi.bi-trash.me-1
+				| Delete
+			button.btn.btn-outline-secondary.ms-2#back-to-list-btn Cancel
+
+block scripts
+	script(src="/static/js/editor.js" type="module")
+	script(src="/static/js/notes.js")

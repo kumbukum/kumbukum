@@ -1,0 +1,28 @@
+extends layout
+
+block content
+	.d-flex.justify-content-between.align-items-center.mb-3
+		h4
+			i.bi.bi-brain.me-2
+			| Memory
+		button.btn.btn-primary#new-memory-btn
+			i.bi.bi-plus-lg.me-1
+			| Store Memory
+
+	#memory-inline-form.d-none.mb-4.border.rounded.p-3.bg-white
+		.mb-2
+			input.form-control#memory-title(type="text" placeholder="Title")
+		.mb-2
+			textarea.form-control#memory-content(rows="3" placeholder="Content")
+		.mb-2
+			input.form-control.form-control-sm#memory-tags(type="text" placeholder="Tags (comma separated)")
+		.mb-2
+			input.form-control.form-control-sm#memory-source(type="text" placeholder="Source (optional)")
+		div
+			button.btn.btn-primary.btn-sm#save-memory-btn Save
+			button.btn.btn-outline-secondary.btn-sm.ms-2#cancel-memory-btn Cancel
+
+	#memories-list.list-group
+
+block scripts
+	script(src="/static/js/memories.js")

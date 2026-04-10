@@ -1,0 +1,29 @@
+extends layout
+
+block content
+	.d-flex.justify-content-between.align-items-center.mb-3
+		h4
+			i.bi.bi-link-45deg.me-2
+			| Saved URLs
+		button.btn.btn-primary#new-url-btn
+			i.bi.bi-plus-lg.me-1
+			| Add URL
+
+	#url-inline-form.d-none.mb-4.border.rounded.p-3.bg-white
+		.mb-2
+			input.form-control#url-input(type="url" placeholder="https://...")
+		.mb-2
+			input.form-control#url-title(type="text" placeholder="Title (optional)")
+		.mb-2
+			input.form-control#url-description(type="text" placeholder="Description (optional)")
+		.mb-2.form-check
+			input.form-check-input#url-crawl(type="checkbox")
+			label.form-check-label(for="url-crawl") Enable full-site crawling
+		div
+			button.btn.btn-primary.btn-sm#save-url-btn Save
+			button.btn.btn-outline-secondary.btn-sm.ms-2#cancel-url-btn Cancel
+
+	#urls-list.list-group
+
+block scripts
+	script(src="/static/js/urls.js")

@@ -1,0 +1,78 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGO_URI: mongodb://mongo:27017/kumbukum
+      REDIS_URL: redis://redis:6379
+      TYPESENSE_HOST: typesense
+      TYPESENSE_PORT: 8108
+      TYPESENSE_PROTOCOL: http
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL:-}
+      APP_URL: ${APP_URL}
+    depends_on:
+      - mongo
+      - redis
+      - typesense
+    restart: unless-stopped
+
+  ws-server:
+    build: .
+    command: node ws-server.js
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: ${SESSION_SECRET}
+      MONGO_URI: mongodb://mongo:27017/kumbukum
+    depends_on:
+      - redis
+      - mongo
+    restart: unless-stopped
+
+  mcp-server:
+    build: .
+    command: node apps/mcp/server.js
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      API_BASE_URL: http://app:3000
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-bookworm
+    restart: unless-stopped
+
+  typesense:
+    image: typesense/typesense:27.1
+    volumes:
+      - typesense_data:/data
+    command: --data-dir /data --api-key=${TYPESENSE_API_KEY}
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  typesense_data:

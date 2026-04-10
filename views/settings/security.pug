@@ -1,0 +1,29 @@
+extends layout
+
+block settings
+	h4.mb-4 Security Settings
+
+	.card.mb-4
+		.card-body
+			h5.card-title
+				i.bi.bi-shield-lock.me-2
+				| Two-Factor Authentication
+			if user.totp_enabled
+				p.text-success
+					i.bi.bi-check-circle.me-1
+					| 2FA is enabled
+				button.btn.btn-outline-danger#disable-2fa Disable 2FA
+			else
+				p.text-muted 2FA is not enabled
+				button.btn.btn-primary#setup-2fa Enable 2FA
+
+	.card
+		.card-body
+			h5.card-title
+				i.bi.bi-fingerprint.me-2
+				| Passkeys
+			#passkey-list.mb-3
+			button.btn.btn-primary#add-passkey Add Passkey
+
+block scripts
+	script(src="/static/js/security.js")

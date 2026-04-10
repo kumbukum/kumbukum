@@ -1,0 +1,16 @@
+extends layout
+
+block settings
+	h4.mb-4 Access Tokens
+
+	.card.mb-4
+		.card-body
+			h5.card-title Create New Token
+			.input-group
+				input.form-control#token-name(type="text" placeholder="Token name (e.g. MCP Server)")
+				button.btn.btn-primary#create-token Create
+
+	#tokens-list
+
+block scripts
+	script(src="/static/js/tokens.js")

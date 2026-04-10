@@ -1,0 +1,17 @@
+extends ../layout
+
+block content
+	.row
+		.col-md-3
+			.list-group.mb-3
+				a.list-group-item.list-group-item-action(href="/settings/profile" class=(title === 'Profile' ? 'active' : ''))
+					i.bi.bi-person.me-2
+					| Profile
+				a.list-group-item.list-group-item-action(href="/settings/security" class=(title === 'Security' ? 'active' : ''))
+					i.bi.bi-shield-lock.me-2
+					| Security
+				a.list-group-item.list-group-item-action(href="/settings/tokens" class=(title === 'Access Tokens' ? 'active' : ''))
+					i.bi.bi-key.me-2
+					| Access Tokens
+		.col-md-9
+			block settings

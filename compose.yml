@@ -1,0 +1,74 @@
+services:
+    app:
+        build: .
+        command: node --watch app.js
+        ports:
+            - "3000:3000"
+        volumes:
+            - .:/app
+            - /app/node_modules
+        environment:
+            NODE_ENV: development
+            PORT: 3000
+            MONGO_URI: mongodb://mongo:27017/kumbukum?replicaSet=rs0
+            REDIS_URL: redis://redis:6379
+            TYPESENSE_HOST: typesense
+            TYPESENSE_PORT: 8108
+            TYPESENSE_PROTOCOL: http
+            TYPESENSE_API_KEY: kumbukum-dev-key
+            TYPESENSE_NODES: ""
+            SESSION_SECRET: dev-session-secret-change-me
+            JWT_SECRET: dev-jwt-secret-change-me
+            SMTP_HOST: ""
+            SMTP_PORT: 587
+            SMTP_USER: ""
+            SMTP_PASS: ""
+            SMTP_FROM: "noreply@localhost"
+            LLM_PROVIDER: openai
+            LLM_API_KEY: ""
+            LLM_MODEL: ""
+            APP_URL: http://localhost:3000
+        depends_on:
+            mongo-init:
+                condition: service_completed_successfully
+            redis:
+                condition: service_started
+            typesense:
+                condition: service_started
+
+    mongo:
+        image: mongo:7
+        ports:
+            - "27017:27017"
+        volumes:
+            - mongo_data:/data/db
+        command: mongod --replSet rs0 --bind_ip_all
+
+    mongo-init:
+        image: mongo:7
+        depends_on:
+            mongo:
+                condition: service_started
+        volumes:
+            - ./docker/mongo-init-replset.sh:/docker-entrypoint-initdb.d/init.sh:ro
+        entrypoint: /bin/bash
+        command: /docker-entrypoint-initdb.d/init.sh
+        environment:
+            MONGO_HOST: mongo
+
+    redis:
+        image: redis:7-bookworm
+        ports:
+            - "6379:6379"
+
+    typesense:
+        image: typesense/typesense:30.1
+        ports:
+            - "8108:8108"
+        volumes:
+            - typesense_data:/data
+        command: --data-dir /data --api-key=kumbukum-dev-key
+
+volumes:
+    mongo_data:
+    typesense_data:

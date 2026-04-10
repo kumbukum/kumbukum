@@ -1,0 +1,50 @@
+doctype html
+html(lang="en")
+	head
+		meta(charset="UTF-8")
+		meta(name="viewport" content="width=device-width, initial-scale=1")
+		title #{title || 'Kumbukum'}
+		link(href="/static/css/vendor.css" rel="stylesheet")
+		link(href="/static/css/app.css" rel="stylesheet")
+		block head
+	body
+		block body
+			nav.navbar.navbar-expand-lg.navbar-dark.bg-dark.sticky-top
+				.container-fluid
+					a.navbar-brand(href="/dashboard")
+						i.bi.bi-lightbulb.me-2
+						| Kumbukum
+					.d-flex.align-items-center
+						if user
+							.dropdown
+								button.btn.btn-outline-light.btn-sm.dropdown-toggle(type="button" data-bs-toggle="dropdown")
+									i.bi.bi-person-circle.me-1
+									= user.name
+								ul.dropdown-menu.dropdown-menu-end
+									li: a.dropdown-item(href="/settings/profile") Profile
+									li: a.dropdown-item(href="/settings/security") Security
+									li: a.dropdown-item(href="/settings/tokens") Access Tokens
+									li: hr.dropdown-divider
+									li: a.dropdown-item(href="#" onclick="logout()") Logout
+
+			.container-fluid
+				.row
+					aside.col-md-2.bg-light.vh-100.p-3.sidebar#sidebar
+						block sidebar
+							.d-flex.justify-content-between.align-items-center.mb-3
+								h6.mb-0 Projects
+								button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
+									i.bi.bi-plus
+							#project-list
+
+					main.col-md-7.p-4#main-content
+						block content
+
+					aside.col-md-3.bg-light.vh-100.p-3.border-start#chat-sidebar
+						block chat
+							include partials/chat_sidebar
+
+		script(src="/static/js/vendor.js" type="module")
+		script(src="/static/js/chat.js")
+		script(src="/static/js/app.js")
+		block scripts
