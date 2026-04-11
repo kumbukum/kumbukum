@@ -30,7 +30,46 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.use('/static', express.static(path.join(__dirname, 'public')));
+// --- Static file cache control ---
+var _font_extensions = /\.(woff|woff2|ttf|otf|eot)$/i;
+var _static_cache_control = process.env.NODE_ENV === 'production'
+    ? {
+        index: false,
+        maxAge: '7d',
+        etag: true,
+        lastModified: true,
+        setHeaders: (res, filePath) => {
+            res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+            if (_font_extensions.test(filePath)) {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+            }
+        },
+    }
+    : {
+        index: false,
+        maxAge: '0',
+        etag: false,
+        lastModified: false,
+        setHeaders: (res, filePath) => {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            if (_font_extensions.test(filePath)) {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+            }
+        },
+    };
+
+app.use('/static', express.static(path.join(__dirname, 'public'), _static_cache_control));
+
+// No cache for dynamic content
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+    res.set('Cloudflare-CDN-Cache-Control', 'no-store');
+    res.set('CDN-Cache-Control', 'no-store');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.removeHeader('ETag');
+    next();
+});
 
 var _90_days_in_ms = 90 * 24 * 60 * 60 * 1000;
 
