@@ -38,6 +38,16 @@ block body
 							.text-center.mt-3
 								a(href="/signup") Create an account
 
+						#magic-link-form.d-none
+							h5.text-center.mb-3 Enter your email to receive a magic link
+							form(id="form-magic-link")
+								.mb-3
+									label.form-label(for="magic-link-email") Email
+									input.form-control#magic-link-email(type="email" name="email" required autofocus)
+								button.btn.btn-primary.w-100(type="submit") Send Magic Link
+							.text-center.mt-3
+								a.small#magic-link-back(href="#") Back to login
+
 						#totp-form.d-none
 							form(id="form-2fa")
 								.mb-3
@@ -46,4 +56,5 @@ block body
 								button.btn.btn-primary.w-100(type="submit") Verify
 
 block scripts
+	script(src="/static/js/simplewebauthn-browser.min.js")
 	script(src="/static/js/auth.js")

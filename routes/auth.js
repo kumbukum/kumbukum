@@ -5,7 +5,7 @@ import { User } from '../model/user.js';
 import { createTenant } from '../modules/tenancy.js';
 import { ensureCollections } from '../modules/typesense.js';
 import { generateToken } from '../middleware/auth.js';
-import { sendVerificationEmail, sendPasswordResetEmail } from '../services/email_service.js';
+import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../services/email_service.js';
 import { sendMagicLink, verifyMagicLink } from '../services/magic_link_service.js';
 import * as passkeyService from '../services/passkey_service.js';
 import { createDefaultProject } from '../services/project_service.js';
@@ -94,6 +94,11 @@ router.get('/verify', async (req, res) => {
 
 		// Clean up pending signup
 		await PendingSignup.deleteOne({ _id: pending._id });
+
+		// Send welcome email (fire-and-forget)
+		sendWelcomeEmail(user.email, user.name).catch((e) =>
+			console.warn('Welcome email failed:', e.message),
+		);
 
 		// Sign the user in directly
 		req.session.userId = user._id.toString();
@@ -397,7 +402,10 @@ router.post('/passkey/register/verify', async (req, res) => {
 		const challenge = req.session.passkeyChallenge;
 		delete req.session.passkeyChallenge;
 
-		await passkeyService.verifyAndSaveRegistration(user, req.body, challenge);
+		const attestation = req.body.attestation;
+		if (!attestation) return res.status(400).json({ error: 'Missing attestation data' });
+
+		await passkeyService.verifyAndSaveRegistration(user, attestation, challenge);
 		res.json({ message: 'Passkey registered' });
 	} catch (err) {
 		console.error('Passkey register verify error:', err);
@@ -407,13 +415,8 @@ router.post('/passkey/register/verify', async (req, res) => {
 
 router.post('/passkey/login/options', async (req, res) => {
 	try {
-		const { email } = req.body;
-		const user = await User.findOne({ email, is_active: true });
-		if (!user) return res.status(404).json({ error: 'User not found' });
-
-		const options = await passkeyService.getAuthenticationOptions(user);
+		const options = await passkeyService.getAuthenticationOptions();
 		req.session.passkeyChallenge = options.challenge;
-		req.session.passkeyUserId = user._id.toString();
 		res.json(options);
 	} catch (err) {
 		console.error('Passkey login options error:', err);
@@ -424,17 +427,18 @@ router.post('/passkey/login/options', async (req, res) => {
 router.post('/passkey/login/verify', async (req, res) => {
 	try {
 		const challenge = req.session.passkeyChallenge;
-		const userId = req.session.passkeyUserId;
 		delete req.session.passkeyChallenge;
-		delete req.session.passkeyUserId;
 
-		const user = await User.findById(userId);
-		if (!user) return res.status(404).json({ error: 'User not found' });
+		const assertion = req.body.assertion;
+		if (!assertion) return res.status(400).json({ error: 'Missing assertion data' });
 
-		const verification = await passkeyService.verifyAuthentication(user, req.body, challenge);
+		const { verification, passkey } = await passkeyService.verifyAuthentication(assertion, challenge);
 		if (!verification.verified) {
 			return res.status(401).json({ error: 'Passkey authentication failed' });
 		}
+
+		const user = await User.findById(passkey.user);
+		if (!user) return res.status(404).json({ error: 'User not found' });
 
 		req.session.userId = user._id.toString();
 		req.session.tenantId = user.tenant?.toString();

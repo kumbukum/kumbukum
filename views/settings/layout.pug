@@ -13,5 +13,15 @@ block content
 				a.list-group-item.list-group-item-action(href="/settings/tokens" class=(title === 'Access Tokens' ? 'active' : ''))
 					i.bi.bi-key.me-2
 					| Access Tokens
+				a.list-group-item.list-group-item-action(href="/settings/typesense" class=(title === 'Typesense' ? 'active' : ''))
+					i.bi.bi-search.me-2
+					| Typesense
+				a.list-group-item.list-group-item-action(href="/settings/usage" class=(title === 'Usage' ? 'active' : ''))
+					i.bi.bi-bar-chart.me-2
+					| Usage
+				if is_hosted
+					a.list-group-item.list-group-item-action(href="/settings/subscription" class=(title === 'Subscription' ? 'active' : ''))
+						i.bi.bi-credit-card.me-2
+						| Subscription
 		.col-md-9
 			block settings

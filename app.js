@@ -11,6 +11,8 @@ import { setupSocketIO } from './modules/socket.js';
 import { initTypesense } from './modules/typesense.js';
 import { resolveTenant } from './modules/tenancy.js';
 import { startChangeStreams } from './modules/change_stream.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './swagger.js';
 import authRoutes from './routes/auth.js';
 import apiRoutes from './routes/api.js';
 import webRoutes from './routes/web.js';
@@ -56,6 +58,12 @@ app.use(sessionMiddleware);
 app.use(resolveTenant);
 
 // Auth routes mounted at root (/login, /signup, /logout, etc.)
+app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+	swaggerOptions: {
+		persistAuthorization: true,
+	},
+}));
+
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/v1', apiRoutes);

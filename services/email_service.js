@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import config from '../config.js';
+import emailTemplates from '../config/email_templates.js';
+import { getSetting } from './system_settings_service.js';
 
 let transporter;
 
@@ -33,29 +35,69 @@ async function sendMail({ to, subject, html }) {
 	return t.sendMail(mailOptions);
 }
 
-export async function sendVerificationEmail(email, token) {
+async function resolveTemplate(templateKey) {
+	const subjectOverride = await getSetting(`email_template.${templateKey}.subject`);
+	const htmlOverride = await getSetting(`email_template.${templateKey}.html`);
+	const defaults = emailTemplates[templateKey] || {};
+	return {
+		subject: subjectOverride || defaults.subject,
+		html: htmlOverride || defaults.html,
+	};
+}
+
+function renderTemplate(template, variables) {
+	let result = template;
+	for (const [key, value] of Object.entries(variables)) {
+		result = result.replaceAll(`{{${key}}}`, value);
+	}
+	return result;
+}
+
+export async function sendVerificationEmail(email, token, name) {
 	const url = `${config.appUrl}/verify?token=${encodeURIComponent(token)}`;
+	const { subject, html } = await resolveTemplate('verification');
 	return sendMail({
 		to: email,
-		subject: 'Confirm your Kumbukum account',
-		html: `<p>Welcome to Kumbukum!</p><p><a href="${url}">Click here to confirm your account</a></p><p>This link expires in 24 hours.</p>`,
+		subject: renderTemplate(subject, { url, name: name || '' }),
+		html: renderTemplate(html, { url, name: name || '' }),
 	});
 }
 
 export async function sendPasswordResetEmail(email, token) {
 	const url = `${config.appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+	const { subject, html } = await resolveTemplate('password_reset');
 	return sendMail({
 		to: email,
-		subject: 'Reset your Kumbukum password',
-		html: `<p>You requested a password reset.</p><p><a href="${url}">Click here to reset your password</a></p><p>This link expires in 1 hour.</p>`,
+		subject: renderTemplate(subject, { url }),
+		html: renderTemplate(html, { url }),
 	});
 }
 
 export async function sendMagicLinkEmail(email, token) {
 	const url = `${config.appUrl}/magic?token=${encodeURIComponent(token)}`;
+	const { subject, html } = await resolveTemplate('magic_link');
 	return sendMail({
 		to: email,
-		subject: 'Your Kumbukum login link',
-		html: `<p>Click the link below to sign in:</p><p><a href="${url}">Sign in to Kumbukum</a></p><p>This link expires in 15 minutes.</p>`,
+		subject: renderTemplate(subject, { url }),
+		html: renderTemplate(html, { url }),
+	});
+}
+
+export async function sendWelcomeEmail(email, name) {
+	const loginUrl = `${config.appUrl}/login`;
+	const { subject, html } = await resolveTemplate('welcome');
+	return sendMail({
+		to: email,
+		subject: renderTemplate(subject, { name: name || '', loginUrl }),
+		html: renderTemplate(html, { name: name || '', loginUrl }),
+	});
+}
+
+export async function sendTestEmail(to, templateKey, sampleVariables) {
+	const { subject, html } = await resolveTemplate(templateKey);
+	return sendMail({
+		to,
+		subject: renderTemplate(subject, sampleVariables),
+		html: renderTemplate(html, sampleVariables),
 	});
 }

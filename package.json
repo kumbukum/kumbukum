@@ -74,11 +74,28 @@
     "otplib": "^13.4.0",
     "pug": "^3.0.4",
     "socket.io": "^4.8.3",
+    "swagger-ui-express": "^5.0.1",
     "sweetalert2": "^11.26.24",
     "typesense": "^3.0.5"
   },
   "devDependencies": {
     "esbuild": "^0.28.0",
     "nodemon": "^3.1.14"
-  }
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "bufferutil",
+        "utf-8-validate"
+      ]
+    },
+    "overrides": {
+      "bufferutil": "^4.1.0",
+      "utf-8-validate": "^5.0.10",
+      "@tiptap/core": "^3.22.3",
+      "@tiptap/pm": "^3.22.3",
+      "@tiptap/extension-code-block": "^3.22.3"
+    }
+  },
+  "packageManager": "pnpm@10.33.0"
 }

@@ -166,4 +166,168 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dateStr) return '—';
         return new Date(dateStr).toLocaleDateString();
     }
+
+    // ---- Email templates page ----
+    const templateList = document.getElementById('template-list');
+    const templateForm = document.getElementById('template-form');
+
+    if (templateList && templateForm) {
+        let templates = [];
+        let activeKey = null;
+
+        const subjectInput = document.getElementById('tpl-subject');
+        const htmlTextarea = document.getElementById('tpl-html');
+        const previewFrame = document.getElementById('tpl-preview');
+        const variableChips = document.getElementById('variable-chips');
+        const templateTitle = document.getElementById('template-title');
+
+        const templateLabels = {
+            verification: 'Verification',
+            password_reset: 'Password Reset',
+            welcome: 'Welcome',
+            magic_link: 'Magic Link',
+        };
+
+        async function loadTemplates() {
+            try {
+                const res = await fetch('/admin/api/email-templates');
+                const data = await res.json();
+                templates = data.templates;
+                renderSidebar();
+                if (templates.length && !activeKey) {
+                    selectTemplate(templates[0].key);
+                } else if (activeKey) {
+                    selectTemplate(activeKey);
+                }
+            } catch (err) {
+                console.error('Load email templates error:', err);
+            }
+        }
+
+        function renderSidebar() {
+            templateList.innerHTML = templates.map((t) => `
+                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ${t.key === activeKey ? 'active' : ''}" data-key="${t.key}">
+                    ${escapeHtml(templateLabels[t.key] || t.key)}
+                    ${t.isCustomized ? '<span class="badge bg-info">Customized</span>' : ''}
+                </a>
+            `).join('');
+
+            templateList.querySelectorAll('.list-group-item').forEach((item) => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    selectTemplate(item.dataset.key);
+                });
+            });
+        }
+
+        function selectTemplate(key) {
+            activeKey = key;
+            const tpl = templates.find((t) => t.key === key);
+            if (!tpl) return;
+
+            templateTitle.textContent = templateLabels[key] || key;
+            subjectInput.value = tpl.subject;
+            htmlTextarea.value = tpl.html;
+            updatePreview();
+
+            variableChips.innerHTML = tpl.variables.map((v) =>
+                `<span class="badge bg-secondary" role="button" title="${escapeHtml(v.description)}" data-var="${v.key}">{{${v.key}}}</span>`
+            ).join('');
+
+            variableChips.querySelectorAll('.badge').forEach((chip) => {
+                chip.addEventListener('click', () => {
+                    const tag = `{{${chip.dataset.var}}}`;
+                    const start = htmlTextarea.selectionStart;
+                    const end = htmlTextarea.selectionEnd;
+                    htmlTextarea.value = htmlTextarea.value.substring(0, start) + tag + htmlTextarea.value.substring(end);
+                    htmlTextarea.focus();
+                    htmlTextarea.selectionStart = htmlTextarea.selectionEnd = start + tag.length;
+                    updatePreview();
+                });
+            });
+
+            renderSidebar();
+        }
+
+        function updatePreview() {
+            let html = htmlTextarea.value;
+            const tpl = templates.find((t) => t.key === activeKey);
+            if (tpl) {
+                for (const v of tpl.variables) {
+                    let sample = `[${v.key}]`;
+                    if (v.key === 'name') sample = 'John';
+                    if (v.key === 'url' || v.key === 'loginUrl') sample = '#';
+                    html = html.replaceAll(`{{${v.key}}}`, sample);
+                }
+            }
+            previewFrame.srcdoc = html;
+        }
+
+        htmlTextarea.addEventListener('input', updatePreview);
+
+        document.getElementById('btn-save').addEventListener('click', async () => {
+            if (!activeKey) return;
+            try {
+                const res = await fetch(`/admin/api/email-templates/${activeKey}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject: subjectInput.value, html: htmlTextarea.value }),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showToast('Template saved');
+                    await loadTemplates();
+                } else {
+                    alert(data.error || 'Save failed');
+                }
+            } catch (err) {
+                console.error('Save template error:', err);
+                alert('Failed to save template');
+            }
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', async () => {
+            if (!activeKey) return;
+            if (!confirm(`Reset "${templateLabels[activeKey] || activeKey}" to default? This will discard your customizations.`)) return;
+            try {
+                const res = await fetch(`/admin/api/email-templates/${activeKey}/reset`, {
+                    method: 'POST',
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showToast('Template reset to default');
+                    await loadTemplates();
+                } else {
+                    alert(data.error || 'Reset failed');
+                }
+            } catch (err) {
+                console.error('Reset template error:', err);
+                alert('Failed to reset template');
+            }
+        });
+
+        document.getElementById('btn-test-email').addEventListener('click', async () => {
+            if (!activeKey) return;
+            const email = prompt('Send test email to:');
+            if (!email) return;
+            try {
+                const res = await fetch(`/admin/api/email-templates/${activeKey}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email }),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showToast('Test email sent');
+                } else {
+                    alert(data.error || 'Failed to send test email');
+                }
+            } catch (err) {
+                console.error('Test email error:', err);
+                alert('Failed to send test email');
+            }
+        });
+
+        loadTemplates();
+    }
 });

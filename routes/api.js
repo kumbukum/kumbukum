@@ -15,6 +15,9 @@ import { emitToTenant } from '../modules/socket.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { User } from '../model/user.js';
+import { UserPasskey } from '../model/user_passkey.js';
+import crypto from 'node:crypto';
 
 const router = Router();
 
@@ -444,6 +447,123 @@ router.delete('/trash', async (req, res) => {
 	} catch (err) {
 		console.error('Empty trash error:', err);
 		res.status(500).json({ error: 'Empty trash failed' });
+	}
+});
+
+// ---- Profile ----
+
+router.put('/profile', async (req, res) => {
+	try {
+		const user = await User.findById(req.userId);
+		if (!user) return res.status(404).json({ error: 'User not found' });
+
+		const { name, email, timezone } = req.body;
+		if (name) user.name = name.trim();
+		if (email) user.email = email.trim().toLowerCase();
+		if (timezone) user.timezone = timezone.trim();
+		await user.save();
+
+		res.json({ user: user.toSafe() });
+	} catch (err) {
+		console.error('Profile update error:', err);
+		res.status(500).json({ error: 'Profile update failed' });
+	}
+});
+
+// ---- Access Tokens ----
+
+router.get('/tokens', async (req, res) => {
+	try {
+		const user = await User.findById(req.userId);
+		if (!user) return res.status(404).json({ error: 'User not found' });
+		const tokens = (user.access_tokens || []).map((t) => ({
+			_id: t._id,
+			name: t.name,
+			created_at: t.created_at,
+		}));
+		res.json({ tokens });
+	} catch (err) {
+		console.error('List tokens error:', err);
+		res.status(500).json({ error: 'Failed to list tokens' });
+	}
+});
+
+router.post('/tokens', async (req, res) => {
+	try {
+		const { name } = req.body;
+		if (!name?.trim()) return res.status(400).json({ error: 'Token name required' });
+
+		const user = await User.findById(req.userId);
+		if (!user) return res.status(404).json({ error: 'User not found' });
+
+		const token = crypto.randomBytes(32).toString('hex');
+		user.access_tokens.push({ token, name: name.trim() });
+		await user.save();
+
+		const entry = user.access_tokens[user.access_tokens.length - 1];
+		res.status(201).json({ token, _id: entry._id, name: entry.name, created_at: entry.created_at });
+	} catch (err) {
+		console.error('Create token error:', err);
+		res.status(500).json({ error: 'Failed to create token' });
+	}
+});
+
+router.delete('/tokens/:id', async (req, res) => {
+	try {
+		const user = await User.findById(req.userId);
+		if (!user) return res.status(404).json({ error: 'User not found' });
+
+		const idx = user.access_tokens.findIndex((t) => t._id.toString() === req.params.id);
+		if (idx === -1) return res.status(404).json({ error: 'Token not found' });
+
+		user.access_tokens.splice(idx, 1);
+		await user.save();
+
+		res.json({ message: 'Token deleted' });
+	} catch (err) {
+		console.error('Delete token error:', err);
+		res.status(500).json({ error: 'Failed to delete token' });
+	}
+});
+
+// ---- 2FA Disable ----
+
+router.post('/2fa/disable', async (req, res) => {
+	try {
+		const user = await User.findById(req.userId).select('+totp_secret');
+		if (!user) return res.status(404).json({ error: 'User not found' });
+
+		user.totp_enabled = false;
+		user.totp_secret = undefined;
+		await user.save();
+
+		res.json({ message: '2FA disabled' });
+	} catch (err) {
+		console.error('2FA disable error:', err);
+		res.status(500).json({ error: 'Failed to disable 2FA' });
+	}
+});
+
+// ---- Passkeys ----
+
+router.get('/passkeys', async (req, res) => {
+	try {
+		const passkeys = await UserPasskey.find({ user: req.userId }).select('name device_type backed_up createdAt').lean();
+		res.json({ passkeys });
+	} catch (err) {
+		console.error('List passkeys error:', err);
+		res.status(500).json({ error: 'Failed to list passkeys' });
+	}
+});
+
+router.delete('/passkeys/:id', async (req, res) => {
+	try {
+		const passkey = await UserPasskey.findOneAndDelete({ _id: req.params.id, user: req.userId });
+		if (!passkey) return res.status(404).json({ error: 'Passkey not found' });
+		res.json({ message: 'Passkey deleted' });
+	} catch (err) {
+		console.error('Delete passkey error:', err);
+		res.status(500).json({ error: 'Failed to delete passkey' });
 	}
 });
 

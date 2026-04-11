@@ -1,0 +1,29 @@
+extends layout
+
+block settings
+	h4.mb-4 Usage
+
+	.card.mb-4
+		.card-body
+			h5.card-title
+				i.bi.bi-bar-chart.me-2
+				| Storage Usage
+			#usage-stats
+				p.text-muted Loading usage data...
+
+block scripts
+	script.
+		document.addEventListener('DOMContentLoaded', async function() {
+			try {
+				var data = await api('GET', '/counts');
+				var el = document.getElementById('usage-stats');
+				el.innerHTML = '<table class="table"><tbody>'
+					+ '<tr><td><i class="bi bi-file-text me-2"></i>Notes</td><td>' + (data.notes || 0) + '</td></tr>'
+					+ '<tr><td><i class="bi bi-lightbulb me-2"></i>Memories</td><td>' + (data.memories || 0) + '</td></tr>'
+					+ '<tr><td><i class="bi bi-link-45deg me-2"></i>URLs</td><td>' + (data.urls || 0) + '</td></tr>'
+					+ '<tr><td><i class="bi bi-folder me-2"></i>Projects</td><td>' + (data.projects || 0) + '</td></tr>'
+					+ '</tbody></table>';
+			} catch (err) {
+				document.getElementById('usage-stats').innerHTML = '<p class="text-danger">Failed to load usage data</p>';
+			}
+		});

@@ -1,4 +1,7 @@
+ignoreWorkspaceRootCheck: true
+linkWorkspacePackages: deep
 packages:
   - "apps/*"
 allowBuilds:
+  '@scarf/scarf': true
   esbuild: true

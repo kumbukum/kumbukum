@@ -1,0 +1,44 @@
+extends layout
+
+block content
+	.row
+		.col-md-2
+			h6.text-muted.mb-2 Templates
+			.list-group#template-list
+				//- Populated by JS
+
+		.col-md-10
+			.d-flex.justify-content-between.align-items-center.mb-3
+				h4.mb-0#template-title Email Templates
+				div
+					button.btn.btn-outline-secondary.btn-sm.me-2#btn-test-email
+						i.bi.bi-send.me-1
+						| Send Test
+					button.btn.btn-outline-warning.btn-sm.me-2#btn-reset
+						i.bi.bi-arrow-counterclockwise.me-1
+						| Reset to Default
+					button.btn.btn-primary.btn-sm#btn-save
+						i.bi.bi-check-lg.me-1
+						| Save
+
+			form#template-form
+				.mb-3
+					label.form-label(for="tpl-subject") Subject
+					input.form-control#tpl-subject(type="text")
+
+				.mb-2
+					label.form-label(for="tpl-html") HTML Body
+					.d-flex.gap-1.mb-1#variable-chips
+						//- Populated by JS
+					textarea.form-control.font-monospace#tpl-html(rows="12")
+
+				.mb-3
+					label.form-label Preview
+					.border.rounded.bg-white
+						iframe#tpl-preview(
+							sandbox=""
+							style="width:100%;min-height:200px;border:none;"
+						)
+
+block scripts
+	script(src="/static/js/admin.js")

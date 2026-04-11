@@ -16,21 +16,23 @@ export async function getRegistrationOptions(user) {
 	const excludeCredentials = passkeys.map((pk) => ({
 		id: pk.credential_id,
 		type: 'public-key',
-		transports: pk.transports,
+		transports: pk.transports || [],
 	}));
 
 	return generateRegistrationOptions({
 		rpName,
 		rpID,
-		userID: user._id.toString(),
+		userID: new TextEncoder().encode(user._id.toString()),
 		userName: user.email,
-		userDisplayName: user.name,
+		userDisplayName: user.name || user.email,
 		excludeCredentials,
 		attestationType: 'none',
 		authenticatorSelection: {
 			residentKey: 'preferred',
 			userVerification: 'preferred',
+			authenticatorAttachment: 'platform',
 		},
+		supportedAlgorithmIDs: [-7, -257],
 	});
 }
 
@@ -40,6 +42,7 @@ export async function verifyAndSaveRegistration(user, response, challenge) {
 		expectedChallenge: challenge,
 		expectedOrigin: origin,
 		expectedRPID: rpID,
+		requireUserVerification: false,
 	});
 
 	if (!verification.verified || !verification.registrationInfo) {
@@ -52,34 +55,29 @@ export async function verifyAndSaveRegistration(user, response, challenge) {
 	await UserPasskey.create({
 		user: user._id,
 		credential_id: credential.id,
-		public_key: Buffer.from(credential.publicKey),
+		public_key: Buffer.from(credential.publicKey).toString('base64url'),
 		counter: credential.counter,
 		device_type: credentialDeviceType,
 		backed_up: credentialBackedUp,
-		transports: response.response.transports || [],
+		transports: response.response?.transports || [],
 	});
 
 	return verification;
 }
 
-export async function getAuthenticationOptions(user) {
-	const passkeys = await UserPasskey.find({ user: user._id });
-	const allowCredentials = passkeys.map((pk) => ({
-		id: pk.credential_id,
-		type: 'public-key',
-		transports: pk.transports,
-	}));
-
+export async function getAuthenticationOptions() {
 	return generateAuthenticationOptions({
 		rpID,
-		allowCredentials,
+		allowCredentials: [],
 		userVerification: 'preferred',
 	});
 }
 
-export async function verifyAuthentication(user, response, challenge) {
+export async function verifyAuthentication(response, challenge) {
 	const passkey = await UserPasskey.findOne({ credential_id: response.id });
 	if (!passkey) throw new Error('Passkey not found');
+
+	const publicKeyBuffer = Buffer.from(passkey.public_key, 'base64url');
 
 	const verification = await verifyAuthenticationResponse({
 		response,
@@ -88,10 +86,11 @@ export async function verifyAuthentication(user, response, challenge) {
 		expectedRPID: rpID,
 		credential: {
 			id: passkey.credential_id,
-			publicKey: passkey.public_key,
+			publicKey: publicKeyBuffer,
 			counter: passkey.counter,
-			transports: passkey.transports,
+			transports: passkey.transports || [],
 		},
+		requireUserVerification: false,
 	});
 
 	if (verification.verified) {
@@ -99,5 +98,5 @@ export async function verifyAuthentication(user, response, challenge) {
 		await passkey.save();
 	}
 
-	return verification;
+	return { verification, passkey };
 }

@@ -7,6 +7,9 @@ import { Url } from '../model/url.js';
 import { Project } from '../model/project.js';
 import { getTypesenseClient } from '../modules/typesense.js';
 import { isSysadminCredentials, requireAdmin } from '../middleware/sysadmin.js';
+import emailTemplates from '../config/email_templates.js';
+import { getByCategory, setSetting, deleteSetting } from '../services/system_settings_service.js';
+import { sendTestEmail } from '../services/email_service.js';
 
 const router = Router();
 
@@ -174,6 +177,110 @@ router.delete('/api/accounts/:id', async (req, res) => {
     } catch (err) {
         console.error('Admin delete account error:', err);
         res.status(500).json({ error: 'Failed to delete account' });
+    }
+});
+
+// ---- Email Templates ----
+
+router.get('/email-templates', (req, res) => {
+    res.render('admin/email_templates', { title: 'Email Templates', activeNav: 'email-templates' });
+});
+
+router.get('/api/email-templates', async (req, res) => {
+    try {
+        const overrides = await getByCategory('email_templates');
+        const overrideMap = {};
+        for (const o of overrides) {
+            overrideMap[o.key] = o.value;
+        }
+
+        const templates = Object.entries(emailTemplates).map(([key, defaults]) => {
+            const subjectKey = `email_template.${key}.subject`;
+            const htmlKey = `email_template.${key}.html`;
+            return {
+                key,
+                subject: overrideMap[subjectKey] || defaults.subject,
+                html: overrideMap[htmlKey] || defaults.html,
+                variables: defaults.variables,
+                isCustomized: !!(overrideMap[subjectKey] || overrideMap[htmlKey]),
+            };
+        });
+
+        res.json({ templates });
+    } catch (err) {
+        console.error('Admin list email templates error:', err);
+        res.status(500).json({ error: 'Failed to list email templates' });
+    }
+});
+
+router.put('/api/email-templates/:key', async (req, res) => {
+    try {
+        const { key } = req.params;
+        if (!emailTemplates[key]) {
+            return res.status(404).json({ error: 'Unknown template' });
+        }
+
+        const { subject, html } = req.body;
+        if (subject !== undefined) {
+            await setSetting(`email_template.${key}.subject`, subject, 'email_templates');
+        }
+        if (html !== undefined) {
+            await setSetting(`email_template.${key}.html`, html, 'email_templates');
+        }
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Admin update email template error:', err);
+        res.status(500).json({ error: 'Failed to update email template' });
+    }
+});
+
+router.post('/api/email-templates/:key/reset', async (req, res) => {
+    try {
+        const { key } = req.params;
+        if (!emailTemplates[key]) {
+            return res.status(404).json({ error: 'Unknown template' });
+        }
+
+        await deleteSetting(`email_template.${key}.subject`);
+        await deleteSetting(`email_template.${key}.html`);
+
+        const defaults = emailTemplates[key];
+        res.json({ ok: true, subject: defaults.subject, html: defaults.html });
+    } catch (err) {
+        console.error('Admin reset email template error:', err);
+        res.status(500).json({ error: 'Failed to reset email template' });
+    }
+});
+
+router.post('/api/email-templates/:key/test', async (req, res) => {
+    try {
+        const { key } = req.params;
+        if (!emailTemplates[key]) {
+            return res.status(404).json({ error: 'Unknown template' });
+        }
+
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email address required' });
+        }
+
+        const sampleVars = {};
+        for (const v of emailTemplates[key].variables) {
+            if (v.key === 'url' || v.key === 'loginUrl') {
+                sampleVars[v.key] = '#';
+            } else if (v.key === 'name') {
+                sampleVars[v.key] = 'Test User';
+            } else {
+                sampleVars[v.key] = `[${v.key}]`;
+            }
+        }
+
+        await sendTestEmail(email, key, sampleVars);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Admin send test email error:', err);
+        res.status(500).json({ error: 'Failed to send test email' });
     }
 });
 

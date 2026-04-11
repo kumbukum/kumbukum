@@ -22,6 +22,8 @@ html(lang="en")
 						block nav
 							li.nav-item
 								a.nav-link(href="/admin" class=(activeNav === 'accounts' ? 'active' : '')) Accounts
+							li.nav-item
+								a.nav-link(href="/admin/email-templates" class=(activeNav === 'email-templates' ? 'active' : '')) Email Templates
 					form(action="/admin/logout" method="POST")
 						button.btn.btn-outline-light.btn-sm(type="submit")
 							i.bi.bi-box-arrow-right.me-1

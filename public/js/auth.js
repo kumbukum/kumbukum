@@ -133,8 +133,13 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	magicLinkBtn?.addEventListener('click', async () => {
-		const email = document.getElementById('email').value;
-		if (!email) return Swal.fire({ icon: 'info', title: 'Email required', text: 'Enter your email first' });
+		const email = document.getElementById('email').value.trim();
+		if (!email) {
+			document.getElementById('login-form').classList.add('d-none');
+			document.getElementById('magic-link-form').classList.remove('d-none');
+			document.getElementById('magic-link-email').focus();
+			return;
+		}
 
 		const res = await fetch('/magic-link', {
 			method: 'POST',
@@ -145,24 +150,45 @@ document.addEventListener('DOMContentLoaded', () => {
 		Swal.fire({ icon: 'success', title: 'Magic link sent', text: data.message || 'Check your email for a login link' });
 	});
 
-	passkeyBtn?.addEventListener('click', async () => {
-		const email = document.getElementById('email').value;
-		if (!email) return Swal.fire({ icon: 'info', title: 'Email required', text: 'Enter your email first' });
+	// Magic link email form
+	const magicLinkForm = document.getElementById('form-magic-link');
+	if (magicLinkForm) {
+		magicLinkForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const email = document.getElementById('magic-link-email').value.trim();
+			if (!email) return;
 
-		try {
-			const optRes = await fetch('/passkey/login/options', {
+			const res = await fetch('/magic-link', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email }),
 			});
-			const options = await optRes.json();
+			const data = await res.json();
+			Swal.fire({ icon: 'success', title: 'Magic link sent', text: data.message || 'Check your email for a login link' });
+		});
+	}
 
-			const credential = await navigator.credentials.get({ publicKey: options });
+	document.getElementById('magic-link-back')?.addEventListener('click', (e) => {
+		e.preventDefault();
+		document.getElementById('magic-link-form').classList.add('d-none');
+		document.getElementById('login-form').classList.remove('d-none');
+	});
+
+	passkeyBtn?.addEventListener('click', async () => {
+		try {
+			const optRes = await fetch('/passkey/login/options', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+			});
+			const options = await optRes.json();
+			if (!optRes.ok) return Swal.fire({ icon: 'error', title: 'Error', text: options.error || 'Failed to get passkey options' });
+
+			const assertion = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
 
 			const verifyRes = await fetch('/passkey/login/verify', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(credential),
+				body: JSON.stringify({ assertion }),
 			});
 			const data = await verifyRes.json();
 			if (data.token) {
@@ -171,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				Swal.fire({ icon: 'error', title: 'Passkey login failed', text: data.error || 'Passkey login failed' });
 			}
 		} catch (err) {
+			if (err.name === 'NotAllowedError') return;
 			Swal.fire({ icon: 'error', title: 'Passkey error', text: err.message });
 		}
 	});
