@@ -1,0 +1,28 @@
+doctype html
+html(lang="en")
+	head
+		meta(charset="UTF-8")
+		meta(name="viewport" content="width=device-width, initial-scale=1")
+		title Admin Login — Kumbukum
+		link(href='/static/images/favicon.ico' rel="shortcut icon")
+		link(href="/static/css/vendor.css" rel="stylesheet")
+		link(href="/static/css/app.css" rel="stylesheet")
+	body.bg-light
+		.container
+			.row.justify-content-center.mt-5
+				.col-md-4
+					.card.shadow
+						.card-body.p-4
+							h4.text-center.mb-4 Admin Login
+
+							if error
+								.alert.alert-danger= error
+
+							form(action="/admin/login" method="POST")
+								.mb-3
+									label.form-label(for="email") Email
+									input.form-control#email(type="email" name="email" required autofocus)
+								.mb-3
+									label.form-label(for="password") Password
+									input.form-control#password(type="password" name="password" required)
+								button.btn.btn-primary.w-100(type="submit") Sign In

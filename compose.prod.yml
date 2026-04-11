@@ -57,17 +57,19 @@ services:
     restart: unless-stopped
 
   mongo:
-    image: mongo:7
+    image: percona/percona-server-mongodb:6.0
     volumes:
-      - mongo_data:/data/db
-    restart: unless-stopped
+        - mongo_data:/data/db
+    command: mongod --setParameter perconaTelemetry=false --replSet rs0 --bind_ip_all
+    environment:
+        PERCONA_TELEMETRY_DISABLE: 1
 
   redis:
-    image: redis:7-bookworm
+    image: redis:8-bookworm
     restart: unless-stopped
 
   typesense:
-    image: typesense/typesense:27.1
+    image: typesense/typesense:31.1
     volumes:
       - typesense_data:/data
     command: --data-dir /data --api-key=${TYPESENSE_API_KEY}

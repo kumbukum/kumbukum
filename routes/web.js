@@ -17,6 +17,8 @@ router.use(async (req, res, next) => {
 	res.locals.user = user;
 	res.locals.projects = projects;
 	res.locals.host_id = req.host_id;
+	res.locals.impersonating = req.session.impersonating || false;
+	res.locals.impersonatingName = req.session.impersonatingName || '';
 	next();
 });
 

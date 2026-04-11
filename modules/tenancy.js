@@ -17,7 +17,7 @@ const tenantSchema = new mongoose.Schema(
 export const Tenant = mongoose.model('Tenant', tenantSchema);
 
 export function resolveTenant(req, res, next) {
-	if (req.path.startsWith('/login') || req.path.startsWith('/signup') || req.path.startsWith('/static')) {
+	if (req.path.startsWith('/login') || req.path.startsWith('/signup') || req.path.startsWith('/static') || req.path.startsWith('/admin') || req.path.startsWith('/sysadmin')) {
 		return next();
 	}
 

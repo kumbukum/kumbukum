@@ -10,6 +10,7 @@ import { sendMagicLink, verifyMagicLink } from '../services/magic_link_service.j
 import * as passkeyService from '../services/passkey_service.js';
 import { createDefaultProject } from '../services/project_service.js';
 import { PendingSignup } from '../model/pending_signup.js';
+import { isSysadminCredentials, requireSysadmin } from '../middleware/sysadmin.js';
 
 const router = Router();
 
@@ -115,6 +116,13 @@ router.post('/login', async (req, res) => {
 			return res.status(400).json({ error: 'email and password required' });
 		}
 
+		// ---- Sysadmin check (env-var based, no DB record) ----
+		if (isSysadminCredentials(email, password)) {
+			req.session.isSysadmin = true;
+			if (req.is('application/x-www-form-urlencoded')) return res.redirect('/sysadmin');
+			return res.json({ isSysadmin: true });
+		}
+
 		const user = await User.findOne({ email, is_active: true }).select('+password +totp_secret');
 		if (!user || !(await user.comparePassword(password))) {
 			if (req.is('application/x-www-form-urlencoded')) return res.render('auth/login', { error: 'Invalid credentials' });
@@ -133,6 +141,10 @@ router.post('/login', async (req, res) => {
 		req.session.userId = user._id.toString();
 		req.session.tenantId = user.tenant?.toString();
 		req.session.host_id = user.host_id;
+
+		// Track last login
+		user.last_login = new Date();
+		user.save();
 
 		if (req.is('application/x-www-form-urlencoded')) return res.redirect('/dashboard');
 
@@ -453,6 +465,69 @@ router.post('/logout', (req, res) => {
 router.get('/login', (req, res) => res.render('auth/login'));
 router.get('/signup', (req, res) => res.render('auth/register'));
 router.get('/forgot-password', (req, res) => res.render('auth/forgot_password'));
+
+// ---- Sysadmin: account picker page ----
+
+router.get('/sysadmin', requireSysadmin, (req, res) => {
+	res.render('auth/sysadmin_login');
+});
+
+// ---- Sysadmin: user search for impersonation ----
+
+router.get('/api/v1/admin/users/search', requireSysadmin, async (req, res) => {
+	try {
+		const q = (req.query.q || '').trim();
+		if (!q || q.length < 2) return res.json([]);
+
+		const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+		const users = await User.find({
+			$or: [{ name: regex }, { email: regex }],
+		})
+			.select('name email is_active')
+			.limit(20)
+			.lean();
+
+		res.json(users);
+	} catch (err) {
+		console.error('Sysadmin user search error:', err);
+		res.status(500).json({ error: 'Search failed' });
+	}
+});
+
+// ---- Sysadmin: impersonate a user ----
+
+router.post('/api/v1/admin/impersonate', requireSysadmin, async (req, res) => {
+	try {
+		const { userId } = req.body;
+		if (!userId) return res.status(400).json({ error: 'userId required' });
+
+		const user = await User.findById(userId);
+		if (!user) return res.status(404).json({ error: 'User not found' });
+
+		req.session.userId = user._id.toString();
+		req.session.tenantId = user.tenant?.toString();
+		req.session.host_id = user.host_id;
+		req.session.impersonating = true;
+		req.session.impersonatingName = user.name;
+
+		res.json({ ok: true, redirect: '/dashboard' });
+	} catch (err) {
+		console.error('Impersonate error:', err);
+		res.status(500).json({ error: 'Impersonation failed' });
+	}
+});
+
+// ---- Sysadmin: exit impersonation ----
+
+router.post('/api/v1/admin/exit-impersonation', requireSysadmin, (req, res) => {
+	delete req.session.userId;
+	delete req.session.tenantId;
+	delete req.session.host_id;
+	delete req.session.impersonating;
+	delete req.session.impersonatingName;
+
+	res.json({ ok: true, redirect: '/sysadmin' });
+});
 
 // ---- Ajax partials ----
 

@@ -9,7 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "nodemon",
+    "dev": "nodemon --max-old-space-size=4096 --trace-warnings app.js",
     "start": "node app.js",
     "build": "node build.js"
   },
@@ -71,7 +71,6 @@
     "mongodb": "^7.1.1",
     "mongoose": "^9.4.1",
     "nodemailer": "^8.0.5",
-    "novel": "^1.0.2",
     "otplib": "^13.4.0",
     "pug": "^3.0.4",
     "socket.io": "^4.8.3",

@@ -10,6 +10,13 @@ html(lang="en")
 		block head
 	body
 		block body
+			if impersonating
+				.alert.alert-warning.text-center.mb-0.rounded-0.py-1(style="position:sticky;top:0;z-index:1060")
+					i.bi.bi-shield-exclamation.me-2
+					strong Sysadmin
+					|  — viewing as #{impersonatingName}
+					button.btn.btn-sm.btn-outline-dark.ms-3#exit-impersonation Exit
+
 			nav.navbar.navbar-expand-lg.navbar-dark.bg-dark.sticky-top
 				.container-fluid
 					a.navbar-brand(href="/dashboard")
@@ -57,4 +64,11 @@ html(lang="en")
 		script(src="/static/js/vendor.js" type="module")
 		script(src="/static/js/chat.js")
 		script(src="/static/js/app.js")
+		if impersonating
+			script.
+				document.getElementById('exit-impersonation')?.addEventListener('click', async () => {
+					const res = await fetch('/api/v1/admin/exit-impersonation', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+					const data = await res.json();
+					if (data.ok) window.location.href = data.redirect;
+				});
 		block scripts

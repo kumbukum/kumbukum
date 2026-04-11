@@ -1,0 +1,30 @@
+extends ../layout
+
+block head
+	title Sysadmin Login — Kumbukum
+
+block body
+	.container
+		.row.justify-content-center.mt-5
+			.col-md-6
+				.card.shadow
+					.card-body.p-4
+						.text-center.mb-4.logo-form
+							include ../includes/logo_black
+
+						h4.text-center.mb-4 Sysadmin Login
+
+						.mb-3
+							label.form-label(for="account-search") Select account to sign in to…
+							.position-relative
+								input.form-control#account-search(type="text" placeholder="Search by name or email" autocomplete="off")
+								.list-group.position-absolute.w-100.shadow-sm.d-none#search-results(style="z-index:1050; max-height:300px; overflow-y:auto")
+
+						hr
+
+						button.btn.btn-primary.w-100#sign-in-own(type="button")
+							i.bi.bi-box-arrow-in-right.me-2
+							| Sign in to my account
+
+block scripts
+	script(src="/static/js/sysadmin_login.js")

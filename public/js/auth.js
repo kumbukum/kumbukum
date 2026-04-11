@@ -93,7 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 				const data = await res.json();
 
-				if (data.requires2FA) {
+				if (data.isSysadmin) {
+					window.location.href = '/sysadmin';
+				} else if (data.requires2FA) {
 					tempToken = data.tempToken;
 					document.getElementById('login-form').classList.add('d-none');
 					document.getElementById('totp-form').classList.remove('d-none');

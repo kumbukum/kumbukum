@@ -44,6 +44,11 @@ const config = {
 		apiKey: process.env.LLM_API_KEY || '',
 		model: process.env.LLM_MODEL || '',
 	},
+
+	sysadmin: {
+		email: process.env.SYSADMIN_EMAIL || '',
+		password: process.env.SYSADMIN_PASSWORD || '',
+	},
 };
 
 export default config;

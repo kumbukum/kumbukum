@@ -14,6 +14,7 @@ import { startChangeStreams } from './modules/change_stream.js';
 import authRoutes from './routes/auth.js';
 import apiRoutes from './routes/api.js';
 import webRoutes from './routes/web.js';
+import adminRoutes from './routes/admin.js';
 import { startScheduler } from './modules/scheduler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,7 @@ app.use(resolveTenant);
 
 // Auth routes mounted at root (/login, /signup, /logout, etc.)
 app.use('/', authRoutes);
+app.use('/admin', adminRoutes);
 app.use('/api/v1', apiRoutes);
 
 app.get('/', (req, res) => {

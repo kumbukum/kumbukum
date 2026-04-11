@@ -1,12 +1,11 @@
 services:
     app:
-        build: .
-        command: node --watch app.js
+        extends:
+            file: ./compose.base.yml
+            service: base
+        command: ["npm", "run", "dev"]
         ports:
             - "3000:3000"
-        volumes:
-            - .:/app
-            - /app/node_modules
         environment:
             NODE_ENV: development
             PORT: 3000
@@ -28,6 +27,8 @@ services:
             LLM_API_KEY: ""
             LLM_MODEL: ""
             APP_URL: http://localhost:3000
+            SYSADMIN_EMAIL: "sysadmin@localhost"
+            SYSADMIN_PASSWORD: "sysadminpassword"
         depends_on:
             mongo-init:
                 condition: service_completed_successfully
@@ -60,9 +61,16 @@ services:
             MONGO_HOST: mongo
 
     redis:
-        image: redis:7-bookworm
-        ports:
-            - "6379:6379"
+        image: redis:8
+        command: redis-server --appendonly yes --port 6379 --save ""
+        volumes:
+            - redis_data:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
 
     typesense:
         image: typesense/typesense:30.1
@@ -82,5 +90,9 @@ services:
             - "1025"        # SMTP
 
 volumes:
+    node_modules:
+    pnpm_store:
     mongo_data:
     typesense_data:
+    redis_data:
+
