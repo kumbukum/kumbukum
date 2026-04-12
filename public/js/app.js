@@ -57,7 +57,7 @@ async function showError(message) {
 }
 
 // Current project
-let currentProjectId = null;
+window.currentProjectId = null;
 
 // Load projects sidebar with counts
 async function loadProjects() {

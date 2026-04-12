@@ -11,7 +11,8 @@ import * as noteService from '../services/note_service.js';
 import { extractText } from '../services/import_service.js';
 import * as memoryService from '../services/memory_service.js';
 import * as urlService from '../services/url_service.js';
-import { searchKnowledge, aiChatSearch } from '../services/ai_chat_service.js';
+import { searchKnowledge, aiChatSearch, processChat } from '../services/ai_chat_service.js';
+import { listConversations, deleteConversation } from '../modules/typesense.js';
 import * as trashService from '../services/trash_service.js';
 import { crawlSite } from '../modules/crawler.js';
 import { getProjectCounts } from '../services/project_service.js';
@@ -321,12 +322,65 @@ router.post('/reindex', async (req, res) => {
 // ---- Search / Knowledge ----
 
 router.post('/search/knowledge', async (req, res) => {
-	const results = await searchKnowledge(req.host_id, req.body.query, req.body.options);
+	const results = await searchKnowledge(req.host_id, req.body.query, {
+		projectId: req.body.project_id,
+		perPage: req.body.per_page,
+		...req.body.options,
+	});
 	res.json({ results });
 });
 
 // ---- AI Chat ----
 
+router.post('/chat', async (req, res) => {
+	try {
+		const { query, conversation_id, project_id } = req.body;
+		if (!query) return res.status(400).json({ error: 'query required' });
+
+		const result = await processChat({
+			hostId: req.host_id,
+			userId: req.userId,
+			query,
+			conversationId: conversation_id,
+			projectId: project_id,
+		});
+
+		res.json({
+			answer: result.answer,
+			results: result.results,
+			action: result.action,
+			conversation_id: result.conversationId,
+			display_in: result.displayIn,
+		});
+	} catch (err) {
+		console.error('AI Chat error:', err);
+		res.status(500).json({ error: 'AI Chat failed' });
+	}
+});
+
+router.get('/chat/conversations', async (req, res) => {
+	try {
+		const conversations = await listConversations(req.host_id, req.userId, {
+			limit: parseInt(req.query.limit, 10) || 10,
+		});
+		res.json({ conversations });
+	} catch (err) {
+		console.error('List conversations error:', err);
+		res.json({ conversations: [] });
+	}
+});
+
+router.delete('/chat/conversations/:id', async (req, res) => {
+	try {
+		await deleteConversation(req.host_id, req.userId, req.params.id);
+		res.json({ message: 'Conversation deleted' });
+	} catch (err) {
+		console.error('Delete conversation error:', err);
+		res.status(500).json({ error: 'Delete conversation failed' });
+	}
+});
+
+// Legacy endpoint — deprecated, use POST /chat instead
 router.post('/chat/search', async (req, res) => {
 	try {
 		const { query, stream: useStream } = req.body;
@@ -356,7 +410,7 @@ router.post('/chat/search', async (req, res) => {
 			res.json({ answer });
 		}
 	} catch (err) {
-		console.error('AI Chat error:', err);
+		console.error('AI Chat (legacy) error:', err);
 		res.status(500).json({ error: 'AI Chat failed' });
 	}
 });

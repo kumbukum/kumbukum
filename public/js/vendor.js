@@ -19754,6 +19754,7 @@ window.Swal = import_sweetalert22.default;
 window.JSURL = JSURL;
 window.FilePond = FilePond;
 window.marked = g;
+window.BsModal = Modal;
 var export_Huebee = import_huebee.default;
 var export_Swal = import_sweetalert2.default;
 export {

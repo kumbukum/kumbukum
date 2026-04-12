@@ -24,9 +24,14 @@ services:
             SMTP_USER: ""
             SMTP_PASS: ""
             SMTP_FROM: "noreply@localhost"
-            AI_CHAT_PROVIDER: openai
-            AI_CHAT_API_KEY: ""
-            AI_CHAT_MODEL: ""
+            CHAT_AI_MODEL: "gemini-flash-latest"
+            CHAT_AI_MODEL_PROVIDER: google
+            NL_SEARCH_MODEL: "gemini-flash-lite-latest"
+            NL_SEARCH_MODEL_PROVIDER: google
+            TS_CONVERSATION_MODEL: "gemini-flash-lite-latest"
+            TS_CONVERSATION_MODEL_PROVIDER: google
+            GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
+            OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
             APP_URL: http://localhost:3000
             SYSADMIN_EMAIL: "sysadmin@localhost"
             SYSADMIN_PASSWORD: "sysadminpassword"

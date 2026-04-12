@@ -1,15 +1,23 @@
 .chat-sidebar
-  .d-flex.justify-content-between.align-items-center.mb-3
+  .d-flex.justify-content-between.align-items-center.mb-2
     h6.mb-0
-      i.bi.bi-chat-dots.me-1
-      | AI Chat
-    button.btn.btn-sm.btn-outline-secondary#clear-chat(title="Clear chat")
-      i.bi.bi-trash
+      i.bi.bi-chat-dots
+      span.ms-2 Chat with your data
+    .d-flex.gap-1
+      button.btn.btn-sm.btn-outline-secondary#chat-history-btn(title="Conversation history")
+        i.bi.bi-clock-history
+      button.btn.btn-sm.btn-outline-secondary#clear-chat(title="New conversation")
+        i.bi.bi-plus-lg
 
-  #chat-messages.overflow-auto(style="height: calc(100vh - 220px)")
+  .mb-2
+    select.form-select.form-select-sm#chat-project-filter
+      option(value="") All projects
+      //- Populated dynamically by chat.js
+
+  #chat-messages.overflow-auto(style="height: calc(100vh - 280px)")
 
   .mt-2
     .input-group
-      input.form-control#chat-input(type="text" placeholder="Ask about your knowledge...")
+      input.form-control#chat-input(type="text" placeholder="Ask, search, or give a command...")
       button.btn.btn-primary#chat-send
         i.bi.bi-send

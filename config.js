@@ -40,9 +40,18 @@ const config = {
 	},
 
 	llm: {
-		provider: process.env.AI_CHAT_PROVIDER || 'openai',
-		apiKey: process.env.AI_CHAT_API_KEY || '',
-		model: process.env.AI_CHAT_MODEL || '',
+		// Main conversational model (richer, for analysis & actions)
+		chatModel: process.env.CHAT_AI_MODEL || '',
+		chatProvider: process.env.CHAT_AI_MODEL_PROVIDER || 'google',
+		// Lightweight model for intent classification & query extraction
+		nlSearchModel: process.env.NL_SEARCH_MODEL || '',
+		nlSearchProvider: process.env.NL_SEARCH_MODEL_PROVIDER || 'google',
+		// Typesense conversation model
+		tsConversationModel: process.env.TS_CONVERSATION_MODEL || '',
+		tsConversationProvider: process.env.TS_CONVERSATION_MODEL_PROVIDER || 'google',
+		// API keys per provider
+		googleApiKey: process.env.GOOGLE_API_KEY || '',
+		openaiApiKey: process.env.OPENAI_API_KEY || '',
 	},
 
 	sysadmin: {

@@ -1,79 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
 	const listEl = document.getElementById('notes-list');
-	const editorEl = document.getElementById('note-editor');
 	const newBtn = document.getElementById('new-note-btn');
-	const saveBtn = document.getElementById('save-note-btn');
-	const deleteBtn = document.getElementById('delete-note-btn');
-	const backBtn = document.getElementById('back-to-list-btn');
 
 	const batchToolbar = document.getElementById('batch-toolbar');
 	const dropZoneEl = document.getElementById('notes-drop-zone');
-
-	const previewContainer = document.getElementById('note-preview-container');
-	const editorContainer = document.getElementById('editor-container');
-	const tabPreview = document.getElementById('note-tab-preview');
-	const tabEdit = document.getElementById('note-tab-edit');
-
-	let currentNoteId = null;
-	let tiptapEditor = null;
-	let currentNoteContent = '';
-	let currentNoteTextContent = '';
-
-	function renderPreview(textContent, htmlContent) {
-		if (!textContent && !htmlContent) return '<p class="text-muted">No content</p>';
-		if (textContent && window.marked) return window.marked.parse(textContent);
-		return htmlContent || `<pre>${textContent}</pre>`;
-	}
-
-	function showPreviewTab() {
-		tabPreview.classList.add('active');
-		tabEdit.classList.remove('active');
-		previewContainer.classList.remove('d-none');
-		editorContainer.classList.add('d-none');
-		previewContainer.innerHTML = renderPreview(currentNoteTextContent, currentNoteContent);
-	}
-
-	function showEditTab() {
-		tabPreview.classList.remove('active');
-		tabEdit.classList.add('active');
-		previewContainer.classList.add('d-none');
-		editorContainer.classList.remove('d-none');
-		if (!tiptapEditor) {
-			initEditor(currentNoteContent);
-		}
-	}
-
-	tabPreview?.addEventListener('click', showPreviewTab);
-	tabEdit?.addEventListener('click', showEditTab);
-
-	function initEditor(content) {
-		const container = document.getElementById('editor-container');
-		container.innerHTML = '';
-		if (tiptapEditor) {
-			tiptapEditor.destroy();
-			tiptapEditor = null;
-		}
-		if (window.KumbukumEditor) {
-			tiptapEditor = window.KumbukumEditor.createEditor(container, { content });
-		} else {
-			container.innerHTML = content || '';
-			container.setAttribute('contenteditable', 'true');
-		}
-	}
-
-	function getEditorContent() {
-		if (tiptapEditor) {
-			return {
-				content: tiptapEditor.getHTML(),
-				text_content: tiptapEditor.getText(),
-			};
-		}
-		const container = document.getElementById('editor-container');
-		return {
-			content: container.innerHTML,
-			text_content: container.textContent,
-		};
-	}
 
 	async function loadNotes() {
 		if (!listEl) return;
@@ -99,98 +29,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			: '<p class="text-muted p-3">No notes yet. Create one!</p>';
 
 		listEl.querySelectorAll('.note-item').forEach((el) => {
-			el.addEventListener('click', () => openNote(el.dataset.id));
+			el.addEventListener('click', (e) => {
+				if (e.target.closest('.batch-cb-wrap')) return;
+				window.openItemModal('notes', el.dataset.id);
+			});
 		});
 	}
 
-	async function openNote(id) {
-		const { note } = await api('GET', `/notes/${id}`);
-		currentNoteId = note._id;
-		document.getElementById('note-title').value = note.title;
-		document.getElementById('note-tags').value = (note.tags || []).join(', ');
-		currentNoteContent = note.content || '';
-		currentNoteTextContent = note.text_content || '';
-		if (tiptapEditor) {
-			tiptapEditor.destroy();
-			tiptapEditor = null;
-		}
-		showPreviewTab();
-		listEl.classList.add('d-none');
-		newBtn.classList.add('d-none');
-		if (batchToolbar) batchToolbar.classList.add('d-none');
-		if (dropZoneEl) dropZoneEl.classList.add('d-none');
-		editorEl.classList.remove('d-none');
-		deleteBtn.classList.remove('d-none');
-	}
-
-	newBtn?.addEventListener('click', () => {
-		currentNoteId = null;
-		currentNoteContent = '';
-		currentNoteTextContent = '';
-		document.getElementById('note-title').value = '';
-		document.getElementById('note-tags').value = '';
-		if (tiptapEditor) {
-			tiptapEditor.destroy();
-			tiptapEditor = null;
-		}
-		initEditor('');
-		showEditTab();
-		listEl.classList.add('d-none');
-		newBtn.classList.add('d-none');
-		if (batchToolbar) batchToolbar.classList.add('d-none');
-		if (dropZoneEl) dropZoneEl.classList.add('d-none');
-		editorEl.classList.remove('d-none');
-		deleteBtn.classList.add('d-none');
-	});
-
-	backBtn?.addEventListener('click', () => {
-		if (tiptapEditor) {
-			tiptapEditor.destroy();
-			tiptapEditor = null;
-		}
-		editorEl.classList.add('d-none');
-		listEl.classList.remove('d-none');
-		newBtn.classList.remove('d-none');
-		if (batchToolbar) batchToolbar.classList.remove('d-none');
-		if (dropZoneEl) dropZoneEl.classList.remove('d-none');
-		loadNotes();
-	});
-
-	saveBtn?.addEventListener('click', async () => {
-		const title = document.getElementById('note-title').value.trim() || 'Untitled';
-		const { content, text_content } = getEditorContent();
-		const tags = document
-			.getElementById('note-tags')
-			.value.split(',')
-			.map((t) => t.trim())
-			.filter(Boolean);
-
-		const data = { title, content, text_content, tags, project: currentProjectId };
-
-		if (currentNoteId) {
-			await api('PUT', `/notes/${currentNoteId}`, data);
-		} else {
-			const { note } = await api('POST', '/notes', data);
-			currentNoteId = note._id;
-		}
-
-		showSuccess('Note saved');
-		backBtn.click();
-	});
-
-	deleteBtn?.addEventListener('click', async () => {
-		if (!currentNoteId) return;
-		const confirmed = await confirmAction('Move to Trash', 'This note will be moved to trash.');
-		if (!confirmed) return;
-
-		await api('DELETE', `/notes/${currentNoteId}`);
-		showSuccess('Moved to trash');
-		backBtn.click();
-	});
+	newBtn?.addEventListener('click', () => window.openItemModal('notes'));
 
 	window.addEventListener('project-changed', loadNotes);
 	window.addEventListener('batch-done', loadNotes);
+	window.addEventListener('item-modal-saved', (e) => { if (e.detail?.type === 'notes') loadNotes(); });
+	window.addEventListener('item-modal-deleted', (e) => { if (e.detail?.type === 'notes') loadNotes(); });
 	loadNotes();
+
+	// Auto-open note from ?open= query param
+	const openId = new URLSearchParams(window.location.search).get('open');
+	if (openId) window.openItemModal('notes', openId);
 
 	// ---- File Import via Drag & Drop (FilePond) ----
 

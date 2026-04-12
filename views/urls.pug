@@ -9,25 +9,6 @@ block content
 			i.bi.bi-plus-lg.me-1
 			| Add URL
 
-	#url-inline-form.d-none.mb-4.border.rounded.p-3.bg-white
-		.mb-3
-			.form-text Enter complete URL (including http:// or https://)
-			input.form-control#url-input(type="url")
-		.mb-3
-			.form-text Title (optional)
-			input.form-control#url-title(type="text")
-		.mb-3
-			.form-text Description (optional)
-			input.form-control#url-description(type="text")
-		.mb-4.form-check
-			input.form-check-input#url-crawl(type="checkbox")
-			label.form-check-label.form-text.mb-0(for="url-crawl") Enable full-site crawling
-			.form-text.fs-7 If enabled, Kumbukum will attempt to crawl the entire website and save all discovered URLs in the index and rescan them every 24 hours to keep the data up to date. Great for knowledge bases and documentation sites that your AI agents can learn from. 
-		.d-flex.align-items-center
-			button.btn.btn-outline-secondary.btn-sm#cancel-url-btn Cancel
-			.ms-auto
-				button.btn.btn-primary.btn-sm#save-url-btn Save
-
 	.d-flex.align-items-center.mb-2.gap-2#batch-toolbar(data-type="urls")
 		.form-check
 			input.form-check-input#select-all-cb(type="checkbox")

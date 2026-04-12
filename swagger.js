@@ -426,10 +426,10 @@ const swaggerSpec = {
         '/search/knowledge': {
             post: {
                 tags: ['Search'],
-                summary: 'Search knowledge (notes + memories)',
+                summary: 'Search knowledge (notes + memories + URLs + pages)',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string' }, options: { type: 'object' } }, required: ['query'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string' }, project_id: { type: 'string', description: 'Filter by project (optional)' }, per_page: { type: 'integer', description: 'Results per collection (default 5)' }, options: { type: 'object' } }, required: ['query'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { results: { type: 'object' } } } } } },
@@ -475,10 +475,62 @@ const swaggerSpec = {
         },
 
         // ---- AI Chat ----
+        '/chat': {
+            post: {
+                tags: ['AI Chat'],
+                summary: 'AI-powered chat with intent classification',
+                description: 'Classifies the query intent (search, action, analysis, conversation), routes to the appropriate handler, and returns results + conversational answer. Results are displayed in the main panel.',
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string', description: 'User message or query' }, conversation_id: { type: 'string', description: 'Continue an existing conversation (optional)' }, project_id: { type: 'string', description: 'Scope search/actions to a project (optional)' } }, required: ['query'] } } },
+                },
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        answer: { type: 'string', description: 'Conversational response' },
+                                        results: { type: 'array', items: { type: 'object' }, description: 'Matching items from knowledge base' },
+                                        action: { type: 'object', nullable: true, description: 'Action performed or pending confirmation' },
+                                        conversation_id: { type: 'string', description: 'Conversation ID for follow-up messages' },
+                                        display_in: { type: 'string', enum: ['panel', 'chat'], description: 'Where results should be displayed' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/chat/conversations': {
+            get: {
+                tags: ['AI Chat'],
+                summary: 'List recent conversations',
+                parameters: [{ name: 'limit', in: 'query', schema: { type: 'integer', default: 10 } }],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { conversations: { type: 'array', items: { type: 'object', properties: { conversation_id: { type: 'string' }, title: { type: 'string' }, timestamp: { type: 'integer' } } } } } } } } },
+                },
+            },
+        },
+        '/chat/conversations/{id}': {
+            delete: {
+                tags: ['AI Chat'],
+                summary: 'Delete a conversation',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                },
+            },
+        },
         '/chat/search': {
             post: {
                 tags: ['AI Chat'],
-                summary: 'AI-powered chat search',
+                summary: 'AI-powered chat search (legacy)',
+                deprecated: true,
+                description: 'Deprecated. Use POST /chat instead.',
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string' }, stream: { type: 'boolean', description: 'Enable SSE streaming' } }, required: ['query'] } } },

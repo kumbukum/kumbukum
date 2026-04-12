@@ -114,17 +114,44 @@ export function memoryTools(api) {
     },
 
     search_knowledge: {
-      description: 'Search across ALL data types (notes, memories, URLs, crawled pages) — use this as your primary search tool for any query',
+      description: 'Search across ALL data types (notes, memories, URLs, crawled pages) — use this as your primary search tool for any query. Optionally scope to a project.',
       inputSchema: {
         type: 'object',
         properties: {
           query: { type: 'string', description: 'Search query' },
+          project_id: { type: 'string', description: 'Filter results to a specific project (optional)' },
+          per_page: { type: 'number', description: 'Results per collection (default 5)' },
         },
         required: ['query'],
       },
       handler: async (args) => {
-        const { results } = await api.post('/search/knowledge', { query: args.query });
+        const { results } = await api.post('/search/knowledge', {
+          query: args.query,
+          project_id: args.project_id,
+          per_page: args.per_page,
+        });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+      },
+    },
+
+    chat: {
+      description: 'AI chat with intent classification — search, create items, or get analysis. Maintains conversation context across calls.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'User message, search query, or command (e.g. "create a note about X", "remember that Y", "find my notes about Z")' },
+          conversation_id: { type: 'string', description: 'Continue an existing conversation (optional)' },
+          project_id: { type: 'string', description: 'Scope search/actions to a project (optional)' },
+        },
+        required: ['query'],
+      },
+      handler: async (args) => {
+        const res = await api.post('/chat', {
+          query: args.query,
+          conversation_id: args.conversation_id,
+          project_id: args.project_id,
+        });
+        return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
       },
     },
   };

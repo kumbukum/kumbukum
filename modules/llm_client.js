@@ -20,18 +20,41 @@ const PROVIDERS = {
 };
 
 /**
-* Chat completion — returns streaming response or full text.
-*/
-export async function chatCompletion({ messages, stream = false }) {
-	const provider = PROVIDERS[config.llm.provider];
-	if (!provider) throw new Error(`Unknown LLM provider: ${config.llm.provider}`);
-	if (!config.llm.apiKey) throw new Error('AI_CHAT_API_KEY not configured');
+ * Resolve provider name and API key.
+ * Accepts an explicit provider string or falls back to config.llm.chatProvider.
+ */
+function resolveProvider(providerName) {
+	const name = providerName || config.llm.chatProvider || 'google';
+	const provider = PROVIDERS[name];
+	if (!provider) throw new Error(`Unknown LLM provider: ${name}`);
 
-	const model = config.llm.model || provider.defaultModel;
+	let apiKey;
+	if (name === 'google') {
+		apiKey = config.llm.googleApiKey;
+	} else if (name === 'openai') {
+		apiKey = config.llm.openaiApiKey;
+	}
+	if (!apiKey) throw new Error(`API key not configured for provider: ${name}`);
 
-	// Google Gemini uses a different API format
-	if (config.llm.provider === 'google') {
-		return googleChat({ messages, model, stream });
+	return { name, provider, apiKey };
+}
+
+/**
+ * Chat completion — returns streaming response or full text.
+ *
+ * Options:
+ *   messages  - Array of {role, content} messages
+ *   stream    - Boolean, return a ReadableStream (default false)
+ *   provider  - Explicit provider name (overrides config)
+ *   model     - Explicit model name (overrides config)
+ *   maxTokens - Max tokens (default 4096)
+ */
+export async function chatCompletion({ messages, stream = false, provider: providerOverride, model: modelOverride, maxTokens = 4096 }) {
+	const { name, provider, apiKey } = resolveProvider(providerOverride);
+	const model = modelOverride || provider.defaultModel;
+
+	if (name === 'google') {
+		return googleChat({ messages, model, stream, apiKey, maxTokens });
 	}
 
 	// OpenAI-compatible API (OpenAI, Groq, Cerebras)
@@ -39,13 +62,13 @@ export async function chatCompletion({ messages, stream = false }) {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${config.llm.apiKey}`,
+			Authorization: `Bearer ${apiKey}`,
 		},
 		body: JSON.stringify({
 			model,
 			messages,
 			stream,
-			max_tokens: 4096,
+			max_tokens: maxTokens,
 		}),
 	});
 
@@ -60,7 +83,7 @@ export async function chatCompletion({ messages, stream = false }) {
 	return data.choices[0].message.content;
 }
 
-async function googleChat({ messages, model, stream }) {
+async function googleChat({ messages, model, stream, apiKey, maxTokens = 4096 }) {
 	// Convert OpenAI format to Gemini format
 	const contents = messages
 		.filter((m) => m.role !== 'system')
@@ -72,9 +95,9 @@ async function googleChat({ messages, model, stream }) {
 	const systemInstruction = messages.find((m) => m.role === 'system');
 
 	const endpoint = stream ? 'streamGenerateContent' : 'generateContent';
-	const url = `${PROVIDERS.google.baseUrl}/models/${model}:${endpoint}?key=${config.llm.apiKey}`;
+	const url = `${PROVIDERS.google.baseUrl}/models/${model}:${endpoint}?key=${apiKey}`;
 
-	const body = { contents };
+	const body = { contents, generationConfig: { maxOutputTokens: maxTokens } };
 	if (systemInstruction) {
 		body.systemInstruction = { parts: [{ text: systemInstruction.content }] };
 	}
@@ -94,4 +117,29 @@ async function googleChat({ messages, model, stream }) {
 
 	const data = await response.json();
 	return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+/**
+ * Convenience: chat completion using the NL search model (lightweight, fast).
+ */
+export async function nlSearchCompletion({ messages, maxTokens = 1024 }) {
+	return chatCompletion({
+		messages,
+		provider: config.llm.nlSearchProvider,
+		model: config.llm.nlSearchModel,
+		maxTokens,
+	});
+}
+
+/**
+ * Convenience: chat completion using the main chat model (richer).
+ */
+export async function chatModelCompletion({ messages, stream = false, maxTokens = 4096 }) {
+	return chatCompletion({
+		messages,
+		stream,
+		provider: config.llm.chatProvider,
+		model: config.llm.chatModel,
+		maxTokens,
+	});
 }

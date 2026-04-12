@@ -10,6 +10,4 @@ const systemSettingSchema = new mongoose.Schema(
 	{ timestamps: true },
 );
 
-systemSettingSchema.index({ category: 1 });
-
 export const SystemSetting = mongoose.model('SystemSetting', systemSettingSchema);

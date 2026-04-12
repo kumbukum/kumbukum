@@ -11,9 +11,11 @@ export { FilePond };
 import { marked } from 'marked';
 export { marked };
 
-// Make SweetAlert2 + JSURL + FilePond + marked available globally for non-module scripts
+// Make SweetAlert2 + JSURL + FilePond + marked + Bootstrap Modal available globally for non-module scripts
 import Swal from 'sweetalert2';
+import { Modal as BsModal } from 'bootstrap';
 window.Swal = Swal;
 window.JSURL = JSURL;
 window.FilePond = FilePond;
 window.marked = marked;
+window.BsModal = BsModal;
