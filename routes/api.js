@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenant } from '../modules/tenancy.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { formidable } from 'formidable';
 
 import * as projectService from '../services/project_service.js';
 import * as noteService from '../services/note_service.js';
+import { extractText } from '../services/import_service.js';
 import * as memoryService from '../services/memory_service.js';
 import * as urlService from '../services/url_service.js';
 import { searchKnowledge, aiChatSearch } from '../services/ai_chat_service.js';
@@ -564,6 +569,81 @@ router.delete('/passkeys/:id', async (req, res) => {
 	} catch (err) {
 		console.error('Delete passkey error:', err);
 		res.status(500).json({ error: 'Failed to delete passkey' });
+	}
+});
+
+// ---- Notes File Import ----
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const IMPORT_DIR = path.join(__dirname, '..', 'import');
+if (!fs.existsSync(IMPORT_DIR)) fs.mkdirSync(IMPORT_DIR, { recursive: true });
+
+const ALLOWED_EXTENSIONS = new Set(['.md', '.txt', '.pdf', '.doc', '.docx', '.rtf', '.csv', '.json', '.xml', '.html', '.htm', '.log', '.text']);
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+router.post('/notes/import', async (req, res) => {
+	try {
+		const form = formidable({
+			uploadDir: IMPORT_DIR,
+			keepExtensions: false,
+			maxFileSize: MAX_FILE_SIZE,
+			multiples: true,
+			filename: (name, ext) => `${crypto.randomUUID()}${ext}`,
+		});
+
+		const [fields, files] = await form.parse(req);
+		const project = (fields.project && fields.project[0]) || req.query.project;
+
+		// formidable v3 wraps files in arrays
+		const fileList = files.file ? (Array.isArray(files.file) ? files.file : [files.file]) : [];
+		if (!fileList.length) {
+			return res.status(400).json({ error: 'No files uploaded' });
+		}
+
+		const results = [];
+
+		for (const f of fileList) {
+			const originalName = f.originalFilename || 'Untitled';
+			const ext = path.extname(originalName).toLowerCase();
+			const title = path.basename(originalName, ext);
+			const filePath = f.filepath;
+
+			if (!ALLOWED_EXTENSIONS.has(ext)) {
+				results.push({ name: originalName, error: `Unsupported file type: ${ext}` });
+				fs.unlink(filePath, () => {});
+				continue;
+			}
+
+			try {
+				const { text, html } = await extractText(filePath, f.mimetype, originalName);
+
+				if (!text && !html) {
+					results.push({ name: originalName, error: 'No text content extracted' });
+					fs.unlink(filePath, () => {});
+					continue;
+				}
+
+				const note = await noteService.createNote(req.userId, req.host_id, {
+					title,
+					content: html,
+					text_content: text,
+					tags: ['imported'],
+					project,
+				});
+
+				results.push({ name: originalName, note_id: note._id });
+			} catch (err) {
+				console.error(`Import error for ${originalName}:`, err.message);
+				results.push({ name: originalName, error: err.message });
+			} finally {
+				fs.unlink(filePath, () => {});
+			}
+		}
+
+		res.json({ results });
+	} catch (err) {
+		console.error('Notes import error:', err);
+		res.status(500).json({ error: 'Import failed: ' + err.message });
 	}
 });
 

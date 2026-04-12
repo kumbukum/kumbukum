@@ -25,7 +25,15 @@ block content
 				i.bi.bi-copy.me-1
 				| Copy
 
-	#notes-list.list-group
+	.position-relative#notes-drop-zone
+		#notes-list.list-group
+		#drop-overlay.drop-overlay.d-none
+			.drop-overlay-card
+				.drop-overlay-icon
+					i.bi.bi-cloud-arrow-up
+				h5 Files upload
+				p.text-muted Drop files here to upload
+		input#import-filepond(type="file" multiple hidden)
 
 	#note-editor.d-none
 		.mb-3

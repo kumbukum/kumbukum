@@ -212,3 +212,49 @@ body {
 .batch-cb {
 	cursor: pointer;
 }
+
+/* ---- Drop overlay for file import ---- */
+
+#notes-drop-zone {
+	min-height: 200px;
+}
+
+.drop-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(108, 117, 125, 0.35);
+	border-radius: 0.5rem;
+}
+
+.drop-overlay-card {
+	background: #fff;
+	border-radius: 0.75rem;
+	padding: 2.5rem 4rem;
+	text-align: center;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.drop-overlay-icon {
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 1rem;
+	border-radius: 50%;
+	background: rgba(253, 126, 20, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.drop-overlay-icon i {
+	font-size: 1.75rem;
+	color: #fd7e14;
+}
+
+/* Hide FilePond panel — we use it programmatically only */
+#notes-drop-zone .filepond--root {
+	display: none;
+}

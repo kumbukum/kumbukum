@@ -28,3 +28,6 @@ coverage/
 
 # Docker volumes
 data/
+
+# File import temp dir
+import/
