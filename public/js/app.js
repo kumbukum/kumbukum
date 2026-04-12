@@ -1,5 +1,15 @@
 const API = '/api/v1';
 
+// Redirect to login when session is expired
+function redirectToLogin() {
+	window.location.href = '/login';
+}
+
+// Check if a fetch response was redirected to the login page
+function isLoginRedirect(res) {
+	return res.redirected && new URL(res.url).pathname.startsWith('/login');
+}
+
 async function api(method, path, body) {
 	const options = {
 		method,
@@ -8,12 +18,19 @@ async function api(method, path, body) {
 	if (body && method !== 'GET') options.body = JSON.stringify(body);
 
 	const res = await fetch(`${API}${path}`, options);
+	if (res.status === 401) return redirectToLogin();
+	if (isLoginRedirect(res)) return redirectToLogin();
 	if (!res.ok) {
 		const err = await res.json().catch(() => ({ error: res.statusText }));
 		throw new Error(err.error || 'Request failed');
 	}
 	return res.json();
 }
+
+// Handle bfcache restoration — force reload so the server can check the session
+window.addEventListener('pageshow', (event) => {
+	if (event.persisted) window.location.reload();
+});
 
 // SweetAlert2 confirm helper
 async function confirmAction(title, text) {
@@ -48,7 +65,9 @@ async function loadProjects() {
 		const list = document.getElementById('project-list');
 		if (!list) return;
 
-		const html = await fetch(`/ajax/project-list?active=${currentProjectId || ''}`).then(r => r.text());
+		const res = await fetch(`/ajax/project-list?active=${currentProjectId || ''}`);
+		if (isLoginRedirect(res)) return redirectToLogin();
+		const html = await res.text();
 		list.innerHTML = html;
 
 		list.querySelectorAll('.project-item').forEach((el) => {
@@ -98,10 +117,10 @@ async function loadProjectOverview(projectId) {
 	if (!container) return;
 
 	try {
-		const html = await fetch(`/ajax/project-overview/${projectId}`).then(r => {
-			if (!r.ok) throw new Error('Failed to load');
-			return r.text();
-		});
+		const res = await fetch(`/ajax/project-overview/${projectId}`);
+		if (isLoginRedirect(res)) return redirectToLogin();
+		if (!res.ok) throw new Error('Failed to load');
+		const html = await res.text();
 		container.innerHTML = html;
 
 		// Intercept overview card links to pass ?g=

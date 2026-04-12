@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const backBtn = document.getElementById('back-to-list-btn');
 
 	const batchToolbar = document.getElementById('batch-toolbar');
+	const dropZoneEl = document.getElementById('notes-drop-zone');
 
 	let currentNoteId = null;
 	let tiptapEditor = null;
@@ -77,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
 		if (batchToolbar) batchToolbar.classList.add('d-none');
+		if (dropZoneEl) dropZoneEl.classList.add('d-none');
 		editorEl.classList.remove('d-none');
 		deleteBtn.classList.remove('d-none');
 	}
@@ -89,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
 		if (batchToolbar) batchToolbar.classList.add('d-none');
+		if (dropZoneEl) dropZoneEl.classList.add('d-none');
 		editorEl.classList.remove('d-none');
 		deleteBtn.classList.add('d-none');
 	});
@@ -102,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		listEl.classList.remove('d-none');
 		newBtn.classList.remove('d-none');
 		if (batchToolbar) batchToolbar.classList.remove('d-none');
+		if (dropZoneEl) dropZoneEl.classList.remove('d-none');
 		loadNotes();
 	});
 
@@ -149,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	if (dropZone && dropOverlay && filepondInput && window.FilePond) {
 		const pond = FilePond.create(filepondInput, {
+			name: 'file',
 			allowMultiple: true,
 			credits: false,
 			server: {
