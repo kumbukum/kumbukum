@@ -3,6 +3,10 @@ extends layout
 block settings
 	h4.mb-4 Profile Settings
 
+	.text-center.mb-4
+		+avatar(user.name, 'xl')
+		p.text-muted.mt-2.mb-0= user.email
+
 	form#profile-form
 		.mb-3
 			label.form-label Name

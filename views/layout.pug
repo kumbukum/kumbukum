@@ -10,6 +10,7 @@ html(lang="en")
 		block head
 	body
 		block body
+			include includes/avatar
 			if impersonating
 				.alert.alert-warning.text-center.mb-0.rounded-0.py-1(style="position:sticky;top:0;z-index:1060")
 					i.bi.bi-shield-exclamation.me-2
@@ -24,8 +25,8 @@ html(lang="en")
 					.d-flex.align-items-center
 						if user
 							.dropdown
-								button.btn.btn-outline-light.btn-sm.dropdown-toggle(type="button" data-bs-toggle="dropdown")
-									i.bi.bi-person-circle.me-1
+								button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
+									+avatar(user.name, 'xs')
 									= user.name
 								ul.dropdown-menu.dropdown-menu-end
 									li: a.dropdown-item(href="/settings/profile") Settings
@@ -152,6 +153,17 @@ html(lang="en")
 		script(src="/socket.io/socket.io.js")
 		script.
 			var __host_id = "#{host_id}";
+			var __user_name = "#{user ? user.name : ''}";
+			var __avatar_colors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
+			function makeAvatar(name, size) {
+				size = size || 'xs';
+				var parts = (name || '?').trim().split(' ');
+				var initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]) : parts[0].substring(0, 2);
+				var hash = 0;
+				for (var i = 0; i < (name || '').length; i++) hash = (name || '').charCodeAt(i) + ((hash << 5) - hash);
+				var bg = __avatar_colors[Math.abs(hash) % __avatar_colors.length];
+				return '<span class="avatar avatar-' + size + '" style="background:' + bg + '" title="' + (name || '') + '">' + initials.toUpperCase() + '</span>';
+			}
 		script(src="/static/js/vendor.js" type="module")
 		script(src="/static/js/editor.js" type="module")
 		script(src="/static/js/chat.js")

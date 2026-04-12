@@ -346,3 +346,63 @@ body {
 	padding-left: 1rem;
 	color: #6c757d;
 }
+
+/* ---- Initials avatar ---- */
+.avatar {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	font-weight: 600;
+	text-transform: uppercase;
+	color: #fff;
+	flex-shrink: 0;
+	line-height: 1;
+	user-select: none;
+}
+
+.avatar-xs {
+	width: 24px;
+	height: 24px;
+	font-size: 0.625rem;
+}
+
+.avatar-sm {
+	width: 32px;
+	height: 32px;
+	font-size: 0.75rem;
+}
+
+.avatar-md {
+	width: 40px;
+	height: 40px;
+	font-size: 0.875rem;
+}
+
+.avatar-lg {
+	width: 64px;
+	height: 64px;
+	font-size: 1.25rem;
+}
+
+.avatar-xl {
+	width: 96px;
+	height: 96px;
+	font-size: 1.75rem;
+}
+
+/* Chat message with avatar */
+.chat-msg-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.chat-msg-row.user {
+	flex-direction: row-reverse;
+}
+
+.chat-msg-row .chat-message {
+	margin-bottom: 0;
+}

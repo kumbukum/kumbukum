@@ -30,12 +30,22 @@ function initChat() {
 	});
 
 	function addMessage(role, text) {
-		const div = document.createElement('div');
-		div.className = `chat-message ${role}`;
-		div.textContent = text;
-		messagesEl.appendChild(div);
+		const row = document.createElement('div');
+		row.className = `chat-msg-row ${role}`;
+
+		const avatarHtml = role === 'user'
+			? makeAvatar(__user_name, 'xs')
+			: '<span class="avatar avatar-xs" style="background:#6c757d" title="AI"><i class="bi bi-robot" style="font-size:0.625rem"></i></span>';
+
+		const bubble = document.createElement('div');
+		bubble.className = `chat-message ${role}`;
+		bubble.textContent = text;
+
+		row.innerHTML = avatarHtml;
+		row.appendChild(bubble);
+		messagesEl.appendChild(row);
 		messagesEl.scrollTop = messagesEl.scrollHeight;
-		return div;
+		return bubble;
 	}
 
 	async function sendMessage() {
