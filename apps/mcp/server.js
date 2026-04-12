@@ -94,16 +94,21 @@ if (transportArg === '--stdio' || !transportArg) {
     session.transport.handlePostMessage(req, res);
   });
 
-  // Streamable HTTP endpoint
-  app.post('/mcp', async (req, res) => {
+  // Streamable HTTP endpoint — stateless (no sessions)
+  // Shared handler for all methods on /mcp
+  const handleMcp = async (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'Token required' });
 
     const server = createServer(token);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
-    await transport.handleRequest(req, res);
-  });
+    await transport.handleRequest(req, res, req.body);
+  };
+
+  app.post('/mcp', handleMcp);
+  app.get('/mcp', handleMcp);
+  app.delete('/mcp', handleMcp);
 
   app.listen(PORT, () => {
     console.log(`Kumbukum MCP server running on port ${PORT}`);

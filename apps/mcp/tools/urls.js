@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * MCP tool definitions: URLs
  */
@@ -6,15 +8,11 @@ export function urlTools(api) {
     save_url: {
       description: 'Save a URL — extracts content automatically. Set crawl_enabled to true for full-site crawling.',
       inputSchema: {
-        type: 'object',
-        properties: {
-          url: { type: 'string', description: 'The URL to save' },
-          title: { type: 'string', description: 'Optional custom title' },
-          description: { type: 'string', description: 'Optional description' },
-          crawl_enabled: { type: 'boolean', description: 'Enable full-site crawling' },
-          project: { type: 'string', description: 'Project ID' },
-        },
-        required: ['url', 'project'],
+        url: z.string().describe('The URL to save'),
+        title: z.string().optional().describe('Optional custom title'),
+        description: z.string().optional().describe('Optional description'),
+        crawl_enabled: z.boolean().optional().describe('Enable full-site crawling'),
+        project: z.string().describe('Project ID'),
       },
       handler: async (args) => {
         const { url } = await api.post('/urls', args);
@@ -25,12 +23,9 @@ export function urlTools(api) {
     list_urls: {
       description: 'List saved URLs, optionally filtered by project',
       inputSchema: {
-        type: 'object',
-        properties: {
-          project: { type: 'string', description: 'Project ID filter' },
-          page: { type: 'number' },
-          limit: { type: 'number' },
-        },
+        project: z.string().optional().describe('Project ID filter'),
+        page: z.number().optional(),
+        limit: z.number().optional(),
       },
       handler: async (args) => {
         const params = new URLSearchParams();
@@ -45,11 +40,7 @@ export function urlTools(api) {
     search_urls: {
       description: 'Search saved URLs using semantic/text search',
       inputSchema: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Search query' },
-        },
-        required: ['query'],
+        query: z.string().describe('Search query'),
       },
       handler: async (args) => {
         const { results } = await api.post('/urls/search', { query: args.query });
@@ -60,11 +51,7 @@ export function urlTools(api) {
     read_url: {
       description: 'Read a saved URL by ID',
       inputSchema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'URL ID' },
-        },
-        required: ['id'],
+        id: z.string().describe('URL ID'),
       },
       handler: async (args) => {
         const { url } = await api.get(`/urls/${args.id}`);
@@ -75,14 +62,10 @@ export function urlTools(api) {
     update_url: {
       description: 'Update a saved URL',
       inputSchema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'URL ID' },
-          title: { type: 'string' },
-          description: { type: 'string' },
-          crawl_enabled: { type: 'boolean' },
-        },
-        required: ['id'],
+        id: z.string().describe('URL ID'),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        crawl_enabled: z.boolean().optional(),
       },
       handler: async (args) => {
         const { id, ...data } = args;
@@ -94,11 +77,7 @@ export function urlTools(api) {
     delete_url: {
       description: 'Delete a saved URL by ID',
       inputSchema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'URL ID' },
-        },
-        required: ['id'],
+        id: z.string().describe('URL ID'),
       },
       handler: async (args) => {
         await api.delete(`/urls/${args.id}`);

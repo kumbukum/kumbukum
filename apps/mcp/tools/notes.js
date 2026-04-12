@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * MCP tool definitions: Notes
  */
@@ -6,15 +8,11 @@ export function noteTools(api) {
     create_note: {
       description: 'Create a new note in a project',
       inputSchema: {
-        type: 'object',
-        properties: {
-          title: { type: 'string', description: 'Note title' },
-          content: { type: 'string', description: 'Note content (HTML)' },
-          text_content: { type: 'string', description: 'Plain text content for search' },
-          tags: { type: 'array', items: { type: 'string' }, description: 'Tags' },
-          project: { type: 'string', description: 'Project ID' },
-        },
-        required: ['title', 'project'],
+        title: z.string().describe('Note title'),
+        content: z.string().optional().describe('Note content (HTML)'),
+        text_content: z.string().optional().describe('Plain text content for search'),
+        tags: z.array(z.string()).optional().describe('Tags'),
+        project: z.string().describe('Project ID'),
       },
       handler: async (args) => {
         const { note } = await api.post('/notes', args);
@@ -25,11 +23,7 @@ export function noteTools(api) {
     read_note: {
       description: 'Read a note by ID',
       inputSchema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'Note ID' },
-        },
-        required: ['id'],
+        id: z.string().describe('Note ID'),
       },
       handler: async (args) => {
         const { note } = await api.get(`/notes/${args.id}`);
@@ -40,15 +34,11 @@ export function noteTools(api) {
     update_note: {
       description: 'Update a note',
       inputSchema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'Note ID' },
-          title: { type: 'string' },
-          content: { type: 'string' },
-          text_content: { type: 'string' },
-          tags: { type: 'array', items: { type: 'string' } },
-        },
-        required: ['id'],
+        id: z.string().describe('Note ID'),
+        title: z.string().optional(),
+        content: z.string().optional(),
+        text_content: z.string().optional(),
+        tags: z.array(z.string()).optional(),
       },
       handler: async (args) => {
         const { id, ...data } = args;
@@ -60,11 +50,7 @@ export function noteTools(api) {
     delete_note: {
       description: 'Delete a note by ID',
       inputSchema: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'Note ID' },
-        },
-        required: ['id'],
+        id: z.string().describe('Note ID'),
       },
       handler: async (args) => {
         await api.delete(`/notes/${args.id}`);
@@ -75,12 +61,9 @@ export function noteTools(api) {
     list_notes: {
       description: 'List notes, optionally filtered by project',
       inputSchema: {
-        type: 'object',
-        properties: {
-          project: { type: 'string', description: 'Project ID filter' },
-          page: { type: 'number' },
-          limit: { type: 'number' },
-        },
+        project: z.string().optional().describe('Project ID filter'),
+        page: z.number().optional(),
+        limit: z.number().optional(),
       },
       handler: async (args) => {
         const params = new URLSearchParams();
@@ -95,11 +78,7 @@ export function noteTools(api) {
     search_notes: {
       description: 'Search notes using semantic/text search',
       inputSchema: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Search query' },
-        },
-        required: ['query'],
+        query: z.string().describe('Search query'),
       },
       handler: async (args) => {
         const { results } = await api.post('/notes/search', { query: args.query });
