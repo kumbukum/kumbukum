@@ -42,7 +42,13 @@ block content
 		.mb-3
 			.form-text Tags
 			input.form-control#note-tags(type="text")
-		#editor-container.border-0.rounded.p-0(style="min-height: 400px")
+		ul.nav.nav-tabs.mb-0#note-tabs
+			li.nav-item
+				button.nav-link.active#note-tab-preview(type="button") Preview
+			li.nav-item
+				button.nav-link#note-tab-edit(type="button") Edit
+		#note-preview-container.preview-container.border.border-top-0.rounded-bottom.p-3(style="min-height: 400px")
+		#editor-container.border-0.rounded.p-0.d-none(style="min-height: 400px")
 		.d-flex.align-items-center.mt-3
 			button.btn.btn-outline-secondary.me-2#back-to-list-btn Cancel
 			button.btn.btn-outline-danger.ms-2#delete-note-btn.d-none

@@ -43,7 +43,13 @@ block content
 				i.bi.bi-search.source-search-icon
 				input.form-control#relationship-search(type="text" placeholder="Type to search..." autocomplete="off")
 			#relationship-tags.d-flex.flex-wrap.gap-1.mt-2
-		#memory-editor-container.border-0.rounded.p-0(style="min-height: 400px")
+		ul.nav.nav-tabs.mb-0#memory-tabs
+			li.nav-item
+				button.nav-link.active#memory-tab-preview(type="button") Preview
+			li.nav-item
+				button.nav-link#memory-tab-edit(type="button") Edit
+		#memory-preview-container.preview-container.border.border-top-0.rounded-bottom.p-3(style="min-height: 400px")
+		#memory-editor-container.border-0.rounded.p-0.d-none(style="min-height: 400px")
 		.d-flex.align-items-center.mt-3
 			button.btn.btn-outline-secondary.me-2#back-to-memories-btn Cancel
 			button.btn.btn-outline-danger.ms-2#delete-memory-btn.d-none

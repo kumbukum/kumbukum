@@ -9,8 +9,42 @@ document.addEventListener('DOMContentLoaded', () => {
 	const batchToolbar = document.getElementById('batch-toolbar');
 	const dropZoneEl = document.getElementById('notes-drop-zone');
 
+	const previewContainer = document.getElementById('note-preview-container');
+	const editorContainer = document.getElementById('editor-container');
+	const tabPreview = document.getElementById('note-tab-preview');
+	const tabEdit = document.getElementById('note-tab-edit');
+
 	let currentNoteId = null;
 	let tiptapEditor = null;
+	let currentNoteContent = '';
+	let currentNoteTextContent = '';
+
+	function renderPreview(textContent, htmlContent) {
+		if (!textContent && !htmlContent) return '<p class="text-muted">No content</p>';
+		if (textContent && window.marked) return window.marked.parse(textContent);
+		return htmlContent || `<pre>${textContent}</pre>`;
+	}
+
+	function showPreviewTab() {
+		tabPreview.classList.add('active');
+		tabEdit.classList.remove('active');
+		previewContainer.classList.remove('d-none');
+		editorContainer.classList.add('d-none');
+		previewContainer.innerHTML = renderPreview(currentNoteTextContent, currentNoteContent);
+	}
+
+	function showEditTab() {
+		tabPreview.classList.remove('active');
+		tabEdit.classList.add('active');
+		previewContainer.classList.add('d-none');
+		editorContainer.classList.remove('d-none');
+		if (!tiptapEditor) {
+			initEditor(currentNoteContent);
+		}
+	}
+
+	tabPreview?.addEventListener('click', showPreviewTab);
+	tabEdit?.addEventListener('click', showEditTab);
 
 	function initEditor(content) {
 		const container = document.getElementById('editor-container');
@@ -74,7 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
 		currentNoteId = note._id;
 		document.getElementById('note-title').value = note.title;
 		document.getElementById('note-tags').value = (note.tags || []).join(', ');
-		initEditor(note.content || '');
+		currentNoteContent = note.content || '';
+		currentNoteTextContent = note.text_content || '';
+		if (tiptapEditor) {
+			tiptapEditor.destroy();
+			tiptapEditor = null;
+		}
+		showPreviewTab();
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
 		if (batchToolbar) batchToolbar.classList.add('d-none');
@@ -85,9 +125,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	newBtn?.addEventListener('click', () => {
 		currentNoteId = null;
+		currentNoteContent = '';
+		currentNoteTextContent = '';
 		document.getElementById('note-title').value = '';
 		document.getElementById('note-tags').value = '';
+		if (tiptapEditor) {
+			tiptapEditor.destroy();
+			tiptapEditor = null;
+		}
 		initEditor('');
+		showEditTab();
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
 		if (batchToolbar) batchToolbar.classList.add('d-none');

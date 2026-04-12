@@ -20,8 +20,9 @@ html(lang="en")
 				.d-flex.align-items-center
 					ul.navbar-nav.me-3
 						block nav
-							li.nav-item
-								a.nav-link(href="/admin" class=(activeNav === 'accounts' ? 'active' : '')) Accounts
+							if is_hosted
+								li.nav-item
+									a.nav-link(href="/admin" class=(activeNav === 'accounts' ? 'active' : '')) Accounts
 							li.nav-item
 								a.nav-link(href="/admin/email-templates" class=(activeNav === 'email-templates' ? 'active' : '')) Email Templates
 					form(action="/admin/logout" method="POST")

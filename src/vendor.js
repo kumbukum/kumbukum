@@ -7,8 +7,13 @@ export { JSURL };
 import * as FilePond from 'filepond';
 export { FilePond };
 
-// Make SweetAlert2 + JSURL + FilePond available globally for non-module scripts
+// Marked (markdown parser)
+import { marked } from 'marked';
+export { marked };
+
+// Make SweetAlert2 + JSURL + FilePond + marked available globally for non-module scripts
 import Swal from 'sweetalert2';
 window.Swal = Swal;
 window.JSURL = JSURL;
 window.FilePond = FilePond;
+window.marked = marked;

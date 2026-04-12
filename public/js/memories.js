@@ -10,11 +10,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const batchToolbar = document.getElementById('batch-toolbar');
 
+	const memPreviewContainer = document.getElementById('memory-preview-container');
+	const memEditorContainer = document.getElementById('memory-editor-container');
+	const memTabPreview = document.getElementById('memory-tab-preview');
+	const memTabEdit = document.getElementById('memory-tab-edit');
+
 	let currentMemoryId = null;
 	let tiptapEditor = null;
+	let currentMemoryContent = '';
 	let relationshipDropdown = null;
 	let relationshipDebounce = null;
 	let selectedRelationships = [];
+
+	function renderPreview(content) {
+		if (!content) return '<p class="text-muted">No content</p>';
+		const isTiptapHtml = /^\s*<(p|h[1-6]|ul|ol|blockquote|pre|div|table|hr)[\s>]/i.test(content);
+		if (isTiptapHtml) return content;
+		if (window.marked) return window.marked.parse(content);
+		return `<pre>${content}</pre>`;
+	}
+
+	function showMemoryPreviewTab() {
+		memTabPreview.classList.add('active');
+		memTabEdit.classList.remove('active');
+		memPreviewContainer.classList.remove('d-none');
+		memEditorContainer.classList.add('d-none');
+		memPreviewContainer.innerHTML = renderPreview(currentMemoryTextContent, currentMemoryContent);
+	}
+
+	function showMemoryEditTab() {
+		memTabPreview.classList.remove('active');
+		memTabEdit.classList.add('active');
+		memPreviewContainer.classList.add('d-none');
+		memEditorContainer.classList.remove('d-none');
+		if (!tiptapEditor) {
+			initEditor(currentMemoryContent);
+		}
+	}
+
+	memTabPreview?.addEventListener('click', showMemoryPreviewTab);
+	memTabEdit?.addEventListener('click', showMemoryEditTab);
 
 	function initEditor(content) {
 		const container = document.getElementById('memory-editor-container');
@@ -161,7 +196,13 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		renderRelationshipTags();
 
-		initEditor(memory.content || '');
+		currentMemoryContent = memory.content || '';
+		currentMemoryTextContent = memory.text_content || '';
+		if (tiptapEditor) {
+			tiptapEditor.destroy();
+			tiptapEditor = null;
+		}
+		showMemoryPreviewTab();
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
 		if (batchToolbar) batchToolbar.classList.add('d-none');
@@ -171,12 +212,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	newBtn?.addEventListener('click', () => {
 		currentMemoryId = null;
+		currentMemoryContent = '';
+		currentMemoryTextContent = '';
 		document.getElementById('memory-title').value = '';
 		document.getElementById('memory-tags').value = '';
 		document.getElementById('memory-source').value = '';
 		selectedRelationships = [];
 		renderRelationshipTags();
+		if (tiptapEditor) {
+			tiptapEditor.destroy();
+			tiptapEditor = null;
+		}
 		initEditor('');
+		showMemoryEditTab();
 		listEl.classList.add('d-none');
 		newBtn.classList.add('d-none');
 		if (batchToolbar) batchToolbar.classList.add('d-none');

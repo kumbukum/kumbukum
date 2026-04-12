@@ -258,3 +258,32 @@ body {
 #notes-drop-zone .filepond--root {
 	display: none;
 }
+
+/* Preview / Edit tab containers */
+.preview-container {
+	overflow-y: auto;
+	background: #fff;
+	word-wrap: break-word;
+}
+
+.preview-container img {
+	max-width: 100%;
+	height: auto;
+}
+
+.preview-container pre {
+	background: #f8f9fa;
+	padding: 0.75rem;
+	border-radius: 0.375rem;
+	overflow-x: auto;
+}
+
+.preview-container code {
+	font-size: 0.875em;
+}
+
+.preview-container blockquote {
+	border-left: 3px solid #dee2e6;
+	padding-left: 1rem;
+	color: #6c757d;
+}
