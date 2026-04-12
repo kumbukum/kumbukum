@@ -40,9 +40,9 @@ const config = {
 	},
 
 	llm: {
-		provider: process.env.LLM_PROVIDER || 'openai',
-		apiKey: process.env.LLM_API_KEY || '',
-		model: process.env.LLM_MODEL || '',
+		provider: process.env.AI_CHAT_PROVIDER || 'openai',
+		apiKey: process.env.AI_CHAT_API_KEY || '',
+		model: process.env.AI_CHAT_MODEL || '',
 	},
 
 	sysadmin: {

@@ -19,9 +19,9 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM}
-      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
-      LLM_API_KEY: ${LLM_API_KEY}
-      LLM_MODEL: ${LLM_MODEL:-}
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-openai}
+      AI_CHAT_API_KEY: ${AI_CHAT_API_KEY}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-}
       APP_URL: ${APP_URL}
     depends_on:
       - mongo

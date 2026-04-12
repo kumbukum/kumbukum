@@ -49,17 +49,42 @@
         updateBatchBar();
     });
 
+    let lastChecked = null;
+
     document.addEventListener('change', (e) => {
         if (e.target.classList.contains('batch-cb')) {
             updateBatchBar();
         }
     });
 
-    // Prevent checkbox clicks from triggering the list-item click
+    // Shift+click range selection and prevent checkbox clicks from triggering list-item click
     document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('batch-cb') || e.target.closest('.batch-cb-wrap')) {
+        const cb = e.target.classList.contains('batch-cb')
+            ? e.target
+            : e.target.closest('.batch-cb-wrap')?.querySelector('.batch-cb');
+
+        if (!cb) return;
+
+        if (e.target.closest('.batch-cb-wrap')) {
             e.stopPropagation();
         }
+
+        if (e.shiftKey && lastChecked && lastChecked !== cb) {
+            const all = Array.from(getAllCheckboxes());
+            const start = all.indexOf(lastChecked);
+            const end = all.indexOf(cb);
+            if (start !== -1 && end !== -1) {
+                const low = Math.min(start, end);
+                const high = Math.max(start, end);
+                const checked = cb.checked;
+                for (let i = low; i <= high; i++) {
+                    all[i].checked = checked;
+                }
+                updateBatchBar();
+            }
+        }
+
+        lastChecked = cb;
     }, true);
 
     batchDeleteBtn.addEventListener('click', async () => {

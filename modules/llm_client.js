@@ -25,7 +25,7 @@ const PROVIDERS = {
 export async function chatCompletion({ messages, stream = false }) {
 	const provider = PROVIDERS[config.llm.provider];
 	if (!provider) throw new Error(`Unknown LLM provider: ${config.llm.provider}`);
-	if (!config.llm.apiKey) throw new Error('LLM_API_KEY not configured');
+	if (!config.llm.apiKey) throw new Error('AI_CHAT_API_KEY not configured');
 
 	const model = config.llm.model || provider.defaultModel;
 

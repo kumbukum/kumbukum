@@ -24,9 +24,9 @@ services:
             SMTP_USER: ""
             SMTP_PASS: ""
             SMTP_FROM: "noreply@localhost"
-            LLM_PROVIDER: openai
-            LLM_API_KEY: ""
-            LLM_MODEL: ""
+            AI_CHAT_PROVIDER: openai
+            AI_CHAT_API_KEY: ""
+            AI_CHAT_MODEL: ""
             APP_URL: http://localhost:3000
             SYSADMIN_EMAIL: "sysadmin@localhost"
             SYSADMIN_PASSWORD: "sysadminpassword"
