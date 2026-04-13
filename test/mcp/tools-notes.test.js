@@ -21,7 +21,7 @@ describe('MCP Tools — Notes', () => {
             put: async (_path, body) => ({ note: { ...FIXTURES.note, ...body } }),
             delete: async () => ({}),
         });
-        tools = noteTools(api);
+        tools = noteTools(api, FIXTURES.project._id);
     });
 
     // ── create_note ───────────────────────────────────────────────
@@ -29,7 +29,7 @@ describe('MCP Tools — Notes', () => {
     it('create_note — calls POST /notes with args', async () => {
         const result = await tools.create_note.handler({
             title: 'Test Note',
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
         });
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/notes');
@@ -44,10 +44,15 @@ describe('MCP Tools — Notes', () => {
             content: '<p>Hello</p>',
             text_content: 'Hello',
             tags: ['test'],
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
         });
         assert.equal(api.lastCall.body.content, '<p>Hello</p>');
         assert.deepEqual(api.lastCall.body.tags, ['test']);
+    });
+
+    it('create_note — defaults to default project when no project_id', async () => {
+        await tools.create_note.handler({ title: 'No Project' });
+        assert.equal(api.lastCall.body.project, FIXTURES.project._id);
     });
 
     // ── read_note ─────────────────────────────────────────────────
@@ -88,7 +93,7 @@ describe('MCP Tools — Notes', () => {
 
     it('list_notes — passes query params', async () => {
         const result = await tools.list_notes.handler({
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
             page: 1,
             limit: 5,
         });

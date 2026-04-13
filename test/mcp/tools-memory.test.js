@@ -23,14 +23,14 @@ describe('MCP Tools — Memory', () => {
             put: async (_path, body) => ({ memory: { ...FIXTURES.memory, ...body } }),
             delete: async () => ({}),
         });
-        tools = memoryTools(api);
+        tools = memoryTools(api, FIXTURES.project._id);
     });
 
     it('store_memory — calls POST /memories', async () => {
         const result = await tools.store_memory.handler({
             title: 'Remember this',
             content: 'Important fact',
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
         });
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/memories');
@@ -45,10 +45,15 @@ describe('MCP Tools — Memory', () => {
             content: 'With tags',
             tags: ['a', 'b'],
             source: 'test',
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
         });
         assert.deepEqual(api.lastCall.body.tags, ['a', 'b']);
         assert.equal(api.lastCall.body.source, 'test');
+    });
+
+    it('store_memory — defaults to default project when no project_id', async () => {
+        await tools.store_memory.handler({ title: 'No Project', content: 'test' });
+        assert.equal(api.lastCall.body.project, FIXTURES.project._id);
     });
 
     it('recall_memory — calls POST /memories/search', async () => {

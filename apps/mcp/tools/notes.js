@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * MCP tool definitions: Notes
  */
-export function noteTools(api) {
+export function noteTools(api, defaultProjectId) {
   return {
     create_note: {
       description: 'Create a new note in a project',
@@ -12,10 +12,11 @@ export function noteTools(api) {
         content: z.string().optional().describe('Note content (HTML)'),
         text_content: z.string().optional().describe('Plain text content for search'),
         tags: z.array(z.string()).optional().describe('Tags'),
-        project: z.string().describe('Project ID'),
+        project_id: z.string().optional().describe('Project ID (defaults to the default project)'),
       },
       handler: async (args) => {
-        const { note } = await api.post('/notes', args);
+        const { project_id, ...rest } = args;
+        const { note } = await api.post('/notes', { ...rest, project: project_id || defaultProjectId });
         return { content: [{ type: 'text', text: JSON.stringify(note, null, 2) }] };
       },
     },
@@ -61,13 +62,13 @@ export function noteTools(api) {
     list_notes: {
       description: 'List notes, optionally filtered by project',
       inputSchema: {
-        project: z.string().optional().describe('Project ID filter'),
+        project_id: z.string().optional().describe('Project ID filter'),
         page: z.number().optional(),
         limit: z.number().optional(),
       },
       handler: async (args) => {
         const params = new URLSearchParams();
-        if (args.project) params.set('project', args.project);
+        if (args.project_id) params.set('project', args.project_id);
         if (args.page) params.set('page', args.page);
         if (args.limit) params.set('limit', args.limit);
         const { notes } = await api.get(`/notes?${params}`);

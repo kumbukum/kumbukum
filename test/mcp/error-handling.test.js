@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createMockApi } from './helpers/mock-api.js';
+import { FIXTURES } from './helpers/fixtures.js';
 import { noteTools } from '../../apps/mcp/tools/notes.js';
 import { memoryTools } from '../../apps/mcp/tools/memory.js';
 import { urlTools } from '../../apps/mcp/tools/urls.js';
@@ -14,9 +15,9 @@ describe('MCP Tools — Error handling', () => {
         delete: async () => { throw new Error('API DELETE failed (403): Forbidden'); },
     });
 
-    const notes = noteTools(failingApi);
-    const memory = memoryTools(failingApi);
-    const urls = urlTools(failingApi);
+    const notes = noteTools(failingApi, FIXTURES.project._id);
+    const memory = memoryTools(failingApi, FIXTURES.project._id);
+    const urls = urlTools(failingApi, FIXTURES.project._id);
 
     it('read_note — handler throws when API fails', async () => {
         await assert.rejects(
@@ -27,7 +28,7 @@ describe('MCP Tools — Error handling', () => {
 
     it('create_note — handler throws when API fails', async () => {
         await assert.rejects(
-            () => notes.create_note.handler({ title: 'Fail', project: 'p' }),
+            () => notes.create_note.handler({ title: 'Fail', project_id: 'p' }),
             (err) => err.message.includes('500'),
         );
     });
@@ -48,14 +49,14 @@ describe('MCP Tools — Error handling', () => {
 
     it('store_memory — handler throws when API fails', async () => {
         await assert.rejects(
-            () => memory.store_memory.handler({ title: 'x', content: 'y', project: 'p' }),
+            () => memory.store_memory.handler({ title: 'x', content: 'y', project_id: 'p' }),
             (err) => err.message.includes('500'),
         );
     });
 
     it('save_url — handler throws when API fails', async () => {
         await assert.rejects(
-            () => urls.save_url.handler({ url: 'https://bad.com', project: 'p' }),
+            () => urls.save_url.handler({ url: 'https://bad.com', project_id: 'p' }),
             (err) => err.message.includes('500'),
         );
     });

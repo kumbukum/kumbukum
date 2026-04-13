@@ -335,7 +335,7 @@ function rmPopulate(type, record) {
 		document.getElementById('rm-memory-tags').value = (record.tags || []).join(', ');
 		document.getElementById('rm-memory-source').value = record.source || '';
 		rmContent = record.content || '';
-		rmTextContent = record.text_content || '';
+		rmTextContent = record.text_content || record.content || '';
 		// Load relationships
 		rmSelectedRelationships = [];
 		if (record.relationships?.length) {

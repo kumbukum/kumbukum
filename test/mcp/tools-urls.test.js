@@ -21,13 +21,13 @@ describe('MCP Tools — URLs', () => {
             put: async (_path, body) => ({ url: { ...FIXTURES.url, ...body } }),
             delete: async () => ({}),
         });
-        tools = urlTools(api);
+        tools = urlTools(api, FIXTURES.project._id);
     });
 
     it('save_url — calls POST /urls', async () => {
         const result = await tools.save_url.handler({
             url: 'https://example.com',
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
         });
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/urls');
@@ -42,15 +42,20 @@ describe('MCP Tools — URLs', () => {
             title: 'Docs',
             description: 'Documentation site',
             crawl_enabled: true,
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
         });
         assert.equal(api.lastCall.body.title, 'Docs');
         assert.equal(api.lastCall.body.crawl_enabled, true);
     });
 
+    it('save_url — defaults to default project when no project_id', async () => {
+        await tools.save_url.handler({ url: 'https://test.com' });
+        assert.equal(api.lastCall.body.project, FIXTURES.project._id);
+    });
+
     it('list_urls — calls GET /urls with query params', async () => {
         const result = await tools.list_urls.handler({
-            project: FIXTURES.project._id,
+            project_id: FIXTURES.project._id,
             page: 1,
             limit: 5,
         });

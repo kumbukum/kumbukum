@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * MCP tool definitions: Memory
  */
-export function memoryTools(api) {
+export function memoryTools(api, defaultProjectId) {
   return {
     store_memory: {
       description: 'Store a new memory — use this to persist important conversation context, decisions, or learnings',
@@ -12,10 +12,11 @@ export function memoryTools(api) {
         content: z.string().describe('Memory content'),
         tags: z.array(z.string()).optional().describe('Tags for categorization'),
         source: z.string().optional().describe('Where this memory came from'),
-        project: z.string().describe('Project ID'),
+        project_id: z.string().optional().describe('Project ID (defaults to the default project)'),
       },
       handler: async (args) => {
-        const { memory } = await api.post('/memories', args);
+        const { project_id, ...rest } = args;
+        const { memory } = await api.post('/memories', { ...rest, project: project_id || defaultProjectId });
         return { content: [{ type: 'text', text: JSON.stringify(memory, null, 2) }] };
       },
     },

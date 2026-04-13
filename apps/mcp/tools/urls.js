@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * MCP tool definitions: URLs
  */
-export function urlTools(api) {
+export function urlTools(api, defaultProjectId) {
   return {
     save_url: {
       description: 'Save a URL — extracts content automatically. Set crawl_enabled to true for full-site crawling.',
@@ -12,10 +12,11 @@ export function urlTools(api) {
         title: z.string().optional().describe('Optional custom title'),
         description: z.string().optional().describe('Optional description'),
         crawl_enabled: z.boolean().optional().describe('Enable full-site crawling'),
-        project: z.string().describe('Project ID'),
+        project_id: z.string().optional().describe('Project ID (defaults to the default project)'),
       },
       handler: async (args) => {
-        const { url } = await api.post('/urls', args);
+        const { project_id, ...rest } = args;
+        const { url } = await api.post('/urls', { ...rest, project: project_id || defaultProjectId });
         return { content: [{ type: 'text', text: JSON.stringify(url, null, 2) }] };
       },
     },
@@ -23,13 +24,13 @@ export function urlTools(api) {
     list_urls: {
       description: 'List saved URLs, optionally filtered by project',
       inputSchema: {
-        project: z.string().optional().describe('Project ID filter'),
+        project_id: z.string().optional().describe('Project ID filter'),
         page: z.number().optional(),
         limit: z.number().optional(),
       },
       handler: async (args) => {
         const params = new URLSearchParams();
-        if (args.project) params.set('project', args.project);
+        if (args.project_id) params.set('project', args.project_id);
         if (args.page) params.set('page', args.page);
         if (args.limit) params.set('limit', args.limit);
         const { urls } = await api.get(`/urls?${params}`);

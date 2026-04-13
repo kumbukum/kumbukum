@@ -12,19 +12,22 @@ import { memoryTools } from '../../../apps/mcp/tools/memory.js';
 import { urlTools } from '../../../apps/mcp/tools/urls.js';
 import { projectTools } from '../../../apps/mcp/tools/projects.js';
 
+import { FIXTURES } from './fixtures.js';
+
 /**
  * Create an MCP server instance wired to the given api mock.
  */
 export function buildMcpServer(api) {
+    const defaultProjectId = FIXTURES.project._id;
     const server = new McpServer({
         name: 'kumbukum-test',
         version: '0.0.1',
     });
 
     const allTools = {
-        ...noteTools(api),
-        ...memoryTools(api),
-        ...urlTools(api),
+        ...noteTools(api, defaultProjectId),
+        ...memoryTools(api, defaultProjectId),
+        ...urlTools(api, defaultProjectId),
         ...projectTools(api),
     };
 
