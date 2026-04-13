@@ -1,0 +1,45 @@
+doctype html
+html(lang="en")
+	head
+		meta(charset="UTF-8")
+		meta(name="viewport" content="width=device-width, initial-scale=1")
+		title #{title || 'Admin — Kumbukum'}
+		link(href='/static/images/favicon.ico' rel="shortcut icon")
+		link(href="/static/css/vendor.css" rel="stylesheet")
+		link(href="/static/css/app.css" rel="stylesheet")
+		block head
+		style.
+			html, body { height: 100%; }
+			body { display: flex; flex-direction: column; }
+			.admin-main { flex: 1; }
+			.admin-footer { flex-shrink: 0; }
+	body
+		nav.navbar.navbar-expand-lg.navbar-dark.bg-dark.sticky-top
+			.container-fluid
+				a.navbar-brand.ms-2(href="/admin") Kumbukum Admin
+				.d-flex.align-items-center
+					ul.navbar-nav.me-3
+						block nav
+							if is_hosted
+								li.nav-item
+									a.nav-link(href="/admin" class=(activeNav === 'accounts' ? 'active' : '')) Accounts
+							li.nav-item
+								a.nav-link(href="/admin/email-templates" class=(activeNav === 'email-templates' ? 'active' : '')) Email Templates
+					form(action="/admin/logout" method="POST")
+						button.btn.btn-outline-light.btn-sm(type="submit")
+							i.bi.bi-box-arrow-right.me-1
+							| Logout
+
+		.container-fluid.admin-main.py-4
+			block content
+
+		.container-fluid.bg-body.admin-footer.mb-5
+			.d-flex.align-items-center.justify-content-center.fs-9
+				a(href="https://kumbukum.com?utm_source=kumbukum_admin&utm_medium=referral" target="_blank") Kumbukum
+				span.ps-1 Made by the Founders who also run
+				a.ps-1(href="https://helpmonks.com?utm_source=kumbukum_admin&utm_medium=referral" target="_blank") Helpmonks - Email Management
+				span.ps-1 and
+				a.ps-1(href="https://razuna.com?utm_source=kumbukum_admin&utm_medium=referral" target="_blank") Razuna - Digital Asset Management
+
+		script(src="/static/js/vendor.js" type="module")
+		block scripts

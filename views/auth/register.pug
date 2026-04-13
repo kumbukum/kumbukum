@@ -1,0 +1,33 @@
+extends ../auth_layout
+
+block head
+	title Sign Up — Kumbukum
+
+block body
+	.container
+		.row.justify-content-center.mt-5
+			.col-md-5
+				.card.shadow
+					.card-body.p-4
+						.text-center.mb-4.logo-form
+							include ../includes/logo_black
+						
+						h3.text-center.mb-4 Create your account
+
+						#signup-result
+
+						form#signup-form
+							.mb-3
+								label.form-label(for="name") Name
+								input.form-control#name(type="text" name="name" required autofocus)
+							.mb-3
+								label.form-label(for="email") Email
+								input.form-control#email(type="email" name="email" required)
+							button.btn.btn-primary.w-100(type="submit") Sign Up
+
+						.text-center.mt-3
+							a(href="/login") Already have an account? Sign in
+
+block scripts
+	script(src="/static/js/vendor.js" type="module")
+	script(src="/static/js/auth.js")

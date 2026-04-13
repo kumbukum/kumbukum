@@ -1,0 +1,210 @@
+import { Editor } from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import CodeBlock from '@tiptap/extension-code-block';
+import HorizontalRule from '@tiptap/extension-horizontal-rule';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Image from '@tiptap/extension-image';
+import { Extension } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+
+// ---- Slash Command Menu ----
+
+const SLASH_COMMANDS = [
+	{ label: 'Heading 1', icon: 'bi-type-h1', command: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
+	{ label: 'Heading 2', icon: 'bi-type-h2', command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+	{ label: 'Heading 3', icon: 'bi-type-h3', command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+	{ label: 'Bullet List', icon: 'bi-list-ul', command: (editor) => editor.chain().focus().toggleBulletList().run() },
+	{ label: 'Ordered List', icon: 'bi-list-ol', command: (editor) => editor.chain().focus().toggleOrderedList().run() },
+	{ label: 'Task List', icon: 'bi-check2-square', command: (editor) => editor.chain().focus().toggleTaskList().run() },
+	{ label: 'Code Block', icon: 'bi-code-square', command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
+	{ label: 'Blockquote', icon: 'bi-chat-quote', command: (editor) => editor.chain().focus().toggleBlockquote().run() },
+	{ label: 'Horizontal Rule', icon: 'bi-dash-lg', command: (editor) => editor.chain().focus().setHorizontalRule().run() },
+];
+
+function createSlashMenu() {
+	const menu = document.createElement('div');
+	menu.className = 'slash-menu';
+	menu.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:none;max-height:300px;overflow-y:auto;min-width:200px;';
+	document.body.appendChild(menu);
+	return menu;
+}
+
+function renderSlashMenu(menu, commands, selectedIndex, onSelect) {
+	menu.innerHTML = '';
+	commands.forEach((cmd, i) => {
+		const item = document.createElement('div');
+		item.className = 'slash-menu-item' + (i === selectedIndex ? ' active' : '');
+		item.style.cssText = 'padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:4px;font-size:14px;' +
+			(i === selectedIndex ? 'background:#e9ecef;' : '');
+		item.innerHTML = `<i class="${cmd.icon}" style="width:18px;text-align:center;"></i><span>${cmd.label}</span>`;
+		item.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			onSelect(i);
+		});
+		item.addEventListener('mouseenter', () => {
+			menu.querySelectorAll('.slash-menu-item').forEach((el, j) => {
+				el.style.background = j === i ? '#e9ecef' : '';
+				el.className = 'slash-menu-item' + (j === i ? ' active' : '');
+			});
+		});
+		menu.appendChild(item);
+	});
+}
+
+const SlashCommands = Extension.create({
+	name: 'slashCommands',
+
+	addProseMirrorPlugins() {
+		const editor = this.editor;
+		const menu = createSlashMenu();
+		let active = false;
+		let filterText = '';
+		let selectedIndex = 0;
+		let filtered = SLASH_COMMANDS;
+
+		function hide() {
+			menu.style.display = 'none';
+			active = false;
+			filterText = '';
+			selectedIndex = 0;
+		}
+
+		function show(coords) {
+			menu.style.display = 'block';
+			menu.style.left = coords.left + 'px';
+			menu.style.top = (coords.bottom + 4) + 'px';
+			active = true;
+			filterText = '';
+			selectedIndex = 0;
+			filtered = SLASH_COMMANDS;
+			renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
+		}
+
+		function executeCommand(index) {
+			const cmd = filtered[index];
+			if (!cmd) return;
+			// Delete the slash and filter text
+			const { from } = editor.state.selection;
+			const textBefore = editor.state.doc.textBetween(Math.max(0, from - filterText.length - 1), from, '');
+			const slashPos = from - filterText.length - 1;
+			editor.chain().focus().deleteRange({ from: Math.max(0, slashPos), to: from }).run();
+			cmd.command(editor);
+			hide();
+		}
+
+		return [
+			new Plugin({
+				key: new PluginKey('slashCommands'),
+				props: {
+					handleKeyDown(view, event) {
+						if (!active) {
+							if (event.key === '/' && view.state.selection.empty) {
+								const { from } = view.state.selection;
+								const textBefore = view.state.doc.textBetween(Math.max(0, from - 1), from, '');
+								// Only show on empty line or after space
+								if (from === 1 || textBefore === '' || textBefore === ' ' || textBefore === '\n') {
+									setTimeout(() => {
+										const coords = view.coordsAtPos(from);
+										show(coords);
+									}, 10);
+								}
+							}
+							return false;
+						}
+
+						if (event.key === 'Escape') {
+							hide();
+							return true;
+						}
+						if (event.key === 'ArrowDown') {
+							selectedIndex = (selectedIndex + 1) % filtered.length;
+							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
+							return true;
+						}
+						if (event.key === 'ArrowUp') {
+							selectedIndex = (selectedIndex - 1 + filtered.length) % filtered.length;
+							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
+							return true;
+						}
+						if (event.key === 'Enter') {
+							event.preventDefault();
+							executeCommand(selectedIndex);
+							return true;
+						}
+						if (event.key === 'Backspace') {
+							if (filterText.length === 0) {
+								hide();
+								return false;
+							}
+							filterText = filterText.slice(0, -1);
+							filtered = SLASH_COMMANDS.filter((c) =>
+								c.label.toLowerCase().includes(filterText.toLowerCase()),
+							);
+							selectedIndex = 0;
+							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
+							return false;
+						}
+						if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+							filterText += event.key;
+							filtered = SLASH_COMMANDS.filter((c) =>
+								c.label.toLowerCase().includes(filterText.toLowerCase()),
+							);
+							selectedIndex = 0;
+							if (filtered.length === 0) {
+								hide();
+								return false;
+							}
+							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
+							return false;
+						}
+						return false;
+					},
+					handleClick() {
+						if (active) hide();
+						return false;
+					},
+				},
+			}),
+		];
+	},
+});
+
+// ---- Editor Factory ----
+
+export function createEditor(element, { content = '', onUpdate = null } = {}) {
+	const editorOptions = {
+		element,
+		extensions: [
+			StarterKit.configure({
+				codeBlock: false,
+				horizontalRule: false,
+			}),
+			Placeholder.configure({
+				placeholder: 'Type "/" for commands, or start typing...',
+			}),
+			CodeBlock,
+			HorizontalRule,
+			TaskList,
+			TaskItem.configure({
+				nested: true,
+			}),
+			Image,
+			SlashCommands,
+		],
+		content,
+	};
+
+	if (onUpdate) {
+		editorOptions.onUpdate = ({ editor: ed }) => onUpdate(ed);
+	}
+
+	const editor = new Editor(editorOptions);
+
+	return editor;
+}
+
+// Export for global use
+window.KumbukumEditor = { createEditor };

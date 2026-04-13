@@ -1,0 +1,61 @@
+extends ../auth_layout
+
+block head
+	title Login — Kumbukum
+
+block body
+	.container
+		.row.justify-content-center.mt-5
+			.col-md-5
+				.card.shadow
+					.card-body.p-4
+						.text-center.mb-4.logo-form
+							include ../includes/logo_black
+
+						#login-form
+							if error
+								.alert.alert-danger= error
+							form(action="/login" method="POST")
+								.mb-3
+									label.form-label(for="email") Email
+									input.form-control#email(type="email" name="email" required autofocus)
+								.mb-3
+									label.form-label(for="password") Password
+									input.form-control#password(type="password" name="password" required)
+								.mb-2.text-end
+									a.small(href="/forgot-password") Forgot password?
+								button.btn.btn-primary.w-100(type="submit") Sign In
+
+							hr
+							.d-grid.gap-2
+								button.btn.btn-outline-secondary#magic-link-btn(type="button")
+									i.bi.bi-envelope.me-2
+									| Sign in with Magic Link
+								button.btn.btn-outline-secondary#passkey-btn(type="button")
+									i.bi.bi-fingerprint.me-2
+									| Sign in with Passkey
+
+							.text-center.mt-3
+								a(href="/signup") Create an account
+
+						#magic-link-form.d-none
+							h5.text-center.mb-3 Enter your email to receive a magic link
+							form(id="form-magic-link")
+								.mb-3
+									label.form-label(for="magic-link-email") Email
+									input.form-control#magic-link-email(type="email" name="email" required autofocus)
+								button.btn.btn-primary.w-100(type="submit") Send Magic Link
+							.text-center.mt-3
+								a.small#magic-link-back(href="#") Back to login
+
+						#totp-form.d-none
+							form(id="form-2fa")
+								.mb-3
+									label.form-label(for="totp-code") Enter your 2FA code
+									input.form-control#totp-code(type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autofocus)
+								button.btn.btn-primary.w-100(type="submit") Verify
+
+block scripts
+	script(src="/static/js/vendor.js" type="module")
+	script(src="/static/js/simplewebauthn-browser.min.js")
+	script(src="/static/js/auth.js")

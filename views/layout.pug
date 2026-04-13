@@ -1,0 +1,183 @@
+doctype html
+html(lang="en")
+	head
+		meta(charset="UTF-8")
+		meta(name="viewport" content="width=device-width, initial-scale=1")
+		title #{title || 'Kumbukum'}
+		link(href='/static/images/favicon.ico' rel="shortcut icon")
+		link(href="/static/css/vendor.css" rel="stylesheet")
+		link(href="/static/css/app.css" rel="stylesheet")
+		block head
+	body
+		block body
+			include includes/avatar
+			if impersonating
+				.alert.alert-warning.text-center.mb-0.rounded-0.py-1(style="position:sticky;top:0;z-index:1060")
+					i.bi.bi-shield-exclamation.me-2
+					strong Sysadmin
+					|  — viewing as #{impersonatingName}
+					button.btn.btn-sm.btn-outline-dark.ms-3#exit-impersonation Exit
+
+			nav.navbar.navbar-expand-lg.navbar-dark.bg-dark.sticky-top
+				.container-fluid
+					a.navbar-brand(href="/dashboard")
+						include includes/logo_white
+					.d-flex.align-items-center
+						if user
+							.dropdown
+								button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
+									+avatar(user.name, 'xs')
+									= user.name
+								ul.dropdown-menu.dropdown-menu-end
+									li: a.dropdown-item(href="/settings/profile") Settings
+									if is_hosted
+										li: hr.dropdown-divider
+										li: a.dropdown-item(href="/settings/subscription") My Subscription
+									li: hr.dropdown-divider
+									li: a.dropdown-item(href="/api/doc" target="_blank") API Docs
+									li: hr.dropdown-divider
+									li: a.dropdown-item(href="#" onclick="logout()") Logout
+
+			.container-fluid.flex-grow-1.overflow-hidden
+				.row.h-100
+					aside.col-md-2.bg-light.p-3.sidebar#sidebar
+						block sidebar
+							.d-flex.justify-content-between.align-items-center.mb-3
+								h6.mb-0 My Projects
+								button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
+									i.bi.bi-plus
+							#project-list
+							hr.my-3
+							a.d-flex.align-items-center.text-decoration-none.text-muted.small(href="/graph")
+								i.bi.bi-diagram-3.me-2
+								| Graph
+							hr.my-3
+							a.d-flex.align-items-center.text-decoration-none.text-muted.small(href="/trash")
+								i.bi.bi-trash.me-2
+								| Trash
+								span.ms-auto.d-none#trash-count-badge
+
+					main.col-md-7.p-4#main-content
+						#chat-results-panel.d-none.mb-4
+							.d-flex.justify-content-between.align-items-center.mb-3
+								h6.mb-0
+									i.bi.bi-search.me-1
+									| Chat Results
+								button.btn.btn-sm.btn-outline-secondary#close-chat-results(title="Close results")
+									i.bi.bi-x-lg
+							#chat-results-list
+						#page-content
+							block content
+
+					aside.col-md-3.p-3.border-start#chat-sidebar
+						block chat
+							include includes/chat_sidebar
+
+		//- Universal modal for viewing/editing/creating items
+		.modal.fade#chat-result-modal(tabindex="-1" aria-hidden="true")
+			.modal-dialog.modal-xl.modal-dialog-scrollable
+				.modal-content
+					.modal-header
+						span.badge.me-2#result-modal-badge
+						h5.modal-title#result-modal-title
+						button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+					.modal-body#result-modal-body
+						//- Note form
+						#result-modal-note.d-none
+							.mb-3
+								.form-text Title
+								input.form-control#rm-note-title(type="text")
+							.mb-3
+								.form-text Tags
+								input.form-control#rm-note-tags(type="text")
+							ul.nav.nav-tabs.mb-0
+								li.nav-item
+									button.nav-link.active#rm-note-tab-preview(type="button") Preview
+								li.nav-item
+									button.nav-link#rm-note-tab-edit(type="button") Edit
+							#rm-note-preview.preview-container.border.border-top-0.rounded-bottom.p-3(style="min-height:300px")
+							#rm-note-editor.border-0.rounded.p-0.d-none(style="min-height:300px")
+
+						//- Memory form
+						#result-modal-memory.d-none
+							.mb-3
+								.form-text Title
+								input.form-control#rm-memory-title(type="text")
+							.mb-3
+								.form-text Tags
+								input.form-control#rm-memory-tags(type="text")
+							.mb-3
+								.form-text Source
+								input.form-control#rm-memory-source(type="text")
+							.mb-3.position-relative
+								.form-text Relationships
+								.source-search-wrap
+									i.bi.bi-search.source-search-icon
+									input.form-control#rm-relationship-search(type="text" placeholder="Type to search..." autocomplete="off")
+								#rm-relationship-tags.d-flex.flex-wrap.gap-1.mt-2
+							ul.nav.nav-tabs.mb-0
+								li.nav-item
+									button.nav-link.active#rm-memory-tab-preview(type="button") Preview
+								li.nav-item
+									button.nav-link#rm-memory-tab-edit(type="button") Edit
+							#rm-memory-preview.preview-container.border.border-top-0.rounded-bottom.p-3(style="min-height:300px")
+							#rm-memory-editor.border-0.rounded.p-0.d-none(style="min-height:300px")
+
+						//- URL form
+						#result-modal-url.d-none
+							.mb-3.d-none#rm-url-og-wrap
+								img.rounded#rm-url-og-image(alt="" style="max-height:80px; object-fit:cover")
+							.mb-3
+								.form-text URL
+								input.form-control#rm-url-input(type="url")
+							.mb-3
+								.form-text Title
+								input.form-control#rm-url-title(type="text")
+							.mb-3
+								.form-text Description
+								input.form-control#rm-url-description(type="text")
+							.mb-3.form-check
+								input.form-check-input#rm-url-crawl(type="checkbox")
+								label.form-check-label(for="rm-url-crawl") Enable full-site crawling
+
+						//- Loading placeholder
+						#result-modal-loading.text-center.py-4.d-none
+							.spinner-border.spinner-border-sm
+							|  Loading...
+
+					.modal-footer
+						button.btn.btn-outline-danger.btn-sm.me-auto.d-none#rm-delete-btn
+							i.bi.bi-trash.me-1
+							| Delete
+						button.btn.btn-secondary.btn-sm(type="button" data-bs-dismiss="modal") Close
+						button.btn.btn-primary.btn-sm#rm-save-btn
+							i.bi.bi-check-lg.me-1
+							| Save
+
+		script(src="/socket.io/socket.io.js")
+		script.
+			var __host_id = "#{host_id}";
+			var __user_name = "#{user ? user.name : ''}";
+			var __avatar_colors = ['#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
+			function makeAvatar(name, size) {
+				size = size || 'xs';
+				var parts = (name || '?').trim().split(' ');
+				var initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]) : parts[0].substring(0, 2);
+				var hash = 0;
+				for (var i = 0; i < (name || '').length; i++) hash = (name || '').charCodeAt(i) + ((hash << 5) - hash);
+				var bg = __avatar_colors[Math.abs(hash) % __avatar_colors.length];
+				return '<span class="avatar avatar-' + size + '" style="background:' + bg + '" title="' + (name || '') + '">' + initials.toUpperCase() + '</span>';
+			}
+		script(src="/static/js/vendor.js" type="module")
+		script(src="/static/js/editor.js" type="module")
+		script(src="/static/js/chat.js")
+		script(src="/static/js/app.js")
+		include includes/openpanel
+		if impersonating
+			script.
+				document.getElementById('exit-impersonation')?.addEventListener('click', async () => {
+					const res = await fetch('/api/v1/admin/exit-impersonation', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+					const data = await res.json();
+					if (data.ok) window.location.href = data.redirect;
+				});
+		block scripts

@@ -1,0 +1,164 @@
+x-env: &env
+    NODE_ENV: development
+    PORT: 3000
+    MONGO_URI: mongodb://dbh.pipefish-mermaid.ts.net:27017/kumbukum?replicaSet=hmrs0
+    # MONGO_URI: mongodb://mongo:27017/kumbukum?replicaSet=rs0
+    REDIS_URL: redis://redis:6379
+    TYPESENSE_HOST: typesense
+    TYPESENSE_PORT: 8108
+    TYPESENSE_PROTOCOL: http
+    TYPESENSE_API_KEY: kumbukum-dev-key
+    TYPESENSE_NODES: ""
+    SESSION_SECRET: dev-session-secret-change-me
+    JWT_SECRET: dev-jwt-secret-change-me
+    SMTP_HOST: "mailpit"
+    SMTP_PORT: 1025
+    SMTP_USER: ""
+    SMTP_PASS: ""
+    SMTP_FROM: "noreply@localhost"
+    CHAT_AI_MODEL: "gemini-flash-latest"
+    CHAT_AI_MODEL_PROVIDER: google
+    NL_SEARCH_MODEL: "gemini-flash-lite-latest"
+    NL_SEARCH_MODEL_PROVIDER: google
+    TS_CONVERSATION_MODEL: "gemini-flash-lite-latest"
+    TS_CONVERSATION_MODEL_PROVIDER: google
+    GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
+    OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+    APP_URL: http://app.kumbukum.com
+    SYSADMIN_EMAIL: "sysadmin@localhost"
+    SYSADMIN_PASSWORD: "sysadminpassword"
+    API_BASE_URL: http://app:3000
+    ENABLE_OPENPANEL: "${ENABLE_OPENPANEL:-false}"
+    OPENPANEL_CLIENT_ID: "${OPENPANEL_CLIENT_ID:-}"
+    OPENPANEL_CLIENT_SECRET: "${OPENPANEL_CLIENT_SECRET:-}"
+    OPENPANEL_API_URL: "${OPENPANEL_API_URL:-}"
+    ENABLE_OTEL: "${ENABLE_OTEL:-false}"
+    OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-kumbukum}"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+    OTEL_EXPORTER_OTLP_HEADERS: "${OTEL_EXPORTER_OTLP_HEADERS:-}"
+    STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+    STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+    STRIPE_PRICE_ID: "${STRIPE_PRICE_ID:-}"
+    STRIPE_PORTAL_CONFIG_ID: "${STRIPE_PORTAL_CONFIG_ID:-}"
+
+services:
+    app:
+        extends:
+            file: ./compose.base.yml
+            service: base
+        command: ["npm", "run", "dev"]
+        ports:
+            - "3000:3000"
+        environment:
+            <<: *env
+        dns:
+            - 100.100.100.100
+        depends_on:
+            # docs:
+            #     condition: service_completed_successfully
+            # mongo-init:
+            #     condition: service_completed_successfully
+            redis:
+                condition: service_started
+            typesense:
+                condition: service_started
+
+    mcp:
+        extends:
+            file: ./compose.base.yml
+            service: base
+        command: ["node", "apps/mcp/server.js", "--http"]
+        ports:
+            - "3002:3002"
+        environment:
+            <<: *env
+            PORT: 3002
+        restart: unless-stopped
+
+    # docs:
+    #     extends:
+    #         file: ./compose.base.yml
+    #         service: base
+    #     command: ["sh", "-c", "node docs/scripts/export-openapi.js && pnpm --filter @kumbukum/docs exec vitepress build && rm -rf docs-dist && cp -r docs/.vitepress/dist docs-dist"]
+    #     restart: "no"
+
+    # mongo:
+    #     image: percona/percona-server-mongodb:6.0
+    #     ports:
+    #         - "27017:27017"
+    #     volumes:
+    #         - mongo_data:/data/db
+    #     command: mongod --setParameter perconaTelemetry=false --replSet rs0 --bind_ip_all
+    #     environment:
+    #         PERCONA_TELEMETRY_DISABLE: 1
+
+    # mongo-init:
+    #     image: percona/percona-server-mongodb:6.0
+    #     depends_on:
+    #         mongo:
+    #             condition: service_started
+    #     volumes:
+    #         - ./docker/mongo-init-replset.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    #     entrypoint: /bin/bash
+    #     command: /docker-entrypoint-initdb.d/init.sh
+    #     environment:
+    #         PERCONA_TELEMETRY_DISABLE: 1
+    #         MONGO_HOST: mongo
+
+    redis:
+        image: redis:8
+        command: redis-server --appendonly yes --port 6379 --save ""
+        volumes:
+            - redis_data:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+
+    typesense:
+        image: typesense/typesense:30.1
+        ports:
+            - "8108:8108"
+        volumes:
+            - typesense_data:/data
+        command: --data-dir /data --api-key=kumbukum-dev-key
+
+    # ── Mailpit (dev mail catcher) ──────────────────────────────
+    mailpit:
+        image: axllent/mailpit:latest
+        restart: unless-stopped
+        ports:
+            - "8025:8025"   # Web UI
+        expose:
+            - "1025"        # SMTP
+
+    caddy:
+        image: caddy:latest
+        cap_add:
+            - NET_ADMIN
+        ports:
+            - "80:80"
+            - "443:443"
+            - "443:443/udp"
+        volumes:
+            - ./docker/config/caddy/Caddyfile:/etc/caddy/Caddyfile
+            - caddy_data:/data
+            - caddy_config:/config
+            - /etc/hostname:/etc/hostname:ro
+        depends_on:
+            - app
+            - redis
+            - typesense
+        dns:
+            - 100.100.100.100
+
+volumes:
+    node_modules:
+    pnpm_store:
+    mongo_data:
+    typesense_data:
+    redis_data:
+    caddy_data:
+    caddy_config:

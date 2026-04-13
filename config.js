@@ -1,0 +1,96 @@
+function parseTypesenseNodes() {
+	const nodesEnv = process.env.TYPESENSE_NODES || '';
+	if (nodesEnv) {
+		try {
+			return JSON.parse(nodesEnv);
+		} catch {
+			console.warn('Invalid TYPESENSE_NODES JSON, falling back to single-node config');
+		}
+	}
+	return [
+		{
+			host: process.env.TYPESENSE_HOST || 'localhost',
+			port: parseInt(process.env.TYPESENSE_PORT, 10) || 8108,
+			protocol: process.env.TYPESENSE_PROTOCOL || 'http',
+		},
+	];
+}
+
+function parseRedisConfig() {
+	const sentinelEnv = process.env.REDIS_SENTINEL || '';
+	if (sentinelEnv) {
+		try {
+			const parsed = JSON.parse(sentinelEnv);
+			if (!parsed.sentinels || !parsed.name) {
+				throw new Error('REDIS_SENTINEL must include "sentinels" and "name"');
+			}
+			return parsed;
+		} catch (err) {
+			console.error('Invalid REDIS_SENTINEL JSON:', err.message);
+			process.exit(1);
+		}
+	}
+	return process.env.REDIS_URL || 'redis://localhost:6379';
+}
+
+const config = {
+	env: process.env.NODE_ENV || 'development',
+	port: parseInt(process.env.PORT, 10) || 3000,
+	mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/kumbukum?replicaSet=rs0',
+	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+	redisOptions: parseRedisConfig(),
+	socketRedis: process.env.SOCKET_REDIS === 'true',
+	sessionSecret: process.env.SESSION_SECRET || 'change-me',
+	jwtSecret: process.env.JWT_SECRET || 'change-me',
+	appUrl: process.env.APP_URL || 'http://localhost:3000',
+
+	typesense: {
+		nodes: parseTypesenseNodes(),
+		apiKey: process.env.TYPESENSE_API_KEY || 'kumbukum-dev-key',
+	},
+
+	smtp: {
+		host: process.env.SMTP_HOST || '',
+		port: parseInt(process.env.SMTP_PORT, 10) || 587,
+		user: process.env.SMTP_USER || '',
+		pass: process.env.SMTP_PASS || '',
+		from: process.env.SMTP_FROM || 'noreply@localhost',
+	},
+
+	llm: {
+		// Main conversational model (richer, for analysis & actions)
+		chatModel: process.env.CHAT_AI_MODEL || '',
+		chatProvider: process.env.CHAT_AI_MODEL_PROVIDER || 'google',
+		// Lightweight model for intent classification & query extraction
+		nlSearchModel: process.env.NL_SEARCH_MODEL || '',
+		nlSearchProvider: process.env.NL_SEARCH_MODEL_PROVIDER || 'google',
+		// Typesense conversation model
+		tsConversationModel: process.env.TS_CONVERSATION_MODEL || '',
+		tsConversationProvider: process.env.TS_CONVERSATION_MODEL_PROVIDER || 'google',
+		// API keys per provider
+		googleApiKey: process.env.GOOGLE_API_KEY || '',
+		openaiApiKey: process.env.OPENAI_API_KEY || '',
+	},
+
+	stripe: {
+		secretKey: process.env.STRIPE_SECRET_KEY || '',
+		webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+		priceId: process.env.STRIPE_PRICE_ID || '',
+		portalConfigId: process.env.STRIPE_PORTAL_CONFIG_ID || '',
+		trialDays: parseInt(process.env.STRIPE_TRIAL_DAYS, 10) || 7,
+	},
+
+	openpanel: {
+		enabled: process.env.ENABLE_OPENPANEL === 'true',
+		clientId: process.env.OPENPANEL_CLIENT_ID || '',
+		clientSecret: process.env.OPENPANEL_CLIENT_SECRET || '',
+		apiUrl: process.env.OPENPANEL_API_URL || '',
+	},
+
+	sysadmin: {
+		email: process.env.SYSADMIN_EMAIL || '',
+		password: process.env.SYSADMIN_PASSWORD || '',
+	},
+};
+
+export default config;

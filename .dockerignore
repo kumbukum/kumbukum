@@ -1,0 +1,10 @@
+node_modules
+apps/*/node_modules
+.git
+.github
+.env*
+test/
+docker/
+compose*.yml
+*.md
+!LICENSE

@@ -1,0 +1,35 @@
+extends layout
+
+block settings
+	h4.mb-4 Profile Settings
+
+	.text-center.mb-4
+		+avatar(user.name, 'xl')
+		p.text-muted.mt-2.mb-0= user.email
+
+	form#profile-form
+		.mb-3
+			label.form-label Name
+			input.form-control#profile-name(type="text" value=user.name)
+		.mb-3
+			label.form-label Email
+			input.form-control#profile-email(type="email" value=user.email)
+		.mb-3
+			label.form-label Timezone
+			input.form-control#profile-timezone(type="text" list="timezone-list" autocomplete="off" value=user.timezone)
+			datalist#timezone-list
+		button.btn.btn-primary(type="submit") Save Changes
+
+block scripts
+	script(src="/static/js/settings.js")
+	script.
+		(function() {
+			const zones = Intl.supportedValuesOf('timeZone');
+			const list = document.getElementById('timezone-list');
+			zones.forEach(function(tz) {
+				const opt = document.createElement('option');
+				opt.value = tz;
+				opt.label = tz.replace(/_/g, ' ');
+				list.appendChild(opt);
+			});
+		})();

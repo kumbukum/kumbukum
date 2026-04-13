@@ -1,0 +1,17 @@
+{
+    "name": "@kumbukum/docs",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vitepress dev --port 5173",
+        "build": "node scripts/export-openapi.js && vitepress build",
+        "preview": "vitepress preview --port 4173"
+    },
+    "devDependencies": {
+        "vitepress": "^1.6.4",
+        "vitepress-openapi": "^0.1.20",
+        "vitepress-plugin-tabs": "^0.8.0",
+        "vue": "^3.5.32"
+    }
+}

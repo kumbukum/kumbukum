@@ -1,0 +1,44 @@
+extends layout
+
+block content
+	.row.justify-content-center
+		.col-md-8
+			.card
+				.card-header.d-flex.justify-content-between.align-items-center
+					h5.mb-0 Edit Account
+					a.btn.btn-sm.btn-outline-secondary(href="/admin") &larr; Back to Accounts
+				.card-body
+					form#edit-account-form
+						input(type="hidden" id="account-id" value=account._id)
+
+						.mb-3
+							label.form-label(for="name") Name
+							input.form-control#name(type="text" value=account.name required)
+
+						.mb-3
+							label.form-label(for="email") Email
+							input.form-control#email(type="email" value=account.email required)
+
+						.mb-3
+							.form-check.form-switch
+								input.form-check-input#is-active(type="checkbox" checked=account.is_active)
+								label.form-check-label(for="is-active") Account Active
+
+						.row.mb-3
+							.col-md-6
+								label.form-label Last Login
+								p.form-control-plaintext
+									if account.last_login
+										= new Date(account.last_login).toLocaleString()
+									else
+										span.text-muted Never
+							.col-md-6
+								label.form-label Member Since
+								p.form-control-plaintext= new Date(account.createdAt).toLocaleString()
+
+						.d-flex.justify-content-between
+							button.btn.btn-primary(type="submit") Save Changes
+							button.btn.btn-danger#delete-account(type="button") Delete Account
+
+block scripts
+	script(src="/static/js/admin.js")

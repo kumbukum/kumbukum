@@ -1,0 +1,48 @@
+(cors) {
+	@cors_preflight method OPTIONS
+	@cors header Origin "*"
+
+	handle @cors_preflight {
+		header Access-Control-Allow-Origin "*"
+		header Access-Control-Allow-Methods "GET, HEAD, OPTIONS, POST, PUT, PATCH, DELETE"
+		header Access-Control-Allow-Headers "Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, X-Api-Key, X-Fluffy-Key, Content-Length, Content-Range, Accept-Ranges, Content-Encoding, chunk-length, chunk-index, chunk-total, transfer-id, file-size, file-name, file-type, filepond-file-id, target-folder-id, upload-length, upload-offset, upload-name, upload-name-encoded, upload-metadata"
+		respond "" 204
+	}
+
+	handle @cors {
+		header Access-Control-Allow-Origin "*"
+		header Access-Control-Allow-Credentials "true"
+		header Access-Control-Allow-Methods "GET, HEAD, OPTIONS, POST, PUT, PATCH, DELETE"
+		header Access-Control-Allow-Headers "Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, X-Api-Key, X-Fluffy-Key, Content-Length, Content-Range, Accept-Ranges, Content-Encoding, chunk-length, chunk-index, chunk-total, transfer-id, file-size, file-name, file-type, filepond-file-id, target-folder-id, upload-length, upload-offset, upload-name, upload-name-encoded, upload-metadata"
+		header Access-Control-Expose-Headers "Content-Length, Content-Range, Accept-Ranges, transfer-id, upload-offset, Location"
+	}
+}
+
+# Main app domain
+app.kumbukum.com:80 {
+	tls internal
+	import cors
+
+    # Enable compression
+    encode gzip
+
+	reverse_proxy http://app:3000
+}
+
+
+mcp.kumbukum.com:80 {
+	tls internal
+    reverse_proxy http://mcp:3002 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote_host}
+        header_up Connection "keep-alive"
+        # SSE requires unbuffered streaming
+        flush_interval -1
+        transport http {
+            keepalive 300s
+            keepalive_idle_conns 10
+            read_timeout 300s
+            write_timeout 300s
+        }
+    }
+}
