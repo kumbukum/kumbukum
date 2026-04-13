@@ -16,6 +16,8 @@ RUN apt-get update && \
 
 FROM builderdev AS devpnpmdev
 COPY --link .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --link apps/mcp/package.json ./apps/mcp/
+COPY --link docs/package.json ./docs/
 RUN pnpm install
 
 # BUILD

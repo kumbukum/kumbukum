@@ -24,15 +24,20 @@ FROM builder AS deps
 
 COPY --link .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --link apps/mcp/package.json ./apps/mcp/
+COPY --link docs/package.json ./docs/
 RUN pnpm install --frozen-lockfile
 
 # ──────────────────────────────────────────────
-# Stage 3: Build frontend assets (vendor.js, vendor.css, fonts)
+# Stage 3: Build frontend assets + VitePress docs
 # ──────────────────────────────────────────────
 FROM deps AS build
 
+ARG APP_VERSION=latest
+ENV VITEPRESS_VERSION=$APP_VERSION
+
 COPY --link . .
 RUN NODE_ENV=production node build.js
+RUN node docs/scripts/export-openapi.js && pnpm --filter @kumbukum/docs exec vitepress build
 
 # ──────────────────────────────────────────────
 # Stage 4: Production image (prod deps only)
@@ -41,6 +46,7 @@ FROM builder AS production
 
 COPY --link .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --link apps/mcp/package.json ./apps/mcp/
+COPY --link docs/package.json ./docs/
 RUN pnpm install --frozen-lockfile --prod
 
 COPY --link . .
@@ -51,6 +57,7 @@ COPY --from=build /opt/kumbukum/public/js/editor.js ./public/js/editor.js
 COPY --from=build /opt/kumbukum/public/js/graph_bundle.js ./public/js/graph_bundle.js
 COPY --from=build /opt/kumbukum/public/css/vendor.css ./public/css/vendor.css
 COPY --from=build /opt/kumbukum/public/css/fonts/ ./public/css/fonts/
+COPY --from=build /opt/kumbukum/docs/.vitepress/dist ./docs-dist
 
 USER node
 EXPOSE 3000

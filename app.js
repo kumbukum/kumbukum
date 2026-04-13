@@ -3,6 +3,7 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import config from './config.js';
@@ -57,6 +58,15 @@ var _static_cache_control = process.env.NODE_ENV === 'production'
             }
         },
     };
+
+// --- Docs site (VitePress built output) ---
+var _docs_dist = path.join(__dirname, 'docs-dist');
+if (fs.existsSync(_docs_dist)) {
+    app.use('/docs', express.static(_docs_dist, { ..._static_cache_control, extensions: ['html'], index: 'index.html' }));
+    app.use('/docs', (req, res) => {
+        res.sendFile(path.join(_docs_dist, '404.html'));
+    });
+}
 
 app.use('/static', express.static(path.join(__dirname, 'public'), _static_cache_control));
 

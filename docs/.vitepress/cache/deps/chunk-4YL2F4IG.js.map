@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../../../node_modules/.pnpm/vitepress-openapi@0.1.20_vitepress@1.6.4_@algolia+client-search@5.50.1_@types+node@25.6_c877224dbb2653f5496bc13231bf345d/node_modules/vitepress-openapi/dist/html-derivative-C6bxFbFW.js"],
+  "sourcesContent": ["import t from \"./html-B50bmoVb.js\";\nconst e = Object.freeze(JSON.parse('{\"displayName\":\"HTML (Derivative)\",\"injections\":{\"R:text.html - (comment.block, text.html meta.embedded, meta.tag.*.*.html, meta.tag.*.*.*.html, meta.tag.*.*.*.*.html)\":{\"patterns\":[{\"match\":\"<\",\"name\":\"invalid.illegal.bad-angle-bracket.html\"}]}},\"name\":\"html-derivative\",\"patterns\":[{\"include\":\"text.html.basic#core-minus-invalid\"},{\"begin\":\"(</?)(\\\\\\\\w[^<>\\\\\\\\s]*)(?<!/)\",\"beginCaptures\":{\"1\":{\"name\":\"punctuation.definition.tag.begin.html\"},\"2\":{\"name\":\"entity.name.tag.html\"}},\"end\":\"((?: ?/)?>)\",\"endCaptures\":{\"1\":{\"name\":\"punctuation.definition.tag.end.html\"}},\"name\":\"meta.tag.other.unrecognized.html.derivative\",\"patterns\":[{\"include\":\"text.html.basic#attribute\"}]}],\"scopeName\":\"text.html.derivative\",\"embeddedLangs\":[\"html\"]}')), n = [\n  ...t,\n  e\n];\nexport {\n  n as default\n};\n"],
+  "mappings": ";;;;;AACA,IAAM,IAAI,OAAO,OAAO,KAAK,MAAM,kuBAAkuB,CAAC;AAAtwB,IAAywB,IAAI;AAAA,EAC3wB,GAAG;AAAA,EACH;AACF;",
+  "names": []
+}

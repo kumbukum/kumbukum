@@ -43,6 +43,8 @@ services:
         dns:
             - 100.100.100.100
         depends_on:
+            docs:
+                condition: service_completed_successfully
             # mongo-init:
             #     condition: service_completed_successfully
             redis:
@@ -61,6 +63,13 @@ services:
             <<: *env
             PORT: 3002
         restart: unless-stopped
+
+    docs:
+        extends:
+            file: ./compose.base.yml
+            service: base
+        command: ["sh", "-c", "node docs/scripts/export-openapi.js && pnpm --filter @kumbukum/docs exec vitepress build && rm -rf docs-dist && cp -r docs/.vitepress/dist docs-dist"]
+        restart: "no"
 
     # mongo:
     #     image: percona/percona-server-mongodb:6.0
