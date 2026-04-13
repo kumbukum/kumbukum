@@ -16,11 +16,29 @@ function parseTypesenseNodes() {
 	];
 }
 
+function parseRedisConfig() {
+	const sentinelEnv = process.env.REDIS_SENTINEL || '';
+	if (sentinelEnv) {
+		try {
+			const parsed = JSON.parse(sentinelEnv);
+			if (!parsed.sentinels || !parsed.name) {
+				throw new Error('REDIS_SENTINEL must include "sentinels" and "name"');
+			}
+			return parsed;
+		} catch (err) {
+			console.error('Invalid REDIS_SENTINEL JSON:', err.message);
+			process.exit(1);
+		}
+	}
+	return process.env.REDIS_URL || 'redis://localhost:6379';
+}
+
 const config = {
 	env: process.env.NODE_ENV || 'development',
 	port: parseInt(process.env.PORT, 10) || 3000,
 	mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/kumbukum?replicaSet=rs0',
 	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+	redisOptions: parseRedisConfig(),
 	socketRedis: process.env.SOCKET_REDIS === 'true',
 	sessionSecret: process.env.SESSION_SECRET || 'change-me',
 	jwtSecret: process.env.JWT_SECRET || 'change-me',
@@ -60,6 +78,13 @@ const config = {
 		priceId: process.env.STRIPE_PRICE_ID || '',
 		portalConfigId: process.env.STRIPE_PORTAL_CONFIG_ID || '',
 		trialDays: parseInt(process.env.STRIPE_TRIAL_DAYS, 10) || 7,
+	},
+
+	openpanel: {
+		enabled: process.env.ENABLE_OPENPANEL === 'true',
+		clientId: process.env.OPENPANEL_CLIENT_ID || '',
+		clientSecret: process.env.OPENPANEL_CLIENT_SECRET || '',
+		apiUrl: process.env.OPENPANEL_API_URL || '',
 	},
 
 	sysadmin: {

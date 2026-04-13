@@ -1,20 +1,18 @@
 services:
   app:
     image: ghcr.io/kumbukum/kumbukum:latest
-    # build:
-    #   context: .
-    #   dockerfile: docker/dockerfiles/prod.Dockerfile
     ports:
       - "3000:3000"
     environment:
-      NODE_ENV: production
-      PORT: 3000
+      APP_URL: ${APP_URL}
       MONGO_URI: mongodb://mongo:27017/kumbukum
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      REDIS_SENTINEL: ${REDIS_SENTINEL:-}
       TYPESENSE_HOST: typesense
       TYPESENSE_PORT: 8108
       TYPESENSE_PROTOCOL: http
       TYPESENSE_API_KEY: ${TYPESENSE_API_KEY}
+      TYPESENSE_NODES: ${TYPESENSE_NODES:-}
       SESSION_SECRET: ${SESSION_SECRET}
       JWT_SECRET: ${JWT_SECRET}
       SMTP_HOST: ${SMTP_HOST}
@@ -30,14 +28,23 @@ services:
       TS_CONVERSATION_MODEL_PROVIDER: ${TS_CONVERSATION_MODEL_PROVIDER:-google}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      APP_URL: ${APP_URL}
+      NODE_ENV: production
+      PORT: 3000
+      ENABLE_OPENPANEL: ${ENABLE_OPENPANEL:-false}
+      OPENPANEL_CLIENT_ID: ${OPENPANEL_CLIENT_ID:-}
+      OPENPANEL_CLIENT_SECRET: ${OPENPANEL_CLIENT_SECRET:-}
+      OPENPANEL_API_URL: ${OPENPANEL_API_URL:-}
+      ENABLE_OTEL: ${ENABLE_OTEL:-false}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-kumbukum}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     depends_on:
       - mongo
       - redis
       - typesense
     restart: unless-stopped
 
-  ws-server:
+  ws:
     image: ghcr.io/kumbukum/kumbukum:latest
     command: node ws-server.js
     ports:
@@ -45,15 +52,20 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      REDIS_SENTINEL: ${REDIS_SENTINEL:-}
       SESSION_SECRET: ${SESSION_SECRET}
       MONGO_URI: mongodb://mongo:27017/kumbukum
+      ENABLE_OTEL: ${ENABLE_OTEL:-false}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-kumbukum-ws}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     depends_on:
       - redis
       - mongo
     restart: unless-stopped
 
-  mcp-server:
+  mcp:
     image: ghcr.io/kumbukum/kumbukum:latest
     command: node apps/mcp/server.js
     ports:
@@ -62,6 +74,10 @@ services:
       NODE_ENV: production
       PORT: 3002
       API_BASE_URL: http://app:3000
+      ENABLE_OTEL: ${ENABLE_OTEL:-false}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-kumbukum-mcp}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     restart: unless-stopped
 
   mongo:

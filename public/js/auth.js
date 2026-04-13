@@ -147,7 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			body: JSON.stringify({ email }),
 		});
 		const data = await res.json();
-		Swal.fire({ icon: 'success', title: 'Magic link sent', text: data.message || 'Check your email for a login link' });
+		await Swal.fire({ icon: 'success', title: 'Magic link sent', text: data.message || 'Check your email for a login link' });
+		window.location.href = '/login';
 	});
 
 	// Magic link email form
@@ -164,7 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				body: JSON.stringify({ email }),
 			});
 			const data = await res.json();
-			Swal.fire({ icon: 'success', title: 'Magic link sent', text: data.message || 'Check your email for a login link' });
+			await Swal.fire({ icon: 'success', title: 'Magic link sent', text: data.message || 'Check your email for a login link' });
+			window.location.href = '/login';
 		});
 	}
 

@@ -5,7 +5,11 @@ let client = null;
 
 function getRedisClient() {
 	if (!client) {
-		client = new Redis(config.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 3 });
+		if (typeof config.redisOptions === 'string') {
+			client = new Redis(config.redisOptions, { lazyConnect: true, maxRetriesPerRequest: 3 });
+		} else {
+			client = new Redis({ ...config.redisOptions, lazyConnect: true, maxRetriesPerRequest: 3 });
+		}
 		client.on('error', (err) => console.warn('Redis cache error:', err.message));
 	}
 	return client;

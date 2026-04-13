@@ -36,7 +36,7 @@ block settings
 					i.bi.bi-info-circle.me-2
 					| No active subscription. Start your free trial below.
 
-			table.table.table-sm.mb-3
+			table.table.table-sm.mb-4
 				tbody
 					tr
 						th Status
@@ -58,9 +58,11 @@ block settings
 
 			if status === 'incomplete' || status === 'canceled'
 				a.btn.btn-primary(href="/billing/checkout")
-					i.bi.bi-credit-card.me-2
-					| Start Free Trial
+					i.bi.bi-credit-card
+					span.ms-2 Start Free Trial
 			else
 				a.btn.btn-primary(href="/billing/portal")
-					i.bi.bi-gear.me-2
-					| Manage Subscription
+					i.bi.bi-gear
+					span.ms-2 Manage Subscription
+			
+			.mt-3.text-muted.fs-9 Kumbukum is made by Helpmonks LLC.

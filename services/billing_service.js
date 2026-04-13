@@ -7,6 +7,9 @@ import config from '../config.js';
  * Returns the Checkout URL to redirect the user to.
  */
 export async function createCheckoutSession(user) {
+    if (!config.stripe.priceId) {
+        throw new Error('STRIPE_PRICE_ID is not configured');
+    }
     const stripe = getStripe();
 
     // Create or reuse Stripe customer

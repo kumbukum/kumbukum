@@ -1,0 +1,53 @@
+//- OpenPanel Web SDK
+if openpanel.enabled && openpanel.clientId
+	script.
+		window.op=window.op||function(){var n=[];return new Proxy(function(){arguments.length&&n.push([].slice.call(arguments))},{get:function(t,r){return"q"===r?n:function(){n.push([r].concat([].slice.call(arguments)))}},has:function(t,r){return"q"===r}})}();
+		window.op('init', {
+			clientId: '#{openpanel.clientId}',
+			clientSecret: '#{openpanel.clientSecret}',
+			apiUrl: '#{openpanel.apiUrl}',
+			trackScreenViews: true,
+			trackOutgoingLinks: true,
+			trackAttributes: true
+		});
+	script(src="https://stats.helpmonks.eu/op1.js" defer async)
+	if user
+		script.
+			try {
+				window.op('identify', {
+					profileId: '#{user._id}',
+					firstName: '#{user.name}'.split(' ')[0] || undefined,
+					lastName: '#{user.name}'.split(' ').slice(1).join(' ') || undefined,
+					email: '#{user.email}',
+					properties: {
+						host_id: '#{host_id}',
+						subscription_status: '#{user.subscription_status || "free"}'
+					}
+				});
+				if ('#{host_id}') {
+					window.op('setGroup', '#{host_id}');
+				}
+			} catch (e) {
+				console.error('OpenPanel identify error:', e);
+			}
+	else
+		script.
+			window.op('clear');
+
+	script.
+		(function() {
+			window.captureEvent = function(options) {
+				options = options || {};
+				if (!options.action) return;
+				if (typeof window.op !== 'undefined') {
+					try {
+						window.op('track', options.action, {
+							host_id: '#{host_id || ""}',
+							subscription_status: '#{user ? (user.subscription_status || "free") : ""}'
+						});
+					} catch (e) {
+						console.error('Error tracking event with OpenPanel:', e);
+					}
+				}
+			};
+		})();

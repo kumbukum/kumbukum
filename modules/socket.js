@@ -22,7 +22,7 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 	// Redis streams adapter for horizontal scaling (multi-server only)
 	if (config.socketRedis) {
 		try {
-			const redisClient = new Redis(config.redisUrl);
+			const redisClient = new Redis(config.redisOptions);
 			await new Promise((resolve, reject) => {
 				redisClient.once('ready', resolve);
 				redisClient.once('error', reject);

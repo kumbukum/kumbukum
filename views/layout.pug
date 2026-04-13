@@ -43,7 +43,7 @@ html(lang="en")
 					aside.col-md-2.bg-light.p-3.sidebar#sidebar
 						block sidebar
 							.d-flex.justify-content-between.align-items-center.mb-3
-								h6.mb-0 Your projects
+								h6.mb-0 My Projects
 								button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
 									i.bi.bi-plus
 							#project-list
@@ -172,6 +172,7 @@ html(lang="en")
 		script(src="/static/js/editor.js" type="module")
 		script(src="/static/js/chat.js")
 		script(src="/static/js/app.js")
+		include includes/openpanel
 		if impersonating
 			script.
 				document.getElementById('exit-impersonation')?.addEventListener('click', async () => {

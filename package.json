@@ -9,8 +9,8 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "nodemon --max-old-space-size=4096 --trace-warnings app.js",
-    "start": "node app.js",
+    "dev": "nodemon --max-old-space-size=4096 --trace-warnings --require ./tracing.cjs app.js",
+    "start": "node --require ./tracing.cjs app.js",
     "build": "node build.js",
     "test": "node --test --test-force-exit test/**/*.test.js",
     "test:mcp": "node --test --test-force-exit test/mcp/**/*.test.js",
@@ -40,9 +40,20 @@
       "public/js/editor.js",
       "public/css/vendor.css"
     ],
-    "exec": "node build.js && node app.js"
+    "exec": "node build.js && node --require ./tracing.cjs app.js"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.72.0",
+    "@opentelemetry/exporter-logs-otlp-grpc": "^0.214.0",
+    "@opentelemetry/exporter-metrics-otlp-grpc": "^0.214.0",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.214.0",
+    "@opentelemetry/instrumentation-ioredis": "^0.62.0",
+    "@opentelemetry/resources": "^2.6.1",
+    "@opentelemetry/sdk-logs": "^0.214.0",
+    "@opentelemetry/sdk-metrics": "^2.6.1",
+    "@opentelemetry/sdk-node": "^0.214.0",
+    "@opentelemetry/semantic-conventions": "^1.40.0",
     "@simplewebauthn/server": "^13.3.0",
     "@socket.io/redis-streams-adapter": "^0.3.1",
     "@tiptap/core": "^3.22.3",

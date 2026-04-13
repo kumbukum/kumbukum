@@ -28,6 +28,9 @@ const app = express();
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
+// Make OpenPanel config available to all templates
+app.locals.openpanel = config.openpanel;
+
 // Stripe webhook needs raw body — skip express.json() for this path
 app.use((req, res, next) => {
     if (req.originalUrl === '/billing/webhook') return next();

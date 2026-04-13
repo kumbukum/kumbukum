@@ -51,22 +51,36 @@ router.get('/billing/checkout', requireAuth, requireTenant, async (req, res) => 
 
 router.get('/billing/success', requireAuth, requireTenant, async (req, res) => {
     // Stripe redirects here after successful checkout.
-    // The webhook will update subscription_status async, but it may arrive before or after this.
-    // We do a quick poll of the user record — if still incomplete, give it a moment.
-    const maxWait = 5000;
-    const interval = 500;
-    let waited = 0;
-
-    while (waited < maxWait) {
-        const user = await User.findById(req.userId);
-        if (user && ['trialing', 'active'].includes(user.subscription_status)) {
-            return res.redirect('/dashboard');
-        }
-        await new Promise((r) => setTimeout(r, interval));
-        waited += interval;
+    // First check if webhook already updated the status.
+    const user = await User.findById(req.userId).select('+stripe_customer_id');
+    if (user && ['trialing', 'active'].includes(user.subscription_status)) {
+        return res.redirect('/dashboard');
     }
 
-    // Fallback: redirect to dashboard anyway — webhook will update status shortly
+    // Webhook may not have arrived yet (especially in dev) — retrieve session directly from Stripe.
+    const sessionId = req.query.session_id;
+    if (sessionId && user) {
+        try {
+            const { getStripe } = await import('../modules/stripe.js');
+            const stripe = getStripe();
+            const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+            if (session.subscription) {
+                const subscription = await stripe.subscriptions.retrieve(session.subscription);
+                await User.findByIdAndUpdate(user._id, {
+                    stripe_customer_id: session.customer,
+                    stripe_subscription_id: subscription.id,
+                    subscription_status: subscription.status,
+                    trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+                });
+                return res.redirect('/dashboard');
+            }
+        } catch (err) {
+            console.error('Billing success: failed to retrieve Stripe session:', err.message);
+        }
+    }
+
+    // Last resort fallback — redirect to dashboard, webhook may still arrive
     res.redirect('/dashboard');
 });
 
