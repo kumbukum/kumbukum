@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress';
 import { useSidebar } from 'vitepress-openapi';
+import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs';
 import spec from './data/openapi.json' with { type: 'json' };
 
 const sidebar = useSidebar({ spec, linkPrefix: '/api/operations/' });
@@ -14,9 +15,17 @@ export default defineConfig({
         ['link', { rel: 'icon', type: 'image/x-icon', href: '/docs/favicon.ico' }],
     ],
 
+    markdown: {
+        config(md) {
+            md.use(tabsMarkdownPlugin);
+        },
+    },
+
     themeConfig: {
         nav: [
             { text: 'Guide', link: '/getting-started' },
+            { text: 'Cloud', link: '/cloud/' },
+            { text: 'Self-Hosted', link: '/selfhosted/' },
             {
                 text: 'API Reference',
                 items: [
@@ -40,6 +49,28 @@ export default defineConfig({
                     items: [
                         { text: 'Introduction', link: '/' },
                         { text: 'Quick Start', link: '/getting-started' },
+                    ],
+                },
+            ],
+            '/cloud/': [
+                {
+                    text: 'Kumbukum Cloud',
+                    items: [
+                        { text: 'Overview', link: '/cloud/' },
+                        { text: 'Account', link: '/cloud/account' },
+                        { text: 'Billing', link: '/cloud/billing' },
+                        { text: 'Support', link: '/cloud/support' },
+                    ],
+                },
+            ],
+            '/selfhosted/': [
+                {
+                    text: 'Self-Hosted',
+                    items: [
+                        { text: 'Overview', link: '/selfhosted/' },
+                        { text: 'Installation', link: '/selfhosted/installation' },
+                        { text: 'Configuration', link: '/selfhosted/configuration' },
+                        { text: 'Upgrading', link: '/selfhosted/upgrading' },
                     ],
                 },
             ],
@@ -71,6 +102,7 @@ export default defineConfig({
                         { text: 'Overview', link: '/mcp/' },
                         { text: 'Setup', link: '/mcp/setup' },
                         { text: 'Tools', link: '/mcp/tools' },
+                        { text: 'Agent Configuration', link: '/mcp/agents' },
                     ],
                 },
             ],

@@ -1,63 +1,34 @@
 # Getting Started
 
-Kumbukum is a self-hosted personal knowledge management system with multi-tenant support, AI chat, and MCP server integration.
+Kumbukum is a personal knowledge management system with AI chat, MCP server integration, and a knowledge graph. It's available as a managed cloud service or a self-hosted open-source application — both editions share the exact same features.
 
-## Prerequisites
+## Choose Your Edition
 
-- Node.js >= 24
-- Docker & Docker Compose
-- pnpm 10+
+:::tabs
+== Cloud
+**Kumbukum Cloud** — We handle hosting, updates, and backups.
 
-## Running with Docker Compose
+1. Sign up at [app.kumbukum.com](https://app.kumbukum.com)
+2. Create your first project
+3. Start adding notes, memories, and URLs
+
+[Cloud documentation →](/cloud/)
+
+== Self-Hosted
+**Self-Hosted** — Run Kumbukum on your own infrastructure.
 
 ```bash
 git clone https://github.com/kumbukum/kumbukum.git
 cd kumbukum
-cp .env.example .env  # edit with your settings
+cp .env.example .env
 docker compose up -d
 ```
 
-The app will be available at `http://localhost:3000`.
+[Installation guide →](/selfhosted/installation)
+:::
 
-## Services
+## Next Steps
 
-| Service    | Port | Description                        |
-| ---------- | ---- | ---------------------------------- |
-| App        | 3000 | Main Express application           |
-| WebSocket  | 3001 | Real-time updates (Socket.IO)      |
-| MCP Server | 3002 | Model Context Protocol server      |
-| MongoDB    | 27017| Database                           |
-| Redis      | 6379 | Caching & pub/sub                  |
-| Typesense  | 8108 | Full-text & vector search          |
-
-## Environment Variables
-
-See `config.js` for the full list. Key variables:
-
-| Variable       | Description                          |
-| -------------- | ------------------------------------ |
-| `MONGO_URI`    | MongoDB connection string            |
-| `REDIS_URL`    | Redis connection string              |
-| `SESSION_SECRET` | Express session secret             |
-| `JWT_SECRET`   | JWT signing secret                   |
-| `APP_URL`      | Public URL of the application        |
-| `LLM_PROVIDER` | AI provider: openai, google, groq, cerebras |
-| `LLM_API_KEY`  | API key for the LLM provider         |
-| `LLM_MODEL`    | Model name to use                    |
-
-## Local Development
-
-```bash
-pnpm install
-pnpm dev
-```
-
-This starts the app with `nodemon` for auto-reload on file changes.
-
-## Building Assets
-
-```bash
-pnpm build
-```
-
-Builds frontend assets (vendor.js, vendor.css, editor.js, graph_bundle.js) with esbuild.
+- [API Reference](/api/) — REST API for notes, memories, URLs, and search
+- [MCP Server](/mcp/) — 28 tools for Claude Desktop and other LLM clients
+- [Knowledge Graph](/api/search) — Connect your data with manual, tag-based, and semantic links

@@ -110,7 +110,12 @@
       "@tiptap/core": "^3.22.3",
       "@tiptap/pm": "^3.22.3",
       "@tiptap/extension-code-block": "^3.22.3"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@scarf/scarf",
+      "esbuild",
+      "vue-demi"
+    ]
   },
   "packageManager": "pnpm@10.33.0"
 }

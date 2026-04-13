@@ -4,17 +4,17 @@ layout: home
 hero:
     name: Kumbukum
     text: Everything your AI needs to remember
-    tagline: Notes, Memory, URLs, Knowledge Graph — with AI Chat and MCP integration
+    tagline: Notes, Memory, URLs, Knowledge Graph — with AI Chat and MCP integration. Available as a managed cloud service or self-hosted.
     actions:
         - theme: brand
           text: Get Started
           link: /getting-started
         - theme: alt
-          text: API Reference
-          link: /api/
+          text: Cloud
+          link: /cloud/
         - theme: alt
-          text: MCP Server
-          link: /mcp/
+          text: Self-Hosted
+          link: /selfhosted/
 
 features:
     - title: Notes

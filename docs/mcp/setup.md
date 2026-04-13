@@ -9,6 +9,22 @@
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
+:::tabs
+== Cloud
+```json
+{
+    "mcpServers": {
+        "kumbukum": {
+            "command": "npx",
+            "args": ["-y", "mcp-remote", "https://app.kumbukum.com/mcp"],
+            "env": {
+                "KUMBUKUM_TOKEN": "your-access-token"
+            }
+        }
+    }
+}
+```
+== Self-Hosted
 ```json
 {
     "mcpServers": {
@@ -23,11 +39,23 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
     }
 }
 ```
+:::
 
 ## HTTP Transport
 
 For remote MCP access via Streamable HTTP:
 
+:::tabs
+== Cloud
+The Cloud MCP endpoint is available at:
+
+```
+https://app.kumbukum.com/mcp
+```
+
+No additional setup required — the server is always running.
+
+== Self-Hosted
 ```bash
 node apps/mcp/server.js --transport http --port 3002
 ```
@@ -35,6 +63,7 @@ node apps/mcp/server.js --transport http --port 3002
 The server will listen at `http://localhost:3002/mcp` for Streamable HTTP connections and `http://localhost:3002/sse` for SSE connections.
 
 In Docker Compose, the MCP server runs as a separate service on port 3002.
+:::
 
 ## Environment Variables
 

@@ -1,5 +1,6 @@
 import DefaultTheme from 'vitepress/theme';
 import { theme, useOpenapi } from 'vitepress-openapi/client';
+import { enhanceAppWithTabs } from 'vitepress-plugin-tabs/client';
 import 'vitepress-openapi/dist/style.css';
 import spec from '../data/openapi.json' with { type: 'json' };
 
@@ -8,5 +9,6 @@ export default {
     enhanceApp({ app }) {
         useOpenapi({ spec });
         theme.enhanceApp({ app });
+        enhanceAppWithTabs(app);
     },
 };

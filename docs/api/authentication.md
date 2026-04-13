@@ -6,18 +6,35 @@ Kumbukum supports multiple authentication methods.
 
 Obtain a JWT by logging in:
 
+:::tabs
+== Cloud
+```bash
+curl -X POST https://app.kumbukum.com/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "your-password"}'
+```
+== Self-Hosted
 ```bash
 curl -X POST https://your-instance.com/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "your-password"}'
 ```
+:::
 
 Use the returned token in subsequent requests:
 
+:::tabs
+== Cloud
+```bash
+curl https://app.kumbukum.com/api/v1/notes \
+  -H "Authorization: Bearer <jwt_token>"
+```
+== Self-Hosted
 ```bash
 curl https://your-instance.com/api/v1/notes \
   -H "Authorization: Bearer <jwt_token>"
 ```
+:::
 
 JWT tokens expire after 7 days.
 
@@ -25,10 +42,18 @@ JWT tokens expire after 7 days.
 
 Generate a personal access token in **Settings > Tokens** within the app. Use it as:
 
+:::tabs
+== Cloud
+```bash
+curl https://app.kumbukum.com/api/v1/notes \
+  -H "Authorization: Token <access_token>"
+```
+== Self-Hosted
 ```bash
 curl https://your-instance.com/api/v1/notes \
   -H "Authorization: Token <access_token>"
 ```
+:::
 
 Access tokens do not expire and are ideal for integrations and the MCP server.
 

@@ -4,9 +4,16 @@ Kumbukum exposes a REST API at `/api/v1/` for managing notes, memories, URLs, pr
 
 ## Base URL
 
+:::tabs
+== Cloud
+```
+https://app.kumbukum.com/api/v1
+```
+== Self-Hosted
 ```
 https://your-instance.com/api/v1
 ```
+:::
 
 ## Authentication
 
@@ -32,4 +39,15 @@ See [Authentication](./authentication) for details.
 
 The full OpenAPI specification is available as an interactive reference in the sidebar under **OpenAPI Reference**.
 
-You can also access the raw spec at [`/api-docs`](https://your-instance.com/api-docs) on your running instance.
+You can also access the raw spec at `/api-docs` on your running instance:
+
+:::tabs
+== Cloud
+```
+https://app.kumbukum.com/api-docs
+```
+== Self-Hosted
+```
+https://your-instance.com/api-docs
+```
+:::
