@@ -24,3 +24,4 @@ RUN pnpm install
 FROM builderdev
 COPY --link --from=devpnpmdev /opt/kumbukum/node_modules /opt/kumbukum/node_modules
 
+ENTRYPOINT ["tini", "--"]

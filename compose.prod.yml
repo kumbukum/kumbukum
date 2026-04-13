@@ -1,43 +1,46 @@
+x-environment: &environment
+  APP_URL: ${APP_URL}
+  API_BASE_URL: http://app:3000
+  MONGO_URI: mongodb://mongo:27017/kumbukum
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+  REDIS_SENTINEL: ${REDIS_SENTINEL:-}
+  TYPESENSE_HOST: typesense
+  TYPESENSE_PORT: 8108
+  TYPESENSE_PROTOCOL: http
+  TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:-verylongandsecurekey}
+  TYPESENSE_NODES: ${TYPESENSE_NODES:-}
+  SESSION_SECRET: ${SESSION_SECRET}
+  JWT_SECRET: ${JWT_SECRET}
+  SMTP_HOST: ${SMTP_HOST}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER}
+  SMTP_PASS: ${SMTP_PASS}
+  SMTP_FROM: ${SMTP_FROM}
+  CHAT_AI_MODEL: ${CHAT_AI_MODEL:-gemini-2.0-flash}
+  CHAT_AI_MODEL_PROVIDER: ${CHAT_AI_MODEL_PROVIDER:-google}
+  NL_SEARCH_MODEL: ${NL_SEARCH_MODEL:-gemini-2.0-flash-lite}
+  NL_SEARCH_MODEL_PROVIDER: ${NL_SEARCH_MODEL_PROVIDER:-google}
+  TS_CONVERSATION_MODEL: ${TS_CONVERSATION_MODEL:-gemini-2.0-flash-lite}
+  TS_CONVERSATION_MODEL_PROVIDER: ${TS_CONVERSATION_MODEL_PROVIDER:-google}
+  GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  ENABLE_OPENPANEL: ${ENABLE_OPENPANEL:-false}
+  OPENPANEL_CLIENT_ID: ${OPENPANEL_CLIENT_ID:-}
+  OPENPANEL_CLIENT_SECRET: ${OPENPANEL_CLIENT_SECRET:-}
+  OPENPANEL_API_URL: ${OPENPANEL_API_URL:-}
+  ENABLE_OTEL: ${ENABLE_OTEL:-false}
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-kumbukum}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+  NODE_ENV: production
+  PORT: 3000
+
 services:
   app:
     image: ghcr.io/kumbukum/kumbukum:latest
     ports:
       - "3000:3000"
-    environment:
-      APP_URL: ${APP_URL}
-      MONGO_URI: mongodb://mongo:27017/kumbukum
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      REDIS_SENTINEL: ${REDIS_SENTINEL:-}
-      TYPESENSE_HOST: typesense
-      TYPESENSE_PORT: 8108
-      TYPESENSE_PROTOCOL: http
-      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY}
-      TYPESENSE_NODES: ${TYPESENSE_NODES:-}
-      SESSION_SECRET: ${SESSION_SECRET}
-      JWT_SECRET: ${JWT_SECRET}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      SMTP_FROM: ${SMTP_FROM}
-      CHAT_AI_MODEL: ${CHAT_AI_MODEL:-gemini-2.0-flash}
-      CHAT_AI_MODEL_PROVIDER: ${CHAT_AI_MODEL_PROVIDER:-google}
-      NL_SEARCH_MODEL: ${NL_SEARCH_MODEL:-gemini-2.0-flash-lite}
-      NL_SEARCH_MODEL_PROVIDER: ${NL_SEARCH_MODEL_PROVIDER:-google}
-      TS_CONVERSATION_MODEL: ${TS_CONVERSATION_MODEL:-gemini-2.0-flash-lite}
-      TS_CONVERSATION_MODEL_PROVIDER: ${TS_CONVERSATION_MODEL_PROVIDER:-google}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      NODE_ENV: production
-      PORT: 3000
-      ENABLE_OPENPANEL: ${ENABLE_OPENPANEL:-false}
-      OPENPANEL_CLIENT_ID: ${OPENPANEL_CLIENT_ID:-}
-      OPENPANEL_CLIENT_SECRET: ${OPENPANEL_CLIENT_SECRET:-}
-      OPENPANEL_API_URL: ${OPENPANEL_API_URL:-}
-      ENABLE_OTEL: ${ENABLE_OTEL:-false}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-kumbukum}
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+    environment: *environment
     depends_on:
       - mongo
       - redis
@@ -50,16 +53,8 @@ services:
     ports:
       - "3001:3001"
     environment:
-      NODE_ENV: production
+      <<: *environment
       PORT: 3001
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      REDIS_SENTINEL: ${REDIS_SENTINEL:-}
-      SESSION_SECRET: ${SESSION_SECRET}
-      MONGO_URI: mongodb://mongo:27017/kumbukum
-      ENABLE_OTEL: ${ENABLE_OTEL:-false}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-kumbukum-ws}
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     depends_on:
       - redis
       - mongo
@@ -71,34 +66,47 @@ services:
     ports:
       - "3002:3002"
     environment:
-      NODE_ENV: production
+      <<: *environment
       PORT: 3002
-      API_BASE_URL: http://app:3000
-      ENABLE_OTEL: ${ENABLE_OTEL:-false}
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-kumbukum-mcp}
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
     restart: unless-stopped
 
   mongo:
     image: percona/percona-server-mongodb:6.0
-    volumes:
-        - mongo_data:/data/db
     command: mongod --setParameter perconaTelemetry=false --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo_data:/data/db
     environment:
-        PERCONA_TELEMETRY_DISABLE: 1
+      PERCONA_TELEMETRY_DISABLE: 1
+  
+  mongo-init:
+    image: percona/percona-server-mongodb:6.0
+    depends_on:
+      mongo:
+        condition: service_started
+    volumes:
+      - ./docker/mongo-init-replset.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    entrypoint: /bin/bash
+    command: /docker-entrypoint-initdb.d/init.sh
+    environment:
+      PERCONA_TELEMETRY_DISABLE: 1
+      MONGO_HOST: mongo
 
   redis:
     image: redis:8-bookworm
+    command: redis-server --appendonly yes --port 6379 --save ""
+    volumes:
+      - redis_data:/data
     restart: unless-stopped
 
   typesense:
     image: typesense/typesense:31.1
+    command: --data-dir /data --api-key=${TYPESENSE_API_KEY}
     volumes:
       - typesense_data:/data
-    command: --data-dir /data --api-key=${TYPESENSE_API_KEY}
     restart: unless-stopped
 
 volumes:
   mongo_data:
   typesense_data:
+  redis_data:
+

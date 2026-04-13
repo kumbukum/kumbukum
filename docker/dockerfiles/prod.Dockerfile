@@ -63,4 +63,4 @@ USER node
 EXPOSE 3000
 
 ENTRYPOINT ["tini", "--"]
-CMD ["node", "app.js"]
+CMD ["npm", "start"]

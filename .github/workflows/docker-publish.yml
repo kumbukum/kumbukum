@@ -1,6 +1,13 @@
 name: Build and Push Docker Image
 
 on:
+    workflow_dispatch:
+        inputs:
+            dry_run:
+                description: "Build only, do not push to GHCR"
+                required: false
+                type: boolean
+                default: true
     push:
         tags:
             - "v1.*.*"
@@ -45,7 +52,7 @@ jobs:
               with:
                   context: .
                   file: docker/dockerfiles/prod.Dockerfile
-                  push: true
+                  push: ${{ inputs.dry_run != true }}
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
                   build-args: |
