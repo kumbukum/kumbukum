@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    image: ghcr.io/kumbukum/kumbukum:latest
+    # build:
+    #   context: .
+    #   dockerfile: docker/dockerfiles/prod.Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -35,7 +38,7 @@ services:
     restart: unless-stopped
 
   ws-server:
-    build: .
+    image: ghcr.io/kumbukum/kumbukum:latest
     command: node ws-server.js
     ports:
       - "3001:3001"
@@ -51,7 +54,7 @@ services:
     restart: unless-stopped
 
   mcp-server:
-    build: .
+    image: ghcr.io/kumbukum/kumbukum:latest
     command: node apps/mcp/server.js
     ports:
       - "3002:3002"
