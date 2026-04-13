@@ -23,6 +23,7 @@ import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { User } from '../model/user.js';
 import { UserPasskey } from '../model/user_passkey.js';
+import * as graphService from '../services/graph_service.js';
 import crypto from 'node:crypto';
 
 const router = Router();
@@ -293,6 +294,49 @@ router.post('/resolve', async (req, res) => {
 	for (const u of urls) items.push({ id: u._id.toString(), title: u.title || u.url, _type: 'urls' });
 
 	res.json({ items });
+});
+
+// ---- Graph Links ----
+
+router.post('/links', async (req, res) => {
+	try {
+		const { source_id, source_type, target_id, target_type, label } = req.body;
+		if (!source_id || !source_type || !target_id || !target_type) {
+			return res.status(400).json({ error: 'source_id, source_type, target_id, target_type required' });
+		}
+		const link = await graphService.createLink(req.userId, req.host_id, { source_id, source_type, target_id, target_type, label });
+		res.status(201).json({ link });
+	} catch (err) {
+		if (err.code === 11000) return res.status(409).json({ error: 'Link already exists' });
+		console.error('Create link error:', err);
+		res.status(400).json({ error: err.message });
+	}
+});
+
+router.delete('/links/:id', async (req, res) => {
+	const link = await graphService.deleteLink(req.host_id, req.params.id);
+	if (!link) return res.status(404).json({ error: 'Link not found' });
+	res.json({ message: 'Link deleted' });
+});
+
+router.get('/links/:itemId', async (req, res) => {
+	const links = await graphService.getLinksForItem(req.host_id, req.params.itemId);
+	res.json({ links });
+});
+
+router.get('/graph', async (req, res) => {
+	try {
+		const data = await graphService.getGraphData(req.host_id, {
+			projectId: req.query.project_id || null,
+			includeTags: req.query.include_tags !== 'false',
+			includeSemantic: req.query.include_semantic === 'true',
+			semanticThreshold: parseFloat(req.query.semantic_threshold) || 0.7,
+		});
+		res.json(data);
+	} catch (err) {
+		console.error('Graph data error:', err);
+		res.status(500).json({ error: 'Failed to load graph data' });
+	}
 });
 
 // ---- Typesense Counts ----

@@ -64,6 +64,8 @@
     "cookie-parser": "^1.4.7",
     "crawlee": "^3.16.0",
     "croner": "^10.0.1",
+    "cytoscape": "^3.33.2",
+    "cytoscape-fcose": "^2.2.0",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "filepond": "^4.32.12",

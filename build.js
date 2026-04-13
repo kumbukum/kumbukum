@@ -62,4 +62,17 @@ await build({
 });
 console.log('Editor built → public/js/editor.js');
 
+// Cytoscape Graph (lazy-loaded on /graph page only)
+await build({
+	entryPoints: ['src/graph/graph_bundle.js'],
+	bundle: true,
+	outfile: 'public/js/graph_bundle.js',
+	format: 'esm',
+	platform: 'browser',
+	target: ['es2020'],
+	minify: isProd,
+	sourcemap: !isProd,
+});
+console.log('Graph bundle built → public/js/graph_bundle.js');
+
 console.log('Build complete.');

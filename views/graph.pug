@@ -1,0 +1,90 @@
+extends layout
+
+block chat
+	//- Hide chat sidebar on graph page
+
+block head
+	style.
+		#graph-container {
+			width: 100%;
+			height: calc(100vh - 120px);
+			border: 1px solid var(--bs-border-color);
+			border-radius: 0.375rem;
+			background: var(--bs-body-bg);
+		}
+		#graph-info-panel {
+			max-height: calc(100vh - 120px);
+			overflow-y: auto;
+		}
+		.graph-legend-dot {
+			display: inline-block;
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			margin-right: 4px;
+			vertical-align: middle;
+		}
+		#chat-sidebar { display: none !important; }
+		#main-content { flex: 0 0 83.333%; max-width: 83.333%; }
+
+block content
+	.d-flex.justify-content-between.align-items-center.mb-3
+		.d-flex.align-items-center.gap-3
+			h5.mb-0
+				i.bi.bi-diagram-3.me-2
+				| Knowledge Graph
+			.input-group.input-group-sm(style="width:220px")
+				span.input-group-text
+					i.bi.bi-search
+				input.form-control#graph-search(type="text" placeholder="Search nodes...")
+		.d-flex.gap-2.align-items-center
+			.btn-group.btn-group-sm(role="group")
+				button.btn.btn-outline-primary.active#toggle-manual(type="button" title="Manual links")
+					i.bi.bi-link-45deg.me-1
+					| Links
+				button.btn.btn-outline-success.active#toggle-tags(type="button" title="Shared tag connections")
+					i.bi.bi-tag.me-1
+					| Tags
+				button.btn.btn-outline-warning#toggle-semantic(type="button" title="AI similarity connections")
+					i.bi.bi-stars.me-1
+					| Semantic
+			select.form-select.form-select-sm#graph-project-filter(style="width:auto")
+				option(value="") All projects
+				each p in projects
+					option(value=p._id)= p.name
+
+	.row
+		.col-md-9
+			#graph-container
+		.col-md-3
+			#graph-info-panel
+				.text-muted.small.text-center.py-5
+					i.bi.bi-cursor.d-block.fs-3.mb-2
+					| Click a node to see details
+
+				//- Legend
+				.mt-4.border-top.pt-3
+					h6.small.text-muted.mb-2 Legend
+					.d-flex.flex-column.gap-1.small
+						div
+							span.graph-legend-dot(style="background:#4A90D9")
+							| Notes
+						div
+							span.graph-legend-dot(style="background:#50C878")
+							| Memories
+						div
+							span.graph-legend-dot(style="background:#E8943A")
+							| URLs
+					.mt-2.d-flex.flex-column.gap-1.small
+						div
+							span.text-muted — 
+							| Manual link
+						div
+							span.text-muted - - 
+							| Shared tag
+						div
+							span.text-muted ··· 
+							| Semantic similarity
+
+	script(type="module" src="/static/js/graph_bundle.js")
+	script(src="/static/js/graph.js" defer)

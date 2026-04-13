@@ -9,6 +9,7 @@ import { noteTools } from './tools/notes.js';
 import { memoryTools } from './tools/memory.js';
 import { urlTools } from './tools/urls.js';
 import { projectTools } from './tools/projects.js';
+import { graphTools } from './tools/graph.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 3002;
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
@@ -51,6 +52,7 @@ Before creating tags, call \`suggest_memory_tags\` to reuse existing tags.
     ...memoryTools(api, defaultProjectId),
     ...urlTools(api, defaultProjectId),
     ...projectTools(api),
+    ...graphTools(api),
   };
 
   for (const [name, tool] of Object.entries(allTools)) {

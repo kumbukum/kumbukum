@@ -3,6 +3,7 @@ import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { indexDocument, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
+import { removeLinksForItem } from './graph_service.js';
 
 const MODEL_MAP = {
 	notes: { model: Note, tsType: 'notes' },
@@ -63,6 +64,7 @@ export async function permanentDelete(host_id, type, id) {
 	const doc = await model.findOneAndDelete({ _id: id, host_id, in_trash: true });
 	if (doc) {
 		removeDocument(host_id, tsType, id).catch((err) => console.error('Typesense remove error:', err.message));
+		removeLinksForItem(host_id, id).catch((err) => console.error('Graph link cleanup error:', err.message));
 	}
 	return doc;
 }

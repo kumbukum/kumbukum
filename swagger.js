@@ -76,6 +76,19 @@ const swaggerSpec = {
                     error: { type: 'string' },
                 },
             },
+            GraphLink: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    source_id: { type: 'string' },
+                    source_type: { type: 'string', enum: ['notes', 'memory', 'urls'] },
+                    target_id: { type: 'string' },
+                    target_type: { type: 'string', enum: ['notes', 'memory', 'urls'] },
+                    label: { type: 'string' },
+                    owner: { type: 'string' },
+                    host_id: { type: 'string' },
+                },
+            },
         },
         parameters: {
             page: { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
@@ -624,6 +637,56 @@ const swaggerSpec = {
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, deleted: { type: 'integer' } } } } } },
+                },
+            },
+        },
+        '/links': {
+            post: {
+                tags: ['Graph'],
+                summary: 'Create a link between two items',
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { type: 'object', properties: { source_id: { type: 'string' }, source_type: { type: 'string', enum: ['notes', 'memory', 'urls'] }, target_id: { type: 'string' }, target_type: { type: 'string', enum: ['notes', 'memory', 'urls'] }, label: { type: 'string' } }, required: ['source_id', 'source_type', 'target_id', 'target_type'] } } },
+                },
+                responses: {
+                    201: { description: 'Link created', content: { 'application/json': { schema: { type: 'object', properties: { link: { $ref: '#/components/schemas/GraphLink' } } } } } },
+                    409: { description: 'Link already exists' },
+                },
+            },
+        },
+        '/links/{id}': {
+            delete: {
+                tags: ['Graph'],
+                summary: 'Delete a link',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Link deleted' },
+                    404: { description: 'Link not found' },
+                },
+            },
+        },
+        '/links/{itemId}': {
+            get: {
+                tags: ['Graph'],
+                summary: 'Get all links for an item',
+                parameters: [{ name: 'itemId', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { links: { type: 'array', items: { $ref: '#/components/schemas/GraphLink' } } } } } } },
+                },
+            },
+        },
+        '/graph': {
+            get: {
+                tags: ['Graph'],
+                summary: 'Get the knowledge graph data (nodes and edges)',
+                parameters: [
+                    { name: 'project_id', in: 'query', schema: { type: 'string' }, description: 'Filter by project' },
+                    { name: 'include_tags', in: 'query', schema: { type: 'string', default: 'true' }, description: 'Include tag-based edges' },
+                    { name: 'include_semantic', in: 'query', schema: { type: 'string', default: 'false' }, description: 'Include semantic similarity edges' },
+                    { name: 'semantic_threshold', in: 'query', schema: { type: 'number', default: 0.7 }, description: 'Semantic similarity threshold' },
+                ],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { nodes: { type: 'array', items: { type: 'object' } }, edges: { type: 'array', items: { type: 'object' } } } } } } },
                 },
             },
         },

@@ -1,6 +1,7 @@
 import { Memory } from '../model/memory.js';
 import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
+import { invalidateGraphCache } from './graph_service.js';
 
 export async function storeMemory(userId, host_id, data) {
 	const mem = await Memory.create({
@@ -15,6 +16,7 @@ export async function storeMemory(userId, host_id, data) {
 	});
 
 	emitToTenant(host_id, 'memory:created', mem);
+	invalidateGraphCache(host_id).catch(() => {});
 	return mem;
 }
 
@@ -49,6 +51,7 @@ export async function updateMemory(host_id, memoryId, data) {
 
 	if (mem) {
 		emitToTenant(host_id, 'memory:updated', mem);
+		invalidateGraphCache(host_id).catch(() => {});
 	}
 
 	return mem;
@@ -63,6 +66,7 @@ export async function deleteMemory(host_id, memoryId) {
 	if (mem) {
 		removeDocument(host_id, 'memory', memoryId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'memory:deleted', { _id: memoryId });
+		invalidateGraphCache(host_id).catch(() => {});
 	}
 	return mem;
 }

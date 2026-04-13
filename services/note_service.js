@@ -1,6 +1,7 @@
 import { Note } from '../model/note.js';
 import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
+import { invalidateGraphCache } from './graph_service.js';
 
 export async function createNote(userId, host_id, data) {
 	const note = await Note.create({
@@ -14,6 +15,7 @@ export async function createNote(userId, host_id, data) {
 	});
 
 	emitToTenant(host_id, 'note:created', note);
+	invalidateGraphCache(host_id).catch(() => {});
 	return note;
 }
 
@@ -48,6 +50,7 @@ export async function updateNote(host_id, noteId, data) {
 
 	if (note) {
 		emitToTenant(host_id, 'note:updated', note);
+		invalidateGraphCache(host_id).catch(() => {});
 	}
 
 	return note;
@@ -62,6 +65,7 @@ export async function deleteNote(host_id, noteId) {
 	if (note) {
 		removeDocument(host_id, 'notes', noteId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'note:deleted', { _id: noteId });
+		invalidateGraphCache(host_id).catch(() => {});
 	}
 	return note;
 }
