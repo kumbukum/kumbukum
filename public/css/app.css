@@ -169,7 +169,9 @@ body {
 }
 
 #editor-container .ProseMirror p.is-editor-empty:first-child::before,
-#memory-editor-container .ProseMirror p.is-editor-empty:first-child::before {
+#memory-editor-container .ProseMirror p.is-editor-empty:first-child::before,
+#rm-note-editor .ProseMirror p.is-editor-empty:first-child::before,
+#rm-memory-editor .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	color: #adb5bd;
 	float: left;
