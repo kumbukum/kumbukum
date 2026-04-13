@@ -6,7 +6,13 @@
 }
 
 body {
-	min-height: 100vh;
+	height: 100vh;
+}
+
+body:has(.sidebar) {
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 }
 
 .fs-7 {
@@ -27,15 +33,24 @@ body {
 }
 
 .sidebar {
-	position: sticky;
-	top: 56px;
 	overflow-y: auto;
+	height: 100%;
+}
+
+#main-content {
+	overflow-y: auto;
+	height: 100%;
 }
 
 #chat-sidebar {
-	position: sticky;
-	top: 56px;
-	overflow-y: auto;
+	overflow-y: hidden;
+	height: 100%;
+}
+
+.chat-sidebar {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
 }
 
 /* Chat messages */
@@ -55,6 +70,21 @@ body {
 .chat-message.assistant {
 	background: #e9ecef;
 	color: #212529;
+}
+
+/* Chat thinking indicator */
+.chat-thinking span {
+	display: inline-block;
+	animation: chatBlink 1.4s infinite;
+	font-size: 1.25rem;
+	line-height: 1;
+}
+.chat-thinking span:nth-child(2) { animation-delay: 0.2s; }
+.chat-thinking span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes chatBlink {
+	0%, 20% { opacity: 0.2; }
+	50% { opacity: 1; }
+	80%, 100% { opacity: 0.2; }
 }
 
 /* Chat history items */

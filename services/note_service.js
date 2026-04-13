@@ -72,3 +72,7 @@ export async function searchNotes(host_id, query, options = {}) {
 		...options,
 	});
 }
+
+export async function countNotes(host_id) {
+	return Note.countDocuments({ host_id, in_trash: { $ne: true } });
+}

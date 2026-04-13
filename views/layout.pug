@@ -38,9 +38,9 @@ html(lang="en")
 									li: hr.dropdown-divider
 									li: a.dropdown-item(href="#" onclick="logout()") Logout
 
-			.container-fluid
-				.row
-					aside.col-md-2.bg-light.vh-100.p-3.sidebar#sidebar
+			.container-fluid.flex-grow-1.overflow-hidden
+				.row.h-100
+					aside.col-md-2.bg-light.p-3.sidebar#sidebar
 						block sidebar
 							.d-flex.justify-content-between.align-items-center.mb-3
 								h6.mb-0 Your projects
@@ -65,7 +65,7 @@ html(lang="en")
 						#page-content
 							block content
 
-					aside.col-md-3.bg-light.vh-100.p-3.border-start#chat-sidebar
+					aside.col-md-3.p-3.border-start#chat-sidebar
 						block chat
 							include includes/chat_sidebar
 

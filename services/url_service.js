@@ -81,3 +81,7 @@ export async function searchUrls(host_id, query, options = {}) {
 		...options,
 	});
 }
+
+export async function countUrls(host_id) {
+	return Url.countDocuments({ host_id, in_trash: { $ne: true } });
+}

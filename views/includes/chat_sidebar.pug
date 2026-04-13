@@ -14,9 +14,9 @@
       option(value="") All projects
       //- Populated dynamically by chat.js
 
-  #chat-messages.overflow-auto(style="height: calc(100vh - 280px)")
+  #chat-messages.overflow-auto.flex-grow-1
 
-  .mt-2
+  .mt-auto.pt-2
     .input-group
       input.form-control#chat-input(type="text" placeholder="Ask, search, or give a command...")
       button.btn.btn-primary#chat-send

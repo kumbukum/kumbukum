@@ -203,7 +203,8 @@ export async function getCollectionCounts(host_id) {
 		try {
 			const col = await ts.collections(`${type}_${host_id}`).retrieve();
 			counts[type] = col.num_documents || 0;
-		} catch {
+		} catch (err) {
+			console.error(`getCollectionCounts: ${type}_${host_id} failed:`, err.message);
 			counts[type] = 0;
 		}
 	}

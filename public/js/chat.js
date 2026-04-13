@@ -56,6 +56,17 @@ function initChat() {
 		input.value = '';
 		sendBtn.disabled = true;
 
+		// Show thinking indicator
+		const thinkingRow = document.createElement('div');
+		thinkingRow.className = 'chat-msg-row assistant';
+		thinkingRow.innerHTML = '<span class="avatar avatar-xs" style="background:#6c757d" title="AI"><i class="bi bi-robot" style="font-size:0.625rem"></i></span>';
+		const thinkingBubble = document.createElement('div');
+		thinkingBubble.className = 'chat-message assistant';
+		thinkingBubble.innerHTML = '<span class="chat-thinking"><span>.</span><span>.</span><span>.</span></span>';
+		thinkingRow.appendChild(thinkingBubble);
+		messagesEl.appendChild(thinkingRow);
+		messagesEl.scrollTop = messagesEl.scrollHeight;
+
 		try {
 			const projectId = projectFilter?.value || undefined;
 			const res = await api('POST', '/chat', {
@@ -86,6 +97,7 @@ function initChat() {
 		} catch (err) {
 			addMessage('assistant', 'Error: ' + (err.message || 'Failed to send message'));
 		} finally {
+			thinkingRow.remove();
 			sendBtn.disabled = false;
 			input.focus();
 		}

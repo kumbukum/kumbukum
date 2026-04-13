@@ -78,3 +78,7 @@ export async function suggestMemoryTags(host_id) {
 	const tags = await Memory.distinct('tags', { host_id });
 	return tags.filter(Boolean).sort();
 }
+
+export async function countMemories(host_id) {
+	return Memory.countDocuments({ host_id, in_trash: { $ne: true } });
+}

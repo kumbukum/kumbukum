@@ -1,4 +1,4 @@
-import { searchAll, conversationSearch, ensureConversationModel } from '../modules/typesense.js';
+import { searchAll, conversationSearch, ensureConversationModel, getCollectionCounts } from '../modules/typesense.js';
 import { nlSearchCompletion, chatModelCompletion } from '../modules/llm_client.js';
 import * as noteService from './note_service.js';
 import * as memoryService from './memory_service.js';
@@ -14,12 +14,13 @@ Respond with JSON only. No markdown, no text outside JSON.
 
 Intent types:
 - "search": User wants to find notes, memories, URLs, or pages (e.g. "find my notes about X", "what do I know about Y")
+- "stats": User wants counts, totals, or statistics about their knowledge base (e.g. "how many notes do I have", "what's in my knowledge base", "show me stats", "how many items")
 - "action": User wants to create, update, move, or delete items (e.g. "create a note about X", "save this URL", "move these to project Y", "remember that X")
 - "analysis": User wants a summary, comparison, or deeper insight from their knowledge (e.g. "summarize my notes about X", "compare these topics")
 - "conversation": Follow-up, clarification, or general chat (e.g. "tell me more", "what did you mean", "thanks")
 
 Respond:
-{"intent": "search|action|analysis|conversation", "query": "extracted search keywords (for search/analysis)", "action_type": "create_note|create_memory|save_url|move_to_project|delete|null", "params": {}, "limit": null, "types": null}
+{"intent": "search|stats|action|analysis|conversation", "query": "extracted search keywords (for search/analysis)", "action_type": "create_note|create_memory|save_url|move_to_project|delete|null", "params": {}, "limit": null, "types": null}
 
 Rules for "limit": if the user specifies a count (e.g. "show me 3 notes", "latest 5 URLs"), set limit to that number. Otherwise null.
 Rules for "types": if the user specifies a content type (e.g. "notes", "memories", "urls"), set types to an array like ["notes"] or ["notes","memory"]. Use these type names: notes, memory, urls, pages. Otherwise null (search all).
@@ -88,6 +89,9 @@ export async function processChat({ hostId, userId, query, conversationId, proje
 		case 'action':
 			return handleAction({ hostId, userId, query, conversationId, projectId, intent });
 
+		case 'stats':
+			return handleStats({ hostId, userId, query, conversationId, projectId, intent });
+
 		case 'analysis':
 			return handleAnalysis({ hostId, userId, query, conversationId, projectId, intent });
 
@@ -124,6 +128,36 @@ async function handleSearch({ hostId, userId, query, conversationId, projectId, 
 		action,
 		conversationId: conversation.conversationId,
 		displayIn: 'panel',
+	};
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Stats Handler
+// ────────────────────────────────────────────────────────────────────
+
+async function handleStats({ hostId, query, conversationId }) {
+	const counts = await getCollectionCounts(hostId);
+	const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+	const statsContext = `Collection counts: ${counts.notes} notes, ${counts.memory} memories, ${counts.urls} URLs. Total items: ${total}.`;
+
+	const answer = await chatModelCompletion({
+		messages: [
+			{
+				role: 'system',
+				content: `You are Kumbukum, a knowledge assistant. Answer the user's question using the stats below. Be concise.\n\nSTATS:\n${statsContext}`,
+			},
+			{ role: 'user', content: query },
+		],
+		maxTokens: 256,
+	});
+
+	return {
+		answer,
+		results: [],
+		action: null,
+		conversationId: conversationId || null,
+		displayIn: 'chat',
 	};
 }
 
