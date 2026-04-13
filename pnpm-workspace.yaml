@@ -1,4 +1,5 @@
 ignoreWorkspaceRootCheck: true
+dangerouslyAllowAllBuilds: true
 linkWorkspacePackages: deep
 packages:
   - "apps/*"
