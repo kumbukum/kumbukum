@@ -18,6 +18,7 @@ import authRoutes from './routes/auth.js';
 import apiRoutes from './routes/api.js';
 import webRoutes from './routes/web.js';
 import adminRoutes from './routes/admin.js';
+import billingRoutes from './routes/billing.js';
 import { startScheduler } from './modules/scheduler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,8 +28,15 @@ const app = express();
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Stripe webhook needs raw body — skip express.json() for this path
+app.use((req, res, next) => {
+    if (req.originalUrl === '/billing/webhook') return next();
+    express.json()(req, res, next);
+});
+app.use((req, res, next) => {
+    if (req.originalUrl === '/billing/webhook') return next();
+    express.urlencoded({ extended: true })(req, res, next);
+});
 app.use(cookieParser());
 
 // --- Static file cache control ---
@@ -114,6 +122,7 @@ app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 app.use('/', authRoutes);
+app.use('/', billingRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/v1', apiRoutes);
 

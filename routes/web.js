@@ -26,6 +26,36 @@ router.use(async (req, res, next) => {
 	next();
 });
 
+// ---- Subscription gate (hosted edition only) ----
+// Users without an active/trialing subscription get redirected to checkout.
+// past_due gets a 3-day grace period before lockout.
+const GRACE_PERIOD_MS = 3 * 24 * 60 * 60 * 1000;
+if (is_hosted) {
+	router.use((req, res, next) => {
+		const user = res.locals.user;
+		if (!user) return next();
+
+		// Settings/subscription page is always accessible so users can manage billing
+		if (req.path.startsWith('/settings/subscription')) return next();
+
+		const status = user.subscription_status || 'incomplete';
+
+		// Active or trialing — all good
+		if (status === 'trialing' || status === 'active') return next();
+
+		// past_due — allow 3-day grace
+		if (status === 'past_due') {
+			const sub = user.updatedAt || user.createdAt;
+			if (sub && (Date.now() - new Date(sub).getTime()) < GRACE_PERIOD_MS) {
+				return next();
+			}
+		}
+
+		// Everything else — redirect to checkout
+		return res.redirect('/billing/checkout');
+	});
+}
+
 router.get('/dashboard', (req, res) => res.render('dashboard', { title: 'Dashboard' }));
 router.get('/notes', (req, res) => res.render('notes', { title: 'Notes' }));
 router.get('/memories', (req, res) => res.render('memories', { title: 'Memory' }));

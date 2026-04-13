@@ -1,0 +1,22 @@
+extends ../layout
+
+block head
+	title= title || 'Checkout'
+
+block body
+	.container
+		.row.justify-content-center.mt-5
+			.col-md-6
+				.card.shadow
+					.card-body.p-4.text-center
+						.mb-4
+							i.bi.bi-credit-card(style="font-size: 3rem; color: var(--bs-primary)")
+						h3.mb-3= title || 'Checkout'
+						p.text-muted.mb-4= message || 'Something went wrong.'
+						.d-flex.justify-content-center.gap-3
+							a.btn.btn-primary(href="/billing/checkout")
+								i.bi.bi-arrow-repeat.me-2
+								| Try Again
+							a.btn.btn-outline-secondary(href="/login")
+								i.bi.bi-box-arrow-in-right.me-2
+								| Log In

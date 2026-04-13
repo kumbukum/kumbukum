@@ -44,6 +44,21 @@ const emailTemplates = {
 			{ key: 'url', description: 'Magic link sign-in URL' },
 		],
 	},
+	trial_ending: {
+		subject: 'Your Kumbukum trial ends in {{daysLeft}} days',
+		html: `<p>Hi {{name}},</p>
+<p>Your free trial ends on <strong>{{trialEndDate}}</strong> (in {{daysLeft}} days).</p>
+<p>To keep using Kumbukum without interruption, make sure your payment method is up to date.</p>
+<p><a href="{{subscriptionUrl}}">Manage your subscription</a></p>
+<p>If you have any questions, just reply to this email.</p>
+<p>— The Kumbukum Team</p>`,
+		variables: [
+			{ key: 'name', description: 'User name' },
+			{ key: 'daysLeft', description: 'Days remaining in trial' },
+			{ key: 'trialEndDate', description: 'Trial end date' },
+			{ key: 'subscriptionUrl', description: 'Subscription settings URL' },
+		],
+	},
 };
 
 export default emailTemplates;

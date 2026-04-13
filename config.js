@@ -54,6 +54,14 @@ const config = {
 		openaiApiKey: process.env.OPENAI_API_KEY || '',
 	},
 
+	stripe: {
+		secretKey: process.env.STRIPE_SECRET_KEY || '',
+		webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+		priceId: process.env.STRIPE_PRICE_ID || '',
+		portalConfigId: process.env.STRIPE_PORTAL_CONFIG_ID || '',
+		trialDays: parseInt(process.env.STRIPE_TRIAL_DAYS, 10) || 7,
+	},
+
 	sysadmin: {
 		email: process.env.SYSADMIN_EMAIL || '',
 		password: process.env.SYSADMIN_PASSWORD || '',

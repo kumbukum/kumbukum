@@ -3,10 +3,64 @@ extends layout
 block settings
 	h4.mb-4 Subscription
 
-	.card
+	.card.mb-4
 		.card-body
 			h5.card-title
 				i.bi.bi-credit-card.me-2
 				| My Subscription
-			p.text-muted Manage your Kumbukum subscription and billing.
-			a.btn.btn-primary(href="https://kumbukum.com/subscription" target="_blank") Manage Subscription
+
+			- var status = user.subscription_status || 'incomplete'
+
+			if status === 'trialing'
+				.alert.alert-info.mb-3
+					i.bi.bi-clock.me-2
+					| Your free trial is active.
+					if user.trial_ends_at
+						|  It ends on 
+						strong= new Date(user.trial_ends_at).toLocaleDateString()
+						| .
+			else if status === 'active'
+				.alert.alert-success.mb-3
+					i.bi.bi-check-circle.me-2
+					| Your subscription is active.
+			else if status === 'past_due'
+				.alert.alert-warning.mb-3
+					i.bi.bi-exclamation-triangle.me-2
+					| Your payment is past due. Please update your payment method to avoid losing access.
+			else if status === 'canceled'
+				.alert.alert-danger.mb-3
+					i.bi.bi-x-circle.me-2
+					| Your subscription has been canceled.
+			else
+				.alert.alert-secondary.mb-3
+					i.bi.bi-info-circle.me-2
+					| No active subscription. Start your free trial below.
+
+			table.table.table-sm.mb-3
+				tbody
+					tr
+						th Status
+						td
+							if status === 'trialing'
+								span.badge.bg-info Trial
+							else if status === 'active'
+								span.badge.bg-success Active
+							else if status === 'past_due'
+								span.badge.bg-warning Past Due
+							else if status === 'canceled'
+								span.badge.bg-danger Canceled
+							else
+								span.badge.bg-secondary Incomplete
+					if user.trial_ends_at && status === 'trialing'
+						tr
+							th Trial Ends
+							td= new Date(user.trial_ends_at).toLocaleDateString()
+
+			if status === 'incomplete' || status === 'canceled'
+				a.btn.btn-primary(href="/billing/checkout")
+					i.bi.bi-credit-card.me-2
+					| Start Free Trial
+			else
+				a.btn.btn-primary(href="/billing/portal")
+					i.bi.bi-gear.me-2
+					| Manage Subscription

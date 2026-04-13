@@ -93,6 +93,16 @@ export async function sendWelcomeEmail(email, name) {
 	});
 }
 
+export async function sendTrialEndingEmail(email, name, daysLeft, trialEndDate) {
+	const subscriptionUrl = `${config.appUrl}/settings/subscription`;
+	const { subject, html } = await resolveTemplate('trial_ending');
+	return sendMail({
+		to: email,
+		subject: renderTemplate(subject, { name: name || '', daysLeft: String(daysLeft), trialEndDate, subscriptionUrl }),
+		html: renderTemplate(html, { name: name || '', daysLeft: String(daysLeft), trialEndDate, subscriptionUrl }),
+	});
+}
+
 export async function sendTestEmail(to, templateKey, sampleVariables) {
 	const { subject, html } = await resolveTemplate(templateKey);
 	return sendMail({

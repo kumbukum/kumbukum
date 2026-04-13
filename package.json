@@ -87,6 +87,7 @@
     "pdfjs-parse": "^1.1.1",
     "pug": "^3.0.4",
     "socket.io": "^4.8.3",
+    "stripe": "^22.0.1",
     "striptags": "^3.2.0",
     "swagger-ui-express": "^5.0.1",
     "sweetalert2": "^11.26.24",

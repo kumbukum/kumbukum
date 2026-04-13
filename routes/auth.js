@@ -8,6 +8,9 @@ import { generateToken } from '../middleware/auth.js';
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../services/email_service.js';
 import { sendMagicLink, verifyMagicLink } from '../services/magic_link_service.js';
 import * as passkeyService from '../services/passkey_service.js';
+import config from '../config.js';
+
+const is_hosted = new URL(config.appUrl).hostname.endsWith('kumbukum.com');
 import { createDefaultProject } from '../services/project_service.js';
 import { PendingSignup } from '../model/pending_signup.js';
 import { isSysadminCredentials, requireSysadmin } from '../middleware/sysadmin.js';
@@ -104,6 +107,11 @@ router.get('/verify', async (req, res) => {
 		req.session.userId = user._id.toString();
 		req.session.tenantId = tenant._id.toString();
 		req.session.host_id = tenant.host_id;
+
+		// Hosted edition: redirect to Stripe Checkout for trial subscription
+		if (is_hosted) {
+			return res.redirect('/billing/checkout');
+		}
 
 		res.redirect('/dashboard');
 	} catch (err) {

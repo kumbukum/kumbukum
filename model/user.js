@@ -18,6 +18,15 @@ const userSchema = new mongoose.Schema(
 		// 2FA
 		totp_secret: { type: String, select: false },
 		totp_enabled: { type: Boolean, default: false },
+		// Billing (hosted edition only)
+		stripe_customer_id: { type: String, select: false },
+		stripe_subscription_id: { type: String, select: false },
+		subscription_status: {
+			type: String,
+			enum: ['incomplete', 'trialing', 'active', 'past_due', 'canceled', 'unpaid'],
+			default: 'incomplete',
+		},
+		trial_ends_at: { type: Date },
 		// Access tokens for API
 		access_tokens: [
 			{
@@ -45,6 +54,8 @@ userSchema.methods.toSafe = function () {
 	delete obj.password;
 	delete obj.totp_secret;
 	delete obj.verification_token;
+	delete obj.stripe_customer_id;
+	delete obj.stripe_subscription_id;
 	return obj;
 };
 
