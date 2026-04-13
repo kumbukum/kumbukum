@@ -199,12 +199,18 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
+      '@scarf/scarf':
+        specifier: ^1.4.0
+        version: 1.4.0
       esbuild:
         specifier: ^0.28.0
         version: 0.28.0
       nodemon:
         specifier: ^3.1.14
         version: 3.1.14
+      vue-demi:
+        specifier: ^0.14.10
+        version: 0.14.10(vue@3.5.32)
 
   apps/mcp:
     dependencies:

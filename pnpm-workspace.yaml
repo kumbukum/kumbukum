@@ -4,6 +4,4 @@ linkWorkspacePackages: deep
 packages:
   - "apps/*"
   - "docs"
-allowBuilds:
-  '@scarf/scarf': true
-  esbuild: true
+
