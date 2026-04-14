@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	// ── Socket.IO: live count updates ──
 	if (typeof io === 'function' && typeof __host_id === 'string' && __host_id) {
-		const socket = io({ transports: ['websocket'] });
+		const socket = io(__ws_url || undefined, { transports: ['websocket'] });
 		socket.on('connect', () => {
 			socket.emit('subscribe', `tenant:${__host_id}`);
 		});

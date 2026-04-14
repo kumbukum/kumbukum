@@ -1,5 +1,6 @@
 x-environment: &environment
   APP_URL: ${APP_URL}
+  WS_URL: ${WS_URL:-}
   API_BASE_URL: http://app:3000
   MONGO_URI: mongodb://mongo:27017/kumbukum
   REDIS_URL: ${REDIS_URL:-redis://redis:6379}

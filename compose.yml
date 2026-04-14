@@ -26,6 +26,7 @@ x-env: &env
     GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
     OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
     APP_URL: http://localhost:3000
+    WS_URL: http://localhost:3001
     SYSADMIN_EMAIL: "sysadmin@localhost"
     SYSADMIN_PASSWORD: "sysadminpassword"
     API_BASE_URL: http://app:3000
