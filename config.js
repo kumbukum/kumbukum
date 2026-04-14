@@ -1,19 +1,28 @@
-function parseTypesenseNodes() {
+function parseTypesenseConfig() {
 	const nodesEnv = process.env.TYPESENSE_NODES || '';
 	if (nodesEnv) {
 		try {
-			return JSON.parse(nodesEnv);
-		} catch {
-			console.warn('Invalid TYPESENSE_NODES JSON, falling back to single-node config');
+			const parsed = JSON.parse(nodesEnv);
+			if (!parsed.nodes || !Array.isArray(parsed.nodes)) {
+				throw new Error('TYPESENSE_NODES must include a "nodes" array');
+			}
+			return parsed;
+		} catch (err) {
+			console.error('Invalid TYPESENSE_NODES JSON:', err.message);
+			process.exit(1);
 		}
 	}
-	return [
-		{
-			host: process.env.TYPESENSE_HOST || 'localhost',
-			port: parseInt(process.env.TYPESENSE_PORT, 10) || 8108,
-			protocol: process.env.TYPESENSE_PROTOCOL || 'http',
-		},
-	];
+	return {
+		nodes: [
+			{
+				host: process.env.TYPESENSE_HOST || 'localhost',
+				port: parseInt(process.env.TYPESENSE_PORT, 10) || 8108,
+				protocol: process.env.TYPESENSE_PROTOCOL || 'http',
+			},
+		],
+		apiKey: process.env.TYPESENSE_API_KEY || 'kumbukum-dev-key',
+		connectionTimeoutSeconds: 30,
+	};
 }
 
 function parseRedisConfig() {
@@ -44,10 +53,7 @@ const config = {
 	jwtSecret: process.env.JWT_SECRET || 'change-me',
 	appUrl: process.env.APP_URL || 'http://localhost:3000',
 
-	typesense: {
-		nodes: parseTypesenseNodes(),
-		apiKey: process.env.TYPESENSE_API_KEY || 'kumbukum-dev-key',
-	},
+	typesense: parseTypesenseConfig(),
 
 	smtp: {
 		host: process.env.SMTP_HOST || '',

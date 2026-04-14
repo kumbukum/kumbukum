@@ -34,7 +34,17 @@ export async function extractText(filePath, mimeType, originalName) {
  */
 async function extractPdfContent(filePath) {
     const buf = fs.readFileSync(filePath);
-    const data = await extractPdf(buf);
+    const origWarn = console.warn;
+    console.warn = (...args) => {
+        if (typeof args[0] === 'string' && args[0].includes('TT:')) return;
+        origWarn.apply(console, args);
+    };
+    let data;
+    try {
+        data = await extractPdf(buf);
+    } finally {
+        console.warn = origWarn;
+    }
     let text = (data.text || '').trim();
     text = striptags(text, [], ' ');
     text = collapseWhitespace(text);

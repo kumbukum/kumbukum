@@ -8,11 +8,7 @@ const syncedConvoModels = new Set();
 
 export function getTypesenseClient() {
 	if (!client) {
-		client = new Typesense.Client({
-			nodes: config.typesense.nodes,
-			apiKey: config.typesense.apiKey,
-			connectionTimeoutSeconds: 30,
-		});
+		client = new Typesense.Client(config.typesense);
 	}
 	return client;
 }
