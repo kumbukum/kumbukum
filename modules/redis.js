@@ -11,7 +11,6 @@ function getRedisClient() {
 			client = new Redis({ ...config.redisOptions, lazyConnect: true, maxRetriesPerRequest: 3 });
 		}
 		client.on('error', (err) => console.warn('Redis cache error:', err.message));
-		client.on('ready', () => console.log(`Redis connected: ${client.options.host || 'sentinel'}:${client.options.port || ''}`));
 	}
 	return client;
 }
@@ -61,5 +60,12 @@ export async function cacheInvalidate(pattern) {
 		}
 	} catch {
 		// silently ignore cache invalidation failures
+	}
+}
+
+export async function initRedis() {
+	const redis = await ensureConnected();
+	if (redis) {
+		console.log(`Redis connected: ${redis.options.host || 'sentinel'}:${redis.options.port || ''}`);
 	}
 }
