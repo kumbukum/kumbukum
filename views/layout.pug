@@ -29,12 +29,13 @@ html(lang="en")
 									+avatar(user.name, 'xs')
 									= user.name
 								ul.dropdown-menu.dropdown-menu-end
-									li: a.dropdown-item(href="/settings/profile") Settings
+									li: a.dropdown-item(href="/settings/profile") Profile & Settings
+									li: hr.dropdown-divider
+									li: a.dropdown-item(href="/docs" target="_blank") Docs
+									li: a.dropdown-item(href="/api/doc" target="_blank") API Docs
 									if is_hosted
 										li: hr.dropdown-divider
 										li: a.dropdown-item(href="/settings/subscription") My Subscription
-									li: hr.dropdown-divider
-									li: a.dropdown-item(href="/api/doc" target="_blank") API Docs
 									li: hr.dropdown-divider
 									li: a.dropdown-item(href="#" onclick="logout()") Logout
 
