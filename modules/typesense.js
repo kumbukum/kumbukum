@@ -123,8 +123,16 @@ export async function ensureCollections(host_id) {
 			await ts.collections(schema.name).retrieve();
 		} catch (err) {
 			if (err.httpStatus === 404) {
-				await ts.collections().create(schema);
-				console.log(`Created Typesense collection: ${schema.name}`);
+				try {
+					await ts.collections().create(schema);
+					console.log(`Created Typesense collection: ${schema.name}`);
+				} catch (createErr) {
+					if (createErr.httpStatus === 409) {
+						// Another instance created it first — safe to ignore
+					} else {
+						throw createErr;
+					}
+				}
 			} else {
 				throw err;
 			}
@@ -271,7 +279,11 @@ export async function reindexHost(host_id, models) {
 		if (!schemaFn) continue;
 
 		// Recreate
-		await ts.collections().create(schemaFn(host_id));
+		try {
+			await ts.collections().create(schemaFn(host_id));
+		} catch (createErr) {
+			if (createErr.httpStatus !== 409) throw createErr;
+		}
 
 		// Import all documents from MongoDB
 		const docs = await model.find({ host_id }).lean();
@@ -295,8 +307,12 @@ export async function reindexHost(host_id, models) {
 
 	// Recreate pages collection (populated by crawling, not reindexed from DB)
 	if (schemas.pages) {
-		await ts.collections().create(schemas.pages(host_id));
-		console.log(`Recreated empty pages collection: pages_${host_id}`);
+		try {
+			await ts.collections().create(schemas.pages(host_id));
+			console.log(`Recreated empty pages collection: pages_${host_id}`);
+		} catch (createErr) {
+			if (createErr.httpStatus !== 409) throw createErr;
+		}
 	}
 
 	return results;
