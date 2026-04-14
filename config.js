@@ -31,7 +31,11 @@ function parseTypesenseConfig() {
 }
 
 function parseRedisConfig() {
-	const sentinelEnv = process.env.REDIS_SENTINEL || '';
+	let sentinelEnv = (process.env.REDIS_SENTINEL || '').trim();
+	// Strip wrapping quotes (some orchestrators add them)
+	if ((sentinelEnv.startsWith("'") && sentinelEnv.endsWith("'")) || (sentinelEnv.startsWith('"') && sentinelEnv.endsWith('"') && sentinelEnv[1] !== '{')) {
+		sentinelEnv = sentinelEnv.slice(1, -1);
+	}
 	if (sentinelEnv) {
 		try {
 			const parsed = JSON.parse(sentinelEnv);
@@ -41,6 +45,7 @@ function parseRedisConfig() {
 			return parsed;
 		} catch (err) {
 			console.error('Invalid REDIS_SENTINEL JSON:', err.message);
+			console.error('REDIS_SENTINEL raw value:', JSON.stringify(sentinelEnv));
 			process.exit(1);
 		}
 	}

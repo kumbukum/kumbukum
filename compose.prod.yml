@@ -39,6 +39,7 @@ x-environment: &environment
 services:
   app:
     image: ghcr.io/kumbukum/kumbukum:latest
+    command: ["npm", "run", "start"]
     ports:
       - "3000:3000"
     environment: *environment
@@ -50,7 +51,7 @@ services:
 
   ws:
     image: ghcr.io/kumbukum/kumbukum:latest
-    command: node ws-server.js
+    command: ["npm", "run", "start:ws"]
     ports:
       - "3001:3001"
     environment:
@@ -63,7 +64,8 @@ services:
 
   mcp:
     image: ghcr.io/kumbukum/kumbukum:latest
-    command: node apps/mcp/server.js
+    workdir: /opt/kumbukum/apps/mcp
+    command: ["npm", "run", "start"]
     ports:
       - "3002:3002"
     environment:
@@ -73,7 +75,7 @@ services:
 
   scheduler:
     image: ghcr.io/kumbukum/kumbukum:latest
-    command: node scheduler.js
+    command: ["npm", "run", "start:scheduler"]
     environment: *environment
     depends_on:
       - mongo

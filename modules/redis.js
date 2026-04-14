@@ -66,6 +66,11 @@ export async function cacheInvalidate(pattern) {
 export async function initRedis() {
 	const redis = await ensureConnected();
 	if (redis) {
-		console.log(`Redis connected: ${redis.options.host || 'sentinel'}:${redis.options.port || ''}`);
+		if (redis.options.sentinels) {
+			const nodes = redis.options.sentinels.map(s => `${s.host}:${s.port}`).join(', ');
+			console.log(`Redis connected via sentinel (master: ${redis.options.name}): ${nodes}`);
+		} else {
+			console.log(`Redis connected: ${redis.options.host}:${redis.options.port}`);
+		}
 	}
 }
