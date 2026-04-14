@@ -23,7 +23,31 @@ import billingRoutes from './routes/billing.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const SERVER_MODE = process.env.SERVER_MODE || 'app';
+
 const app = express();
+
+var _90_days_in_ms = 90 * 24 * 60 * 60 * 1000;
+
+const sessionMiddleware = session({
+	'secret': config.sessionSecret,
+	'resave': true,
+	'saveUninitialized': false,
+	'proxy': process.env.NODE_ENV === 'production' ? true : false,
+	'store': MongoStore.create({
+		'mongoUrl': config.mongoUri,
+		'collectionName': 'sessions',
+		'ttl': _90_days_in_ms,
+		'createTTLIndex': true,
+	}),
+	'cookie': {
+		'maxAge': _90_days_in_ms,
+		'sameSite': process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+		'secure': process.env.NODE_ENV === 'production' ? true : false 
+	},
+});
+
+if (SERVER_MODE === 'app') {
 
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
@@ -92,26 +116,6 @@ app.use((req, res, next) => {
     next();
 });
 
-var _90_days_in_ms = 90 * 24 * 60 * 60 * 1000;
-
-const sessionMiddleware = session({
-	'secret': config.sessionSecret,
-	'resave': true,
-	'saveUninitialized': false,
-	'proxy': process.env.NODE_ENV === 'production' ? true : false,
-	'store': MongoStore.create({
-		'mongoUrl': config.mongoUri,
-		'collectionName': 'sessions',
-		'ttl': _90_days_in_ms,
-		'createTTLIndex': true,
-	}),
-	'cookie': {
-		'maxAge': _90_days_in_ms,
-		'sameSite': process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-		'secure': process.env.NODE_ENV === 'production' ? true : false 
-	},
-});
-
 
 app.use(sessionMiddleware);
 
@@ -138,19 +142,24 @@ app.get('/', (req, res) => {
 
 app.use('/', webRoutes);
 
+} // end SERVER_MODE === 'app'
+
 async function start() {
 	await connectDB();
 	await initRedis();
 	await initTypesense();
 
 	const server = app.listen(config.port, () => {
-		console.log(`Kumbukum running on port ${config.port} [${config.env}]`);
+		console.log(`Kumbukum ${SERVER_MODE} running on port ${config.port} [${config.env}]`);
 	});
 
 	await setupSocketIO(server, sessionMiddleware);
-	startChangeStreams().catch((err) =>
-		console.error('Change streams failed to start:', err.message),
-	);
+
+	if (SERVER_MODE === 'app') {
+		startChangeStreams().catch((err) =>
+			console.error('Change streams failed to start:', err.message),
+		);
+	}
 }
 
 start().catch((err) => {
