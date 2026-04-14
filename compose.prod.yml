@@ -57,9 +57,11 @@ services:
     environment:
       <<: *environment
       PORT: 3001
+      SERVER_MODE: ws
     depends_on:
       - redis
       - mongo
+      - typesense
     restart: unless-stopped
 
   mcp:

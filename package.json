@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs app.js",
     "start:scheduler": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs scheduler.js",
-    "start:ws": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs ws-server.js",
+    "start:ws": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs app.js",
     "build": "node build.js",
     "dev": "nodemon --max-old-space-size=4096 --trace-warnings --require ./tracing.cjs app.js",
     "test": "node --test --test-force-exit test/**/*.test.js",
@@ -25,7 +25,6 @@
       "app.js",
       "config.js",
       "db.js",
-      "ws-server.js",
       "routes/",
       "middleware/",
       "model/",
