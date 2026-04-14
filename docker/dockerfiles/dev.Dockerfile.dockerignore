@@ -1,5 +1,1 @@
 # .dockerignore
-apps/**
-!apps/mcp/package.json
-docs/**
-!docs/package.json

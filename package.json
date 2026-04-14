@@ -9,9 +9,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "nodemon --max-old-space-size=4096 --trace-warnings --require ./tracing.cjs app.js",
-    "start": "node --require ./tracing.cjs app.js",
+    "start": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs app.js",
+    "start:scheduler": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs scheduler.js",
     "build": "node build.js",
+    "dev": "nodemon --max-old-space-size=4096 --trace-warnings --require ./tracing.cjs app.js",
     "test": "node --test --test-force-exit test/**/*.test.js",
     "test:mcp": "node --test --test-force-exit test/mcp/**/*.test.js",
     "docs:dev": "pnpm --filter @kumbukum/docs dev",
