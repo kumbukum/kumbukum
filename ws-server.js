@@ -3,47 +3,54 @@
  */
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
-import { createAdapter } from '@socket.io/redis-adapter';
+import { createAdapter } from '@socket.io/redis-streams-adapter';
 import Redis from 'ioredis';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
+import config from './config.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 3001;
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/kumbukum';
-const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me';
 
 const httpServer = createServer();
 
 const io = new Server(httpServer, {
-  cors: { origin: '*', credentials: true },
+	cookie: false,
+	transports: ['websocket'],
+	cors: {
+		origin: config.env === 'development' ? '*' : config.appUrl,
+		credentials: true,
+	},
 });
 
-// Redis adapter
-const pubClient = new Redis(REDIS_URL);
-const subClient = pubClient.duplicate();
-
-io.adapter(createAdapter(pubClient, subClient));
+// Redis streams adapter for horizontal scaling
+const redisClient = new Redis(config.redisOptions);
+await new Promise((resolve, reject) => {
+	redisClient.once('ready', resolve);
+	redisClient.once('error', reject);
+	setTimeout(() => reject(new Error('Redis connection timeout')), 5000);
+});
+io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000 }));
+console.log(`Redis streams adapter connected: ${redisClient.options.host || 'sentinel'}:${redisClient.options.port || ''}`);
 
 // Session middleware for auth
 const sessionMiddleware = session({
-  secret: SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: MONGO_URI }),
+	secret: config.sessionSecret,
+	resave: false,
+	saveUninitialized: false,
+	store: MongoStore.create({ mongoUrl: config.mongoUri }),
 });
 
 io.engine.use(sessionMiddleware);
 
 io.on('connection', (socket) => {
-  const sess = socket.request.session;
-  if (!sess?.userId) {
-    socket.disconnect(true);
-    return;
-  }
-  socket.join(`tenant:${sess.hostId}`);
+	const sess = socket.request.session;
+	if (!sess?.userId) {
+		socket.disconnect(true);
+		return;
+	}
+	socket.join(`tenant:${sess.hostId}`);
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`WebSocket server running on port ${PORT}`);
+	console.log(`WebSocket server running on port ${PORT}`);
 });
