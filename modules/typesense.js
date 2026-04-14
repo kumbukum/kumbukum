@@ -288,6 +288,12 @@ export async function reindexHost(host_id, models) {
 				console.error(`Reindex error [${type}/${doc._id}]:`, err.message);
 			}
 		}
+
+		// Mark all successfully imported documents as indexed
+		if (imported > 0) {
+			await model.updateMany({ host_id, in_trash: { $ne: true } }, { $set: { is_indexed: true } });
+		}
+
 		results[type] = { total: docs.length, imported };
 	}
 
@@ -311,6 +317,74 @@ export async function initTypesense() {
 	} catch (err) {
 		console.warn('Typesense not available — indexing will fail until connected:', err.message);
 	}
+}
+
+/**
+ * Index documents that have is_indexed: false.
+ * Called periodically by the scheduler to catch any documents missed by change streams.
+ */
+export async function indexMissing(models) {
+	const { Note, Memory, Url } = models;
+
+	const typeModelMap = [
+		{ type: 'notes', model: Note, transform: (doc) => ({
+			id: doc._id.toString(),
+			title: doc.title || '',
+			text_content: doc.text_content || '',
+			project_id: doc.project.toString(),
+			tags: doc.tags || [],
+			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
+			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
+		})},
+		{ type: 'memory', model: Memory, transform: (doc) => ({
+			id: doc._id.toString(),
+			title: doc.title || '',
+			content: doc.content || '',
+			project_id: doc.project.toString(),
+			tags: doc.tags || [],
+			source: doc.source || '',
+			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
+			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
+		})},
+		{ type: 'urls', model: Url, transform: (doc) => ({
+			id: doc._id.toString(),
+			url: doc.url || '',
+			title: doc.title || '',
+			description: doc.description || '',
+			text_content: doc.text_content || '',
+			project_id: doc.project.toString(),
+			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
+			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
+		})},
+	];
+
+	let totalIndexed = 0;
+
+	for (const { type, model, transform } of typeModelMap) {
+		const docs = await model.find({ is_indexed: { $ne: true }, in_trash: { $ne: true } }).lean();
+		if (docs.length === 0) continue;
+
+		console.log(`indexMissing: ${docs.length} unindexed ${type} documents found`);
+
+		for (const doc of docs) {
+			try {
+				await ensureCollections(doc.host_id);
+				const ts = getTypesenseClient();
+				const collectionName = `${type}_${doc.host_id}`;
+				await ts.collections(collectionName).documents().upsert(transform(doc));
+				await model.updateOne({ _id: doc._id }, { $set: { is_indexed: true } });
+				totalIndexed++;
+			} catch (err) {
+				console.error(`indexMissing error [${type}/${doc._id}]:`, err.message);
+			}
+		}
+	}
+
+	if (totalIndexed > 0) {
+		console.log(`indexMissing: indexed ${totalIndexed} documents`);
+	}
+
+	return totalIndexed;
 }
 
 // ────────────────────────────────────────────────────────────────────

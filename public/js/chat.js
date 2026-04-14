@@ -228,7 +228,8 @@ let rmCurrentId = null;
 let rmCurrentType = null;
 let rmContent = '';
 let rmTextContent = '';
-let rmSelectedRelationships = [];
+let rmSelectedLinks = [];
+let rmOriginalLinks = [];
 let rmRelDropdown = null;
 let rmRelDebounce = null;
 
@@ -332,6 +333,37 @@ async function openResultModal(item) {
 }
 
 function rmPopulate(type, record) {
+	// Load links for any item type (from GraphLink collection)
+	rmSelectedLinks = [];
+	rmOriginalLinks = [];
+	if (record._id) {
+		api('GET', `/links/${record._id}`).then(({ links }) => {
+			if (!links?.length) return;
+			const ids = new Set();
+			for (const l of links) {
+				const otherId = l.source_id === record._id ? l.target_id : l.source_id;
+				const otherType = l.source_id === record._id ? l.target_type : l.source_type;
+				if (!ids.has(otherId)) {
+					ids.add(otherId);
+					rmSelectedLinks.push({ id: otherId, _type: otherType, title: '', link_id: l._id });
+				}
+			}
+			// Resolve titles
+			api('POST', '/resolve', { ids: [...ids] }).then(({ items }) => {
+				for (const link of rmSelectedLinks) {
+					const resolved = items.find(i => i.id === link.id);
+					if (resolved) link.title = resolved.title;
+				}
+				rmOriginalLinks = rmSelectedLinks.map(l => ({ ...l }));
+				rmRenderLinkTags();
+			}).catch(() => {
+				rmOriginalLinks = rmSelectedLinks.map(l => ({ ...l }));
+				rmRenderLinkTags();
+			});
+		}).catch(() => {});
+	}
+	rmRenderLinkTags();
+
 	if (type === 'notes') {
 		const panel = document.getElementById('result-modal-note');
 		panel.classList.remove('d-none');
@@ -348,15 +380,6 @@ function rmPopulate(type, record) {
 		document.getElementById('rm-memory-source').value = record.source || '';
 		rmContent = record.content || '';
 		rmTextContent = record.text_content || record.content || '';
-		// Load relationships
-		rmSelectedRelationships = [];
-		if (record.relationships?.length) {
-			api('POST', '/resolve', { ids: record.relationships }).then(({ items }) => {
-				rmSelectedRelationships = items || [];
-				rmRenderRelationshipTags();
-			}).catch(() => {});
-		}
-		rmRenderRelationshipTags();
 		rmShowMemoryPreview();
 	} else if (type === 'urls') {
 		const panel = document.getElementById('result-modal-url');
@@ -435,19 +458,34 @@ function rmGetEditorContent() {
 	return { content: rmContent, text_content: rmTextContent };
 }
 
-// ── Relationship search (memory) ─────────────────────────────────
+// ── Link search (all item types) ─────────────────────────────────
 
 const rmTypeIcons = { notes: 'bi-file-text', memory: 'bi-lightbulb', urls: 'bi-link-45deg' };
 const rmTypeLabels = { notes: 'Note', memory: 'Memory', urls: 'URL' };
 
+function rmGetActiveLinkContainer() {
+	const panels = ['result-modal-note', 'result-modal-memory', 'result-modal-url'];
+	for (const id of panels) {
+		const panel = document.getElementById(id);
+		if (panel && !panel.classList.contains('d-none')) {
+			return {
+				search: panel.querySelector('.rm-link-search'),
+				tags: panel.querySelector('.rm-link-tags'),
+				wrap: panel.querySelector('.rm-link-search')?.closest('.position-relative'),
+			};
+		}
+	}
+	return {};
+}
+
 function rmEnsureRelDropdown() {
 	if (rmRelDropdown) return rmRelDropdown;
-	const input = document.getElementById('rm-relationship-search');
-	if (!input) return null;
+	const { wrap } = rmGetActiveLinkContainer();
+	if (!wrap) return null;
 	rmRelDropdown = document.createElement('div');
 	rmRelDropdown.className = 'source-dropdown list-group position-absolute w-100';
 	rmRelDropdown.style.cssText = 'z-index:1060; max-height:200px; overflow-y:auto; display:none; top:100%';
-	input.parentElement.appendChild(rmRelDropdown);
+	wrap.appendChild(rmRelDropdown);
 	return rmRelDropdown;
 }
 
@@ -455,28 +493,31 @@ function rmHideRelDropdown() {
 	if (rmRelDropdown) rmRelDropdown.style.display = 'none';
 }
 
-function rmRenderRelationshipTags() {
-	const container = document.getElementById('rm-relationship-tags');
-	if (!container) return;
-	container.innerHTML = rmSelectedRelationships.map((r, i) => `
-		<span class="badge bg-secondary d-inline-flex align-items-center gap-1 me-1 mb-1">
-			<i class="${rmTypeIcons[r._type] || 'bi-link'}"></i>
-			${escapeHtml(r.title || r.url || r.id)}
-			<button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.5rem" data-index="${i}"></button>
-		</span>
-	`).join('');
-	container.querySelectorAll('.btn-close').forEach(btn => {
-		btn.addEventListener('click', () => {
-			rmSelectedRelationships.splice(parseInt(btn.dataset.index), 1);
-			rmRenderRelationshipTags();
+function rmRenderLinkTags() {
+	// Render into whichever panel is visible
+	const containers = document.querySelectorAll('.rm-link-tags');
+	for (const container of containers) {
+		container.innerHTML = rmSelectedLinks.map((r, i) => `
+			<span class="badge bg-secondary d-inline-flex align-items-center gap-1 me-1 mb-1">
+				<i class="${rmTypeIcons[r._type] || 'bi-link'}"></i>
+				${escapeHtml(r.title || r.url || r.id)}
+				<button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.5rem" data-index="${i}"></button>
+			</span>
+		`).join('');
+		container.querySelectorAll('.btn-close').forEach(btn => {
+			btn.addEventListener('click', () => {
+				rmSelectedLinks.splice(parseInt(btn.dataset.index), 1);
+				rmRenderLinkTags();
+			});
 		});
-	});
+	}
 }
 
-async function rmSearchRelationships(query) {
+async function rmSearchLinks(query) {
 	if (!query || query.length < 3) { rmHideRelDropdown(); return; }
 	const { results } = await api('POST', '/search/all', { query });
-	const filtered = (results || []).filter(r => !rmSelectedRelationships.some(s => s.id === r.id));
+	const currentId = rmCurrentId;
+	const filtered = (results || []).filter(r => r.id !== currentId && !rmSelectedLinks.some(s => s.id === r.id));
 	const dd = rmEnsureRelDropdown();
 	if (!dd || !filtered.length) { rmHideRelDropdown(); return; }
 
@@ -494,12 +535,44 @@ async function rmSearchRelationships(query) {
 	dd.querySelectorAll('button').forEach(btn => {
 		btn.addEventListener('mousedown', (e) => {
 			e.preventDefault();
-			rmSelectedRelationships.push({ id: btn.dataset.id, _type: btn.dataset.type, title: btn.dataset.title });
-			rmRenderRelationshipTags();
-			document.getElementById('rm-relationship-search').value = '';
+			rmSelectedLinks.push({ id: btn.dataset.id, _type: btn.dataset.type, title: btn.dataset.title });
+			rmRenderLinkTags();
+			const { search } = rmGetActiveLinkContainer();
+			if (search) search.value = '';
 			rmHideRelDropdown();
 		});
 	});
+}
+
+async function rmSyncLinks(itemId, itemType) {
+	const typeMap = { notes: 'notes', memory: 'memory', urls: 'urls' };
+	const currentType = typeMap[itemType] || itemType;
+
+	// Find removed links (were in original but not in current)
+	const removedLinks = rmOriginalLinks.filter(o => !rmSelectedLinks.some(s => s.id === o.id));
+	// Find added links (in current but not in original)
+	const addedLinks = rmSelectedLinks.filter(s => !rmOriginalLinks.some(o => o.id === s.id));
+
+	const promises = [];
+
+	// Delete removed links
+	for (const link of removedLinks) {
+		if (link.link_id) {
+			promises.push(api('DELETE', `/links/${link.link_id}`).catch(() => {}));
+		}
+	}
+
+	// Create new links
+	for (const link of addedLinks) {
+		promises.push(api('POST', '/links', {
+			source_id: itemId,
+			source_type: currentType,
+			target_id: link.id,
+			target_type: link._type,
+		}).catch(() => {}));
+	}
+
+	if (promises.length) await Promise.all(promises);
 }
 
 // ── Cleanup ──────────────────────────────────────────────────────
@@ -510,8 +583,9 @@ function rmCleanup() {
 	rmCurrentType = null;
 	rmContent = '';
 	rmTextContent = '';
-	rmSelectedRelationships = [];
-	rmRenderRelationshipTags();
+	rmSelectedLinks = [];
+	rmOriginalLinks = [];
+	rmRenderLinkTags();
 	if (rmRelDropdown) { rmRelDropdown.remove(); rmRelDropdown = null; }
 	// Reset loading + form panels so modal is clean for next open
 	const loadingEl = document.getElementById('result-modal-loading');
@@ -536,13 +610,14 @@ function initResultModalHandlers() {
 	document.getElementById('rm-memory-tab-preview')?.addEventListener('click', rmShowMemoryPreview);
 	document.getElementById('rm-memory-tab-edit')?.addEventListener('click', rmShowMemoryEdit);
 
-	// Relationship search
-	const relInput = document.getElementById('rm-relationship-search');
-	relInput?.addEventListener('input', () => {
-		clearTimeout(rmRelDebounce);
-		rmRelDebounce = setTimeout(() => rmSearchRelationships(relInput.value.trim()), 150);
+	// Link search (all item types)
+	document.querySelectorAll('.rm-link-search').forEach(input => {
+		input.addEventListener('input', () => {
+			clearTimeout(rmRelDebounce);
+			rmRelDebounce = setTimeout(() => rmSearchLinks(input.value.trim()), 150);
+		});
+		input.addEventListener('blur', () => setTimeout(rmHideRelDropdown, 150));
 	});
-	relInput?.addEventListener('blur', () => setTimeout(rmHideRelDropdown, 150));
 
 	// Save (create or update)
 	document.getElementById('rm-save-btn')?.addEventListener('click', async () => {
@@ -562,20 +637,21 @@ function initResultModalHandlers() {
 				} else {
 					await api('PUT', `/notes/${rmCurrentId}`, data);
 				}
+				await rmSyncLinks(rmCurrentId, 'notes');
 			} else if (rmCurrentType === 'memory') {
 				const title = document.getElementById('rm-memory-title').value.trim();
 				if (!title) return showError('Title is required');
 				const { content, text_content } = rmGetEditorContent();
 				const tags = document.getElementById('rm-memory-tags').value.split(',').map((t) => t.trim()).filter(Boolean);
 				const source = document.getElementById('rm-memory-source').value.trim();
-				const relationships = rmSelectedRelationships.map(r => r.id);
-				const data = { title, content, text_content, tags, source, relationships, project: window.currentProjectId };
+				const data = { title, content, text_content, tags, source, project: window.currentProjectId };
 				if (isCreate) {
 					const { memory } = await api('POST', '/memories', data);
 					rmCurrentId = memory._id;
 				} else {
 					await api('PUT', `/memories/${rmCurrentId}`, data);
 				}
+				await rmSyncLinks(rmCurrentId, 'memory');
 			} else if (rmCurrentType === 'urls') {
 				const url = document.getElementById('rm-url-input').value.trim();
 				if (!url) return showError('URL is required');
@@ -584,10 +660,12 @@ function initResultModalHandlers() {
 				const crawl_enabled = document.getElementById('rm-url-crawl').checked;
 				const data = { url, title, description, crawl_enabled, project: window.currentProjectId };
 				if (isCreate) {
-					await api('POST', '/urls', data);
+					const resp = await api('POST', '/urls', data);
+					rmCurrentId = resp.url._id;
 				} else {
 					await api('PUT', `/urls/${rmCurrentId}`, data);
 				}
+				await rmSyncLinks(rmCurrentId, 'urls');
 			}
 
 			showSuccess(isCreate ? 'Created' : 'Saved');

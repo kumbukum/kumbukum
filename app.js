@@ -19,7 +19,6 @@ import apiRoutes from './routes/api.js';
 import webRoutes from './routes/web.js';
 import adminRoutes from './routes/admin.js';
 import billingRoutes from './routes/billing.js';
-import { startScheduler } from './modules/scheduler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -147,7 +146,6 @@ async function start() {
 	});
 
 	await setupSocketIO(server, sessionMiddleware);
-	startScheduler();
 	startChangeStreams().catch((err) =>
 		console.error('Change streams failed to start:', err.message),
 	);

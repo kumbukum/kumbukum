@@ -2,7 +2,7 @@ import { Url } from '../model/url.js';
 import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { extractUrlContent } from '../modules/url_content_extractor.js';
 import { emitToTenant } from '../modules/socket.js';
-import { invalidateGraphCache } from './graph_service.js';
+import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
 
 export async function saveUrl(userId, host_id, data) {
 	let extracted = {};
@@ -73,6 +73,7 @@ export async function deleteUrl(host_id, urlId) {
 	);
 	if (urlDoc) {
 		removeDocument(host_id, 'urls', urlId).catch((err) => console.error('Typesense remove error:', err.message));
+		removeLinksForItem(host_id, urlId).catch((err) => console.error('Remove links error:', err.message));
 		emitToTenant(host_id, 'url:deleted', { _id: urlId });
 		invalidateGraphCache(host_id).catch(() => {});
 	}

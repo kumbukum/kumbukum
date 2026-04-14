@@ -29,7 +29,7 @@ This project uses Kumbukum as its knowledge store via MCP.
 ### After Completing Significant Work
 1. Call `store_memory` to save key decisions, outcomes, and context for future sessions
 2. Use descriptive titles and tag memories for easy retrieval
-3. If you created something that relates to existing items, use `create_link` to connect them in the knowledge graph
+3. Use `create_link` to connect newly created items to related notes, memories, or URLs in the knowledge graph
 
 ### Creating Notes
 Use `create_note` for structured documentation:
@@ -38,12 +38,21 @@ Use `create_note` for structured documentation:
 - Meeting notes
 - Technical specs
 
+After creating a note, use `create_link` to connect it to related items.
+
 ### Creating Memories
 Use `store_memory` for agent-scoped learnings:
 - Debugging insights and solutions
 - User preferences and patterns
 - Task outcomes and what worked
 - Codebase conventions discovered during work
+
+After storing a memory, use `create_link` to connect it to related notes, URLs, or other memories.
+
+### Saving URLs
+Use `save_url` to bookmark and extract content from web pages.
+
+After saving a URL, use `create_link` to connect it to related notes or memories.
 
 ### Searching
 - `search_knowledge` — Search across ALL types (notes, memories, URLs). **Use this first.**

@@ -24,7 +24,7 @@ x-env: &env
     TS_CONVERSATION_MODEL_PROVIDER: google
     GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
     OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-    APP_URL: http://app.kumbukum.com
+    APP_URL: http://localhost:3000
     SYSADMIN_EMAIL: "sysadmin@localhost"
     SYSADMIN_PASSWORD: "sysadminpassword"
     API_BASE_URL: http://app:3000
@@ -73,6 +73,15 @@ services:
         environment:
             <<: *env
             PORT: 3002
+        restart: unless-stopped
+
+    scheduler:
+        extends:
+            file: ./compose.base.yml
+            service: base
+        command: ["node", "scheduler.js"]
+        environment:
+            <<: *env
         restart: unless-stopped
 
     # docs:
