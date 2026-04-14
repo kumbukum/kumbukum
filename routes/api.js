@@ -244,7 +244,7 @@ router.post('/batch/copy', async (req, res) => {
 	}
 });
 
-// ---- Cross-collection search (for relationships) ----
+// ---- Cross-collection search (for link picker) ----
 
 router.post('/search/all', async (req, res) => {
 	try {
@@ -276,7 +276,7 @@ router.post('/search/all', async (req, res) => {
 	}
 });
 
-// ---- Resolve IDs to titles (for relationships) ----
+// ---- Resolve IDs to titles (for link picker) ----
 
 router.post('/resolve', async (req, res) => {
 	const ids = req.body.ids;

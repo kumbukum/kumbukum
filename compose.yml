@@ -11,6 +11,7 @@ x-env: &env
     TYPESENSE_NODES: ""
     SESSION_SECRET: dev-session-secret-change-me
     JWT_SECRET: dev-jwt-secret-change-me
+    ENABLE_SIGNUP: "true"
     SMTP_HOST: "mailpit"
     SMTP_PORT: 1025
     SMTP_USER: ""
@@ -24,7 +25,7 @@ x-env: &env
     TS_CONVERSATION_MODEL_PROVIDER: google
     GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
     OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-    APP_URL: http://app.kumbukum.com
+    APP_URL: http://localhost:3000
     SYSADMIN_EMAIL: "sysadmin@localhost"
     SYSADMIN_PASSWORD: "sysadminpassword"
     API_BASE_URL: http://app:3000
@@ -42,6 +43,32 @@ x-env: &env
     STRIPE_PORTAL_CONFIG_ID: "${STRIPE_PORTAL_CONFIG_ID:-}"
 
 services:
+    # ---------------------------------------------------------------
+    # One-shot service: installs / syncs node_modules before any app
+    # container starts. Every service that needs node_modules must
+    # depend on this with condition: service_completed_successfully.
+    # ---------------------------------------------------------------
+    init:
+        extends:
+            file: ./compose.base.yml
+            service: base
+        build:
+            context: .
+            dockerfile: ./docker/dockerfiles/dev.Dockerfile
+        environment:
+            <<: *env
+        restart: "no"
+        command: ["/bin/bash", "-c", "
+            if [ ! -d node_modules ] || [ package.json -nt node_modules/.installed ] || [ pnpm-lock.yaml -nt node_modules/.installed ]; then
+                echo '[init] Installing / syncing dependencies...';
+                pnpm install;
+                touch node_modules/.installed;
+                echo '[init] Done';
+            else
+                echo '[init] Dependencies up to date';
+            fi
+        "]
+
     app:
         extends:
             file: ./compose.base.yml
@@ -54,8 +81,8 @@ services:
         dns:
             - 100.100.100.100
         depends_on:
-            # docs:
-            #     condition: service_completed_successfully
+            init:
+                condition: service_completed_successfully
             # mongo-init:
             #     condition: service_completed_successfully
             redis:
@@ -67,20 +94,29 @@ services:
         extends:
             file: ./compose.base.yml
             service: base
-        command: ["node", "apps/mcp/server.js", "--http"]
+        working_dir: /opt/kumbukum/apps/mcp
+        command: ["npm", "run", "start"]
         ports:
             - "3002:3002"
         environment:
             <<: *env
             PORT: 3002
         restart: unless-stopped
+        depends_on:
+            init:
+                condition: service_completed_successfully
 
-    # docs:
-    #     extends:
-    #         file: ./compose.base.yml
-    #         service: base
-    #     command: ["sh", "-c", "node docs/scripts/export-openapi.js && pnpm --filter @kumbukum/docs exec vitepress build && rm -rf docs-dist && cp -r docs/.vitepress/dist docs-dist"]
-    #     restart: "no"
+    scheduler:
+        extends:
+            file: ./compose.base.yml
+            service: base
+        command: ["npm", "run", "start:scheduler"]
+        environment:
+            <<: *env
+        restart: unless-stopped
+        depends_on:
+            init:
+                condition: service_completed_successfully
 
     # mongo:
     #     image: percona/percona-server-mongodb:6.0

@@ -70,6 +70,16 @@ services:
       PORT: 3002
     restart: unless-stopped
 
+  scheduler:
+    image: ghcr.io/kumbukum/kumbukum:latest
+    command: node scheduler.js
+    environment: *environment
+    depends_on:
+      - mongo
+      - redis
+      - typesense
+    restart: unless-stopped
+
   mongo:
     image: percona/percona-server-mongodb:6.0
     command: mongod --setParameter perconaTelemetry=false --replSet rs0 --bind_ip_all

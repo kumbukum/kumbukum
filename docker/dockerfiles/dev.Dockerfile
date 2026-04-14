@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:lts-trixie-slim AS builderdev
+FROM node:lts-trixie-slim
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -13,15 +13,5 @@ RUN apt-get update && \
     npm i -g pnpm@10 && \
     npm remove -g yarn && \
     rm -rf /var/lib/apt/lists/*
-
-FROM builderdev AS devpnpmdev
-COPY --link .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY --link apps/mcp/package.json ./apps/mcp/
-COPY --link docs/package.json ./docs/
-RUN pnpm install
-
-# BUILD
-FROM builderdev
-COPY --link --from=devpnpmdev /opt/kumbukum/node_modules /opt/kumbukum/node_modules
 
 ENTRYPOINT ["tini", "--"]

@@ -90,6 +90,12 @@ html(lang="en")
 							.mb-3
 								.form-text Tags
 								input.form-control#rm-note-tags(type="text")
+							.mb-3.position-relative
+								.form-text Links
+								.source-search-wrap
+									i.bi.bi-search.source-search-icon
+									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
+								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 							ul.nav.nav-tabs.mb-0
 								li.nav-item
 									button.nav-link.active#rm-note-tab-preview(type="button") Preview
@@ -110,11 +116,11 @@ html(lang="en")
 								.form-text Source
 								input.form-control#rm-memory-source(type="text")
 							.mb-3.position-relative
-								.form-text Relationships
+								.form-text Links
 								.source-search-wrap
 									i.bi.bi-search.source-search-icon
-									input.form-control#rm-relationship-search(type="text" placeholder="Type to search..." autocomplete="off")
-								#rm-relationship-tags.d-flex.flex-wrap.gap-1.mt-2
+									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
+								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 							ul.nav.nav-tabs.mb-0
 								li.nav-item
 									button.nav-link.active#rm-memory-tab-preview(type="button") Preview
@@ -139,6 +145,12 @@ html(lang="en")
 							.mb-3.form-check
 								input.form-check-input#rm-url-crawl(type="checkbox")
 								label.form-check-label(for="rm-url-crawl") Enable full-site crawling
+							.mb-3.position-relative
+								.form-text Links
+								.source-search-wrap
+									i.bi.bi-search.source-search-icon
+									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
+								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 
 						//- Loading placeholder
 						#result-modal-loading.text-center.py-4.d-none

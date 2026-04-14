@@ -191,6 +191,8 @@ Get a project by ID.
 
 ## Knowledge Graph
 
+Links connect any two items (notes, memories, URLs) in the knowledge graph. After creating an item with `create_note`, `store_memory`, or `save_url`, use `create_link` to connect it to related items. This is a two-step pattern: create the item first, then link it.
+
 ### `create_link`
 Create a link between two items.
 

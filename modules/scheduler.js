@@ -1,11 +1,16 @@
 import { Cron } from 'croner';
 import { reindexAll } from './crawler.js';
+import { indexMissing } from './typesense.js';
 import { User } from '../model/user.js';
+import { Note } from '../model/note.js';
+import { Memory } from '../model/memory.js';
+import { Url } from '../model/url.js';
 import { sendTrialEndingEmail } from '../services/email_service.js';
 
 /**
  * Schedule crawl reindexing every 24 hours at 3 AM.
  * Schedule trial-ending reminders daily at 9 AM.
+ * Schedule Typesense catch-up indexing every 5 minutes.
  */
 export function startScheduler() {
 	new Cron('0 3 * * *', async () => {
@@ -45,5 +50,14 @@ export function startScheduler() {
 		}
 	});
 
-	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00 daily');
+	// Catch-up indexing: find documents with is_indexed:false and index them
+	new Cron('*/30 * * * * *', async () => {
+		try {
+			await indexMissing({ Note, Memory, Url });
+		} catch (err) {
+			console.error('Index catch-up error:', err);
+		}
+	});
+
+	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, index catch-up every 30s');
 }

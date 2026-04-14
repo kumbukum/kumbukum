@@ -44,6 +44,12 @@ function watchCollection(db, collectionName, typesenseType) {
 				const host_id = fullDocument.host_id;
 				if (!host_id) return;
 
+				// Skip events where only is_indexed changed (avoids infinite loop)
+				if (operationType === 'update' && change.updateDescription) {
+					const fields = Object.keys(change.updateDescription.updatedFields || {});
+					if (fields.length === 1 && fields[0] === 'is_indexed') return;
+				}
+
 				// If trashed, remove from Typesense instead of indexing
 				if (fullDocument.in_trash) {
 					await removeDocument(host_id, typesenseType, fullDocument._id.toString()).catch(() => {});
@@ -53,6 +59,9 @@ function watchCollection(db, collectionName, typesenseType) {
 				await ensureCollections(host_id);
 				const tsDoc = toTypesenseDoc(typesenseType, fullDocument);
 				await indexDocument(host_id, typesenseType, tsDoc);
+
+				// Mark as indexed in MongoDB
+				collection.updateOne({ _id: fullDocument._id }, { $set: { is_indexed: true } }).catch(() => {});
 			} else if (operationType === 'delete' && documentKey?._id) {
 				// For deletes we don't have host_id, so we attempt removal with a best-effort approach
 				// The document is already gone from MongoDB, so we can't look it up

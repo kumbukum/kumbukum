@@ -9,7 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node --optimize_for_size --max-old-space-size=4096 server.js --http"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

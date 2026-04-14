@@ -1,7 +1,7 @@
 import { Memory } from '../model/memory.js';
 import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
-import { invalidateGraphCache } from './graph_service.js';
+import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
 
 export async function storeMemory(userId, host_id, data) {
 	const mem = await Memory.create({
@@ -9,7 +9,6 @@ export async function storeMemory(userId, host_id, data) {
 		content: data.content || '',
 		tags: data.tags || [],
 		source: data.source || '',
-		relationships: data.relationships || [],
 		project: data.project,
 		owner: userId,
 		host_id,
@@ -40,7 +39,6 @@ export async function updateMemory(host_id, memoryId, data) {
 	if (data.content !== undefined) update.content = data.content;
 	if (data.tags !== undefined) update.tags = data.tags;
 	if (data.source !== undefined) update.source = data.source;
-	if (data.relationships !== undefined) update.relationships = data.relationships;
 	if (data.project !== undefined) update.project = data.project;
 
 	const mem = await Memory.findOneAndUpdate(
@@ -65,6 +63,7 @@ export async function deleteMemory(host_id, memoryId) {
 	);
 	if (mem) {
 		removeDocument(host_id, 'memory', memoryId).catch((err) => console.error('Typesense remove error:', err.message));
+		removeLinksForItem(host_id, memoryId).catch((err) => console.error('Remove links error:', err.message));
 		emitToTenant(host_id, 'memory:deleted', { _id: memoryId });
 		invalidateGraphCache(host_id).catch(() => {});
 	}

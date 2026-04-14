@@ -35,8 +35,9 @@ block body
 									i.bi.bi-fingerprint.me-2
 									| Sign in with Passkey
 
-							.text-center.mt-3
-								a(href="/signup") Create an account
+							if process.env.ENABLE_SIGNUP === "true"
+								.text-center.mt-3
+									a(href="/signup") Create an account
 
 						#magic-link-form.d-none
 							h5.text-center.mb-3 Enter your email to receive a magic link
