@@ -309,7 +309,8 @@ export async function initTypesense() {
 	try {
 		const ts = getTypesenseClient();
 		const health = await ts.health.retrieve();
-		console.log(`Typesense connected: ${health.ok ? 'healthy' : 'unhealthy'}`);
+		const nodes = config.typesense.nodes.map(n => `${n.host}:${n.port}`).join(', ');
+		console.log(`Typesense connected (${health.ok ? 'healthy' : 'unhealthy'}): ${nodes}`);
 	} catch (err) {
 		console.warn('Typesense not available — indexing will fail until connected:', err.message);
 	}
