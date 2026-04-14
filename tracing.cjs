@@ -5,6 +5,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 const process = require('process');
+const EventEmitter = require('events');
+
+// OTel instrumentations add multiple listeners per request (Express + Router + HTTP).
+// Raise the default to avoid MaxListenersExceededWarning under load.
+EventEmitter.defaultMaxListeners = 50;
 
 // Only load OpenTelemetry if ENABLE_OTEL is true
 if (process.env.ENABLE_OTEL !== 'true') {
