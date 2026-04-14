@@ -54,6 +54,7 @@ jobs:
                   push: ${{ inputs.dry_run != true }}
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
+                  provenance: false
                   build-args: |
                       APP_VERSION=${{ steps.meta.outputs.version }}
                   cache-from: type=gha
