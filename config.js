@@ -1,5 +1,9 @@
 function parseTypesenseConfig() {
-	const nodesEnv = process.env.TYPESENSE_NODES || '';
+	let nodesEnv = (process.env.TYPESENSE_NODES || '').trim();
+	// Strip wrapping single or double quotes (some orchestrators add them)
+	if ((nodesEnv.startsWith("'") && nodesEnv.endsWith("'")) || (nodesEnv.startsWith('"') && nodesEnv.endsWith('"') && nodesEnv[1] !== '{')) {
+		nodesEnv = nodesEnv.slice(1, -1);
+	}
 	if (nodesEnv) {
 		try {
 			const parsed = JSON.parse(nodesEnv);
@@ -9,6 +13,7 @@ function parseTypesenseConfig() {
 			return parsed;
 		} catch (err) {
 			console.error('Invalid TYPESENSE_NODES JSON:', err.message);
+			console.error('TYPESENSE_NODES raw value:', JSON.stringify(nodesEnv));
 			process.exit(1);
 		}
 	}
