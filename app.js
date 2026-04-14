@@ -10,6 +10,7 @@ import config from './config.js';
 import { connectDB } from './db.js';
 import { setupSocketIO } from './modules/socket.js';
 import { initTypesense } from './modules/typesense.js';
+import { initRedis } from './modules/redis.js';
 import { resolveTenant } from './modules/tenancy.js';
 import { startChangeStreams } from './modules/change_stream.js';
 import swaggerUi from 'swagger-ui-express';
@@ -139,6 +140,7 @@ app.use('/', webRoutes);
 
 async function start() {
 	await connectDB();
+	await initRedis();
 	await initTypesense();
 
 	const server = app.listen(config.port, () => {
