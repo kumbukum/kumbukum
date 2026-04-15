@@ -1,0 +1,163 @@
+extends layout
+
+block content
+	.row.mb-3
+		.col
+			h4.fw-bold Audit Logs
+
+	//- Filters
+	.row.g-2.mb-3
+		.col-md-2
+			input.form-control.form-control-sm#audit-search(type="text" placeholder="Search...")
+		.col-md-2
+			select.form-select.form-select-sm#audit-resource
+				option(value="") All Resources
+				option(value="note") Note
+				option(value="memory") Memory
+				option(value="url") URL
+				option(value="project") Project
+				option(value="link") Link
+				option(value="user") User
+				option(value="passkey") Passkey
+				option(value="conversation") Conversation
+				option(value="trash") Trash
+		.col-md-2
+			select.form-select.form-select-sm#audit-action
+				option(value="") All Actions
+				option(value="create") Create
+				option(value="update") Update
+				option(value="delete") Delete
+				option(value="search") Search
+				option(value="login") Login
+				option(value="export") Export
+				option(value="import") Import
+				option(value="restore") Restore
+				option(value="reindex") Reindex
+		.col-md-2
+			select.form-select.form-select-sm#audit-channel
+				option(value="") All Channels
+				option(value="web") Web
+				option(value="api") API
+				option(value="mcp") MCP
+		.col-md-2
+			input.form-control.form-control-sm#audit-from(type="date")
+		.col-md-2
+			input.form-control.form-control-sm#audit-to(type="date")
+
+	.table-responsive
+		table.table.table-sm.table-hover
+			thead
+				tr
+					th Time
+					th Action
+					th Resource
+					th Channel
+					th Token / Client
+					th User
+					th IP
+					th Details
+			tbody#audit-table-body
+				tr
+					td(colspan="8")
+						.text-center.text-muted Loading...
+
+	//- Pagination
+	nav
+		ul.pagination.pagination-sm.justify-content-center#audit-pagination
+
+block scripts
+	script.
+		(async () => {
+			const tbody = document.getElementById('audit-table-body');
+			const pagination = document.getElementById('audit-pagination');
+			let currentPage = 1;
+
+			const els = {
+				search: document.getElementById('audit-search'),
+				resource: document.getElementById('audit-resource'),
+				action: document.getElementById('audit-action'),
+				channel: document.getElementById('audit-channel'),
+				from: document.getElementById('audit-from'),
+				to: document.getElementById('audit-to'),
+			};
+
+			async function load(page = 1) {
+				currentPage = page;
+				const params = new URLSearchParams({ page, per_page: 50 });
+				if (els.search.value) params.set('q', els.search.value);
+				if (els.resource.value) params.set('resource', els.resource.value);
+				if (els.action.value) params.set('action', els.action.value);
+				if (els.channel.value) params.set('channel', els.channel.value);
+				if (els.from.value) params.set('from', els.from.value);
+				if (els.to.value) params.set('to', els.to.value);
+
+				const res = await fetch(`/admin/api/audit-logs?${params}`);
+				const data = await res.json();
+				renderTable(data.logs || []);
+				renderPagination(data.page, data.pages);
+			}
+
+			function renderTable(logs) {
+				if (!logs.length) {
+					tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No audit logs found</td></tr>';
+					return;
+				}
+				tbody.innerHTML = logs.map(log => {
+					const time = new Date(log.createdAt).toLocaleString();
+					const badge = channelBadge(log.channel);
+					const tokenClient = log.mcp_client || log.token_label || '—';
+					const userId = log.user_id || '—';
+					const details = log.details ? `<code class="small">${escHtml(JSON.stringify(log.details)).slice(0, 120)}</code>` : '—';
+					return `<tr>
+						<td class="text-nowrap small">${escHtml(time)}</td>
+						<td><span class="badge bg-secondary">${escHtml(log.action)}</span></td>
+						<td>${escHtml(log.resource)}${log.resource_id ? ` <span class="text-muted small">${escHtml(log.resource_id.slice(-6))}</span>` : ''}</td>
+						<td>${badge}</td>
+						<td class="small">${escHtml(tokenClient)}</td>
+						<td class="small">${escHtml(userId)}</td>
+						<td class="small">${escHtml(log.ip || '—')}</td>
+						<td>${details}</td>
+					</tr>`;
+				}).join('');
+			}
+
+			function channelBadge(ch) {
+				const colors = { web: 'primary', api: 'success', mcp: 'warning' };
+				return `<span class="badge bg-${colors[ch] || 'secondary'}">${escHtml(ch || '—')}</span>`;
+			}
+
+			function renderPagination(page, pages) {
+				if (pages <= 1) { pagination.innerHTML = ''; return; }
+				let html = '';
+				if (page > 1) html += `<li class="page-item"><a class="page-link" href="#" data-page="${page - 1}">&laquo;</a></li>`;
+				const start = Math.max(1, page - 2);
+				const end = Math.min(pages, page + 2);
+				for (let i = start; i <= end; i++) {
+					html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+				}
+				if (page < pages) html += `<li class="page-item"><a class="page-link" href="#" data-page="${page + 1}">&raquo;</a></li>`;
+				pagination.innerHTML = html;
+			}
+
+			pagination.addEventListener('click', (e) => {
+				e.preventDefault();
+				const p = e.target.closest('[data-page]');
+				if (p) load(parseInt(p.dataset.page, 10));
+			});
+
+			let debounce;
+			for (const el of Object.values(els)) {
+				el.addEventListener(el.type === 'text' ? 'input' : 'change', () => {
+					clearTimeout(debounce);
+					debounce = setTimeout(() => load(1), 300);
+				});
+			}
+
+			function escHtml(s) {
+				const d = document.createElement('div');
+				d.textContent = s || '';
+				return d.innerHTML;
+			}
+
+			load();
+		})();

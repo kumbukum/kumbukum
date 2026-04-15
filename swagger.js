@@ -89,6 +89,24 @@ const swaggerSpec = {
                     host_id: { type: 'string' },
                 },
             },
+            AuditLog: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    action: { type: 'string', enum: ['create', 'update', 'delete', 'search', 'login', 'export', 'import', 'restore', 'reindex'] },
+                    resource: { type: 'string', enum: ['note', 'memory', 'url', 'project', 'link', 'user', 'passkey', 'conversation', 'trash'] },
+                    resource_id: { type: 'string' },
+                    user_id: { type: 'string' },
+                    host_id: { type: 'string' },
+                    channel: { type: 'string', enum: ['web', 'api', 'mcp'] },
+                    token_label: { type: 'string' },
+                    mcp_client: { type: 'string' },
+                    details: { type: 'object' },
+                    ip: { type: 'string' },
+                    user_agent: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                },
+            },
         },
         parameters: {
             page: { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
@@ -747,6 +765,43 @@ const swaggerSpec = {
                 responses: {
                     200: { description: 'WebSocket healthy', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
                     503: { description: 'WebSocket unavailable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'not_initialized' } } } } } },
+                },
+            },
+        },
+        // ---- Audit Logs ----
+        '/audit-logs': {
+            get: {
+                tags: ['Audit Logs'],
+                summary: 'List audit logs',
+                description: 'Returns paginated audit logs for the current tenant. Supports filtering by resource, action, channel, date range, and free-text search.',
+                parameters: [
+                    { name: 'resource', in: 'query', schema: { type: 'string', enum: ['note', 'memory', 'url', 'project', 'link', 'user', 'passkey', 'conversation', 'trash'] } },
+                    { name: 'action', in: 'query', schema: { type: 'string', enum: ['create', 'update', 'delete', 'search', 'login', 'export', 'import', 'restore', 'reindex'] } },
+                    { name: 'channel', in: 'query', schema: { type: 'string', enum: ['web', 'api', 'mcp'] } },
+                    { name: 'mcp_client', in: 'query', schema: { type: 'string' }, description: 'Filter by MCP client name' },
+                    { name: 'q', in: 'query', schema: { type: 'string' }, description: 'Free-text search across resource_id, token_label, mcp_client' },
+                    { name: 'from', in: 'query', schema: { type: 'string', format: 'date' }, description: 'Start date (inclusive)' },
+                    { name: 'to', in: 'query', schema: { type: 'string', format: 'date' }, description: 'End date (inclusive)' },
+                    { $ref: '#/components/parameters/page' },
+                    { name: 'per_page', in: 'query', schema: { type: 'integer', default: 50 } },
+                ],
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        logs: { type: 'array', items: { $ref: '#/components/schemas/AuditLog' } },
+                                        total: { type: 'integer' },
+                                        page: { type: 'integer' },
+                                        pages: { type: 'integer' },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
             },
         },

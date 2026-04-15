@@ -3,6 +3,7 @@ import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { emitToTenant } from '../modules/socket.js';
+import * as audit from './audit_service.js';
 
 export async function createDefaultProject(userId, host_id) {
 	return Project.create({
@@ -13,7 +14,7 @@ export async function createDefaultProject(userId, host_id) {
 	});
 }
 
-export async function createProject(userId, host_id, data) {
+export async function createProject(userId, host_id, data, ctx = {}) {
 	const project = await Project.create({
 		name: data.name,
 		owner: userId,
@@ -21,6 +22,7 @@ export async function createProject(userId, host_id, data) {
 		color: data.color,
 	});
 	emitToTenant(host_id, 'project:created', project);
+	audit.log({ action: 'create', resource: 'project', resource_id: project._id.toString(), user_id: userId, host_id, ...ctx });
 	return project;
 }
 
@@ -32,17 +34,25 @@ export async function getProject(host_id, projectId) {
 	return Project.findOne({ _id: projectId, host_id });
 }
 
-export async function updateProject(host_id, projectId, data) {
+export async function updateProject(host_id, projectId, data, ctx = {}) {
+	const before = ctx.user_id ? await Project.findOne({ _id: projectId, host_id }).lean() : null;
+
 	const project = await Project.findOneAndUpdate(
 		{ _id: projectId, host_id },
 		{ $set: { name: data.name, color: data.color } },
 		{ new: true },
 	);
-	if (project) emitToTenant(host_id, 'project:updated', project);
+	if (project) {
+		emitToTenant(host_id, 'project:updated', project);
+		if (ctx.user_id) {
+			const details = audit.diffSnapshot(before, project);
+			audit.log({ action: 'update', resource: 'project', resource_id: projectId, host_id, details, ...ctx });
+		}
+	}
 	return project;
 }
 
-export async function deleteProject(host_id, projectId) {
+export async function deleteProject(host_id, projectId, ctx = {}) {
 	const project = await Project.findOne({ _id: projectId, host_id });
 	if (!project) return null;
 	if (project.is_default) throw new Error('Cannot delete the default project');
@@ -50,6 +60,7 @@ export async function deleteProject(host_id, projectId) {
 	project.is_active = false;
 	await project.save();
 	emitToTenant(host_id, 'project:deleted', { _id: projectId });
+	if (ctx.user_id) audit.log({ action: 'delete', resource: 'project', resource_id: projectId, host_id, ...ctx });
 	return project;
 }
 

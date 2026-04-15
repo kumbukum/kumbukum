@@ -51,7 +51,7 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
 - **Projects**: Organize all data into projects`,
   });
 
-  // Register all tools
+  // Register all tools, wrapping handlers to inject MCP client identity
   const allTools = {
     ...noteTools(api, defaultProjectId),
     ...memoryTools(api, defaultProjectId),
@@ -61,7 +61,15 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
   };
 
   for (const [name, tool] of Object.entries(allTools)) {
-    server.tool(name, tool.description, tool.inputSchema, tool.handler);
+    const originalHandler = tool.handler;
+    const wrappedHandler = async (params, extra) => {
+      const cv = server.getClientVersion();
+      if (cv) {
+        api.setMcpClient(`${cv.name || 'unknown'}/${cv.version || '?'}`);
+      }
+      return originalHandler(params, extra);
+    };
+    server.tool(name, tool.description, tool.inputSchema, wrappedHandler);
   }
 
   return server;

@@ -10,6 +10,7 @@ import { isSysadminCredentials, requireAdmin } from '../middleware/sysadmin.js';
 import emailTemplates from '../config/email_templates.js';
 import { getByCategory, setSetting, deleteSetting } from '../services/system_settings_service.js';
 import { sendTestEmail } from '../services/email_service.js';
+import * as auditService from '../services/audit_service.js';
 
 const router = Router();
 
@@ -281,6 +282,34 @@ router.post('/api/email-templates/:key/test', async (req, res) => {
     } catch (err) {
         console.error('Admin send test email error:', err);
         res.status(500).json({ error: 'Failed to send test email' });
+    }
+});
+
+// ---- Audit Logs ----
+
+router.get('/audit-logs', (req, res) => {
+    res.render('admin/audit_logs', { title: 'Audit Logs', activeNav: 'audit-logs' });
+});
+
+router.get('/api/audit-logs', async (req, res) => {
+    try {
+        const result = await auditService.query({
+            host_id: req.query.host_id,
+            user_id: req.query.user_id,
+            resource: req.query.resource,
+            action: req.query.action,
+            channel: req.query.channel,
+            mcp_client: req.query.mcp_client,
+            q: req.query.q,
+            from: req.query.from,
+            to: req.query.to,
+            page: parseInt(req.query.page, 10) || 1,
+            per_page: parseInt(req.query.per_page, 10) || 50,
+        });
+        res.json(result);
+    } catch (err) {
+        console.error('Admin audit logs error:', err);
+        res.status(500).json({ error: 'Failed to fetch audit logs' });
     }
 });
 

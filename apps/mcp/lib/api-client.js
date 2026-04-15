@@ -5,17 +5,21 @@ export class ApiClient {
   constructor(baseUrl, token) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.token = token;
+    this.mcpClient = null;
+  }
+
+  setMcpClient(clientInfo) {
+    this.mcpClient = clientInfo;
   }
 
   async request(method, path, body) {
     const url = `${this.baseUrl}/api/v1${path}`;
-    const options = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Token ${this.token}`,
-      },
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Token ${this.token}`,
     };
+    if (this.mcpClient) headers['X-MCP-Client'] = this.mcpClient;
+    const options = { method, headers };
 
     if (body && method !== 'GET') {
       options.body = JSON.stringify(body);
