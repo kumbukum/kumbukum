@@ -36,7 +36,7 @@ export async function getRegistrationOptions(user) {
 	});
 }
 
-export async function verifyAndSaveRegistration(user, response, challenge) {
+export async function verifyAndSaveRegistration(user, response, challenge, { name, browser_info } = {}) {
 	const verification = await verifyRegistrationResponse({
 		response,
 		expectedChallenge: challenge,
@@ -60,6 +60,8 @@ export async function verifyAndSaveRegistration(user, response, challenge) {
 		device_type: credentialDeviceType,
 		backed_up: credentialBackedUp,
 		transports: response.response?.transports || [],
+		...(name && { name }),
+		...(browser_info && { browser_info }),
 	});
 
 	return verification;

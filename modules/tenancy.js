@@ -6,7 +6,7 @@ const tenantSchema = new mongoose.Schema(
 		name: { type: String, required: true },
 		owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 		is_active: { type: Boolean, default: true },
-		plan: { type: String, default: 'free' },
+		plan: { type: String, enum: ['free', 'starter', 'pro'], default: 'free' },
 		settings: {
 			timezone: { type: String, default: 'UTC' },
 		},

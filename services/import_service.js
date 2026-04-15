@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import mammoth from 'mammoth';
 import extractPdf from 'pdfjs-parse';
 import lineByLine from 'n-readlines';
@@ -10,22 +9,37 @@ const WORD_TYPES = [
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
-const WORD_EXTENSIONS = ['.doc', '.docx'];
+
+// MIME prefixes that are known binary and cannot be imported as notes
+const BINARY_PREFIXES = ['image/', 'audio/', 'video/', 'font/'];
+const BINARY_TYPES = new Set([
+    'application/zip', 'application/gzip', 'application/x-tar',
+    'application/x-7z-compressed', 'application/x-rar-compressed',
+    'application/octet-stream', 'application/wasm',
+    'application/x-executable', 'application/x-mach-binary',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
 
 /**
- * Dispatch to the right extractor based on mime type and extension.
+ * Dispatch to the right extractor based on detected mime type.
  * Returns { text, html } — html may be same as text for plain files.
  */
 export async function extractText(filePath, mimeType, originalName) {
-    const ext = path.extname(originalName || '').toLowerCase();
+    // Reject known binary types early with a clear message
+    if (BINARY_PREFIXES.some((p) => mimeType.startsWith(p)) || BINARY_TYPES.has(mimeType)) {
+        throw new Error('File is binary and cannot be imported as a note');
+    }
 
-    if (PDF_TYPES.includes(mimeType) || ext === '.pdf') {
+    if (PDF_TYPES.includes(mimeType)) {
         return extractPdfContent(filePath);
     }
-    if (WORD_TYPES.includes(mimeType) || WORD_EXTENSIONS.includes(ext)) {
+    if (WORD_TYPES.includes(mimeType)) {
         return extractWordContent(filePath);
     }
-    // Everything else: MD, TXT, RTF, code files, etc.
+    // Everything else: MD, TXT, RTF, HBS, code files, extensionless text, etc.
     return extractTextContent(filePath);
 }
 

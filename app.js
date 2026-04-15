@@ -13,6 +13,7 @@ import { initTypesense } from './modules/typesense.js';
 import { initRedis } from './modules/redis.js';
 import { resolveTenant } from './modules/tenancy.js';
 import { startChangeStreams } from './modules/change_stream.js';
+import { createApiLimiter } from './middleware/rate_limit.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger.js';
 import authRoutes from './routes/auth.js';
@@ -131,7 +132,7 @@ app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.use('/', authRoutes);
 app.use('/', billingRoutes);
 app.use('/admin', adminRoutes);
-app.use('/api/v1', apiRoutes);
+app.use('/api/v1', createApiLimiter(), apiRoutes);
 
 app.get('/', (req, res) => {
 	if (req.session?.userId) {

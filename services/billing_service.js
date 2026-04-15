@@ -1,6 +1,18 @@
 import { getStripe } from '../modules/stripe.js';
 import { User } from '../model/user.js';
+import { Tenant } from '../modules/tenancy.js';
 import config from '../config.js';
+
+/**
+ * Resolve plan name from a Stripe subscription's price ID.
+ * Falls back to 'starter' if no matching price is configured.
+ */
+function resolvePlanFromSubscription(subscription) {
+    const priceId = subscription.items?.data?.[0]?.price?.id;
+    if (priceId === config.stripe.proPriceId) return 'pro';
+    if (priceId === config.stripe.starterPriceId) return 'starter';
+    return 'starter';
+}
 
 /**
  * Create a Stripe Checkout session with a free trial that collects the card upfront.
@@ -74,11 +86,15 @@ export async function handleWebhook(rawBody, sig) {
             const userId = session.metadata?.kumbukum_user_id;
             if (userId && session.subscription) {
                 const subscription = await stripe.subscriptions.retrieve(session.subscription);
-                await User.findByIdAndUpdate(userId, {
+                const plan = resolvePlanFromSubscription(subscription);
+                const user = await User.findByIdAndUpdate(userId, {
                     stripe_subscription_id: subscription.id,
                     subscription_status: subscription.status,
                     trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
-                });
+                }, { new: true });
+                if (user?.host_id) {
+                    await Tenant.findOneAndUpdate({ host_id: user.host_id }, { plan });
+                }
             }
             break;
         }
@@ -90,6 +106,8 @@ export async function handleWebhook(rawBody, sig) {
                 user.subscription_status = subscription.status;
                 user.trial_ends_at = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
                 await user.save();
+                const plan = resolvePlanFromSubscription(subscription);
+                await Tenant.findOneAndUpdate({ host_id: user.host_id }, { plan });
             }
             break;
         }
@@ -100,6 +118,7 @@ export async function handleWebhook(rawBody, sig) {
             if (user) {
                 user.subscription_status = 'canceled';
                 await user.save();
+                await Tenant.findOneAndUpdate({ host_id: user.host_id }, { plan: 'starter' });
             }
             break;
         }

@@ -16,7 +16,7 @@ The app will be available at `http://localhost:3000`.
 | Service    | Port  | Description                   |
 | ---------- | ----- | ----------------------------- |
 | App        | 3000  | Main Express application      |
-| WebSocket  | 3001  | Real-time updates (Socket.IO) |
+| WebSocket  | 3001  | Real-time updates             |
 | MCP Server | 3002  | Model Context Protocol server |
 | MongoDB    | 27017 | Database                      |
 | Redis      | 6379  | Caching & pub/sub             |

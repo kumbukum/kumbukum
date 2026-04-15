@@ -89,10 +89,17 @@ const config = {
 		openaiApiKey: process.env.OPENAI_API_KEY || '',
 	},
 
+	plans: {
+		starter: { apiRpm: 60, chatDaily: 50, mcpRpm: 120 },
+		pro: { apiRpm: 0, chatDaily: 0, mcpRpm: 0 },
+	},
+
 	stripe: {
 		secretKey: process.env.STRIPE_SECRET_KEY || '',
 		webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
 		priceId: process.env.STRIPE_PRICE_ID || '',
+		starterPriceId: process.env.STRIPE_STARTER_PRICE_ID || '',
+		proPriceId: process.env.STRIPE_PRO_PRICE_ID || '',
 		portalConfigId: process.env.STRIPE_PORTAL_CONFIG_ID || '',
 		trialDays: parseInt(process.env.STRIPE_TRIAL_DAYS, 10) || 7,
 	},
