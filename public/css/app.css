@@ -345,9 +345,20 @@ body:has(.sidebar) {
 	color: #fd7e14;
 }
 
-/* Hide FilePond panel — we use it programmatically only */
+/* FilePond — hidden by default, slides in during uploads */
 #notes-drop-zone .filepond--root {
-	display: none;
+	height: 0;
+	overflow: hidden;
+	opacity: 0;
+	transition: opacity 0.3s ease, height 0.3s ease, margin 0.3s ease;
+	margin-bottom: 0;
+}
+
+#notes-drop-zone .filepond--root.filepond--active {
+	height: auto;
+	overflow: visible;
+	opacity: 1;
+	margin-bottom: 1rem;
 }
 
 /* Preview / Edit tab containers */

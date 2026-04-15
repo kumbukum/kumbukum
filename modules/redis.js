@@ -3,7 +3,7 @@ import config from '../config.js';
 
 let client = null;
 
-function getRedisClient() {
+export function getRedisClient() {
 	if (!client) {
 		if (typeof config.redisOptions === 'string') {
 			client = new Redis(config.redisOptions, { lazyConnect: true, maxRetriesPerRequest: 3 });

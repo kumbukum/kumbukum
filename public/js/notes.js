@@ -63,28 +63,56 @@ document.addEventListener('DOMContentLoaded', () => {
 				process: {
 					url: '/api/v1/notes/import',
 					method: 'POST',
+					headers: {},
 					ondata: (formData) => {
 						if (currentProjectId) {
 							formData.append('project', currentProjectId);
 						}
 						return formData;
 					},
+					onload: (response) => response,
+					onerror: (response) => response,
 				},
 			},
 		});
 
-		// Hide the FilePond UI — we only use it programmatically
 		const pondRoot = dropZone.querySelector('.filepond--root');
-		if (pondRoot) pondRoot.style.display = 'none';
 
-		pond.on('processfiles', () => {
-			showSuccess('Files imported as notes');
-			pond.removeFiles();
-			loadNotes();
+		// Show FilePond panel when files are added
+		pond.on('addfile', () => {
+			if (pondRoot) pondRoot.classList.add('filepond--active');
 		});
 
-		pond.on('error', (error) => {
-			if (error?.main) showError(error.main);
+		let successCount = 0;
+		let errorCount = 0;
+
+		pond.on('processfile', (error) => {
+			if (error) {
+				errorCount++;
+			} else {
+				successCount++;
+			}
+		});
+
+		pond.on('processfiles', () => {
+			if (successCount > 0) {
+				showSuccess(`${successCount} file${successCount > 1 ? 's' : ''} imported as notes`);
+				loadNotes();
+			}
+			if (errorCount > 0) {
+				showError(`${errorCount} file${errorCount > 1 ? 's' : ''} could not be imported`);
+			}
+			successCount = 0;
+			errorCount = 0;
+			// Hide FilePond panel after a brief delay so user sees final state
+			setTimeout(() => {
+				pond.removeFiles();
+				if (pondRoot) pondRoot.classList.remove('filepond--active');
+			}, 2000);
+		});
+
+		pond.on('warning', (error) => {
+			if (error?.body) showError(error.body);
 		});
 
 		// Drag & drop overlay logic

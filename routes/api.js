@@ -9,6 +9,7 @@ import { formidable } from 'formidable';
 import * as projectService from '../services/project_service.js';
 import * as noteService from '../services/note_service.js';
 import { extractText } from '../services/import_service.js';
+import { detectFileType } from '../modules/file_detect.js';
 import * as memoryService from '../services/memory_service.js';
 import * as urlService from '../services/url_service.js';
 import { searchKnowledge, aiChatSearch, processChat } from '../services/ai_chat_service.js';
@@ -24,6 +25,7 @@ import { Url } from '../model/url.js';
 import { User } from '../model/user.js';
 import { UserPasskey } from '../model/user_passkey.js';
 import * as graphService from '../services/graph_service.js';
+import { createChatLimiter } from '../middleware/rate_limit.js';
 import crypto from 'node:crypto';
 
 const router = Router();
@@ -376,7 +378,7 @@ router.post('/search/knowledge', async (req, res) => {
 
 // ---- AI Chat ----
 
-router.post('/chat', async (req, res) => {
+router.post('/chat', createChatLimiter(), async (req, res) => {
 	try {
 		const { query, conversation_id, project_id } = req.body;
 		if (!query) return res.status(400).json({ error: 'query required' });
@@ -676,14 +678,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const IMPORT_DIR = path.join(__dirname, '..', 'import');
 if (!fs.existsSync(IMPORT_DIR)) fs.mkdirSync(IMPORT_DIR, { recursive: true });
 
-const ALLOWED_EXTENSIONS = new Set(['.md', '.txt', '.pdf', '.doc', '.docx', '.rtf', '.csv', '.json', '.xml', '.html', '.htm', '.log', '.text']);
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
 router.post('/notes/import', async (req, res) => {
 	try {
 		const form = formidable({
 			uploadDir: IMPORT_DIR,
-			keepExtensions: false,
+			keepExtensions: true,
 			maxFileSize: MAX_FILE_SIZE,
 			multiples: true,
 			filename: (name, ext) => `${crypto.randomUUID()}${ext}`,
@@ -695,53 +696,42 @@ router.post('/notes/import', async (req, res) => {
 		// formidable v3 wraps files in arrays
 		const fileList = files.file ? (Array.isArray(files.file) ? files.file : [files.file]) : [];
 		if (!fileList.length) {
-			return res.status(400).json({ error: 'No files uploaded' });
+			return res.status(400).type('text').send('No files uploaded');
 		}
 
-		const results = [];
+		// FilePond sends one file per request — handle accordingly
+		const f = fileList[0];
+		const originalName = f.originalFilename || 'Untitled';
+		const ext = path.extname(originalName).toLowerCase();
+		const title = path.basename(originalName, ext) || 'Untitled';
+		const filePath = f.filepath;
 
-		for (const f of fileList) {
-			const originalName = f.originalFilename || 'Untitled';
-			const ext = path.extname(originalName).toLowerCase();
-			const title = path.basename(originalName, ext);
-			const filePath = f.filepath;
+		try {
+			const detected = await detectFileType(filePath);
+			const { text, html } = await extractText(filePath, detected.mimeType, originalName);
 
-			if (!ALLOWED_EXTENSIONS.has(ext)) {
-				results.push({ name: originalName, error: `Unsupported file type: ${ext}` });
-				fs.unlink(filePath, () => {});
-				continue;
+			if (!text && !html) {
+				return res.status(415).type('text').send('No text content could be extracted from this file');
 			}
 
-			try {
-				const { text, html } = await extractText(filePath, f.mimetype, originalName);
+			const note = await noteService.createNote(req.userId, req.host_id, {
+				title,
+				content: html,
+				text_content: text,
+				tags: ['imported'],
+				project,
+			});
 
-				if (!text && !html) {
-					results.push({ name: originalName, error: 'No text content extracted' });
-					fs.unlink(filePath, () => {});
-					continue;
-				}
-
-				const note = await noteService.createNote(req.userId, req.host_id, {
-					title,
-					content: html,
-					text_content: text,
-					tags: ['imported'],
-					project,
-				});
-
-				results.push({ name: originalName, note_id: note._id });
-			} catch (err) {
-				console.error(`Import error for ${originalName}:`, err.message);
-				results.push({ name: originalName, error: err.message });
-			} finally {
-				fs.unlink(filePath, () => {});
-			}
+			res.type('text').send(String(note._id));
+		} catch (err) {
+			console.error(`Import error for ${originalName}:`, err.message);
+			res.status(415).type('text').send(err.message);
+		} finally {
+			fs.unlink(filePath, () => {});
 		}
-
-		res.json({ results });
 	} catch (err) {
 		console.error('Notes import error:', err);
-		res.status(500).json({ error: 'Import failed: ' + err.message });
+		res.status(500).type('text').send('Import failed: ' + err.message);
 	}
 });
 

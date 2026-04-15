@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 
 import { ApiClient } from './lib/api-client.js';
 import { noteTools } from './tools/notes.js';
@@ -80,6 +81,17 @@ if (transportArg === '--stdio' || !transportArg) {
   // HTTP/SSE transport
   const app = express();
   app.use(express.json());
+
+  // MCP rate limiter — 120 req/min per token (in-memory store)
+  const mcpLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    keyGenerator: (req) => req.query.token || req.headers.authorization?.replace('Bearer ', '') || 'anon',
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { error: 'MCP rate limit exceeded (120 requests/min).' },
+  });
+  app.use(mcpLimiter);
 
   // SSE endpoint
   const sseTransports = new Map();
