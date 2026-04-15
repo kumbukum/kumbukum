@@ -404,6 +404,7 @@ router.post('/chat', createChatLimiter(), async (req, res) => {
 			query,
 			conversationId: conversation_id,
 			projectId: project_id,
+			ctx: auditCtx(req),
 		});
 
 		res.json({
@@ -752,7 +753,7 @@ router.post('/notes/import', async (req, res) => {
 				text_content: text,
 				tags: ['imported'],
 				project,
-			});
+			}, auditCtx(req));
 
 			res.type('text').send(String(note._id));
 		} catch (err) {
