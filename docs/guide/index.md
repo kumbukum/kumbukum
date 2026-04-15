@@ -18,7 +18,7 @@ Write and organize rich-text notes. Use the built-in editor or import existing d
 
 ### Memories
 
-Memories are quick, personal knowledge entries — decisions, facts, context, insights. Think of them as things you'd tell a colleague to get them up to speed. They're especially powerful when used with AI tools over MCP, letting your AI assistant recall important context across conversations. Memories are primarily added by your AI client as it learns things worth remembering, but you can also create them directly in the app.
+Memories are primarily used by your AI tools to provide context and improve responses. Your AI client stores preferences, decisions, facts about you or your work in memories. Notes are longer, structured documents — reference material, meeting notes, documentation. Both are searchable and accessible to all your AI tools. In practice, you don't add memories manually. However, with Kumbukum, you can also add, edit, or remove them to suit your needs.
 
 ### URLs
 
