@@ -690,6 +690,66 @@ const swaggerSpec = {
                 },
             },
         },
+        // ---- Health ----
+        '/health': {
+            get: {
+                tags: ['Health'],
+                summary: 'Liveness probe',
+                description: 'Returns 200 if the process is up. No auth required. Mounted at /health (not under /api/v1).',
+                security: [],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
+                },
+            },
+        },
+        '/health/mongodb': {
+            get: {
+                tags: ['Health'],
+                summary: 'MongoDB health',
+                description: 'Returns 200 if MongoDB connection is ready, 503 otherwise. No auth required.',
+                security: [],
+                responses: {
+                    200: { description: 'MongoDB healthy', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
+                    503: { description: 'MongoDB unavailable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'unavailable' } } } } } },
+                },
+            },
+        },
+        '/health/redis': {
+            get: {
+                tags: ['Health'],
+                summary: 'Redis health',
+                description: 'Returns 200 if Redis is reachable, 503 otherwise. No auth required.',
+                security: [],
+                responses: {
+                    200: { description: 'Redis healthy', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
+                    503: { description: 'Redis unavailable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'unavailable' } } } } } },
+                },
+            },
+        },
+        '/health/typesense': {
+            get: {
+                tags: ['Health'],
+                summary: 'Typesense health',
+                description: 'Returns 200 if Typesense is healthy, 503 otherwise. No auth required.',
+                security: [],
+                responses: {
+                    200: { description: 'Typesense healthy', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
+                    503: { description: 'Typesense unavailable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'unavailable' } } } } } },
+                },
+            },
+        },
+        '/health/websocket': {
+            get: {
+                tags: ['Health'],
+                summary: 'WebSocket health',
+                description: 'Returns 200 if Socket.IO is initialized, 503 otherwise. No auth required.',
+                security: [],
+                responses: {
+                    200: { description: 'WebSocket healthy', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
+                    503: { description: 'WebSocket unavailable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'not_initialized' } } } } } },
+                },
+            },
+        },
     },
 };
 

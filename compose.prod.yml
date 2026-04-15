@@ -43,6 +43,12 @@ services:
     ports:
       - "3000:3000"
     environment: *environment
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       - mongo
       - redis
@@ -58,6 +64,12 @@ services:
       <<: *environment
       PORT: 3001
       SERVER_MODE: ws
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       - redis
       - mongo
@@ -73,6 +85,12 @@ services:
     environment:
       <<: *environment
       PORT: 3002
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   scheduler:

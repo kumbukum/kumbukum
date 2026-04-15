@@ -82,6 +82,11 @@ if (transportArg === '--stdio' || !transportArg) {
   const app = express();
   app.use(express.json());
 
+  // Health check — no auth, no rate limit
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', transport: 'http' });
+  });
+
   // MCP rate limiter — 120 req/min per token (in-memory store)
   const mcpLimiter = rateLimit({
     windowMs: 60 * 1000,
