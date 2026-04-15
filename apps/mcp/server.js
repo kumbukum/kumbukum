@@ -31,14 +31,18 @@ async function createServer(token) {
   const server = new McpServer({
     name: 'kumbukum',
     version: '0.1.0',
-    instructions: `You are connected to Kumbukum, a personal knowledge management system.
+    instructions: `You are connected to Kumbukum, a shared memory layer platform.
 
 ## Primary Search
 Use \`search_knowledge\` as your primary tool for ANY search query — it returns results from notes, memories, URLs, and crawled pages in a single call.
 
 ## Memory
-Periodically call \`store_memory\` to persist important conversation context, decisions, or learnings for future sessions.
-Before creating tags, call \`suggest_memory_tags\` to reuse existing tags.
+- You have persistent memory via the \`store_memory\` and \`recall_memory\` tools.
+- **Before starting any task**, call \`recall_memory\` with a query describing the task to check for relevant prior context, decisions, or notes.
+- **After completing significant work**, call \`store_memory\` to save key decisions, outcomes, or context for future sessions.
+- **Before creating tags**, call \`suggest_memory_tags\` to reuse existing tags and avoid duplicates.
+- You can also use \`search_memory\` (alias of \`recall_memory\`) if your client prefers search-style naming.
+- Memories are personal — scoped to the authenticated user — and searchable by meaning, not just keywords.
 
 ## Data Types
 - **Notes**: Rich text documents organized by project
