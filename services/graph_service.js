@@ -63,6 +63,53 @@ export async function getLinksForItem(hostId, itemId) {
 	}).lean();
 }
 
+export async function getConnectionsForItem(hostId, itemId) {
+	// 1. Get manual links
+	const manualLinks = await getLinksForItem(hostId, itemId);
+	const manualIds = new Set();
+	manualIds.add(itemId);
+	for (const l of manualLinks) {
+		manualIds.add(l.source_id.toString());
+		manualIds.add(l.target_id.toString());
+	}
+
+	// 2. Find the item and its tags
+	let item = null;
+	let itemType = null;
+	for (const [type, Model] of Object.entries(MODEL_MAP)) {
+		item = await Model.findOne({ _id: itemId, host_id: hostId }).select('tags').lean();
+		if (item) { itemType = type; break; }
+	}
+
+	// 3. Find tag-based connections (items sharing tags, excluding manual links)
+	const tagConnections = [];
+	if (item?.tags?.length) {
+		const tagQuery = { host_id: hostId, tags: { $in: item.tags }, _id: { $ne: itemId }, in_trash: { $ne: true } };
+		const [notes, memories, urls] = await Promise.all([
+			Note.find(tagQuery).select('title tags').limit(50).lean(),
+			Memory.find(tagQuery).select('title tags').limit(50).lean(),
+			Url.find(tagQuery).select('title url tags').limit(50).lean(),
+		]);
+		for (const n of notes) {
+			if (manualIds.has(n._id.toString())) continue;
+			const shared = n.tags.filter(t => item.tags.includes(t));
+			tagConnections.push({ id: n._id.toString(), type: 'notes', title: n.title, shared_tags: shared });
+		}
+		for (const m of memories) {
+			if (manualIds.has(m._id.toString())) continue;
+			const shared = m.tags.filter(t => item.tags.includes(t));
+			tagConnections.push({ id: m._id.toString(), type: 'memory', title: m.title, shared_tags: shared });
+		}
+		for (const u of urls) {
+			if (manualIds.has(u._id.toString())) continue;
+			const shared = u.tags.filter(t => item.tags.includes(t));
+			tagConnections.push({ id: u._id.toString(), type: 'urls', title: u.title || u.url, shared_tags: shared });
+		}
+	}
+
+	return { links: manualLinks, tag_connections: tagConnections };
+}
+
 export async function removeLinksForItem(hostId, itemId) {
 	const result = await GraphLink.deleteMany({
 		host_id: hostId,

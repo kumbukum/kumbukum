@@ -341,6 +341,11 @@ router.get('/links/:itemId', async (req, res) => {
 	res.json({ links });
 });
 
+router.get('/connections/:itemId', async (req, res) => {
+	const data = await graphService.getConnectionsForItem(req.host_id, req.params.itemId);
+	res.json(data);
+});
+
 router.get('/graph', async (req, res) => {
 	try {
 		const data = await graphService.getGraphData(req.host_id, {

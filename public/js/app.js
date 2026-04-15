@@ -242,6 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	await loadProjects();
 	loadTrashCount();
 	if (hasExplicitProject && currentProjectId) loadProjectOverview(currentProjectId);
+	if (typeof initResultModalHandlers === 'function') initResultModalHandlers();
 	if (typeof initChat === 'function') initChat();
 
 	// ── Socket.IO: live count updates ──
