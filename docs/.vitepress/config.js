@@ -60,6 +60,7 @@ export default defineConfig({
                         { text: 'Knowledge Graph', link: '/guide/graph' },
                         { text: 'AI Chat', link: '/guide/ai-chat' },
                         { text: 'Import', link: '/guide/import' },
+                        { text: 'Git Sync', link: '/guide/git-sync' },
                         { text: 'Settings', link: '/guide/settings' },
                     ],
                 },

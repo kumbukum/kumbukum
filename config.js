@@ -115,6 +115,8 @@ const config = {
 		email: process.env.SYSADMIN_EMAIL || '',
 		password: process.env.SYSADMIN_PASSWORD || '',
 	},
+
+	gitEncryptionKey: process.env.GIT_ENCRYPTION_KEY || '',
 };
 
 export default config;

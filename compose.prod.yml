@@ -35,6 +35,7 @@ x-environment: &environment
   OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
   NODE_ENV: production
   PORT: 3000
+  GIT_ENCRYPTION_KEY: ${GIT_ENCRYPTION_KEY:-}
 
 services:
   app:

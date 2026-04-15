@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { requireTenant } from '../modules/tenancy.js';
+import { requireTenant, Tenant } from '../modules/tenancy.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +27,7 @@ import { UserPasskey } from '../model/user_passkey.js';
 import * as graphService from '../services/graph_service.js';
 import * as exportService from '../services/export_service.js';
 import * as auditService from '../services/audit_service.js';
+import * as gitSyncService from '../services/git_sync_service.js';
 import { createChatLimiter } from '../middleware/rate_limit.js';
 import crypto from 'node:crypto';
 
@@ -77,6 +78,71 @@ router.delete('/projects/:id', async (req, res) => {
 	} catch (err) {
 		res.status(400).json({ error: err.message });
 	}
+});
+
+// ---- Git Sync ----
+
+async function requireGitSyncAccess(req, res, next) {
+	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
+	const plan = tenant?.plan || 'free';
+	if (plan !== 'pro' && plan !== 'free') {
+		return res.status(403).json({ error: 'Git Sync is available on the Pro plan' });
+	}
+	next();
+}
+
+router.get('/projects/:id/git-repos', requireGitSyncAccess, async (req, res) => {
+	const repos = await gitSyncService.listGitRepos(req.host_id, req.params.id);
+	res.json({ repos });
+});
+
+router.post('/projects/:id/git-repos', requireGitSyncAccess, async (req, res) => {
+	try {
+		const repo = await gitSyncService.createGitRepo(req.userId, req.host_id, {
+			...req.body,
+			project: req.params.id,
+		}, auditCtx(req));
+		res.status(201).json({ repo });
+	} catch (err) {
+		res.status(400).json({ error: err.message });
+	}
+});
+
+router.get('/git-repos/:id', requireGitSyncAccess, async (req, res) => {
+	const repo = await gitSyncService.getGitRepo(req.host_id, req.params.id);
+	if (!repo) return res.status(404).json({ error: 'Git repo not found' });
+	res.json({ repo });
+});
+
+router.put('/git-repos/:id', requireGitSyncAccess, async (req, res) => {
+	const repo = await gitSyncService.updateGitRepo(req.host_id, req.params.id, req.body, auditCtx(req));
+	if (!repo) return res.status(404).json({ error: 'Git repo not found' });
+	res.json({ repo });
+});
+
+router.delete('/git-repos/:id', requireGitSyncAccess, async (req, res) => {
+	const repo = await gitSyncService.deleteGitRepo(req.host_id, req.params.id, auditCtx(req));
+	if (!repo) return res.status(404).json({ error: 'Git repo not found' });
+	res.json({ message: 'Git repo deleted' });
+});
+
+router.post('/git-repos/:id/sync', requireGitSyncAccess, async (req, res) => {
+	try {
+		await gitSyncService.syncRepo(req.params.id, req.userId, req.host_id, auditCtx(req));
+		res.json({ message: 'Sync complete' });
+	} catch (err) {
+		res.status(400).json({ error: err.message });
+	}
+});
+
+router.get('/git-repos/:id/status', requireGitSyncAccess, async (req, res) => {
+	const repo = await gitSyncService.getGitRepo(req.host_id, req.params.id);
+	if (!repo) return res.status(404).json({ error: 'Git repo not found' });
+	res.json({
+		status: repo.last_sync_status,
+		last_synced_at: repo.last_synced_at,
+		error: repo.last_sync_error || undefined,
+	});
 });
 
 // ---- Notes ----

@@ -308,3 +308,144 @@ async function loadTrashCount() {
 		// ignore
 	}
 }
+
+// ---- Git Sync ----
+
+async function addGitRepo(projectId) {
+	const { value: formValues } = await Swal.fire({
+		title: 'Add Git Repository',
+		html: `
+			<label class="swal-label" for="swal-git-name">Label</label>
+			<input id="swal-git-name" class="swal2-input">
+			<label class="swal-label" for="swal-git-url">Repository URL</label>
+			<div class="input-group">
+				<span class="input-group-text">https://</span>
+				<input id="swal-git-url" class="form-control">
+			</div>
+			<label class="swal-label" for="swal-git-branch">Branch</label>
+			<input id="swal-git-branch" class="swal2-input">
+			<span class="swal-hint">Default: main</span>
+			<label class="swal-label" for="swal-git-token">Access token <small class="fw-normal text-muted">(private repos)</small></label>
+			<input id="swal-git-token" class="swal2-input" type="password">
+			<label class="swal-label" for="swal-git-notes">Notes directory</label>
+			<input id="swal-git-notes" class="swal2-input">
+			<span class="swal-hint">Default: notes</span>
+			<label class="swal-label" for="swal-git-memories">Memories directory</label>
+			<input id="swal-git-memories" class="swal2-input">
+			<span class="swal-hint">Default: memories</span>
+		`,
+		focusConfirm: false,
+		showCancelButton: true,
+		confirmButtonText: 'Add',
+		preConfirm: () => {
+			let url = document.getElementById('swal-git-url').value.trim();
+			if (!url) { Swal.showValidationMessage('Repository URL is required'); return false; }
+			if (!url.startsWith('https://') && !url.startsWith('http://')) url = 'https://' + url;
+			return {
+				name: document.getElementById('swal-git-name').value.trim(),
+				repo_url: url,
+				branch: document.getElementById('swal-git-branch').value.trim() || 'main',
+				auth_token: document.getElementById('swal-git-token').value.trim(),
+				notes_path: document.getElementById('swal-git-notes').value.trim() || 'notes',
+				memories_path: document.getElementById('swal-git-memories').value.trim() || 'memories',
+			};
+		},
+	});
+	if (!formValues) return;
+	try {
+		await api('POST', `/projects/${projectId}/git-repos`, formValues);
+		loadProjectOverview(projectId);
+		Swal.fire({ icon: 'success', title: 'Git repo added', timer: 1500, showConfirmButton: false });
+	} catch (err) {
+		Swal.fire('Error', err.message, 'error');
+	}
+}
+
+async function editGitRepo(repoId) {
+	try {
+		const { repo } = await api('GET', `/git-repos/${repoId}`);
+		const editUrl = (repo.repo_url || '').replace(/^https?:\/\//, '');
+		const { value: formValues } = await Swal.fire({
+			title: 'Edit Git Repository',
+			html: `
+				<label class="swal-label" for="swal-git-name">Label</label>
+				<input id="swal-git-name" class="swal2-input" value="${repo.name || ''}">
+				<label class="swal-label" for="swal-git-url">Repository URL</label>
+				<div class="input-group">
+					<span class="input-group-text">https://</span>
+					<input id="swal-git-url" class="form-control" value="${editUrl}">
+				</div>
+				<label class="swal-label" for="swal-git-branch">Branch</label>
+				<input id="swal-git-branch" class="swal2-input" value="${repo.branch || 'main'}">
+				<span class="swal-hint">Default: main</span>
+				<label class="swal-label" for="swal-git-token">Access token <small class="fw-normal text-muted">(leave empty to keep)</small></label>
+				<input id="swal-git-token" class="swal2-input" type="password">
+				<label class="swal-label" for="swal-git-notes">Notes directory</label>
+				<input id="swal-git-notes" class="swal2-input" value="${repo.notes_path || 'notes'}">
+				<span class="swal-hint">Default: notes</span>
+				<label class="swal-label" for="swal-git-memories">Memories directory</label>
+				<input id="swal-git-memories" class="swal2-input" value="${repo.memories_path || 'memories'}">
+				<span class="swal-hint">Default: memories</span>
+				<div class="swal2-checkbox-container mt-2" style="margin:0 1em">
+					<label><input type="checkbox" id="swal-git-enabled" ${repo.enabled ? 'checked' : ''}> Enabled</label>
+				</div>
+			`,
+			focusConfirm: false,
+			showCancelButton: true,
+			confirmButtonText: 'Save',
+			preConfirm: () => {
+				let rawUrl = document.getElementById('swal-git-url').value.trim();
+				if (rawUrl && !rawUrl.startsWith('https://') && !rawUrl.startsWith('http://')) rawUrl = 'https://' + rawUrl;
+				const data = {
+					name: document.getElementById('swal-git-name').value.trim(),
+					repo_url: rawUrl,
+					branch: document.getElementById('swal-git-branch').value.trim(),
+					notes_path: document.getElementById('swal-git-notes').value.trim(),
+					memories_path: document.getElementById('swal-git-memories').value.trim(),
+					enabled: document.getElementById('swal-git-enabled').checked,
+				};
+				const tok = document.getElementById('swal-git-token').value.trim();
+				if (tok) data.auth_token = tok;
+				return data;
+			},
+		});
+		if (!formValues) return;
+		await api('PUT', `/git-repos/${repoId}`, formValues);
+		const activeProject = document.querySelector('.project-item.active')?.dataset?.id;
+		if (activeProject) loadProjectOverview(activeProject);
+		Swal.fire({ icon: 'success', title: 'Updated', timer: 1500, showConfirmButton: false });
+	} catch (err) {
+		Swal.fire('Error', err.message, 'error');
+	}
+}
+
+async function deleteGitRepo(repoId) {
+	const result = await Swal.fire({
+		title: 'Remove git repo?',
+		text: 'This removes the sync configuration. Synced items remain.',
+		icon: 'warning',
+		showCancelButton: true,
+		confirmButtonColor: '#d33',
+		confirmButtonText: 'Remove',
+	});
+	if (!result.isConfirmed) return;
+	try {
+		await api('DELETE', `/git-repos/${repoId}`);
+		const activeProject = document.querySelector('.project-item.active')?.dataset?.id;
+		if (activeProject) loadProjectOverview(activeProject);
+	} catch (err) {
+		Swal.fire('Error', err.message, 'error');
+	}
+}
+
+async function triggerGitSync(repoId) {
+	try {
+		Swal.fire({ title: 'Syncing…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+		await api('POST', `/git-repos/${repoId}/sync`);
+		const activeProject = document.querySelector('.project-item.active')?.dataset?.id;
+		if (activeProject) loadProjectOverview(activeProject);
+		Swal.fire({ icon: 'success', title: 'Sync complete', timer: 1500, showConfirmButton: false });
+	} catch (err) {
+		Swal.fire('Sync failed', err.message, 'error');
+	}
+}

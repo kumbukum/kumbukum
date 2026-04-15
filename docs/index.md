@@ -29,4 +29,7 @@ features:
       details: Chat with your knowledge base. Semantic search across all data types with LLM context building.
     - title: MCP Server
       details: 28 tools for Claude Desktop and other LLM clients via Model Context Protocol.
----
+    - title: Browser Extension
+      details: Save notes and URLs from anywhere. Available for Chrome and Firefox.
+    - title: Bidirectional Git Sync
+      details: Sync your data to and from your Git repos per project.

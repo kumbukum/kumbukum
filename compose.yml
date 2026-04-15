@@ -43,6 +43,7 @@ x-env: &env
     STRIPE_STARTER_PRICE_ID: "${STRIPE_STARTER_PRICE_ID:-}"
     STRIPE_PRO_PRICE_ID: "${STRIPE_PRO_PRICE_ID:-}"
     STRIPE_PORTAL_CONFIG_ID: "${STRIPE_PORTAL_CONFIG_ID:-}"
+    GIT_ENCRYPTION_KEY: "${GIT_ENCRYPTION_KEY:-}"
 
 services:
     # ---------------------------------------------------------------

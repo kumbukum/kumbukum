@@ -488,3 +488,34 @@ small,
 .swal2-actions {
 	flex-direction: row-reverse;
 }
+
+/* SweetAlert2 — form styling */
+.swal2-input {
+	height: auto !important;
+	padding: .375rem .75rem !important;
+	font-size: .875rem !important;
+	margin: .15em 1em !important;
+	width: calc(100% - 2em) !important;
+}
+.swal2-html-container label.swal-label {
+	display: block;
+	text-align: left;
+	font-size: .8rem;
+	font-weight: 600;
+	color: #495057;
+	margin: .6rem 1em .1rem;
+}
+.swal2-html-container .swal-hint {
+	display: block;
+	text-align: left;
+	font-size: .75rem;
+	color: #868e96;
+	margin: .05rem 1em 0;
+}
+.swal2-html-container .input-group {
+	margin: .15em 1em;
+	width: calc(100% - 2em);
+}
+.swal2-html-container .input-group .form-control {
+	font-size: .875rem;
+}

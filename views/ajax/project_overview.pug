@@ -39,3 +39,44 @@ p.text-muted.small Created #{createdAt}
 					i.bi.bi-link-45deg.d-block.mb-2(style="font-size:1.5rem; color:#198754")
 					.fs-3.fw-bold= pc.urls
 					.text-muted URLs
+
+if gitSyncEnabled
+	hr.my-4
+	.d-flex.justify-content-between.align-items-center.mb-3
+		h5.mb-0
+			i.bi.bi-git.me-2
+			| Git Sync
+		button.btn.btn-sm.btn-outline-primary(onclick=`addGitRepo('${project._id}')`)
+			i.bi.bi-plus.me-1
+			| Add Repo
+
+	if gitRepos && gitRepos.length
+		.list-group
+			each repo in gitRepos
+				.list-group-item
+					.d-flex.justify-content-between.align-items-start
+						div
+							.fw-bold= repo.name || repo.repo_url
+							.text-muted.small= repo.repo_url
+							.d-flex.gap-2.mt-1
+								if repo.enabled
+									span.badge.bg-success Enabled
+								else
+									span.badge.bg-secondary Disabled
+								if repo.last_sync_status === 'success'
+									span.badge.bg-info Last sync: success
+								else if repo.last_sync_status === 'failed'
+									span.badge.bg-danger.cursor-pointer(title=repo.last_sync_error) Last sync: failed
+								else if repo.last_sync_status === 'in_progress'
+									span.badge.bg-warning Syncing…
+								if repo.last_synced_at
+									span.text-muted.small= 'Synced ' + new Date(repo.last_synced_at).toLocaleString()
+						.d-flex.gap-1
+							button.btn.btn-sm.btn-outline-primary(onclick=`triggerGitSync('${repo._id}')` title="Sync now")
+								i.bi.bi-arrow-repeat
+							button.btn.btn-sm.btn-outline-secondary(onclick=`editGitRepo('${repo._id}')` title="Settings")
+								i.bi.bi-gear
+							button.btn.btn-sm.btn-outline-danger(onclick=`deleteGitRepo('${repo._id}')` title="Remove")
+								i.bi.bi-trash
+	else
+		p.text-muted.small No git repos configured. Add one to sync markdown files.

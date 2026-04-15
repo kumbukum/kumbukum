@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { requireTenant } from '../modules/tenancy.js';
+import { requireTenant, Tenant } from '../modules/tenancy.js';
 import { User } from '../model/user.js';
 import { listProjects, getProject, getProjectCounts } from '../services/project_service.js';
+import { listGitRepos } from '../services/git_sync_service.js';
 import config from '../config.js';
 
 const is_hosted = new URL(config.appUrl).hostname.endsWith('kumbukum.com');
@@ -86,12 +87,16 @@ router.get('/ajax/project-list', async (req, res) => {
 
 router.get('/ajax/project-overview/:id', async (req, res) => {
 	try {
-		const [project, counts] = await Promise.all([
+		const [project, counts, tenant] = await Promise.all([
 			getProject(req.host_id, req.params.id),
 			getProjectCounts(req.host_id).catch(() => ({})),
+			Tenant.findOne({ host_id: req.host_id }).select('plan').lean(),
 		]);
 		if (!project) return res.status(404).send('');
-		res.render('ajax/project_overview', { project, counts });
+		const plan = tenant?.plan || 'free';
+		const gitSyncEnabled = plan === 'pro' || plan === 'free';
+		const gitRepos = gitSyncEnabled ? await listGitRepos(req.host_id, req.params.id) : [];
+		res.render('ajax/project_overview', { project, counts, gitSyncEnabled, gitRepos });
 	} catch (err) {
 		res.status(500).send('<div class="text-danger">Failed to load project</div>');
 	}
