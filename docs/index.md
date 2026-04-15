@@ -3,12 +3,12 @@ layout: home
 
 hero:
     name: Kumbukum
-    text: Everything your AI needs to remember
+    text: Turn scattered company knowledge into AI-ready context
     tagline: Notes, Memory, URLs, Knowledge Graph — with AI Chat and MCP integration. Available as a managed cloud service or self-hosted.
     actions:
         - theme: brand
           text: Get Started
-          link: /getting-started
+          link: /guide/
         - theme: alt
           text: Cloud
           link: /cloud/

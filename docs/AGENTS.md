@@ -2,6 +2,10 @@
 
 - When reporting information, be extremely concise and sacrifice grammar for the sake of concision.
 
+# Context
+
+Kumbukum is not a note taking or second brain app. Refer to it as a "memory layer for AI-native teams" or "a place that turns scattered company knowledge into AI-ready context every assistant can use". Avoid calling it a "personal knowledge library" or "second brain".
+
 ## Documentation
 - IMPORTANT: BEFORE EXECUTING A REGEX SEARCH THROUGH OUR CODE BASE ALWAYS CHECK THE RAZUNA-MEMORY MCP SERVER FIRST
 - IMPORTANT: For each fix, change, update, etc., create a new documentation note in the RAZUNA-MEMORY MCP server. You can create markdown notes or store and recall memory. Use both as needed.

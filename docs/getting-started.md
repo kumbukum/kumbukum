@@ -18,10 +18,8 @@ Kumbukum is a personal knowledge management system with AI chat, MCP server inte
 **Self-Hosted** — Run Kumbukum on your own infrastructure.
 
 ```bash
-git clone https://github.com/kumbukum/kumbukum.git
-cd kumbukum
-cp .env.example .env
-docker compose up -d
+curl -O https://raw.githubusercontent.com/kumbukum/kumbukum/main/compose.prod.yml
+docker compose -f compose.prod.yml up -d
 ```
 
 [Installation guide →](/selfhosted/installation)

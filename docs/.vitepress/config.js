@@ -23,7 +23,7 @@ export default defineConfig({
 
     themeConfig: {
         nav: [
-            { text: 'Guide', link: '/getting-started' },
+            { text: 'Guide', link: '/guide/' },
             { text: 'Cloud', link: '/cloud/' },
             { text: 'Self-Hosted', link: '/selfhosted/' },
             {
@@ -43,12 +43,30 @@ export default defineConfig({
         ],
 
         sidebar: {
-            '/': [
+            '/guide/': [
                 {
                     text: 'Getting Started',
                     items: [
-                        { text: 'Introduction', link: '/' },
-                        { text: 'Quick Start', link: '/getting-started' },
+                        { text: 'Introduction', link: '/guide/' },
+                    ],
+                },
+                {
+                    text: 'Guide',
+                    items: [
+                        { text: 'Projects', link: '/guide/projects' },
+                        { text: 'Notes', link: '/guide/notes' },
+                        { text: 'Memories', link: '/guide/memories' },
+                        { text: 'URLs', link: '/guide/urls' },
+                        { text: 'Knowledge Graph', link: '/guide/graph' },
+                        { text: 'AI Chat', link: '/guide/ai-chat' },
+                        { text: 'Import', link: '/guide/import' },
+                        { text: 'Settings', link: '/guide/settings' },
+                    ],
+                },
+                {
+                    text: 'Tools & Extensions',
+                    items: [
+                        { text: 'Browser Extension', link: '/guide/browser-extension' },
                     ],
                 },
             ],
