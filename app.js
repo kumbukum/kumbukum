@@ -21,12 +21,16 @@ import apiRoutes from './routes/api.js';
 import webRoutes from './routes/web.js';
 import adminRoutes from './routes/admin.js';
 import billingRoutes from './routes/billing.js';
+import healthRoutes from './routes/health.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SERVER_MODE = process.env.SERVER_MODE || 'app';
 
 const app = express();
+
+// Health check — mounted before everything so monitoring tools need no auth/session
+app.use('/health', healthRoutes);
 
 var _90_days_in_ms = 90 * 24 * 60 * 60 * 1000;
 
@@ -116,7 +120,6 @@ app.use((req, res, next) => {
     res.removeHeader('ETag');
     next();
 });
-
 
 app.use(sessionMiddleware);
 
