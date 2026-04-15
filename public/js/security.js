@@ -77,10 +77,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			const attestation = await SimpleWebAuthnBrowser.startRegistration({ optionsJSON: options });
 
+			const { Swal } = await import('/static/js/vendor.js');
+			const { value: name } = await Swal.fire({
+				title: 'Name this passkey',
+				input: 'text',
+				inputPlaceholder: 'e.g. 1Password, MacBook Touch ID',
+				showCancelButton: true,
+				inputValidator: (v) => !v?.trim() ? 'Please enter a name' : null,
+			});
+			if (!name) return;
+			const browser_info = detectBrowserInfo();
+
 			const verifyRes = await fetch('/passkey/register/verify', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ attestation }),
+				body: JSON.stringify({ attestation, name: name.trim(), browser_info }),
 			});
 			const verifyData = await verifyRes.json();
 			if (!verifyRes.ok) return showError(verifyData.error || 'Passkey registration failed');
@@ -103,18 +114,55 @@ document.addEventListener('DOMContentLoaded', () => {
 				list.innerHTML = '<p class="text-muted">No passkeys registered</p>';
 				return;
 			}
-			list.innerHTML = data.passkeys.map((pk) => `
+			list.innerHTML = data.passkeys.map((pk) => {
+				const details = [];
+				if (pk.browser_info) details.push(escapeHtml(pk.browser_info));
+				if (pk.device_type === 'multiDevice') details.push('Synced');
+				if (pk.backed_up) details.push('Backed up');
+				const detailStr = details.length ? `<small class="text-muted d-block">${details.join(' · ')}</small>` : '';
+				const lastUsed = pk.last_used_at ? `<small class="text-muted">Last used ${new Date(pk.last_used_at).toLocaleDateString()}</small>` : '';
+
+				return `
 				<div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
-					<div>
-						<i class="bi bi-fingerprint me-2"></i>
-						<strong>${escapeHtml(pk.name || 'Passkey')}</strong>
-						<small class="text-muted ms-2">${new Date(pk.createdAt).toLocaleDateString()}</small>
+					<div class="flex-grow-1">
+						<div class="d-flex align-items-center">
+							<i class="bi bi-fingerprint me-2"></i>
+							<strong class="passkey-name">${escapeHtml(pk.name || 'Passkey')}</strong>
+							<button class="btn btn-sm btn-link p-0 ms-2 rename-passkey" data-id="${pk._id}" data-name="${escapeHtml(pk.name || 'Passkey')}" title="Rename">
+								<i class="bi bi-pencil"></i>
+							</button>
+							<small class="text-muted ms-2">Added ${new Date(pk.createdAt).toLocaleDateString()}</small>
+							${lastUsed ? `<span class="ms-2">${lastUsed}</span>` : ''}
+						</div>
+						${detailStr}
 					</div>
-					<button class="btn btn-sm btn-outline-danger delete-passkey" data-id="${pk._id}">
+					<button class="btn btn-sm btn-outline-danger delete-passkey ms-2" data-id="${pk._id}">
 						<i class="bi bi-trash"></i>
 					</button>
 				</div>
-			`).join('');
+			`}).join('');
+
+			list.querySelectorAll('.rename-passkey').forEach((btn) => {
+				btn.addEventListener('click', async () => {
+					const currentName = btn.dataset.name;
+					const { Swal } = await import('/static/js/vendor.js');
+					const { value: newName } = await Swal.fire({
+						title: 'Rename passkey',
+						input: 'text',
+						inputValue: currentName,
+						showCancelButton: true,
+						inputValidator: (v) => !v?.trim() ? 'Please enter a name' : null,
+					});
+					if (!newName || newName.trim() === currentName) return;
+					try {
+						await api('PATCH', `/passkeys/${btn.dataset.id}`, { name: newName.trim() });
+						showSuccess('Passkey renamed');
+						loadPasskeys();
+					} catch (err) {
+						showError(err.message);
+					}
+				});
+			});
 
 			list.querySelectorAll('.delete-passkey').forEach((btn) => {
 				btn.addEventListener('click', async () => {
@@ -171,5 +219,23 @@ document.addEventListener('DOMContentLoaded', () => {
 		const div = document.createElement('div');
 		div.textContent = str;
 		return div.innerHTML;
+	}
+
+	function detectBrowserInfo() {
+		const ua = navigator.userAgent;
+		let browser = 'Unknown';
+		if (ua.includes('Firefox/')) browser = 'Firefox';
+		else if (ua.includes('Edg/')) browser = 'Edge';
+		else if (ua.includes('Chrome/') && !ua.includes('Edg/')) browser = 'Chrome';
+		else if (ua.includes('Safari/') && !ua.includes('Chrome/')) browser = 'Safari';
+
+		let os = 'Unknown';
+		if (ua.includes('Mac OS')) os = 'macOS';
+		else if (ua.includes('Windows')) os = 'Windows';
+		else if (ua.includes('Linux')) os = 'Linux';
+		else if (ua.includes('Android')) os = 'Android';
+		else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+
+		return `${browser} on ${os}`;
 	}
 });

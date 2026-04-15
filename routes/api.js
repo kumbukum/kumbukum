@@ -653,11 +653,28 @@ router.post('/2fa/disable', async (req, res) => {
 
 router.get('/passkeys', async (req, res) => {
 	try {
-		const passkeys = await UserPasskey.find({ user: req.userId }).select('name device_type backed_up createdAt').lean();
+		const passkeys = await UserPasskey.find({ user: req.userId }).select('name device_type backed_up browser_info transports last_used_at createdAt').lean();
 		res.json({ passkeys });
 	} catch (err) {
 		console.error('List passkeys error:', err);
 		res.status(500).json({ error: 'Failed to list passkeys' });
+	}
+});
+
+router.patch('/passkeys/:id', async (req, res) => {
+	try {
+		const name = typeof req.body.name === 'string' ? req.body.name.trim().slice(0, 100) : null;
+		if (!name) return res.status(400).json({ error: 'Name is required' });
+		const passkey = await UserPasskey.findOneAndUpdate(
+			{ _id: req.params.id, user: req.userId },
+			{ name },
+			{ new: true },
+		);
+		if (!passkey) return res.status(404).json({ error: 'Passkey not found' });
+		res.json({ passkey: { _id: passkey._id, name: passkey.name } });
+	} catch (err) {
+		console.error('Rename passkey error:', err);
+		res.status(500).json({ error: 'Failed to rename passkey' });
 	}
 });
 

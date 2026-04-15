@@ -10,6 +10,7 @@ const passkeySchema = new mongoose.Schema(
 		backed_up: { type: Boolean, default: false },
 		transports: [{ type: String, enum: ['usb', 'ble', 'nfc', 'internal', 'hybrid', 'smart-card'] }],
 		name: { type: String, default: 'Passkey' },
+		browser_info: { type: String },
 		last_used_at: { type: Date },
 	},
 	{ timestamps: true },

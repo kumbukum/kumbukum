@@ -413,7 +413,10 @@ router.post('/passkey/register/verify', async (req, res) => {
 		const attestation = req.body.attestation;
 		if (!attestation) return res.status(400).json({ error: 'Missing attestation data' });
 
-		await passkeyService.verifyAndSaveRegistration(user, attestation, challenge);
+		const name = typeof req.body.name === 'string' ? req.body.name.trim().slice(0, 100) : undefined;
+		const browser_info = typeof req.body.browser_info === 'string' ? req.body.browser_info.trim().slice(0, 200) : undefined;
+
+		await passkeyService.verifyAndSaveRegistration(user, attestation, challenge, { name, browser_info });
 		res.json({ message: 'Passkey registered' });
 	} catch (err) {
 		console.error('Passkey register verify error:', err);
