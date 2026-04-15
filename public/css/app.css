@@ -1,6 +1,8 @@
 /* Kumbukum — App Styles */
 
 :root {
+	--bs-body-font-size: .93rem;
+	--bs-badge-font-weight: 400;
 	--sidebar-bg: #f8f9fa;
 	--chat-bg: #f8f9fa;
 }
@@ -13,6 +15,20 @@ body:has(.sidebar) {
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
+}
+
+b, 
+strong {
+	font-weight: 500;
+}
+
+small,
+.small {
+	font-size: 0.8rem;
+}
+
+.list-group-item-action {
+	color: initial !important;
 }
 
 .fs-7 {
@@ -181,8 +197,13 @@ body:has(.sidebar) {
 
 /* Memory tags */
 .tag-badge {
-	font-size: 0.75rem;
+	font-size: 0.65rem;
 }
+.text-bg-secondary {
+	color: #495057 !important;
+	background-color: #dfdfdf !important;
+}
+
 
 /* Editor container */
 #editor-container .ProseMirror {
@@ -243,7 +264,7 @@ body:has(.sidebar) {
 
 .navbar-brand img {
 	max-height: 20px;
-	margin-left: 1rem;
+	margin-left: .3rem;
 }
 
 /* Ghost-style source search field */
@@ -280,6 +301,10 @@ body:has(.sidebar) {
 	border-radius: 6px;
 	box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 	background: #fff;
+}
+
+#chat-result-modal .modal-body {
+	overflow: visible;
 }
 
 /* Batch action toolbar */
@@ -448,4 +473,9 @@ body:has(.sidebar) {
 
 .chat-msg-row .chat-message {
 	margin-bottom: 0;
+}
+
+/* SweetAlert2 — confirm button always on the right */
+.swal2-actions {
+	flex-direction: row-reverse;
 }

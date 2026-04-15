@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="fw-semibold">${escapeHtml(user.name)}</div>
                         <small class="text-muted">${escapeHtml(user.email)}</small>
                     </div>
-                    ${user.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}
+                    ${user.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge text-bg-secondary tag-badge rounded-pill">Inactive</span>'}
                 `;
                 item.addEventListener('click', (e) => {
                     e.preventDefault();

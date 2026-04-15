@@ -14,18 +14,20 @@ document.addEventListener('DOMContentLoaded', () => {
 					(u) => {
 						const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '';
 						return `
-				<div class="list-group-item url-item d-flex align-items-center gap-3" data-id="${u._id}" role="button" style="cursor:pointer">
-					<div class="batch-cb-wrap pt-1">
+				<div class="list-group-item url-item d-flex align-items-start gap-3" data-id="${u._id}" role="button" style="cursor:pointer">
+					<div class="batch-cb-wrap">
 						<input type="checkbox" class="form-check-input batch-cb" value="${u._id}">
 					</div>
 					${u.og_image ? `<img src="${u.og_image}" class="og-image-thumb rounded flex-shrink-0" alt="">` : ''}
-					<div class="flex-grow-1 min-width-0">
-						<strong class="d-block text-truncate">${u.title || u.url}</strong>
-						<div><a href="${u.url}" target="_blank" class="text-muted small url-link text-truncate d-inline-block" style="max-width:100%">${u.url}</a></div>
+					<div class="flex-grow-1 overflow-hidden">
+						<div class="d-flex justify-content-between align-items-center gap-2">
+							<strong class="text-truncate">${u.title || u.url}</strong>
+							<span class="text-muted small text-nowrap flex-shrink-0">${date}</span>
+						</div>
+						<div class="text-truncate"><a href="${u.url}" target="_blank" class="text-muted small url-link">${u.url}</a></div>
 						<p class="mb-0 text-muted small text-truncate">${u.description?.slice(0, 200) || ''}</p>
 						${u.crawl_enabled ? '<span class="badge bg-success mt-1"><i class="bi bi-arrow-repeat"></i> Crawling</span>' : ''}
 					</div>
-					<div class="text-muted small text-nowrap ms-auto">${date}</div>
 				</div>`;
 					},
 				)

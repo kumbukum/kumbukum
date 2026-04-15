@@ -190,23 +190,25 @@ function renderResults(results, listEl, panelEl) {
 		badge.className = `badge bg-${typeBadgeColor(item._type)} me-2`;
 		badge.textContent = item._type;
 
-		const title = document.createElement('strong');
-		title.textContent = item.title || item.url || 'Untitled';
+		const titleSpan = document.createElement('strong');
+		titleSpan.className = 'text-truncate';
+		titleSpan.textContent = item.title || item.url || 'Untitled';
 
-		const header = document.createElement('div');
-		header.className = 'mb-1';
-		header.appendChild(badge);
-		header.appendChild(title);
-		body.appendChild(header);
+		const titleRow = document.createElement('div');
+		titleRow.className = 'd-flex align-items-center gap-1';
+		titleRow.appendChild(badge);
+		titleRow.appendChild(titleSpan);
 
 		// Date
 		const ts = item.updated_at || item.created_at || item.crawled_at;
 		if (ts) {
 			const dateEl = document.createElement('small');
-			dateEl.className = 'text-muted';
+			dateEl.className = 'text-muted text-nowrap flex-shrink-0 ms-auto';
 			dateEl.textContent = new Date(ts * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-			body.appendChild(dateEl);
+			titleRow.appendChild(dateEl);
 		}
+
+		body.appendChild(titleRow);
 
 		const snippet = item.text_content || item.content || item.description || '';
 		if (snippet) {
@@ -498,7 +500,7 @@ function rmRenderLinkTags() {
 	const containers = document.querySelectorAll('.rm-link-tags');
 	for (const container of containers) {
 		container.innerHTML = rmSelectedLinks.map((r, i) => `
-			<span class="badge bg-secondary d-inline-flex align-items-center gap-1 me-1 mb-1">
+			<span class="badge text-bg-secondary tag-badge rounded-pill d-inline-flex align-items-center gap-1 me-1 mb-1">
 				<i class="${rmTypeIcons[r._type] || 'bi-link'}"></i>
 				${escapeHtml(r.title || r.url || r.id)}
 				<button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.5rem" data-index="${i}"></button>
