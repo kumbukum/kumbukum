@@ -13,6 +13,7 @@ build/
 docs-dist/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+public/build-id
 
 # Logs
 *.log

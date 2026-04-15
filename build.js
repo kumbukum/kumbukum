@@ -1,5 +1,6 @@
 import { build } from 'esbuild';
-import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
+import { copyFileSync, mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -74,5 +75,16 @@ await build({
 	sourcemap: !isProd,
 });
 console.log('Graph bundle built → public/js/graph_bundle.js');
+
+// Generate build ID from content hash of all static JS + CSS assets
+const hash = createHash('md5');
+for (const dir of ['public/js', 'public/css']) {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        if (entry.isFile()) hash.update(readFileSync(join(dir, entry.name)));
+    }
+}
+const buildId = hash.digest('hex').slice(0, 10);
+writeFileSync(join(__dirname, 'public', 'build-id'), buildId);
+console.log(`Build ID: ${buildId}`);
 
 console.log('Build complete.');
