@@ -69,6 +69,7 @@ router.get('/settings/security', (req, res) => res.render('settings/security', {
 router.get('/settings/tokens', (req, res) => res.render('settings/tokens', { title: 'Access Tokens' }));
 router.get('/settings/typesense', (req, res) => res.render('settings/typesense', { title: 'Typesense' }));
 router.get('/settings/usage', (req, res) => res.render('settings/usage', { title: 'Usage' }));
+router.get('/settings/export', (req, res) => res.render('settings/export', { title: 'Export' }));
 if (is_hosted) {
 	router.get('/settings/subscription', (req, res) => res.render('settings/subscription', { title: 'Subscription' }));
 }

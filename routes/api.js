@@ -25,6 +25,7 @@ import { Url } from '../model/url.js';
 import { User } from '../model/user.js';
 import { UserPasskey } from '../model/user_passkey.js';
 import * as graphService from '../services/graph_service.js';
+import * as exportService from '../services/export_service.js';
 import { createChatLimiter } from '../middleware/rate_limit.js';
 import crypto from 'node:crypto';
 
@@ -749,6 +750,44 @@ router.post('/notes/import', async (req, res) => {
 	} catch (err) {
 		console.error('Notes import error:', err);
 		res.status(500).type('text').send('Import failed: ' + err.message);
+	}
+});
+
+// ---- Export ----
+
+router.post('/export', async (req, res) => {
+	try {
+		const user = await User.findById(req.userId);
+		const doc = await exportService.startExport(req.userId, req.host_id, user.email, user.name);
+		res.json({ message: 'Export started', export_id: doc._id });
+	} catch (err) {
+		if (err.message === 'An export is already in progress') {
+			return res.status(409).json({ error: err.message });
+		}
+		console.error('Export start error:', err);
+		res.status(500).json({ error: 'Failed to start export' });
+	}
+});
+
+router.get('/export/status', async (req, res) => {
+	try {
+		const doc = await exportService.getExportStatus(req.host_id);
+		if (!doc) return res.json({ status: null });
+		res.json({ status: doc.status, error: doc.error || undefined, expires_at: doc.expires_at, token: doc.status === 'ready' ? doc.token : undefined });
+	} catch (err) {
+		console.error('Export status error:', err);
+		res.status(500).json({ error: 'Failed to get export status' });
+	}
+});
+
+router.get('/export/download/:token', async (req, res) => {
+	try {
+		const filePath = await exportService.getExportFile(req.params.token, req.host_id);
+		if (!filePath) return res.status(404).json({ error: 'Export not found or expired' });
+		res.download(filePath, 'kumbukum-export.zip');
+	} catch (err) {
+		console.error('Export download error:', err);
+		res.status(500).json({ error: 'Download failed' });
 	}
 });
 

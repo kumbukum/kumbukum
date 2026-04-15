@@ -103,6 +103,16 @@ export async function sendTrialEndingEmail(email, name, daysLeft, trialEndDate) 
 	});
 }
 
+export async function sendExportReadyEmail(email, name, token) {
+	const downloadUrl = `${config.appUrl}/api/v1/export/download/${token}`;
+	const { subject, html } = await resolveTemplate('export_ready');
+	return sendMail({
+		to: email,
+		subject: renderTemplate(subject, { name: name || '', downloadUrl }),
+		html: renderTemplate(html, { name: name || '', downloadUrl }),
+	});
+}
+
 export async function sendTestEmail(to, templateKey, sampleVariables) {
 	const { subject, html } = await resolveTemplate(templateKey);
 	return sendMail({

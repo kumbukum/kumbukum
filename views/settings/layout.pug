@@ -19,6 +19,9 @@ block content
 				a.list-group-item.list-group-item-action(href="/settings/usage" class=(title === 'Usage' ? 'active' : ''))
 					i.bi.bi-bar-chart.me-2
 					| Usage
+				a.list-group-item.list-group-item-action(href="/settings/export" class=(title === 'Export' ? 'active' : ''))
+					i.bi.bi-box-arrow-up.me-2
+					| Export
 				if is_hosted
 					a.list-group-item.list-group-item-action(href="/settings/subscription" class=(title === 'Subscription' ? 'active' : ''))
 						i.bi.bi-credit-card.me-2
