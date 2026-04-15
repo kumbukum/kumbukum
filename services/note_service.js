@@ -2,8 +2,9 @@ import { Note } from '../model/note.js';
 import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
+import * as audit from './audit_service.js';
 
-export async function createNote(userId, host_id, data) {
+export async function createNote(userId, host_id, data, ctx = {}) {
 	const note = await Note.create({
 		title: data.title,
 		content: data.content || '',
@@ -16,6 +17,7 @@ export async function createNote(userId, host_id, data) {
 
 	emitToTenant(host_id, 'note:created', note);
 	invalidateGraphCache(host_id).catch(() => {});
+	audit.log({ action: 'create', resource: 'note', resource_id: note._id.toString(), user_id: userId, host_id, ...ctx });
 	return note;
 }
 
@@ -34,13 +36,15 @@ export async function getNote(host_id, noteId) {
 	return Note.findOne({ _id: noteId, host_id });
 }
 
-export async function updateNote(host_id, noteId, data) {
+export async function updateNote(host_id, noteId, data, ctx = {}) {
 	const update = {};
 	if (data.title !== undefined) update.title = data.title;
 	if (data.content !== undefined) update.content = data.content;
 	if (data.text_content !== undefined) update.text_content = data.text_content;
 	if (data.tags !== undefined) update.tags = data.tags;
 	if (data.project !== undefined) update.project = data.project;
+
+	const before = ctx.user_id ? await Note.findOne({ _id: noteId, host_id }).lean() : null;
 
 	const note = await Note.findOneAndUpdate(
 		{ _id: noteId, host_id },
@@ -51,12 +55,16 @@ export async function updateNote(host_id, noteId, data) {
 	if (note) {
 		emitToTenant(host_id, 'note:updated', note);
 		invalidateGraphCache(host_id).catch(() => {});
+		if (ctx.user_id) {
+			const details = audit.diffSnapshot(before, note);
+			audit.log({ action: 'update', resource: 'note', resource_id: noteId, host_id, details, ...ctx });
+		}
 	}
 
 	return note;
 }
 
-export async function deleteNote(host_id, noteId) {
+export async function deleteNote(host_id, noteId, ctx = {}) {
 	const note = await Note.findOneAndUpdate(
 		{ _id: noteId, host_id, in_trash: { $ne: true } },
 		{ $set: { in_trash: true, trashed_at: new Date() } },
@@ -67,6 +75,7 @@ export async function deleteNote(host_id, noteId) {
 		removeLinksForItem(host_id, noteId).catch((err) => console.error('Remove links error:', err.message));
 		emitToTenant(host_id, 'note:deleted', { _id: noteId });
 		invalidateGraphCache(host_id).catch(() => {});
+		if (ctx.user_id) audit.log({ action: 'delete', resource: 'note', resource_id: noteId, host_id, ...ctx });
 	}
 	return note;
 }

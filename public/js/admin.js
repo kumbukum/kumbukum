@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePreview();
 
             variableChips.innerHTML = tpl.variables.map((v) =>
-                `<span class="badge bg-secondary" role="button" title="${escapeHtml(v.description)}" data-var="${v.key}">{{${v.key}}}</span>`
+                `<span class="badge text-bg-secondary tag-badge rounded-pill" role="button" title="${escapeHtml(v.description)}" data-var="${v.key}">{{${v.key}}}</span>`
             ).join('');
 
             variableChips.querySelectorAll('.badge').forEach((chip) => {

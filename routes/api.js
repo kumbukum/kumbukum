@@ -26,12 +26,24 @@ import { User } from '../model/user.js';
 import { UserPasskey } from '../model/user_passkey.js';
 import * as graphService from '../services/graph_service.js';
 import * as exportService from '../services/export_service.js';
+import * as auditService from '../services/audit_service.js';
 import { createChatLimiter } from '../middleware/rate_limit.js';
 import crypto from 'node:crypto';
 
 const router = Router();
 
 router.use(requireAuth, requireTenant);
+
+function auditCtx(req) {
+	return {
+		user_id: req.userId,
+		channel: req.headers['x-mcp-client'] ? 'mcp' : (req.authMethod === 'session' ? 'web' : 'api'),
+		token_label: req.tokenLabel,
+		mcp_client: req.headers['x-mcp-client'],
+		ip: req.ip,
+		user_agent: req.headers['user-agent'],
+	};
+}
 
 // ---- Projects ----
 
@@ -41,7 +53,7 @@ router.get('/projects', async (req, res) => {
 });
 
 router.post('/projects', async (req, res) => {
-	const project = await projectService.createProject(req.userId, req.host_id, req.body);
+	const project = await projectService.createProject(req.userId, req.host_id, req.body, auditCtx(req));
 	res.status(201).json({ project });
 });
 
@@ -52,14 +64,14 @@ router.get('/projects/:id', async (req, res) => {
 });
 
 router.put('/projects/:id', async (req, res) => {
-	const project = await projectService.updateProject(req.host_id, req.params.id, req.body);
+	const project = await projectService.updateProject(req.host_id, req.params.id, req.body, auditCtx(req));
 	if (!project) return res.status(404).json({ error: 'Project not found' });
 	res.json({ project });
 });
 
 router.delete('/projects/:id', async (req, res) => {
 	try {
-		const project = await projectService.deleteProject(req.host_id, req.params.id);
+		const project = await projectService.deleteProject(req.host_id, req.params.id, auditCtx(req));
 		if (!project) return res.status(404).json({ error: 'Project not found' });
 		res.json({ message: 'Project deleted' });
 	} catch (err) {
@@ -78,7 +90,7 @@ router.get('/notes', async (req, res) => {
 });
 
 router.post('/notes', async (req, res) => {
-	const note = await noteService.createNote(req.userId, req.host_id, req.body);
+	const note = await noteService.createNote(req.userId, req.host_id, req.body, auditCtx(req));
 	res.status(201).json({ note });
 });
 
@@ -89,13 +101,13 @@ router.get('/notes/:id', async (req, res) => {
 });
 
 router.put('/notes/:id', async (req, res) => {
-	const note = await noteService.updateNote(req.host_id, req.params.id, req.body);
+	const note = await noteService.updateNote(req.host_id, req.params.id, req.body, auditCtx(req));
 	if (!note) return res.status(404).json({ error: 'Note not found' });
 	res.json({ note });
 });
 
 router.delete('/notes/:id', async (req, res) => {
-	const note = await noteService.deleteNote(req.host_id, req.params.id);
+	const note = await noteService.deleteNote(req.host_id, req.params.id, auditCtx(req));
 	if (!note) return res.status(404).json({ error: 'Note not found' });
 	res.json({ message: 'Note deleted' });
 });
@@ -116,7 +128,7 @@ router.get('/memories', async (req, res) => {
 });
 
 router.post('/memories', async (req, res) => {
-	const memory = await memoryService.storeMemory(req.userId, req.host_id, req.body);
+	const memory = await memoryService.storeMemory(req.userId, req.host_id, req.body, auditCtx(req));
 	res.status(201).json({ memory });
 });
 
@@ -127,13 +139,13 @@ router.get('/memories/:id', async (req, res) => {
 });
 
 router.put('/memories/:id', async (req, res) => {
-	const memory = await memoryService.updateMemory(req.host_id, req.params.id, req.body);
+	const memory = await memoryService.updateMemory(req.host_id, req.params.id, req.body, auditCtx(req));
 	if (!memory) return res.status(404).json({ error: 'Memory not found' });
 	res.json({ memory });
 });
 
 router.delete('/memories/:id', async (req, res) => {
-	const memory = await memoryService.deleteMemory(req.host_id, req.params.id);
+	const memory = await memoryService.deleteMemory(req.host_id, req.params.id, auditCtx(req));
 	if (!memory) return res.status(404).json({ error: 'Memory not found' });
 	res.json({ message: 'Memory deleted' });
 });
@@ -159,7 +171,7 @@ router.get('/urls', async (req, res) => {
 });
 
 router.post('/urls', async (req, res) => {
-	const url = await urlService.saveUrl(req.userId, req.host_id, req.body);
+	const url = await urlService.saveUrl(req.userId, req.host_id, req.body, auditCtx(req));
 
 	if (url.crawl_enabled) {
 		crawlSite(url).catch((err) => console.error('Background crawl error:', err.message));
@@ -175,13 +187,13 @@ router.get('/urls/:id', async (req, res) => {
 });
 
 router.put('/urls/:id', async (req, res) => {
-	const url = await urlService.updateUrl(req.host_id, req.params.id, req.body);
+	const url = await urlService.updateUrl(req.host_id, req.params.id, req.body, auditCtx(req));
 	if (!url) return res.status(404).json({ error: 'URL not found' });
 	res.json({ url });
 });
 
 router.delete('/urls/:id', async (req, res) => {
-	const url = await urlService.deleteUrl(req.host_id, req.params.id);
+	const url = await urlService.deleteUrl(req.host_id, req.params.id, auditCtx(req));
 	if (!url) return res.status(404).json({ error: 'URL not found' });
 	res.json({ message: 'URL deleted' });
 });
@@ -200,7 +212,8 @@ router.post('/batch/delete', async (req, res) => {
 		if (!['notes', 'memories', 'urls'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
 		const deleteFn = { notes: noteService.deleteNote, memories: memoryService.deleteMemory, urls: urlService.deleteUrl }[type];
-		const results = await Promise.all(ids.map((id) => deleteFn(req.host_id, id).catch(() => null)));
+		const ctx = auditCtx(req);
+		const results = await Promise.all(ids.map((id) => deleteFn(req.host_id, id, ctx).catch(() => null)));
 		const deleted = results.filter(Boolean).length;
 		res.json({ message: `${deleted} items deleted`, deleted });
 	} catch (err) {
@@ -216,7 +229,8 @@ router.post('/batch/move', async (req, res) => {
 		if (!['notes', 'memories', 'urls'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
 		const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl }[type];
-		const results = await Promise.all(ids.map((id) => updateFn(req.host_id, id, { project }).catch(() => null)));
+		const ctx = auditCtx(req);
+		const results = await Promise.all(ids.map((id) => updateFn(req.host_id, id, { project }, ctx).catch(() => null)));
 		const moved = results.filter(Boolean).length;
 		if (moved) emitToTenant(req.host_id, 'counts:refresh');
 		res.json({ message: `${moved} items moved`, moved });
@@ -307,7 +321,7 @@ router.post('/links', async (req, res) => {
 		if (!source_id || !source_type || !target_id || !target_type) {
 			return res.status(400).json({ error: 'source_id, source_type, target_id, target_type required' });
 		}
-		const link = await graphService.createLink(req.userId, req.host_id, { source_id, source_type, target_id, target_type, label });
+		const link = await graphService.createLink(req.userId, req.host_id, { source_id, source_type, target_id, target_type, label }, auditCtx(req));
 		res.status(201).json({ link });
 	} catch (err) {
 		if (err.code === 11000) return res.status(409).json({ error: 'Link already exists' });
@@ -317,7 +331,7 @@ router.post('/links', async (req, res) => {
 });
 
 router.delete('/links/:id', async (req, res) => {
-	const link = await graphService.deleteLink(req.host_id, req.params.id);
+	const link = await graphService.deleteLink(req.host_id, req.params.id, auditCtx(req));
 	if (!link) return res.status(404).json({ error: 'Link not found' });
 	res.json({ message: 'Link deleted' });
 });
@@ -750,6 +764,30 @@ router.post('/notes/import', async (req, res) => {
 	} catch (err) {
 		console.error('Notes import error:', err);
 		res.status(500).type('text').send('Import failed: ' + err.message);
+	}
+});
+
+// ---- Audit Logs ----
+
+router.get('/audit-logs', async (req, res) => {
+	try {
+		const result = await auditService.query({
+			host_id: req.host_id,
+			user_id: req.query.user_id,
+			resource: req.query.resource,
+			action: req.query.action,
+			channel: req.query.channel,
+			mcp_client: req.query.mcp_client,
+			q: req.query.q,
+			from: req.query.from,
+			to: req.query.to,
+			page: parseInt(req.query.page, 10) || 1,
+			per_page: parseInt(req.query.per_page, 10) || 50,
+		});
+		res.json(result);
+	} catch (err) {
+		console.error('Audit logs error:', err);
+		res.status(500).json({ error: 'Failed to fetch audit logs' });
 	}
 });
 

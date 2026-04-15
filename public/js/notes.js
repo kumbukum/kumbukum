@@ -13,17 +13,26 @@ document.addEventListener('DOMContentLoaded', () => {
 		listEl.innerHTML = notes.length
 			? notes
 				.map(
-					(n) => `
-				<div class="list-group-item list-group-item-action note-item d-flex justify-content-between align-items-center" data-id="${n._id}">
-					<div class="batch-cb-wrap me-2">
-						<input type="checkbox" class="form-check-input batch-cb" value="${n._id}">
+					(n) => {
+						const excerpt = n.text_content?.slice(0, 200) || '';
+						const date = new Date(n.updatedAt).toLocaleDateString();
+						return `
+				<div class="list-group-item list-group-item-action note-item" data-id="${n._id}">
+					<div class="d-flex align-items-start gap-2">
+						<div class="batch-cb-wrap">
+							<input type="checkbox" class="form-check-input batch-cb" value="${n._id}">
+						</div>
+						<div class="flex-grow-1 overflow-hidden">
+							<div class="d-flex justify-content-between align-items-center gap-2">
+								<strong class="text-truncate">${n.title}</strong>
+								<small class="text-muted text-nowrap flex-shrink-0">${date}</small>
+							</div>
+							${excerpt ? `<p class="mb-0 text-muted small text-truncate">${excerpt}</p>` : ''}
+							<div class="text-muted small">${n.tags?.map((t) => `<span class="badge text-bg-secondary tag-badge rounded-pill me-1">${t}</span>`).join('') || ''}</div>
+						</div>
 					</div>
-					<div class="flex-grow-1">
-						<strong>${n.title}</strong>
-						<div class="text-muted small">${n.tags?.map((t) => `<span class="badge bg-secondary tag-badge me-1">${t}</span>`).join('') || ''}</div>
-					</div>
-					<small class="text-muted">${new Date(n.updatedAt).toLocaleDateString()}</small>
-				</div>`,
+				</div>`;
+					},
 				)
 				.join('')
 			: '<p class="text-muted p-3">No notes yet. Create one!</p>';

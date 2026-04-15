@@ -35,3 +35,4 @@ data/
 
 # File import temp dir
 import/
+/export/*

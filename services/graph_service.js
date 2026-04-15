@@ -4,6 +4,7 @@ import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { searchCollection } from '../modules/typesense.js';
 import { cacheGet, cacheSet, cacheInvalidate } from '../modules/redis.js';
+import * as audit from './audit_service.js';
 
 const MODEL_MAP = {
 	notes: Note,
@@ -17,7 +18,7 @@ const CACHE_TTL = 300; // 5 minutes
 
 // ---- Link CRUD ----
 
-export async function createLink(userId, hostId, data) {
+export async function createLink(userId, hostId, data, ctx = {}) {
 	// Validate source and target exist
 	const sourceModel = MODEL_MAP[data.source_type];
 	const targetModel = MODEL_MAP[data.target_type];
@@ -42,13 +43,15 @@ export async function createLink(userId, hostId, data) {
 	});
 
 	invalidateGraphCache(hostId).catch(() => {});
+	audit.log({ action: 'create', resource: 'link', resource_id: link._id.toString(), user_id: userId, host_id: hostId, ...ctx });
 	return link;
 }
 
-export async function deleteLink(hostId, linkId) {
+export async function deleteLink(hostId, linkId, ctx = {}) {
 	const link = await GraphLink.findOneAndDelete({ _id: linkId, host_id: hostId });
 	if (link) {
 		invalidateGraphCache(hostId).catch(() => {});
+		if (ctx.user_id) audit.log({ action: 'delete', resource: 'link', resource_id: linkId, host_id: hostId, ...ctx });
 	}
 	return link;
 }

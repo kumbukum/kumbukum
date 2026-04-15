@@ -2,8 +2,9 @@ import { Memory } from '../model/memory.js';
 import { searchCollection, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
+import * as audit from './audit_service.js';
 
-export async function storeMemory(userId, host_id, data) {
+export async function storeMemory(userId, host_id, data, ctx = {}) {
 	const mem = await Memory.create({
 		title: data.title,
 		content: data.content || '',
@@ -16,6 +17,7 @@ export async function storeMemory(userId, host_id, data) {
 
 	emitToTenant(host_id, 'memory:created', mem);
 	invalidateGraphCache(host_id).catch(() => {});
+	audit.log({ action: 'create', resource: 'memory', resource_id: mem._id.toString(), user_id: userId, host_id, ...ctx });
 	return mem;
 }
 
@@ -33,13 +35,15 @@ export async function getMemory(host_id, memoryId) {
 	return Memory.findOne({ _id: memoryId, host_id });
 }
 
-export async function updateMemory(host_id, memoryId, data) {
+export async function updateMemory(host_id, memoryId, data, ctx = {}) {
 	const update = {};
 	if (data.title !== undefined) update.title = data.title;
 	if (data.content !== undefined) update.content = data.content;
 	if (data.tags !== undefined) update.tags = data.tags;
 	if (data.source !== undefined) update.source = data.source;
 	if (data.project !== undefined) update.project = data.project;
+
+	const before = ctx.user_id ? await Memory.findOne({ _id: memoryId, host_id }).lean() : null;
 
 	const mem = await Memory.findOneAndUpdate(
 		{ _id: memoryId, host_id },
@@ -50,12 +54,16 @@ export async function updateMemory(host_id, memoryId, data) {
 	if (mem) {
 		emitToTenant(host_id, 'memory:updated', mem);
 		invalidateGraphCache(host_id).catch(() => {});
+		if (ctx.user_id) {
+			const details = audit.diffSnapshot(before, mem);
+			audit.log({ action: 'update', resource: 'memory', resource_id: memoryId, host_id, details, ...ctx });
+		}
 	}
 
 	return mem;
 }
 
-export async function deleteMemory(host_id, memoryId) {
+export async function deleteMemory(host_id, memoryId, ctx = {}) {
 	const mem = await Memory.findOneAndUpdate(
 		{ _id: memoryId, host_id, in_trash: { $ne: true } },
 		{ $set: { in_trash: true, trashed_at: new Date() } },
@@ -66,6 +74,7 @@ export async function deleteMemory(host_id, memoryId) {
 		removeLinksForItem(host_id, memoryId).catch((err) => console.error('Remove links error:', err.message));
 		emitToTenant(host_id, 'memory:deleted', { _id: memoryId });
 		invalidateGraphCache(host_id).catch(() => {});
+		if (ctx.user_id) audit.log({ action: 'delete', resource: 'memory', resource_id: memoryId, host_id, ...ctx });
 	}
 	return mem;
 }

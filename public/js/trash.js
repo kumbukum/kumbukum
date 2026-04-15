@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					</div>
 					<div class="flex-grow-1">
 						<div class="d-flex align-items-center gap-2 mb-1">
-							<span class="badge bg-secondary"><i class="bi ${ICONS[item._type] || 'bi-file'}"></i> ${LABELS[item._type] || item._type}</span>
+							<span class="badge text-bg-secondary tag-badge rounded-pill"><i class="bi ${ICONS[item._type] || 'bi-file'}"></i> ${LABELS[item._type] || item._type}</span>
 							<strong>${item.title || item.url || 'Untitled'}</strong>
 						</div>
 						<small class="text-muted">Trashed ${new Date(item.trashed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>

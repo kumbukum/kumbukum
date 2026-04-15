@@ -14,6 +14,7 @@ export async function requireAuth(req, res, next) {
 	if (req.session?.userId) {
 		req.userId = req.session.userId;
 		req.host_id = req.session.host_id;
+		req.authMethod = 'session';
 		return next();
 	}
 
@@ -24,6 +25,7 @@ export async function requireAuth(req, res, next) {
 			const payload = jwt.verify(token, config.jwtSecret);
 			req.userId = payload.userId;
 			req.host_id = payload.host_id;
+			req.authMethod = 'bearer';
 			await resolveTenantId(req);
 			return next();
 		} catch {
@@ -35,12 +37,15 @@ export async function requireAuth(req, res, next) {
 		const accessToken = authHeader.slice(6);
 		const user = await User.findOne(
 			{ 'access_tokens.token': accessToken, is_active: true },
-			'host_id tenant',
+			'host_id tenant access_tokens',
 		);
 		if (user) {
 			req.userId = user._id.toString();
 			req.host_id = user.host_id;
 			req.tenantId = user.tenant?.toString();
+			req.authMethod = 'token';
+			const matched = user.access_tokens.find((t) => t.token === accessToken);
+			if (matched) req.tokenLabel = matched.name;
 			return next();
 		}
 	}
