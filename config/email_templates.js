@@ -59,6 +59,18 @@ const emailTemplates = {
 			{ key: 'subscriptionUrl', description: 'Subscription settings URL' },
 		],
 	},
+	export_ready: {
+		subject: 'Your Kumbukum export is ready',
+		html: `<p>Hi {{name}},</p>
+<p>Your data export is ready for download.</p>
+<p><a href="{{downloadUrl}}">Download your export</a></p>
+<p>This link expires in 24 hours. After that, you can request a new export from your settings.</p>
+<p>— The Kumbukum Team</p>`,
+		variables: [
+			{ key: 'name', description: 'User name' },
+			{ key: 'downloadUrl', description: 'Export download URL' },
+		],
+	},
 };
 
 export default emailTemplates;

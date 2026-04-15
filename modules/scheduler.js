@@ -6,6 +6,7 @@ import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { sendTrialEndingEmail } from '../services/email_service.js';
+import { cleanupExpiredExports } from '../services/export_service.js';
 
 /**
  * Schedule crawl reindexing every 24 hours at 3 AM.
@@ -59,5 +60,14 @@ export function startScheduler() {
 		}
 	});
 
-	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, index catch-up every 30s');
+	// Cleanup expired export files every hour
+	new Cron('0 * * * *', async () => {
+		try {
+			await cleanupExpiredExports();
+		} catch (err) {
+			console.error('Export cleanup error:', err);
+		}
+	});
+
+	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, index catch-up every 30s, export cleanup hourly');
 }

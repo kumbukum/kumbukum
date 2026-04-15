@@ -7,9 +7,9 @@ Run Kumbukum on your own infrastructure. The self-hosted edition is fully open s
 - **Node.js** >= 24
 - **Docker** & Docker Compose (recommended)
 - **pnpm** 10+
-- **MongoDB** 7+
-- **Redis** 7+
-- **Typesense** 27+
+- **MongoDB** 6+
+- **Redis** 6+
+- **Typesense** 31+
 
 ## Quick Links
 
@@ -19,7 +19,7 @@ Run Kumbukum on your own infrastructure. The self-hosted edition is fully open s
 
 ## Source Code
 
-Kumbukum is open source under the [FSL-1.1-MIT license](https://github.com/kumbukum/kumbukum/blob/main/LICENSE).
+Kumbukum is open source under the [AGPL v3 license](https://github.com/kumbukum/kumbukum/blob/main/LICENSE).
 
 ```bash
 git clone https://github.com/kumbukum/kumbukum.git

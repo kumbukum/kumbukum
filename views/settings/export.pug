@@ -1,0 +1,88 @@
+extends layout
+
+block settings
+	h4.mb-4 Export Data
+
+	.card
+		.card-body
+			h5.card-title
+				i.bi.bi-box-arrow-up
+				span.ms-2 Export All Data
+			p.text-muted Export all your notes, memories, URLs, and links as a ZIP file. You will receive an email with a download link once the export is ready. The link expires after 24 hours.
+			button.btn.btn-primary#export-btn Export Data
+			#export-status.d-none.mt-3
+
+block scripts
+	script.
+		document.addEventListener('DOMContentLoaded', function() {
+			var exportBtn = document.getElementById('export-btn');
+			var statusEl = document.getElementById('export-status');
+
+			function showStatus(html) {
+				statusEl.innerHTML = html;
+				statusEl.classList.remove('d-none');
+			}
+
+			function pollStatus() {
+				var interval = setInterval(async function() {
+					try {
+						var data = await api('GET', '/export/status');
+						if (!data || !data.status) {
+							clearInterval(interval);
+							return;
+						}
+						if (data.status === 'processing') {
+							showStatus('<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Export is being prepared...</div>');
+						} else if (data.status === 'ready') {
+							clearInterval(interval);
+							showStatus('<div class="alert alert-success">Export ready! <a href="/api/v1/export/download/' + data.token + '" class="alert-link">Download ZIP</a><br><small class="text-muted">Link expires in 24 hours. A download link has also been sent to your email.</small></div>');
+							exportBtn.disabled = false;
+							exportBtn.textContent = 'Export Data';
+						} else if (data.status === 'failed') {
+							clearInterval(interval);
+							showStatus('<div class="alert alert-danger">Export failed: ' + (data.error || 'Unknown error') + '</div>');
+							exportBtn.disabled = false;
+							exportBtn.textContent = 'Export Data';
+						}
+					} catch (err) {
+						clearInterval(interval);
+						showStatus('<div class="alert alert-danger">Failed to check status</div>');
+						exportBtn.disabled = false;
+						exportBtn.textContent = 'Export Data';
+					}
+				}, 3000);
+			}
+
+			// Check for existing in-progress export on page load
+			(async function() {
+				try {
+					var data = await api('GET', '/export/status');
+					if (data && (data.status === 'pending' || data.status === 'processing')) {
+						exportBtn.disabled = true;
+						exportBtn.textContent = 'Exporting...';
+						showStatus('<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Export is being prepared...</div>');
+						pollStatus();
+					} else if (data && data.status === 'ready' && data.token) {
+						showStatus('<div class="alert alert-success">Your last export is ready. <a href="/api/v1/export/download/' + data.token + '" class="alert-link">Download ZIP</a><br><small class="text-muted">Link expires in 24 hours.</small></div>');
+					}
+				} catch (e) {}
+			})();
+
+			exportBtn.addEventListener('click', async function() {
+				var confirmed = await confirmAction('Export All Data', 'This will export all your notes, memories, URLs, and links into a ZIP file.');
+				if (!confirmed) return;
+
+				exportBtn.disabled = true;
+				exportBtn.textContent = 'Exporting...';
+				showStatus('<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Starting export...</div>');
+
+				try {
+					await api('POST', '/export');
+					pollStatus();
+				} catch (err) {
+					showStatus('<div class="alert alert-danger">' + err.message + '</div>');
+					exportBtn.disabled = false;
+					exportBtn.textContent = 'Export Data';
+				}
+			});
+		});

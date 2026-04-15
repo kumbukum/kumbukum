@@ -4,7 +4,7 @@
 
 - **Documentation** — You're here! Browse the [API Reference](/api/) and [MCP Server](/mcp/) guides
 - **GitHub Issues** — Report bugs and request features at [github.com/kumbukum/kumbukum/issues](https://github.com/kumbukum/kumbukum/issues)
-- **Email** — Reach us at support@kumbukum.com
+- **Email** — Reach us at hi@kumbukum.com
 
 ## Status
 
