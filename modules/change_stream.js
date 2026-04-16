@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 import config from '../config.js';
-import { indexDocument, removeDocument, ensureCollections } from './typesense.js';
+import { indexDocument, removeDocument, ensureCollections, toTypesenseDoc } from './typesense.js';
 
 const COLLECTION_MAP = {
 	notes: 'notes',
@@ -11,26 +11,6 @@ const COLLECTION_MAP = {
 let client = null;
 const streams = [];
 let healthInterval = null;
-
-function toTypesenseDoc(type, doc) {
-	const base = {
-		id: doc._id.toString(),
-		project_id: doc.project?.toString() || '',
-		created_at: Math.floor(new Date(doc.createdAt || Date.now()).getTime() / 1000),
-		updated_at: Math.floor(new Date(doc.updatedAt || Date.now()).getTime() / 1000),
-	};
-
-	switch (type) {
-		case 'notes':
-			return { ...base, title: doc.title || '', text_content: doc.text_content || '', tags: doc.tags || [] };
-		case 'memory':
-			return { ...base, title: doc.title || '', content: doc.content || '', tags: doc.tags || [], source: doc.source || '' };
-		case 'urls':
-			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', text_content: doc.text_content || '' };
-		default:
-			return base;
-	}
-}
 
 function watchCollection(db, collectionName, typesenseType) {
 	const collection = db.collection(collectionName);
