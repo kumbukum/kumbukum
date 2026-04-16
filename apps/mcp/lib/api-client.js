@@ -19,7 +19,7 @@ export class ApiClient {
       Authorization: `Token ${this.token}`,
     };
     if (this.mcpClient) headers['X-MCP-Client'] = this.mcpClient;
-    const options = { method, headers };
+    const options = { method, headers, signal: AbortSignal.timeout(30000) };
 
     if (body && method !== 'GET') {
       options.body = JSON.stringify(body);

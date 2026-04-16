@@ -13,6 +13,13 @@ async function start() {
     console.log('Scheduler process running');
 }
 
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught exception:', err);
+});
+
 start().catch((err) => {
     console.error('Scheduler failed to start:', err);
     process.exit(1);

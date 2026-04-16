@@ -54,6 +54,9 @@ function watchCollection(db, collectionName, typesenseType) {
 
 	stream.on('error', (err) => {
 		console.error(`Change stream error [${collectionName}]:`, err.message);
+		// Remove the dead stream before reconnecting
+		const idx = streams.indexOf(stream);
+		if (idx !== -1) streams.splice(idx, 1);
 		// Auto-reconnect after a delay
 		setTimeout(() => {
 			console.log(`Reconnecting change stream for ${collectionName}...`);
@@ -67,6 +70,8 @@ function watchCollection(db, collectionName, typesenseType) {
 
 	stream.on('close', () => {
 		console.log(`Change stream closed: ${collectionName}`);
+		const idx = streams.indexOf(stream);
+		if (idx !== -1) streams.splice(idx, 1);
 	});
 
 	streams.push(stream);
