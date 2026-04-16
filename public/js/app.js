@@ -264,6 +264,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 			});
 		}
 	}
+
+	// ── Refresh counts when tab regains focus (catches events missed while backgrounded) ──
+	document.addEventListener('visibilitychange', () => {
+		if (document.visibilityState === 'visible') {
+			refreshCounts();
+			loadTrashCount();
+		}
+	});
 });
 
 // Refresh sidebar counts via API

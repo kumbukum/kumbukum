@@ -62,10 +62,10 @@ function watchCollection(db, collectionName, typesenseType) {
 
 				// Mark as indexed in MongoDB
 				collection.updateOne({ _id: fullDocument._id }, { $set: { is_indexed: true } }).catch(() => {});
-			} else if (operationType === 'delete' && documentKey?._id) {
-				// For deletes we don't have host_id, so we attempt removal with a best-effort approach
-				// The document is already gone from MongoDB, so we can't look it up
-				console.log(`Change stream delete: ${typesenseType}/${documentKey._id} (skipped — no host_id)`);
+			} else if (operationType === 'delete') {
+				// Deletes don't include fullDocument (already gone from MongoDB).
+				// Typesense cleanup is handled at the service layer (trash_service)
+				// before the MongoDB delete, so nothing to do here.
 			}
 		} catch (err) {
 			console.error(`Change stream error [${typesenseType}]:`, err.message);
