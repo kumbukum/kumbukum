@@ -13,10 +13,18 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 	io = new Server(httpServer, {
 		cookie: false,
 		transports: ['websocket'],
-		cors: {
-			origin: config.env === 'development' ? '*' : config.appUrl,
-			credentials: true,
+		pingInterval: 55000,
+		pingTimeout: 60000,
+		cleanupEmptyChildNamespaces: true,
+		cors: { origin: '*', credentials: true },
+		connectionStateRecovery: {
+			// the backup duration of the sessions and the packets
+			maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+			// whether to skip middlewares upon successful recovery
+			skipMiddlewares: true,
 		},
+		tls: { rejectUnauthorized: false },
+		perMessageDeflate: { threshold: 32768 },
 	});
 
 	// Redis streams adapter for horizontal scaling (multi-server only)
@@ -28,7 +36,7 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 				redisClient.once('error', reject);
 				setTimeout(() => reject(new Error('timeout')), 5000);
 			});
-			io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000 }));
+			io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
 			console.log('Socket.IO Redis streams adapter connected');
 		} catch (err) {
 			console.warn('Socket.IO Redis adapter failed, using in-memory:', err.message);
@@ -53,8 +61,16 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 
 /**
  * Emit a CRUD event to a tenant room.
+ * Delay (ms) is configurable via SOCKET_EMIT_DELAY to account for
+ * replication lag in clustered setups (MongoDB ReplicaSet, Typesense
+ * Cluster, Redis Sentinel). Default 500 ms; set to 0 for instant emit.
  */
 export function emitToTenant(host_id, event, data) {
 	if (!io) return;
-	io.to(`tenant:${host_id}`).emit(event, data);
+	const delay = config.socketEmitDelay;
+	if (delay > 0) {
+		setTimeout(() => io.to(`tenant:${host_id}`).emit(event, data), delay);
+	} else {
+		io.to(`tenant:${host_id}`).emit(event, data);
+	}
 }
