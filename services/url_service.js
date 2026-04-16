@@ -58,7 +58,7 @@ export async function updateUrl(host_id, urlId, data, ctx = {}) {
 	const urlDoc = await Url.findOneAndUpdate(
 		{ _id: urlId, host_id },
 		{ $set: update },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 
 	if (urlDoc) {
@@ -77,7 +77,7 @@ export async function deleteUrl(host_id, urlId, ctx = {}) {
 	const urlDoc = await Url.findOneAndUpdate(
 		{ _id: urlId, host_id, in_trash: { $ne: true } },
 		{ $set: { in_trash: true, trashed_at: new Date() } },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 	if (urlDoc) {
 		removeDocument(host_id, 'urls', urlId).catch((err) => console.error('Typesense remove error:', err.message));

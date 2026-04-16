@@ -129,7 +129,7 @@ router.put('/api/accounts/:id', async (req, res) => {
         if (email !== undefined) update.email = email.trim().toLowerCase();
         if (is_active !== undefined) update.is_active = Boolean(is_active);
 
-        const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
+        const user = await User.findByIdAndUpdate(req.params.id, update, { returnDocument: 'after' });
         if (!user) return res.status(404).json({ error: 'Not found' });
 
         // Sync is_active to tenant

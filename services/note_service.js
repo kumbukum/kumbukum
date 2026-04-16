@@ -49,7 +49,7 @@ export async function updateNote(host_id, noteId, data, ctx = {}) {
 	const note = await Note.findOneAndUpdate(
 		{ _id: noteId, host_id },
 		{ $set: update },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 
 	if (note) {
@@ -68,7 +68,7 @@ export async function deleteNote(host_id, noteId, ctx = {}) {
 	const note = await Note.findOneAndUpdate(
 		{ _id: noteId, host_id, in_trash: { $ne: true } },
 		{ $set: { in_trash: true, trashed_at: new Date() } },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 	if (note) {
 		removeDocument(host_id, 'notes', noteId).catch((err) => console.error('Typesense remove error:', err.message));

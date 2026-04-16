@@ -144,7 +144,7 @@ export async function updateGitRepo(hostId, repoId, data, ctx = {}) {
 	const repo = await GitRepo.findOneAndUpdate(
 		{ _id: repoId, host_id: hostId },
 		{ $set: update },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 	if (repo) {
 		audit.log({ action: 'update', resource: 'git_repo', resource_id: repoId, host_id: hostId, ...ctx });

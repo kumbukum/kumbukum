@@ -755,7 +755,7 @@ router.patch('/passkeys/:id', async (req, res) => {
 		const passkey = await UserPasskey.findOneAndUpdate(
 			{ _id: req.params.id, user: req.userId },
 			{ name },
-			{ new: true },
+			{ returnDocument: 'after' },
 		);
 		if (!passkey) return res.status(404).json({ error: 'Passkey not found' });
 		res.json({ passkey: { _id: passkey._id, name: passkey.name } });
