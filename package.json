@@ -44,6 +44,7 @@
     "exec": "node build.js && node --require ./tracing.cjs app.js"
   },
   "dependencies": {
+    "@keyv/valkey": "^1.0.11",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.72.0",
     "@opentelemetry/exporter-logs-otlp-grpc": "^0.214.0",
@@ -93,9 +94,8 @@
     "ioredis": "^5.10.1",
     "iovalkey": "^0.3.3",
     "jsonwebtoken": "^9.0.3",
-    "keyv": "^5.6.0",
-    "@keyv/valkey": "^1.0.11",
     "jsurl": "^0.1.5",
+    "keyv": "^5.6.0",
     "mammoth": "^1.12.0",
     "marked": "^18.0.0",
     "mongodb": "^7.1.1",
@@ -108,7 +108,7 @@
     "rate-limit-redis": "^4.3.1",
     "simple-git": "^3.36.0",
     "socket.io": "^4.8.3",
-    "stripe": "^22.0.1",
+    "stripe": "^22.0.2",
     "striptags": "^3.2.0",
     "swagger-ui-express": "^5.0.1",
     "sweetalert2": "^11.26.24",
