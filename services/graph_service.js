@@ -232,6 +232,7 @@ function computeTagEdges(nodes) {
 async function computeSemanticEdges(hostId, nodes, threshold) {
 	const edges = [];
 	const seen = new Set();
+	const nodeIds = new Set(nodes.map((n) => n.id));
 
 	// Sample up to 50 nodes for semantic search to avoid excessive queries
 	const sample = nodes.length > 50 ? nodes.slice(0, 50) : nodes;
@@ -255,6 +256,7 @@ async function computeSemanticEdges(hostId, nodes, threshold) {
 			for (const hit of (results.hits || [])) {
 				const targetId = hit.document.id;
 				if (targetId === node.id) continue;
+				if (!nodeIds.has(targetId)) continue;
 
 				const score = hit.text_match_info?.score || hit.hybrid_search_info?.rank_fusion_score || 0;
 				if (score < threshold) continue;
