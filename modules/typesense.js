@@ -16,6 +16,29 @@ export function getTypesenseClient() {
 /**
  * Collection schemas by type. Host ID is appended at runtime.
  */
+
+/**
+ * Transform a Mongoose / raw MongoDB document into a Typesense document.
+ */
+export function toTypesenseDoc(type, doc) {
+	const base = {
+		id: (doc._id || doc.id).toString(),
+		project_id: doc.project?.toString() || '',
+		created_at: Math.floor(new Date(doc.createdAt || Date.now()).getTime() / 1000),
+		updated_at: Math.floor(new Date(doc.updatedAt || Date.now()).getTime() / 1000),
+	};
+
+	switch (type) {
+		case 'notes':
+			return { ...base, title: doc.title || '', text_content: doc.text_content || '', tags: doc.tags || [] };
+		case 'memory':
+			return { ...base, title: doc.title || '', content: doc.content || '', tags: doc.tags || [], source: doc.source || '' };
+		case 'urls':
+			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', text_content: doc.text_content || '' };
+		default:
+			return base;
+	}
+}
 const schemas = {
 	notes: (host_id) => ({
 		name: `notes_${host_id}`,
@@ -142,11 +165,14 @@ export async function ensureCollections(host_id) {
 
 /**
  * Index a document into a collection.
+ * If doc looks like a raw Mongoose document (has _id but no id), it is
+ * transformed automatically via toTypesenseDoc.
  */
 export async function indexDocument(host_id, type, doc) {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
-	return ts.collections(collectionName).documents().upsert(doc);
+	const tsDoc = doc.id ? doc : toTypesenseDoc(type, doc);
+	return ts.collections(collectionName).documents().upsert(tsDoc);
 }
 
 /**
