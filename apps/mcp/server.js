@@ -14,7 +14,7 @@ import { graphTools } from './tools/graph.js';
 import { gitSyncTools } from './tools/git_sync.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 3002;
-const API_BASE_URL = process.env['API-BASE-URL'] || 'http://localhost:3000';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
 
 /**
  * Extract the raw access token from the request.
