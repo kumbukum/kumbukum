@@ -65,7 +65,7 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
   for (const [name, tool] of Object.entries(allTools)) {
     const originalHandler = tool.handler;
     const wrappedHandler = async (params, extra) => {
-      const cv = server.getClientVersion();
+      const cv = server.server.getClientVersion();
       if (cv) {
         api.setMcpClient(`${cv.name || 'unknown'}/${cv.version || '?'}`);
       }
