@@ -59,6 +59,7 @@ const config = {
 	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 	redisOptions: parseRedisConfig(),
 	socketRedis: process.env.SOCKET_REDIS === 'true',
+	socketEmitDelay: parseInt(process.env.SOCKET_EMIT_DELAY, 10) || 500,
 	sessionSecret: process.env.SESSION_SECRET || 'change-me',
 	jwtSecret: process.env.JWT_SECRET || 'change-me',
 	appUrl: process.env.APP_URL || 'http://localhost:3000',

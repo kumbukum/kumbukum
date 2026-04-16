@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	// ── Socket.IO: live count updates ──
 	if (typeof io === 'function' && typeof __host_id === 'string' && __host_id) {
-		const socket = io(__ws_url || undefined, { transports: ['websocket'] });
+		const socket = io(__ws_url || undefined, { 'transports': ['websocket'], 'reconnection': true, 'autoConnect': true, 'timeout': 40000, 'withCredentials': true, 'reconnectionAttempts': 50, 'reconnectionDelay': 1000, 'reconnectionDelayMax': 10000, 'forceNew': false });
 		socket.on('connect', () => {
 			socket.emit('subscribe', `tenant:${__host_id}`);
 		});
@@ -304,17 +304,21 @@ async function refreshCounts() {
 	}, 300);
 }
 
+let trashDebounce = null;
 async function loadTrashCount() {
-	try {
-		const { count } = await api('GET', '/trash/count');
-		const badge = document.getElementById('trash-count-badge');
-		if (badge) {
-			badge.textContent = count || '';
-			badge.classList.toggle('d-none', !count);
+	clearTimeout(trashDebounce);
+	trashDebounce = setTimeout(async () => {
+		try {
+			const { count } = await api('GET', '/trash/count');
+			const badge = document.getElementById('trash-count-badge');
+			if (badge) {
+				badge.textContent = count || '';
+				badge.classList.toggle('d-none', !count);
+			}
+		} catch (e) {
+			// ignore
 		}
-	} catch (e) {
-		// ignore
-	}
+	}, 300);
 }
 
 // ---- Git Sync ----
