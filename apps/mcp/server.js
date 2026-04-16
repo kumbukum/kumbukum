@@ -14,20 +14,19 @@ import { graphTools } from './tools/graph.js';
 import { gitSyncTools } from './tools/git_sync.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 3002;
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
-const PROJECT_ID_OVERRIDE = process.env.KUMBUKUM_PROJECT_ID || null;
+const API_BASE_URL = process.env['API-BASE-URL'] || 'http://localhost:3000';
 
-async function resolveDefaultProjectId(api) {
-  if (PROJECT_ID_OVERRIDE) return PROJECT_ID_OVERRIDE;
+async function resolveDefaultProjectId(api, projectIdOverride) {
+  if (projectIdOverride) return projectIdOverride;
   const { projects } = await api.get('/projects');
   const def = projects?.find((p) => p.is_default);
-  if (!def) throw new Error('No default project found — set KUMBUKUM_PROJECT_ID or create a default project');
+  if (!def) throw new Error('No default project found — pass X-Project-Id header or create a default project');
   return def._id;
 }
 
-async function createServer(token) {
+async function createServer(token, { projectId } = {}) {
   const api = new ApiClient(API_BASE_URL, token);
-  const defaultProjectId = await resolveDefaultProjectId(api);
+  const defaultProjectId = await resolveDefaultProjectId(api, projectId);
 
   const server = new McpServer({
     name: 'kumbukum',
@@ -82,13 +81,14 @@ const transportArg = process.argv[2];
 
 if (transportArg === '--stdio' || !transportArg) {
   // stdio transport (default for Claude Desktop etc.)
-  const token = process.env.KUMBUKUM_TOKEN;
+  const token = process.env['ACCESS-TOKEN'];
   if (!token) {
-    console.error('KUMBUKUM_TOKEN environment variable required for stdio transport');
+    console.error('ACCESS-TOKEN environment variable required for stdio transport');
     process.exit(1);
   }
 
-  const server = await createServer(token);
+  const projectId = process.env['PROJECT-ID'] || null;
+  const server = await createServer(token, { projectId });
   const transport = new StdioServerTransport();
   await server.connect(transport);
 } else {
@@ -105,7 +105,7 @@ if (transportArg === '--stdio' || !transportArg) {
   const mcpLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 120,
-    keyGenerator: (req) => req.query.token || req.headers.authorization?.replace('Bearer ', '') || 'anon',
+    keyGenerator: (req) => req.headers.authorization?.replace('Bearer ', '') || 'anon',
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: { error: 'MCP rate limit exceeded (120 requests/min).' },
@@ -116,10 +116,11 @@ if (transportArg === '--stdio' || !transportArg) {
   const sseTransports = new Map();
 
   app.get('/sse', async (req, res) => {
-    const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Token required' });
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Authorization: Bearer <access-token> header required' });
 
-    const server = await createServer(token);
+    const projectId = req.headers['x-project-id'] || null;
+    const server = await createServer(token, { projectId });
     const transport = new SSEServerTransport('/messages', res);
     sseTransports.set(transport.sessionId, { server, transport });
 
@@ -141,9 +142,10 @@ if (transportArg === '--stdio' || !transportArg) {
   // Shared handler for all methods on /mcp
   const handleMcp = async (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Token required' });
+    if (!token) return res.status(401).json({ error: 'Authorization: Bearer <access-token> header required' });
 
-    const server = await createServer(token);
+    const projectId = req.headers['x-project-id'] || null;
+    const server = await createServer(token, { projectId });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);

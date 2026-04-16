@@ -7,14 +7,14 @@ Kumbukum includes a [Model Context Protocol](https://modelcontextprotocol.io/) (
 - **28 tools** across notes, memories, URLs, projects, graph, search, and AI chat
 - **Automatic default project** — tools work without specifying a project
 - **Three transports**: stdio (default), SSE, and Streamable HTTP
-- **Token-based auth** via personal access token
+- **Token-based auth** via `Authorization: Bearer` header or `ACCESS-TOKEN` env var
 
 ## Quick Start
 
 ```bash
-# Set your Kumbukum access token
-export KUMBUKUM_TOKEN=your-access-token
-export KUMBUKUM_URL=https://your-instance.com
+# Set your access token
+export ACCESS-TOKEN=your-access-token
+export API-BASE-URL=https://your-instance.com
 
 # Run with stdio transport (default)
 node apps/mcp/server.js

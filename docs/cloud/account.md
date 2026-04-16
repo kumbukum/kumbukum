@@ -24,7 +24,7 @@ Manage your profile at **Settings > Profile**:
 Generate personal access tokens at **Settings > Tokens**. Tokens are used for:
 
 - REST API access (`Authorization: Token <access_token>`)
-- MCP server authentication (`KUMBUKUM_TOKEN` environment variable)
+- MCP server authentication (`ACCESS-TOKEN` environment variable or `Authorization: Bearer` header)
 
 Tokens do not expire. You can revoke them at any time from the settings page.
 
