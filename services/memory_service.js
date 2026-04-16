@@ -48,7 +48,7 @@ export async function updateMemory(host_id, memoryId, data, ctx = {}) {
 	const mem = await Memory.findOneAndUpdate(
 		{ _id: memoryId, host_id },
 		{ $set: update },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 
 	if (mem) {
@@ -67,7 +67,7 @@ export async function deleteMemory(host_id, memoryId, ctx = {}) {
 	const mem = await Memory.findOneAndUpdate(
 		{ _id: memoryId, host_id, in_trash: { $ne: true } },
 		{ $set: { in_trash: true, trashed_at: new Date() } },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 	if (mem) {
 		removeDocument(host_id, 'memory', memoryId).catch((err) => console.error('Typesense remove error:', err.message));

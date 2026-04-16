@@ -46,7 +46,7 @@ export async function restoreItem(host_id, type, id) {
 	const doc = await model.findOneAndUpdate(
 		{ _id: id, host_id, in_trash: true },
 		{ $set: { in_trash: false }, $unset: { trashed_at: '' } },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 
 	if (doc) {

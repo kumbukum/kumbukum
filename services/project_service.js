@@ -40,7 +40,7 @@ export async function updateProject(host_id, projectId, data, ctx = {}) {
 	const project = await Project.findOneAndUpdate(
 		{ _id: projectId, host_id },
 		{ $set: { name: data.name, color: data.color } },
-		{ new: true },
+		{ returnDocument: 'after' },
 	);
 	if (project) {
 		emitToTenant(host_id, 'project:updated', project);

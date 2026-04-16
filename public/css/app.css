@@ -484,6 +484,11 @@ small,
 	margin-bottom: 0;
 }
 
+/* SweetAlert2 — prevent body height override from collapsing flex layout */
+body.swal2-height-auto {
+	height: 100vh !important;
+}
+
 /* SweetAlert2 — confirm button always on the right */
 .swal2-actions {
 	flex-direction: row-reverse;

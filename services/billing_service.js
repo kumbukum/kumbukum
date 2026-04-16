@@ -91,7 +91,7 @@ export async function handleWebhook(rawBody, sig) {
                     stripe_subscription_id: subscription.id,
                     subscription_status: subscription.status,
                     trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
-                }, { new: true });
+                }, { returnDocument: 'after' });
                 if (user?.host_id) {
                     await Tenant.findOneAndUpdate({ host_id: user.host_id }, { plan });
                 }

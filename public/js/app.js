@@ -252,9 +252,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 			socket.emit('subscribe', `tenant:${__host_id}`);
 		});
 		const crudEvents = [
-			'note:created', 'note:deleted',
-			'memory:created', 'memory:deleted',
-			'url:created', 'url:deleted',
+			'note:created', 'note:updated', 'note:deleted',
+			'memory:created', 'memory:updated', 'memory:deleted',
+			'url:created', 'url:updated', 'url:deleted',
 			'counts:refresh',
 		];
 		for (const evt of crudEvents) {
