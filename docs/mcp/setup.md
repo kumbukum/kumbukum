@@ -18,7 +18,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
             "command": "npx",
             "args": ["-y", "mcp-remote", "https://app.kumbukum.com/mcp"],
             "env": {
-                "KUMBUKUM_TOKEN": "your-access-token"
+                "ACCESS-TOKEN": "your-access-token"
             }
         }
     }
@@ -32,8 +32,8 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
             "command": "node",
             "args": ["/path/to/kumbukum/apps/mcp/server.js"],
             "env": {
-                "KUMBUKUM_TOKEN": "your-access-token",
-                "KUMBUKUM_URL": "https://your-instance.com"
+                "ACCESS-TOKEN": "your-access-token",
+                "API-BASE-URL": "https://your-instance.com"
             }
         }
     }
@@ -69,13 +69,20 @@ In Docker Compose, the MCP server runs as a separate service on port 3002.
 
 | Variable              | Description                           | Default                  |
 | --------------------- | ------------------------------------- | ------------------------ |
-| `KUMBUKUM_TOKEN`      | Personal access token (required)      | —                        |
-| `KUMBUKUM_URL`        | Base URL of the Kumbukum instance     | `http://localhost:3000`  |
-| `KUMBUKUM_PROJECT_ID` | Override default project ID           | Auto-detected            |
+| `ACCESS-TOKEN`        | Personal access token (required)      | —                        |
+| `API-BASE-URL`        | Base URL of the Kumbukum instance     | `http://localhost:3000`  |
+| `PROJECT-ID`          | Override default project ID           | Auto-detected            |
 | `PORT`                | HTTP transport port                   | `3002`                   |
+
+::: tip HTTP Transport Headers
+When using the HTTP or SSE transport, pass your credentials as headers instead of environment variables:
+
+- `Authorization: Bearer <access-token>` — required
+- `X-Project-Id: <project-id>` — optional, overrides the default project
+:::
 
 ## Default Project
 
 On startup, the MCP server calls `GET /projects` and picks the project with `is_default: true`. All create tools (`create_note`, `store_memory`, `save_url`) fall back to this project when `project_id` is omitted.
 
-Set `KUMBUKUM_PROJECT_ID` to override this behavior.
+Set `PROJECT-ID` (env var for stdio) or the `X-Project-Id` header (HTTP/SSE) to override this behavior.
