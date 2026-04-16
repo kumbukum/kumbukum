@@ -29,17 +29,23 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 
 	// Redis streams adapter for horizontal scaling (multi-server only)
 	if (config.socketRedis) {
+		let redisClient;
 		try {
-			const redisClient = new Redis(config.redisOptions);
-			await new Promise((resolve, reject) => {
-				redisClient.once('ready', resolve);
-				redisClient.once('error', reject);
-				setTimeout(() => reject(new Error('timeout')), 5000);
+			if (typeof config.redisOptions === 'string') {
+				redisClient = new Redis(config.redisOptions, { lazyConnect: true });
+			} else {
+				redisClient = new Redis({ ...config.redisOptions, lazyConnect: true });
+			}
+			// Persistent handler prevents unhandled error events during reconnects
+			redisClient.on('error', (err) => {
+				console.warn('Socket.IO Redis client error:', err.message);
 			});
+			await redisClient.connect();
 			io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
 			console.log('Socket.IO Redis streams adapter connected');
 		} catch (err) {
 			console.warn('Socket.IO Redis adapter failed, using in-memory:', err.message);
+			if (redisClient) redisClient.disconnect();
 		}
 	}
 
