@@ -165,7 +165,7 @@ export async function deleteGitRepo(hostId, repoId, ctx = {}) {
 
 // ── Sync ──
 
-export async function syncRepo(repoId, userId, hostId, ctx = {}) {
+export async function syncRepo(repoId, userId, hostId, ctx = { channel: 'api' }) {
 	const gitRepoDoc = await GitRepo.findOne({ _id: repoId, host_id: hostId });
 	if (!gitRepoDoc) throw new Error('Git repo not found');
 	if (!gitRepoDoc.enabled) throw new Error('Git sync is disabled for this repo');
