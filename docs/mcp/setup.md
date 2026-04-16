@@ -77,7 +77,9 @@ In Docker Compose, the MCP server runs as a separate service on port 3002.
 ::: tip HTTP Transport Headers
 When using the HTTP or SSE transport, pass your credentials as headers instead of environment variables:
 
-- `Authorization: Bearer <access-token>` — required
+- `Authorization: Bearer <access-token>` — recommended
+- `Authorization: Token <access-token>` — also accepted
+- `access-token: <access-token>` — alternative (mirrors Razuna MCP)
 - `X-Project-Id: <project-id>` — optional, overrides the default project
 :::
 

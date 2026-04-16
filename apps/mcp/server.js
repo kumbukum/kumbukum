@@ -16,6 +16,17 @@ import { gitSyncTools } from './tools/git_sync.js';
 const PORT = parseInt(process.env.PORT, 10) || 3002;
 const API_BASE_URL = process.env['API-BASE-URL'] || 'http://localhost:3000';
 
+/**
+ * Extract the raw access token from the request.
+ * Accepts: Authorization: Bearer <token>, Authorization: Token <token>, or access-token: <token>
+ */
+function extractToken(req) {
+    const auth = req.headers.authorization;
+    if (auth?.startsWith('Bearer ')) return auth.slice(7);
+    if (auth?.startsWith('Token ')) return auth.slice(6);
+    return req.headers['access-token'] || null;
+}
+
 async function resolveDefaultProjectId(api, projectIdOverride) {
   if (projectIdOverride) return projectIdOverride;
   const { projects } = await api.get('/projects');
@@ -105,7 +116,7 @@ if (transportArg === '--stdio' || !transportArg) {
   const mcpLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 120,
-    keyGenerator: (req) => req.headers.authorization?.replace('Bearer ', '') || 'anon',
+    keyGenerator: (req) => extractToken(req) || 'anon',
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: { error: 'MCP rate limit exceeded (120 requests/min).' },
@@ -116,8 +127,8 @@ if (transportArg === '--stdio' || !transportArg) {
   const sseTransports = new Map();
 
   app.get('/sse', async (req, res) => {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Authorization: Bearer <access-token> header required' });
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: 'Provide Authorization: Bearer <token>, Authorization: Token <token>, or access-token header' });
 
     const projectId = req.headers['x-project-id'] || null;
     const server = await createServer(token, { projectId });
@@ -141,8 +152,8 @@ if (transportArg === '--stdio' || !transportArg) {
   // Streamable HTTP endpoint — stateless (no sessions)
   // Shared handler for all methods on /mcp
   const handleMcp = async (req, res) => {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Authorization: Bearer <access-token> header required' });
+    const token = extractToken(req);
+    if (!token) return res.status(401).json({ error: 'Provide Authorization: Bearer <token>, Authorization: Token <token>, or access-token header' });
 
     const projectId = req.headers['x-project-id'] || null;
     const server = await createServer(token, { projectId });
