@@ -78,7 +78,7 @@ async function classifyIntent(query) {
  * @param {string} opts.projectId - Scope to project (optional)
  * @returns {{ answer: string, results: object, action: object|null, conversationId: string, displayIn: 'panel'|'chat' }}
  */
-export async function processChat({ hostId, userId, query, conversationId, projectId }) {
+export async function processChat({ hostId, userId, query, conversationId, projectId, ctx = {} }) {
 	// Ensure conversation model exists (idempotent, fast after first call)
 	await ensureConversationModel(hostId, userId);
 
@@ -87,7 +87,7 @@ export async function processChat({ hostId, userId, query, conversationId, proje
 
 	switch (intent.intent) {
 		case 'action':
-			return handleAction({ hostId, userId, query, conversationId, projectId, intent });
+			return handleAction({ hostId, userId, query, conversationId, projectId, intent, ctx });
 
 		case 'stats':
 			return handleStats({ hostId, userId, query, conversationId, projectId, intent });
@@ -207,7 +207,7 @@ async function handleAnalysis({ hostId, userId, query, conversationId, projectId
 // Action Handler
 // ────────────────────────────────────────────────────────────────────
 
-async function handleAction({ hostId, userId, query, conversationId, projectId, intent }) {
+async function handleAction({ hostId, userId, query, conversationId, projectId, intent, ctx = {} }) {
 	const actionType = intent.action_type;
 	const params = intent.params || {};
 
@@ -251,7 +251,7 @@ async function handleAction({ hostId, userId, query, conversationId, projectId, 
 					title: params.title || 'Untitled Note',
 					content: params.content || '',
 					project: finalProjectId,
-				});
+			}, ctx);
 				return {
 					answer: `Note "${note.title}" created.`,
 					results: [{ ...note.toObject?.() || note, _type: 'notes' }],
@@ -267,7 +267,7 @@ async function handleAction({ hostId, userId, query, conversationId, projectId, 
 					content: params.content || query,
 					project: finalProjectId,
 					source: 'chat',
-				});
+			}, ctx);
 				return {
 					answer: `Memory "${memory.title}" stored.`,
 					results: [{ ...memory.toObject?.() || memory, _type: 'memory' }],
@@ -290,7 +290,7 @@ async function handleAction({ hostId, userId, query, conversationId, projectId, 
 				const url = await urlService.saveUrl(userId, hostId, {
 					url: params.url,
 					project: finalProjectId,
-				});
+				}, ctx);
 				return {
 					answer: `URL "${url.title || url.url}" saved.`,
 					results: [{ ...url.toObject?.() || url, _type: 'urls' }],
@@ -315,7 +315,7 @@ async function handleAction({ hostId, userId, query, conversationId, projectId, 
 				if (!updateFn) {
 					return { answer: `Unknown item type: ${itemType}`, results: [], action: null, conversationId, displayIn: 'chat' };
 				}
-				const results = await Promise.all(params.item_ids.map((id) => updateFn(hostId, id, { project: finalProjectId }).catch(() => null)));
+				const results = await Promise.all(params.item_ids.map((id) => updateFn(hostId, id, { project: finalProjectId }, ctx).catch(() => null)));
 				const moved = results.filter(Boolean).length;
 				return {
 					answer: `Moved ${moved} ${itemType} to project.`,

@@ -5,8 +5,8 @@ html(lang="en")
 		meta(name="viewport" content="width=device-width, initial-scale=1")
 		title #{title || 'Admin — Kumbukum'}
 		link(href='/static/images/favicon.ico' rel="shortcut icon")
-		link(href="/static/css/vendor.css" rel="stylesheet")
-		link(href="/static/css/app.css" rel="stylesheet")
+		link(href=`/static/v-${v}/css/vendor.css` rel="stylesheet")
+		link(href=`/static/v-${v}/css/app.css` rel="stylesheet")
 		block head
 		style.
 			html, body { height: 100%; }
@@ -43,5 +43,5 @@ html(lang="en")
 				span.ps-1 and
 				a.ps-1(href="https://razuna.com?utm_source=kumbukum_admin&utm_medium=referral" target="_blank") Razuna - Digital Asset Management
 
-		script(src="/static/js/vendor.js" type="module")
+		script(src=`/static/v-${v}/js/vendor.js` type="module")
 		block scripts

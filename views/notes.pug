@@ -5,7 +5,7 @@ block content
 		h4
 			i.bi.bi-journal-text
 			span.ms-2 Notes
-		button.btn.btn-primary#new-note-btn
+		button.btn.btn-sm.btn-primary#new-note-btn
 			i.bi.bi-plus-lg
 			span.ms-1 New Note
 
@@ -36,5 +36,5 @@ block content
 		input#import-filepond(type="file" multiple hidden)
 
 block scripts
-	script(src="/static/js/notes.js")
-	script(src="/static/js/batch.js")
+	script(src=`/static/v-${v}/js/notes.js`)
+	script(src=`/static/v-${v}/js/batch.js`)

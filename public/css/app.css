@@ -5,6 +5,7 @@
 	--bs-badge-font-weight: 400;
 	--sidebar-bg: #f8f9fa;
 	--chat-bg: #f8f9fa;
+	--tag-color: #495057;
 }
 
 body {
@@ -171,7 +172,7 @@ small,
 .section-link {
 	display: flex;
 	font-size: 0.85rem;
-	color: #495057;
+	color: var(--tag-color);
 	text-decoration: none;
 }
 
@@ -200,10 +201,12 @@ small,
 	font-size: 0.65rem;
 }
 .text-bg-secondary {
-	color: #495057 !important;
+	color: var(--tag-color) !important;
 	background-color: #dfdfdf !important;
 }
-
+.btn-close-white {
+	--bs-btn-close-filter: var(--tag-color) !important;
+}
 
 /* Editor container */
 #editor-container .ProseMirror {
@@ -301,6 +304,12 @@ small,
 	border-radius: 6px;
 	box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 	background: #fff;
+}
+
+.source-dropdown .list-group-item.active {
+	background-color: var(--bs-list-group-action-hover-bg, rgba(0,0,0,.075));
+	color: inherit;
+	border-color: var(--bs-list-group-border-color);
 }
 
 #chat-result-modal .modal-body {
@@ -478,4 +487,35 @@ small,
 /* SweetAlert2 — confirm button always on the right */
 .swal2-actions {
 	flex-direction: row-reverse;
+}
+
+/* SweetAlert2 — form styling */
+.swal2-input {
+	height: auto !important;
+	padding: .375rem .75rem !important;
+	font-size: .875rem !important;
+	margin: .15em 1em !important;
+	width: calc(100% - 2em) !important;
+}
+.swal2-html-container label.swal-label {
+	display: block;
+	text-align: left;
+	font-size: .8rem;
+	font-weight: 600;
+	color: #495057;
+	margin: .6rem 1em .1rem;
+}
+.swal2-html-container .swal-hint {
+	display: block;
+	text-align: left;
+	font-size: .75rem;
+	color: #868e96;
+	margin: .05rem 1em 0;
+}
+.swal2-html-container .input-group {
+	margin: .15em 1em;
+	width: calc(100% - 2em);
+}
+.swal2-html-container .input-group .form-control {
+	font-size: .875rem;
 }

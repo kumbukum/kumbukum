@@ -5,8 +5,8 @@ html(lang="en")
 		meta(name="viewport" content="width=device-width, initial-scale=1")
 		title #{title || 'Kumbukum'}
 		link(href='/static/images/favicon.ico' rel="shortcut icon")
-		link(href="/static/css/vendor.css" rel="stylesheet")
-		link(href="/static/css/app.css" rel="stylesheet")
+		link(href=`/static/v-${v}/css/vendor.css` rel="stylesheet")
+		link(href=`/static/v-${v}/css/app.css` rel="stylesheet")
 		block head
 	body
 		block body
@@ -184,10 +184,10 @@ html(lang="en")
 				var bg = __avatar_colors[Math.abs(hash) % __avatar_colors.length];
 				return '<span class="avatar avatar-' + size + '" style="background:' + bg + '" title="' + (name || '') + '">' + initials.toUpperCase() + '</span>';
 			}
-		script(src="/static/js/vendor.js" type="module")
-		script(src="/static/js/editor.js" type="module")
-		script(src="/static/js/chat.js")
-		script(src="/static/js/app.js")
+		script(src=`/static/v-${v}/js/vendor.js` type="module")
+		script(src=`/static/v-${v}/js/editor.js` type="module")
+		script(src=`/static/v-${v}/js/chat.js`)
+		script(src=`/static/v-${v}/js/app.js`)
 		include includes/openpanel
 		if impersonating
 			script.

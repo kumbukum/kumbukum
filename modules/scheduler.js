@@ -7,6 +7,7 @@ import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { sendTrialEndingEmail } from '../services/email_service.js';
 import { cleanupExpiredExports } from '../services/export_service.js';
+import { runScheduledSync } from '../services/git_sync_service.js';
 
 /**
  * Schedule crawl reindexing every 24 hours at 3 AM.
@@ -69,5 +70,14 @@ export function startScheduler() {
 		}
 	});
 
-	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, index catch-up every 30s, export cleanup hourly');
+	// Git repo sync every 10 minutes
+	new Cron('*/10 * * * *', async () => {
+		try {
+			await runScheduledSync();
+		} catch (err) {
+			console.error('Git sync scheduler error:', err);
+		}
+	});
+
+	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, index catch-up every 30s, export cleanup hourly, git sync every 10min');
 }

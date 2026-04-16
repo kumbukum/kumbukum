@@ -57,6 +57,7 @@ COPY --link --from=build /opt/kumbukum/public/js/editor.js ./public/js/editor.js
 COPY --link --from=build /opt/kumbukum/public/js/graph_bundle.js ./public/js/graph_bundle.js
 COPY --link --from=build /opt/kumbukum/public/css/vendor.css ./public/css/vendor.css
 COPY --link --from=build /opt/kumbukum/public/css/fonts/ ./public/css/fonts/
+COPY --link --from=build /opt/kumbukum/public/build-id ./public/build-id
 COPY --link --from=build /opt/kumbukum/docs/.vitepress/dist ./docs-dist
 
 USER node

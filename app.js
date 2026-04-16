@@ -60,6 +60,13 @@ app.set('views', path.join(__dirname, 'views'));
 // Make OpenPanel config available to all templates
 app.locals.openpanel = config.openpanel;
 
+// Cache-busting build ID — embedded in static asset paths: /static/v-{hash}/...
+try {
+    app.locals.v = fs.readFileSync(path.join(__dirname, 'public', 'build-id'), 'utf8').trim();
+} catch {
+    app.locals.v = Date.now().toString(36);
+}
+
 // Stripe webhook needs raw body — skip express.json() for this path
 app.use((req, res, next) => {
     if (req.originalUrl === '/billing/webhook') return next();
@@ -108,6 +115,11 @@ if (fs.existsSync(_docs_dist)) {
     });
 }
 
+// Strip version segment from static paths: /static/v-abc123/js/app.js → /static/js/app.js
+app.use('/static', (req, res, next) => {
+    req.url = req.url.replace(/^\/v-[a-z0-9]+/i, '');
+    next();
+});
 app.use('/static', express.static(path.join(__dirname, 'public'), _static_cache_control));
 
 // No cache for dynamic content

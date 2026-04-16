@@ -57,6 +57,6 @@ block body
 								button.btn.btn-primary.w-100(type="submit") Verify
 
 block scripts
-	script(src="/static/js/vendor.js" type="module")
-	script(src="/static/js/simplewebauthn-browser.min.js")
-	script(src="/static/js/auth.js")
+	script(src=`/static/v-${v}/js/vendor.js` type="module")
+	script(src=`/static/v-${v}/js/simplewebauthn-browser.min.js`)
+	script(src=`/static/v-${v}/js/auth.js`)

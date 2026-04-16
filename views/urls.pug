@@ -5,7 +5,7 @@ block content
 		h4
 			i.bi.bi-link-45deg.me-2
 			| Saved URLs
-		button.btn.btn-primary#new-url-btn
+		button.btn.btn-sm.btn-primary#new-url-btn
 			i.bi.bi-plus-lg.me-1
 			| Add URL
 
@@ -28,5 +28,5 @@ block content
 	#urls-list.list-group
 
 block scripts
-	script(src="/static/js/urls.js")
-	script(src="/static/js/batch.js")
+	script(src=`/static/v-${v}/js/urls.js`)
+	script(src=`/static/v-${v}/js/batch.js`)

@@ -5,8 +5,8 @@ html(lang="en")
 		meta(name="viewport" content="width=device-width, initial-scale=1")
 		title #{title || 'Kumbukum'}
 		link(href='/static/images/favicon.ico' rel="shortcut icon")
-		link(href="/static/css/vendor.css" rel="stylesheet")
-		link(href="/static/css/app.css" rel="stylesheet")
+		link(href=`/static/v-${v}/css/vendor.css` rel="stylesheet")
+		link(href=`/static/v-${v}/css/app.css` rel="stylesheet")
 		block head
 	body
 		block body

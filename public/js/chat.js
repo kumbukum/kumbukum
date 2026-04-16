@@ -20,9 +20,6 @@ function initChat() {
 	// Populate project filter
 	loadProjectFilter();
 
-	// Init result modal handlers
-	initResultModalHandlers();
-
 	// Close results panel — restore page content
 	closeResultsBtn?.addEventListener('click', () => {
 		resultsPanel.classList.add('d-none');
@@ -232,8 +229,10 @@ let rmContent = '';
 let rmTextContent = '';
 let rmSelectedLinks = [];
 let rmOriginalLinks = [];
+let rmTagConnections = [];
 let rmRelDropdown = null;
 let rmRelDebounce = null;
+let rmRelHighlightIdx = -1;
 
 /**
  * Open the universal item modal.
@@ -335,33 +334,39 @@ async function openResultModal(item) {
 }
 
 function rmPopulate(type, record) {
-	// Load links for any item type (from GraphLink collection)
+	// Load links for any item type (manual links + tag connections)
 	rmSelectedLinks = [];
 	rmOriginalLinks = [];
+	rmTagConnections = [];
 	if (record._id) {
-		api('GET', `/links/${record._id}`).then(({ links }) => {
-			if (!links?.length) return;
-			const ids = new Set();
-			for (const l of links) {
-				const otherId = l.source_id === record._id ? l.target_id : l.source_id;
-				const otherType = l.source_id === record._id ? l.target_type : l.source_type;
-				if (!ids.has(otherId)) {
-					ids.add(otherId);
-					rmSelectedLinks.push({ id: otherId, _type: otherType, title: '', link_id: l._id });
+		api('GET', `/connections/${record._id}`).then(({ links, tag_connections }) => {
+			// Manual links
+			if (links?.length) {
+				const ids = new Set();
+				for (const l of links) {
+					const otherId = l.source_id === record._id ? l.target_id : l.source_id;
+					const otherType = l.source_id === record._id ? l.target_type : l.source_type;
+					if (!ids.has(otherId)) {
+						ids.add(otherId);
+						rmSelectedLinks.push({ id: otherId, _type: otherType, title: '', link_id: l._id });
+					}
 				}
+				// Resolve titles
+				api('POST', '/resolve', { ids: [...ids] }).then(({ items }) => {
+					for (const link of rmSelectedLinks) {
+						const resolved = items.find(i => i.id === link.id);
+						if (resolved) link.title = resolved.title;
+					}
+					rmOriginalLinks = rmSelectedLinks.map(l => ({ ...l }));
+					rmRenderLinkTags();
+				}).catch(() => {
+					rmOriginalLinks = rmSelectedLinks.map(l => ({ ...l }));
+					rmRenderLinkTags();
+				});
 			}
-			// Resolve titles
-			api('POST', '/resolve', { ids: [...ids] }).then(({ items }) => {
-				for (const link of rmSelectedLinks) {
-					const resolved = items.find(i => i.id === link.id);
-					if (resolved) link.title = resolved.title;
-				}
-				rmOriginalLinks = rmSelectedLinks.map(l => ({ ...l }));
-				rmRenderLinkTags();
-			}).catch(() => {
-				rmOriginalLinks = rmSelectedLinks.map(l => ({ ...l }));
-				rmRenderLinkTags();
-			});
+			// Tag-based connections
+			rmTagConnections = tag_connections || [];
+			rmRenderLinkTags();
 		}).catch(() => {});
 	}
 	rmRenderLinkTags();
@@ -473,6 +478,7 @@ function rmGetActiveLinkContainer() {
 			return {
 				search: panel.querySelector('.rm-link-search'),
 				tags: panel.querySelector('.rm-link-tags'),
+				searchWrap: panel.querySelector('.source-search-wrap'),
 				wrap: panel.querySelector('.rm-link-search')?.closest('.position-relative'),
 			};
 		}
@@ -482,34 +488,52 @@ function rmGetActiveLinkContainer() {
 
 function rmEnsureRelDropdown() {
 	if (rmRelDropdown) return rmRelDropdown;
-	const { wrap } = rmGetActiveLinkContainer();
-	if (!wrap) return null;
+	const { searchWrap } = rmGetActiveLinkContainer();
+	if (!searchWrap) return null;
+	searchWrap.style.position = 'relative';
 	rmRelDropdown = document.createElement('div');
 	rmRelDropdown.className = 'source-dropdown list-group position-absolute w-100';
-	rmRelDropdown.style.cssText = 'z-index:1060; max-height:200px; overflow-y:auto; display:none; top:100%';
-	wrap.appendChild(rmRelDropdown);
+	rmRelDropdown.style.cssText = 'z-index:1060; max-height:200px; overflow-y:auto; display:none; top:100%; left:0';
+	searchWrap.appendChild(rmRelDropdown);
 	return rmRelDropdown;
 }
 
 function rmHideRelDropdown() {
 	if (rmRelDropdown) rmRelDropdown.style.display = 'none';
+	rmRelHighlightIdx = -1;
 }
 
 function rmRenderLinkTags() {
 	// Render into whichever panel is visible
 	const containers = document.querySelectorAll('.rm-link-tags');
 	for (const container of containers) {
-		container.innerHTML = rmSelectedLinks.map((r, i) => `
+		let html = rmSelectedLinks.map((r, i) => `
 			<span class="badge text-bg-secondary tag-badge rounded-pill d-inline-flex align-items-center gap-1 me-1 mb-1">
 				<i class="${rmTypeIcons[r._type] || 'bi-link'}"></i>
 				${escapeHtml(r.title || r.url || r.id)}
 				<button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.5rem" data-index="${i}"></button>
 			</span>
 		`).join('');
+		if (rmTagConnections.length) {
+			html += '<div class="w-100 mt-2 mb-1"><small class="text-muted"><i class="bi bi-tag me-1"></i>Connected via shared tags</small></div>';
+			html += rmTagConnections.map(c => `
+				<span class="badge text-bg-light border tag-badge rounded-pill d-inline-flex align-items-center gap-1 me-1 mb-1 rm-tag-connection" role="button" data-type="${c.type}" data-id="${c.id}" title="Shared tags: ${escapeHtml(c.shared_tags?.join(', ') || '')}">
+					<i class="${rmTypeIcons[c.type] || 'bi-link'} text-muted"></i>
+					<span class="text-muted">${escapeHtml(c.title || c.id)}</span>
+					<i class="bi bi-tag-fill text-success" style="font-size:0.55rem"></i>
+				</span>
+			`).join('');
+		}
+		container.innerHTML = html;
 		container.querySelectorAll('.btn-close').forEach(btn => {
 			btn.addEventListener('click', () => {
 				rmSelectedLinks.splice(parseInt(btn.dataset.index), 1);
 				rmRenderLinkTags();
+			});
+		});
+		container.querySelectorAll('.rm-tag-connection').forEach(el => {
+			el.addEventListener('click', () => {
+				window.openItemModal(el.dataset.type, el.dataset.id);
 			});
 		});
 	}
@@ -534,16 +558,28 @@ async function rmSearchLinks(query) {
 	`).join('');
 	dd.style.display = 'block';
 
+	rmRelHighlightIdx = -1;
 	dd.querySelectorAll('button').forEach(btn => {
 		btn.addEventListener('mousedown', (e) => {
 			e.preventDefault();
-			rmSelectedLinks.push({ id: btn.dataset.id, _type: btn.dataset.type, title: btn.dataset.title });
-			rmRenderLinkTags();
-			const { search } = rmGetActiveLinkContainer();
-			if (search) search.value = '';
-			rmHideRelDropdown();
+			rmSelectDropdownItem(btn);
 		});
 	});
+}
+
+function rmSelectDropdownItem(btn) {
+	rmSelectedLinks.push({ id: btn.dataset.id, _type: btn.dataset.type, title: btn.dataset.title });
+	rmRenderLinkTags();
+	const { search } = rmGetActiveLinkContainer();
+	if (search) search.value = '';
+	rmHideRelDropdown();
+}
+
+function rmHighlightDropdownItem(idx) {
+	if (!rmRelDropdown) return;
+	const items = rmRelDropdown.querySelectorAll('button');
+	items.forEach((el, i) => el.classList.toggle('active', i === idx));
+	if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
 }
 
 async function rmSyncLinks(itemId, itemType) {
@@ -587,6 +623,7 @@ function rmCleanup() {
 	rmTextContent = '';
 	rmSelectedLinks = [];
 	rmOriginalLinks = [];
+	rmTagConnections = [];
 	rmRenderLinkTags();
 	if (rmRelDropdown) { rmRelDropdown.remove(); rmRelDropdown = null; }
 	// Reset loading + form panels so modal is clean for next open
@@ -619,6 +656,27 @@ function initResultModalHandlers() {
 			rmRelDebounce = setTimeout(() => rmSearchLinks(input.value.trim()), 150);
 		});
 		input.addEventListener('blur', () => setTimeout(rmHideRelDropdown, 150));
+		input.addEventListener('keydown', (e) => {
+			if (!rmRelDropdown || rmRelDropdown.style.display === 'none') return;
+			const items = rmRelDropdown.querySelectorAll('button');
+			if (!items.length) return;
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				rmRelHighlightIdx = Math.min(rmRelHighlightIdx + 1, items.length - 1);
+				rmHighlightDropdownItem(rmRelHighlightIdx);
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				rmRelHighlightIdx = Math.max(rmRelHighlightIdx - 1, 0);
+				rmHighlightDropdownItem(rmRelHighlightIdx);
+			} else if (e.key === 'Enter') {
+				e.preventDefault();
+				if (rmRelHighlightIdx >= 0 && items[rmRelHighlightIdx]) {
+					rmSelectDropdownItem(items[rmRelHighlightIdx]);
+				}
+			} else if (e.key === 'Escape') {
+				rmHideRelDropdown();
+			}
+		});
 	});
 
 	// Save (create or update)
@@ -702,6 +760,7 @@ function initResultModalHandlers() {
 
 // Expose globally so page scripts can use it
 window.openItemModal = openItemModal;
+window.initResultModalHandlers = initResultModalHandlers;
 
 function escapeHtml(str) {
 	const div = document.createElement('div');

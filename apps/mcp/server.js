@@ -11,6 +11,7 @@ import { memoryTools } from './tools/memory.js';
 import { urlTools } from './tools/urls.js';
 import { projectTools } from './tools/projects.js';
 import { graphTools } from './tools/graph.js';
+import { gitSyncTools } from './tools/git_sync.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 3002;
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
@@ -58,6 +59,7 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
     ...urlTools(api, defaultProjectId),
     ...projectTools(api),
     ...graphTools(api),
+    ...gitSyncTools(api, defaultProjectId),
   };
 
   for (const [name, tool] of Object.entries(allTools)) {

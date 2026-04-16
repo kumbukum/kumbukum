@@ -115,16 +115,15 @@
         const panel = document.getElementById('graph-info-panel');
         const typeLabel = { notes: 'Note', memory: 'Memory', urls: 'URL' };
         const connections = node.neighborhood('node').length;
-        const detailUrl = data.type === 'notes' ? '/notes' : data.type === 'urls' ? '/urls' : '/memories';
 
         panel.innerHTML = `
             <div class="p-2">
                 <span class="badge" style="background:${data.color}">${typeLabel[data.type] || data.type}</span>
                 <h6 class="mt-2 mb-1">${escapeHtml(data.label)}</h6>
                 <p class="text-muted small mb-2">${connections} connection${connections !== 1 ? 's' : ''}</p>
-                <a href="${detailUrl}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-arrow-right me-1"></i>Go to ${typeLabel[data.type] || 'item'}
-                </a>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="graph-open-item" data-type="${data.type}" data-id="${data.id}">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Open ${typeLabel[data.type] || 'item'}
+                </button>
                 <hr>
                 <h6 class="small text-muted">Connections</h6>
                 <ul class="list-unstyled small">
@@ -132,6 +131,10 @@
                 </ul>
             </div>
         `;
+        document.getElementById('graph-open-item').addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            window.openItemModal(btn.dataset.type, btn.dataset.id);
+        });
     }
 
     function clearSelection() {
@@ -176,14 +179,14 @@
 
         // Edges
         for (const edge of data.edges) {
-            if (!state.includeManual && edge.type === 'manual') continue;
-            if (!state.includeTags && edge.type === 'tag') continue;
-            if (!state.includeSemantic && edge.type === 'semantic') continue;
+            if (!state.includeManual && edge.edge_type === 'manual') continue;
+            if (!state.includeTags && edge.edge_type === 'tag') continue;
+            if (!state.includeSemantic && edge.edge_type === 'semantic') continue;
 
-            const style = EDGE_STYLES[edge.type] || EDGE_STYLES.manual;
+            const style = EDGE_STYLES[edge.edge_type] || EDGE_STYLES.manual;
             elements.push({
                 data: {
-                    id: `e-${edge.source}-${edge.target}-${edge.type}`,
+                    id: `e-${edge.source}-${edge.target}-${edge.edge_type}`,
                     source: edge.source,
                     target: edge.target,
                     label: edge.label || '',

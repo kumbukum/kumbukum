@@ -21,7 +21,7 @@ block settings
 		button.btn.btn-primary(type="submit") Save Changes
 
 block scripts
-	script(src="/static/js/settings.js")
+	script(src=`/static/v-${v}/js/settings.js`)
 	script.
 		(function() {
 			const zones = Intl.supportedValuesOf('timeZone');

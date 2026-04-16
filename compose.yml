@@ -26,7 +26,7 @@ x-env: &env
     GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
     OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
     APP_URL: http://localhost:3000
-    WS_URL: http://localhost:3001
+    WS_URL: ""
     SYSADMIN_EMAIL: "sysadmin@localhost"
     SYSADMIN_PASSWORD: "sysadminpassword"
     API_BASE_URL: http://app:3000
@@ -43,6 +43,7 @@ x-env: &env
     STRIPE_STARTER_PRICE_ID: "${STRIPE_STARTER_PRICE_ID:-}"
     STRIPE_PRO_PRICE_ID: "${STRIPE_PRO_PRICE_ID:-}"
     STRIPE_PORTAL_CONFIG_ID: "${STRIPE_PORTAL_CONFIG_ID:-}"
+    GIT_ENCRYPTION_KEY: "${GIT_ENCRYPTION_KEY:-}"
 
 services:
     # ---------------------------------------------------------------

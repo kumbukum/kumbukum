@@ -76,6 +76,28 @@ const swaggerSpec = {
                     error: { type: 'string' },
                 },
             },
+            GitRepo: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    project: { type: 'string' },
+                    name: { type: 'string' },
+                    repo_url: { type: 'string' },
+                    branch: { type: 'string' },
+                    auth_token: { type: 'string', description: 'Masked — never returned in full' },
+                    sync_interval: { type: 'integer' },
+                    enabled: { type: 'boolean' },
+                    notes_path: { type: 'string' },
+                    memories_path: { type: 'string' },
+                    sync_path: { type: 'string' },
+                    trash_on_delete: { type: 'boolean' },
+                    last_sync_status: { type: 'string', enum: ['success', 'failed', 'in_progress'], nullable: true },
+                    last_synced_at: { type: 'string', format: 'date-time', nullable: true },
+                    last_sync_error: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' },
+                },
+            },
             GraphLink: {
                 type: 'object',
                 properties: {
@@ -802,6 +824,139 @@ const swaggerSpec = {
                             },
                         },
                     },
+                },
+            },
+        },
+        // ---- Git Sync ----
+        '/projects/{id}/git-repos': {
+            get: {
+                tags: ['Git Sync'],
+                summary: 'List git repos for a project',
+                description: 'Returns all configured git repos for the given project. Requires Pro plan or self-hosted (free) edition.',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Project ID' }],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { repos: { type: 'array', items: { $ref: '#/components/schemas/GitRepo' } } } } } } },
+                    403: { description: 'Plan not eligible', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+            post: {
+                tags: ['Git Sync'],
+                summary: 'Add a git repo to a project',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Project ID' }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string', description: 'Friendly label' },
+                                    repo_url: { type: 'string', description: 'HTTPS git repo URL' },
+                                    branch: { type: 'string', default: 'main' },
+                                    auth_token: { type: 'string', description: 'Personal access token (stored encrypted)' },
+                                    sync_interval: { type: 'integer', default: 10, description: 'Sync interval in minutes (min 5)' },
+                                    notes_path: { type: 'string', default: 'notes', description: 'Directory mapped to notes' },
+                                    memories_path: { type: 'string', default: 'memories', description: 'Directory mapped to memories' },
+                                    sync_path: { type: 'string', default: '/', description: 'Subfolder within repo to sync' },
+                                    trash_on_delete: { type: 'boolean', default: true },
+                                },
+                                required: ['repo_url'],
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    201: { description: 'Created', content: { 'application/json': { schema: { type: 'object', properties: { repo: { $ref: '#/components/schemas/GitRepo' } } } } } },
+                    400: { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    403: { description: 'Plan not eligible', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/git-repos/{id}': {
+            get: {
+                tags: ['Git Sync'],
+                summary: 'Get a git repo',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { repo: { $ref: '#/components/schemas/GitRepo' } } } } } },
+                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+            put: {
+                tags: ['Git Sync'],
+                summary: 'Update a git repo',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                    repo_url: { type: 'string' },
+                                    branch: { type: 'string' },
+                                    auth_token: { type: 'string' },
+                                    sync_interval: { type: 'integer' },
+                                    enabled: { type: 'boolean' },
+                                    notes_path: { type: 'string' },
+                                    memories_path: { type: 'string' },
+                                    sync_path: { type: 'string' },
+                                    trash_on_delete: { type: 'boolean' },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { repo: { $ref: '#/components/schemas/GitRepo' } } } } } },
+                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+            delete: {
+                tags: ['Git Sync'],
+                summary: 'Delete a git repo',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/git-repos/{id}/sync': {
+            post: {
+                tags: ['Git Sync'],
+                summary: 'Trigger manual sync',
+                description: 'Immediately syncs the git repo (pull + push). Returns when complete.',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Sync complete', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                    400: { description: 'Sync failed or in progress', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/git-repos/{id}/status': {
+            get: {
+                tags: ['Git Sync'],
+                summary: 'Get sync status',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        status: { type: 'string', enum: ['success', 'failed', 'in_progress'], nullable: true },
+                                        last_synced_at: { type: 'string', format: 'date-time', nullable: true },
+                                        error: { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
         },
