@@ -82,10 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		listEl.querySelectorAll('.restore-btn').forEach((btn) => {
 			btn.addEventListener('click', async () => {
 				const el = btn.closest('.trash-item');
-				await api('POST', '/trash/restore', { type: el.dataset.type, id: el.dataset.id });
+					await api('POST', '/trash/restore', { type: el.dataset.type, id: el.dataset.id });
 				showSuccess('Item restored');
 				loadTrash();
 				refreshTrashCount();
+				refreshCounts();
 			});
 		});
 
@@ -98,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				showSuccess('Item permanently deleted');
 				loadTrash();
 				refreshTrashCount();
+				refreshCounts();
 			});
 		});
 
@@ -124,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		showSuccess(`${items.length} items restored`);
 		loadTrash();
 		refreshTrashCount();
+		refreshCounts();
 	});
 
 	batchDeleteBtn?.addEventListener('click', async () => {
@@ -135,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		showSuccess(`${items.length} items permanently deleted`);
 		loadTrash();
 		refreshTrashCount();
+		refreshCounts();
 	});
 
 	emptyBtn?.addEventListener('click', async () => {
@@ -144,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		showSuccess('Trash emptied');
 		loadTrash();
 		refreshTrashCount();
+		refreshCounts();
 	});
 
 	filterBtns.forEach((btn) => {

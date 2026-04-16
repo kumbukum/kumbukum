@@ -155,7 +155,12 @@ export async function indexDocument(host_id, type, doc) {
 export async function removeDocument(host_id, type, docId) {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
-	return ts.collections(collectionName).documents(docId).delete();
+	try {
+		return await ts.collections(collectionName).documents(docId).delete();
+	} catch (err) {
+		if (err?.httpStatus === 404) return null;
+		throw err;
+	}
 }
 
 /**

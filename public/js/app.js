@@ -265,6 +265,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 		}
 	}
 
+	// ── Same-tab CRUD: refresh counts immediately when items change via modals / batch ──
+	for (const evt of ['item-modal-saved', 'item-modal-deleted', 'batch-done']) {
+		window.addEventListener(evt, () => {
+			refreshCounts();
+			loadTrashCount();
+		});
+	}
+
 	// ── Refresh counts when tab regains focus (catches events missed while backgrounded) ──
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState === 'visible') {
