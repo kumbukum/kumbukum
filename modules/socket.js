@@ -31,14 +31,42 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 	if (config.socketRedis) {
 		let redisClient;
 		try {
-			if (typeof config.redisOptions === 'string') {
-				redisClient = new Redis(config.redisOptions, { lazyConnect: true });
+			const opts = config.redisOptions;
+			const isSentinel = typeof opts === 'object' && opts.sentinels && Array.isArray(opts.sentinels);
+
+			if (typeof opts === 'string') {
+				redisClient = new Redis(opts, { lazyConnect: true });
+			} else if (isSentinel) {
+				redisClient = new Redis({
+					sentinels: opts.sentinels,
+					name: opts.name,
+					lazyConnect: true,
+					keepAlive: 10000,
+					enableOfflineQueue: true,
+					sentinelRetryStrategy(times) {
+						return Math.min(times * 100, 5000);
+					},
+					connectTimeout: 10000,
+					commandTimeout: 5000,
+					sentinelCommandTimeout: 10000,
+					enableReadyCheck: false,
+					maxRetriesPerRequest: null,
+					retryStrategy(times) {
+						return Math.min(times * 100, 5000);
+					},
+					sentinelMaxConnections: 3,
+					updateSentinels: true,
+					failoverDetector: false,
+				});
 			} else {
-				redisClient = new Redis({ ...config.redisOptions, lazyConnect: true });
+				redisClient = new Redis({ ...opts, lazyConnect: true });
 			}
 			// Persistent handler prevents unhandled error events during reconnects
 			redisClient.on('error', (err) => {
-				console.warn('Socket.IO Redis client error:', err.message);
+				const msg = err?.message || '';
+				// Transient sentinel errors are auto-recovered — only log unexpected ones
+				if (msg.includes('sentinels are unreachable') || msg.includes('EHOSTUNREACH') || msg.includes('ECONNREFUSED')) return;
+				console.warn('Socket.IO Redis client error:', msg);
 			});
 			await redisClient.connect();
 			io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
