@@ -3,6 +3,10 @@ import config from '../config.js';
 
 let client;
 
+const _ts_exlude_default = 'embedding';
+
+const _token_separators = ['+', '-', '@', '.', '_', ' ', '=', '\\', ';', ',', ':', "'", '|', '&', '(', ')', '[', ']', '{', '}', '<', '>', '/', '?', '!', '#', '$', '%', '^', '*', '~', '`', '"', '\n', '\t', '\r', '\f', '\v'];
+
 // Track conversation models whose api_key has been synced this process lifetime
 const syncedConvoModels = new Set();
 
@@ -42,6 +46,7 @@ export function toTypesenseDoc(type, doc) {
 const schemas = {
 	notes: (host_id) => ({
 		name: `notes_${host_id}`,
+		enable_nested_fields: true,
 		fields: [
 			{ name: 'title', type: 'string' },
 			{ name: 'text_content', type: 'string' },
@@ -52,6 +57,7 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
+				num_dim: 1024,
 				embed: {
 					from: ['title', 'text_content'],
 					model_config: {
@@ -61,10 +67,12 @@ const schemas = {
 			},
 		],
 		default_sorting_field: 'updated_at',
+		token_separators: _token_separators,
 	}),
-
+	
 	memory: (host_id) => ({
 		name: `memory_${host_id}`,
+		enable_nested_fields: true,
 		fields: [
 			{ name: 'title', type: 'string' },
 			{ name: 'content', type: 'string' },
@@ -76,6 +84,7 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
+				num_dim: 1024,
 				embed: {
 					from: ['title', 'content'],
 					model_config: {
@@ -85,10 +94,12 @@ const schemas = {
 			},
 		],
 		default_sorting_field: 'updated_at',
+		token_separators: _token_separators,
 	}),
-
+	
 	urls: (host_id) => ({
 		name: `urls_${host_id}`,
+		enable_nested_fields: true,
 		fields: [
 			{ name: 'url', type: 'string' },
 			{ name: 'title', type: 'string' },
@@ -100,6 +111,7 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
+				num_dim: 1024,
 				embed: {
 					from: ['title', 'description', 'text_content'],
 					model_config: {
@@ -109,10 +121,12 @@ const schemas = {
 			},
 		],
 		default_sorting_field: 'updated_at',
+		token_separators: _token_separators,
 	}),
-
+	
 	pages: (host_id) => ({
 		name: `pages_${host_id}`,
+		enable_nested_fields: true,
 		fields: [
 			{ name: 'url', type: 'string' },
 			{ name: 'parent_url_id', type: 'string', facet: true },
@@ -123,6 +137,7 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
+				num_dim: 1024,
 				embed: {
 					from: ['title', 'text_content'],
 					model_config: {
@@ -132,6 +147,7 @@ const schemas = {
 			},
 		],
 		default_sorting_field: 'crawled_at',
+		token_separators: _token_separators,
 	}),
 };
 
@@ -201,6 +217,7 @@ export async function searchCollection(host_id, type, query, options = {}) {
 		prefix: false,
 		per_page: options.perPage || 10,
 		page: options.page || 1,
+		exclude_fields: options.exclude_fields || _ts_exlude_default,
 		...options.extra,
 	});
 }
@@ -217,6 +234,7 @@ export async function searchAll(host_id, query, options = {}) {
 		query_by: 'embedding',
 		prefix: false,
 		per_page: options.perPage || 5,
+		exclude_fields: options.exclude_fields || _ts_exlude_default,
 	}));
 
 	const results = await ts.multiSearch.perform({ searches });
@@ -236,7 +254,7 @@ export async function getCollectionCounts(host_id) {
 	const counts = {};
 	for (const type of ['notes', 'memory', 'urls']) {
 		try {
-			const col = await ts.collections(`${type}_${host_id}`).retrieve();
+			const col = await ts.collections(`${type}_${host_id}`).retrieve({ 'exclude_fields': 'fields' });
 			counts[type] = col.num_documents || 0;
 		} catch (err) {
 			console.error(`getCollectionCounts: ${type}_${host_id} failed:`, err.message);
@@ -355,7 +373,7 @@ export async function reindexHost(host_id, models) {
 export async function initTypesense() {
 	try {
 		const ts = getTypesenseClient();
-		const health = await ts.health.retrieve();
+		const health = await ts.health.retrieve({ 'exclude_fields': 'fields' });
 		const nodes = config.typesense.nodes.map(n => `${n.host}:${n.port}`).join(', ');
 		console.log(`Typesense connected (${health.ok ? 'healthy' : 'unhealthy'}): ${nodes}`);
 	} catch (err) {
@@ -501,7 +519,7 @@ export async function ensureConversationModel(hostId, userId) {
 
 	// 1. Ensure conversation store collection exists
 	try {
-		await ts.collections(collectionName).retrieve();
+		await ts.collections(collectionName).retrieve({ 'exclude_fields': 'fields' });
 	} catch (err) {
 		if (err.httpStatus === 404) {
 			const schema = {
@@ -649,6 +667,7 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 			query_by: 'embedding',
 			prefix: false,
 			per_page: perPage,
+			exclude_fields: _ts_exlude_default,
 		};
 		if (projectId) {
 			search.filter_by = `project_id:=${projectId}`;
@@ -752,7 +771,7 @@ export async function listConversations(hostId, userId, { limit = 10 } = {}) {
 			filter_by: `model_id:=${modelId}`,
 			sort_by: 'timestamp:desc',
 			per_page: limit * 5,
-			exclude_fields: 'embedding',
+			exclude_fields: _ts_exlude_default,
 		});
 
 		// Group by conversation_id, extract first user message as title

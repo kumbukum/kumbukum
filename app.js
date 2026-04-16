@@ -6,6 +6,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import './modules/process_env.js';
 import config from './config.js';
 import { connectDB } from './db.js';
 import { setupSocketIO } from './modules/socket.js';
