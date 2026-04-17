@@ -9,7 +9,7 @@ Kumbukum is an open-source memory layer for AI-native teams and MCP-compatible t
 
 [Website](https://kumbukum.com) · [Cloud](https://app.kumbukum.com) · [Docs](https://app.kumbukum.com/docs/) · [Self-Hosted Guide](https://app.kumbukum.com/docs/selfhosted/) · [MCP Docs](https://app.kumbukum.com/docs/mcp/) · [API Reference](https://app.kumbukum.com/docs/api/)
 
-![Kumbukum homepage preview](docs/assets/readme-hero.svg)
+![Kumbukum homepage preview](docs/assets/readme-hero.jpg)
 
 ## Why Kumbukum?
 
