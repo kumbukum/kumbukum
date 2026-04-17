@@ -524,11 +524,17 @@ router.post('/chat', createChatLimiter(), async (req, res) => {
 			ctx: auditCtx(req),
 		});
 
+		const conversationReset = !!conversation_id
+			&& !!result.conversationId
+			&& result.conversationId !== conversation_id;
+
 		res.json({
 			answer: result.answer,
 			results: result.results,
 			action: result.action,
 			conversation_id: result.conversationId,
+			conversation_reset: conversationReset,
+			previous_conversation_id: conversationReset ? conversation_id : undefined,
 			display_in: result.displayIn,
 		});
 	} catch (err) {

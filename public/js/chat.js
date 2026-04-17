@@ -77,6 +77,10 @@ function initChat() {
 				currentConversationId = res.conversation_id;
 			}
 
+			if (res.conversation_reset) {
+				addMessage('assistant', 'Your previous chat thread expired, so I started a new conversation for this reply.');
+			}
+
 			// Show answer in chat
 			if (res.answer) {
 				addMessage('assistant', res.answer);

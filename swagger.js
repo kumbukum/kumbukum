@@ -606,6 +606,8 @@ const swaggerSpec = {
                                         results: { type: 'array', items: { type: 'object' }, description: 'Matching items from knowledge base' },
                                         action: { type: 'object', nullable: true, description: 'Action performed or pending confirmation' },
                                         conversation_id: { type: 'string', description: 'Conversation ID for follow-up messages' },
+                                        conversation_reset: { type: 'boolean', description: 'True when the requested conversation was invalid/expired and a new thread was started automatically' },
+                                        previous_conversation_id: { type: 'string', description: 'The stale conversation ID that was replaced, when conversation_reset is true' },
                                         display_in: { type: 'string', enum: ['panel', 'chat'], description: 'Where results should be displayed' },
                                     },
                                 },

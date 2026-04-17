@@ -834,10 +834,33 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 		searchParams.conversation_id = conversationId;
 	}
 
+	function isInvalidConversationIdError(err) {
+		const message = err?.message || '';
+		return err?.httpStatus === 400
+			&& !!searchParams.conversation_id
+			&& message.includes('conversation_id')
+			&& message.includes('invalid');
+	}
+
+	async function performConversationMultiSearch() {
+		return ts.multiSearch.perform({ searches }, searchParams);
+	}
+
+	async function retryWithoutConversationId(reason) {
+		const staleConversationId = searchParams.conversation_id;
+		if (!staleConversationId) {
+			throw reason;
+		}
+
+		delete searchParams.conversation_id;
+		console.warn(`Conversation ${staleConversationId} is invalid for model ${convoModelId}; starting a new conversation.`);
+		return performConversationMultiSearch();
+	}
+
 	// Execute with auto-recovery for missing conversation models
 	let data;
 	try {
-		data = await ts.multiSearch.perform({ searches }, searchParams);
+		data = await performConversationMultiSearch();
 	} catch (err) {
 		const message = err.message || '';
 		const needsConversationRepair = err.httpStatus === 400 && (
@@ -849,7 +872,17 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 		if (needsConversationRepair) {
 			console.warn(`Conversation model ${convoModelId} needs repair, recreating metadata...`);
 			await ensureConversationModel(hostId, userId);
-			data = await ts.multiSearch.perform({ searches }, searchParams);
+			try {
+				data = await performConversationMultiSearch();
+			} catch (retryErr) {
+				if (isInvalidConversationIdError(retryErr)) {
+					data = await retryWithoutConversationId(retryErr);
+				} else {
+					throw retryErr;
+				}
+			}
+		} else if (isInvalidConversationIdError(err)) {
+			data = await retryWithoutConversationId(err);
 		} else {
 			throw err;
 		}
@@ -863,7 +896,7 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 
 	// Parse conversation answer
 	const rawAnswer = data.conversation?.answer || '';
-	const convId = data.conversation?.conversation_id || conversationId || '';
+	const convId = data.conversation?.conversation_id || searchParams.conversation_id || '';
 	const parsed = parseConversationAnswer(rawAnswer);
 
 	return {
