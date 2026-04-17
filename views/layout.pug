@@ -93,19 +93,19 @@ html(lang="en")
 							.mb-3
 								.form-text Tags
 								input.form-control#rm-note-tags(type="text")
+							ul.nav.nav-tabs.mb-3
+								li.nav-item
+									button.nav-link.active#rm-note-tab-preview(type="button") Preview
+								li.nav-item
+									button.nav-link#rm-note-tab-edit(type="button") Edit
+							#rm-note-preview.preview-container.border.border-top-0.rounded-bottom.p-3.mb-3(style="min-height:300px")
+							#rm-note-editor.border-0.rounded.p-0.d-none.mb-3(style="min-height:300px")
 							.mb-3.position-relative
 								.form-text Links
 								.source-search-wrap
 									i.bi.bi-search.source-search-icon
 									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
-							ul.nav.nav-tabs.mb-0
-								li.nav-item
-									button.nav-link.active#rm-note-tab-preview(type="button") Preview
-								li.nav-item
-									button.nav-link#rm-note-tab-edit(type="button") Edit
-							#rm-note-preview.preview-container.border.border-top-0.rounded-bottom.p-3(style="min-height:300px")
-							#rm-note-editor.border-0.rounded.p-0.d-none(style="min-height:300px")
 
 						//- Memory form
 						#result-modal-memory.d-none
@@ -118,38 +118,40 @@ html(lang="en")
 							.mb-3
 								.form-text Source
 								input.form-control#rm-memory-source(type="text")
+							ul.nav.nav-tabs.mb-3
+								li.nav-item
+									button.nav-link.active#rm-memory-tab-preview(type="button") Preview
+								li.nav-item
+									button.nav-link#rm-memory-tab-edit(type="button") Edit
+							#rm-memory-preview.preview-container.border.border-top-0.rounded-bottom.p-3.mb-3(style="min-height:300px")
+							#rm-memory-editor.border-0.rounded.p-0.d-none.mb-3(style="min-height:300px")
 							.mb-3.position-relative
 								.form-text Links
 								.source-search-wrap
 									i.bi.bi-search.source-search-icon
 									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
-							ul.nav.nav-tabs.mb-0
-								li.nav-item
-									button.nav-link.active#rm-memory-tab-preview(type="button") Preview
-								li.nav-item
-									button.nav-link#rm-memory-tab-edit(type="button") Edit
-							#rm-memory-preview.preview-container.border.border-top-0.rounded-bottom.p-3(style="min-height:300px")
-							#rm-memory-editor.border-0.rounded.p-0.d-none(style="min-height:300px")
 
 						//- URL form
 						#result-modal-url.d-none
-							.mb-3.d-none#rm-url-og-wrap
-								img.rounded#rm-url-og-image(alt="" style="object-fit:cover")
-							.mb-3
-								.form-text URL
-								input.form-control#rm-url-input(type="url")
-							.mb-3
-								.form-text Title
-								input.form-control#rm-url-title(type="text")
-							.mb-3
-								.form-text Description
-								input.form-control#rm-url-description(type="text")
-							.mb-3.form-check
-								input.form-check-input#rm-url-crawl(type="checkbox")
-								label.form-check-label(for="rm-url-crawl") Enable full-site crawling
-							.mb-3.position-relative
-								.form-text Links
+							.d-flex.mb-3.w-100.px-3
+								.d-none.pe-5.pt-4#rm-url-og-wrap
+									img.rounded#rm-url-og-image(alt="" style="object-fit:cover")
+								.flex-grow-1
+									.mb-3
+										.form-text URL
+										input.form-control#rm-url-input(type="url" autofocus)
+									.mb-3
+										.form-text Title (optional)
+										input.form-control#rm-url-title(type="text")
+									.mb-3.form-check
+										input.form-check-input#rm-url-crawl(type="checkbox")
+										label.form-check-label(for="rm-url-crawl") Enable full-site crawling
+									.mb-3
+										.form-text Description (optional)
+										textarea.form-control#rm-url-description(type="text" rows="3")
+							.mb-3.px-3.position-relative
+								.form-text Links (optional)
 								.source-search-wrap
 									i.bi.bi-search.source-search-icon
 									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
