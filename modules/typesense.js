@@ -350,8 +350,9 @@ export async function reindexHost(host_id, models) {
 
 	const results = {};
 
-	// Drop all host collections first (including pages and conversation store)
-	const allCollections = [...typeModelMap.map((t) => `${t.type}_${host_id}`), `pages_${host_id}`, `conversation_store_${host_id}`];
+	// Drop indexed content collections first. Keep conversation history intact:
+	// reindexing search data should not break chat history or existing convo models.
+	const allCollections = [...typeModelMap.map((t) => `${t.type}_${host_id}`), `pages_${host_id}`];
 	for (const collectionName of allCollections) {
 		try {
 			await ts.collections(collectionName).delete();
@@ -689,29 +690,39 @@ export async function ensureConversationModel(hostId, userId) {
 	}
 
 	if (existing) {
-		// Model exists — check if key settings need updating
+		const updateFields = {};
+		if (existing.history_collection !== collectionName) {
+			updateFields.history_collection = collectionName;
+		}
+
+		// Model exists — sync provider config at most once per process unless the history collection drifted.
 		if (!syncedConvoModels.has(modelId)) {
 			const storedSignature = await getStoredConversationModelSignature(modelId);
-			if (storedSignature === desiredSignature) {
+			if (storedSignature === desiredSignature && !updateFields.history_collection) {
 				syncedConvoModels.add(modelId);
 				return;
 			}
 
-			const updateFields = { api_key: apiKey };
+			updateFields.api_key = apiKey;
 			if (existing.model_name !== tsModelName) {
 				updateFields.model_name = tsModelName;
 			}
 			if (existing.max_bytes !== 102400) {
 				updateFields.max_bytes = 102400;
 			}
+		}
+
+		if (Object.keys(updateFields).length > 0) {
 			try {
 				await _updateConversationModel(modelId, updateFields);
 				await setStoredConversationModelSignature(modelId, desiredSignature);
-				syncedConvoModels.add(modelId);
 			} catch (err) {
 				console.error(`Error updating conversation model ${modelId}:`, err.message);
+				throw err;
 			}
 		}
+
+		syncedConvoModels.add(modelId);
 		return;
 	}
 
@@ -828,8 +839,15 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 	try {
 		data = await ts.multiSearch.perform({ searches }, searchParams);
 	} catch (err) {
-		if (err.httpStatus === 400 && err.message?.includes('conversation_model_id')) {
-			console.warn(`Conversation model ${convoModelId} missing, recreating...`);
+		const message = err.message || '';
+		const needsConversationRepair = err.httpStatus === 400 && (
+			message.includes('conversation_model_id')
+			|| message.includes('history_collection')
+			|| message.includes('history collection')
+		);
+
+		if (needsConversationRepair) {
+			console.warn(`Conversation model ${convoModelId} needs repair, recreating metadata...`);
 			await ensureConversationModel(hostId, userId);
 			data = await ts.multiSearch.perform({ searches }, searchParams);
 		} else {
