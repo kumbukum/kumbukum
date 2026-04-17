@@ -196,3 +196,13 @@
 
 		await api('POST', `/batch/${action}`, buildBatchBody({ project }));
 		showSuccess(`${count} ${action === 'move' ? 'moved' : 'copied'}`);
+		resetBatch();
+		window.dispatchEvent(new CustomEvent('batch-done'));
+	}
+
+	batchMoveBtn.addEventListener('click', () => pickProject('move'));
+	batchCopyBtn.addEventListener('click', () => pickProject('copy'));
+
+	// Expose for list renderers to call after re-rendering items
+	window.updateBatchBar = updateBatchBar;
+})();

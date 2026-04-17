@@ -5,6 +5,8 @@ html(lang="en")
 		meta(name="viewport" content="width=device-width, initial-scale=1")
 		title #{title || 'Kumbukum'}
 		link(href='/static/images/favicon.ico' rel="shortcut icon")
+		script(type="importmap").
+			{ "imports": { "/static/js/vendor.js": "/static/v-#{v}/js/vendor.js" } }
 		link(href=`/static/v-${v}/css/vendor.css` rel="stylesheet")
 		link(href=`/static/v-${v}/css/app.css` rel="stylesheet")
 		block head

@@ -9,11 +9,11 @@
     "node": ">=24"
   },
   "scripts": {
-    "start": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs app.js",
+    "start": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs --import ./instrument.js app.js",
     "start:scheduler": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs scheduler.js",
-    "start:ws": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs app.js",
+    "start:ws": "node --optimize_for_size --max-old-space-size=4096 --require ./tracing.cjs --import ./instrument.js app.js",
     "build": "node build.js",
-    "dev": "nodemon --max-old-space-size=4096 --trace-warnings --require ./tracing.cjs app.js",
+    "dev": "nodemon --max-old-space-size=4096 --trace-warnings --require ./tracing.cjs --import ./instrument.js app.js",
     "test": "node --test --test-force-exit test/**/*.test.js",
     "test:mcp": "node --test --test-force-exit test/mcp/**/*.test.js",
     "docs:dev": "pnpm --filter @kumbukum/docs dev",
@@ -56,6 +56,8 @@
     "@opentelemetry/sdk-metrics": "^2.6.1",
     "@opentelemetry/sdk-node": "^0.214.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
+    "@sentry/node": "^10.49.0",
+    "@sentry/profiling-node": "^10.49.0",
     "@simplewebauthn/server": "^13.3.0",
     "@socket.io/redis-streams-adapter": "^0.3.1",
     "@tiptap/core": "^3.22.3",

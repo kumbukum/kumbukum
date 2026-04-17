@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
@@ -181,6 +182,9 @@ app.get('/', (req, res) => {
 });
 
 app.use('/', webRoutes);
+
+// Sentry error handler — after all controllers, before other error middleware
+Sentry.setupExpressErrorHandler(app);
 
 } // end SERVER_MODE === 'app'
 

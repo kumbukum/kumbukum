@@ -5,7 +5,7 @@
 		if project.is_default
 			span.badge.bg-warning.text-dark Default
 	.d-flex.gap-2
-		span.text-muted.fs-7.me-2.align-self-center= project._id
+		span.text-muted.fs-7.me-2.align-self-center.user-select-all= project._id
 		button.btn.btn-sm.btn-outline-secondary(onclick=`editProject('${project._id}')`)
 			i.bi.bi-pencil.me-1
 			| Edit
