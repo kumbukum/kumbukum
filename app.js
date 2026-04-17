@@ -14,7 +14,7 @@ import { setupSocketIO } from './modules/socket.js';
 import { initTypesense } from './modules/typesense.js';
 import { initRedis } from './modules/redis.js';
 import { resolveTenant } from './modules/tenancy.js';
-import { startChangeStreams } from './modules/change_stream.js';
+
 import { createApiLimiter } from './middleware/rate_limit.js';
 import { verifyScreenshotSignature, resolveScreenshotPath } from './modules/screenshot.js';
 import swaggerUi from 'swagger-ui-express';
@@ -199,11 +199,7 @@ async function start() {
 
 	await setupSocketIO(server, sessionMiddleware);
 
-	if (SERVER_MODE === 'app') {
-		startChangeStreams().catch((err) =>
-			console.error('Change streams failed to start:', err.message),
-		);
-	}
+
 }
 
 process.on('unhandledRejection', (reason, promise) => {

@@ -52,12 +52,12 @@ export function startScheduler() {
 		}
 	});
 
-	// Catch-up indexing: find documents with is_indexed:false and index them
-	new Cron('*/30 * * * * *', async () => {
+	// Batch indexing: find documents with is_indexed:false and batch-import to Typesense
+	new Cron('*/20 * * * * *', async () => {
 		try {
 			await indexMissing({ Note, Memory, Url });
 		} catch (err) {
-			console.error('Index catch-up error:', err);
+			console.error('Index batch error:', err);
 		}
 	});
 
@@ -79,5 +79,5 @@ export function startScheduler() {
 		}
 	});
 
-	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, index catch-up every 30s, export cleanup hourly, git sync every 10min');
+	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, batch index every 20s, export cleanup hourly, git sync every 10min');
 }

@@ -192,6 +192,22 @@ export async function indexDocument(host_id, type, doc) {
 }
 
 /**
+ * Batch-import documents into a collection.
+ * Uses Typesense's import endpoint which is optimised for bulk operations.
+ * Returns the array of per-document result objects.
+ */
+export async function importDocuments(host_id, type, docs, action = 'upsert') {
+	const ts = getTypesenseClient();
+	const collectionName = `${type}_${host_id}`;
+	try {
+		return await ts.collections(collectionName).documents().import(docs, { action, dirty_values: 'coerce_or_drop' });
+	} catch (err) {
+		console.error(`[TYPESENSE] import error (${docs.length} docs → ${collectionName}):`, err.message);
+		return err.importResults || [];
+	}
+}
+
+/**
  * Remove a document from a collection.
  */
 export async function removeDocument(host_id, type, docId) {
@@ -406,67 +422,75 @@ export async function initTypesense() {
 
 /**
  * Index documents that have is_indexed: false.
- * Called periodically by the scheduler to catch any documents missed by change streams.
+ * Runs on a scheduler interval. Uses aggregate to group by host_id,
+ * then batch-imports up to BATCH_LIMIT docs per host via Typesense import().
  */
+const BATCH_LIMIT = 100;
+
 export async function indexMissing(models) {
 	const { Note, Memory, Url } = models;
 
 	const typeModelMap = [
-		{ type: 'notes', model: Note, transform: (doc) => ({
-			id: doc._id.toString(),
-			title: doc.title || '',
-			text_content: doc.text_content || '',
-			project_id: doc.project.toString(),
-			tags: doc.tags || [],
-			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
-			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
-		})},
-		{ type: 'memory', model: Memory, transform: (doc) => ({
-			id: doc._id.toString(),
-			title: doc.title || '',
-			content: doc.content || '',
-			project_id: doc.project.toString(),
-			tags: doc.tags || [],
-			source: doc.source || '',
-			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
-			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
-		})},
-		{ type: 'urls', model: Url, transform: (doc) => ({
-			id: doc._id.toString(),
-			url: doc.url || '',
-			title: doc.title || '',
-			description: doc.description || '',
-			text_content: doc.text_content || '',
-			project_id: doc.project.toString(),
-			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
-			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
-		})},
+		{ type: 'notes', model: Note },
+		{ type: 'memory', model: Memory },
+		{ type: 'urls', model: Url },
 	];
 
 	let totalIndexed = 0;
 
-	for (const { type, model, transform } of typeModelMap) {
-		const docs = await model.find({ is_indexed: { $ne: true }, in_trash: { $ne: true } }).lean();
-		if (docs.length === 0) continue;
+	for (const { type, model } of typeModelMap) {
+		// Fast aggregate: get host_ids that have unindexed docs, sorted by most-recently-updated first
+		const hosts = await model.aggregate([
+			{ $match: { is_indexed: { $ne: true }, in_trash: { $ne: true } } },
+			{ $sort: { updatedAt: -1 } },
+			{ $group: { _id: '$host_id' } },
+		]);
 
-		console.log(`indexMissing: ${docs.length} unindexed ${type} documents found`);
+		if (!hosts.length) continue;
 
-		for (const doc of docs) {
-			try {
-				await ensureCollections(doc.host_id);
-				const ts = getTypesenseClient();
-				const collectionName = `${type}_${doc.host_id}`;
-				await ts.collections(collectionName).documents().upsert(transform(doc));
-				await model.updateOne({ _id: doc._id }, { $set: { is_indexed: true } });
-				totalIndexed++;
-			} catch (err) {
-				console.error(`indexMissing error [${type}/${doc._id}]:`, err.message);
+		for (const { _id: host_id } of hosts) {
+			await ensureCollections(host_id);
+
+			const docs = await model
+				.find({ host_id, is_indexed: { $ne: true }, in_trash: { $ne: true } })
+				.sort({ updatedAt: -1 })
+				.limit(BATCH_LIMIT)
+				.lean();
+
+			if (!docs.length) continue;
+
+			const tsDocs = docs.map((doc) => toTypesenseDoc(type, doc));
+			const results = await importDocuments(host_id, type, tsDocs);
+
+			// Separate successes and failures
+			const successIds = [];
+			const failedIds = [];
+			for (let i = 0; i < results.length; i++) {
+				if (results[i].success) {
+					successIds.push(docs[i]._id);
+				} else {
+					failedIds.push({ id: docs[i]._id.toString(), error: results[i].error });
+				}
+			}
+
+			// Mark successful docs as indexed in one updateMany
+			if (successIds.length) {
+				await model.updateMany({ _id: { $in: successIds } }, { $set: { is_indexed: true } });
+				totalIndexed += successIds.length;
+			}
+
+			if (failedIds.length) {
+				console.error(`indexMissing: ${failedIds.length} ${type} failed for host ${host_id}:`, failedIds);
+			}
+
+			if (docs.length > 0) {
+				console.log(`indexMissing: imported ${successIds.length}/${docs.length} ${type} docs for host ${host_id}`);
 			}
 		}
 	}
 
 	if (totalIndexed > 0) {
-		console.log(`indexMissing: indexed ${totalIndexed} documents`);
+		console.log(`indexMissing: indexed ${totalIndexed} documents total`);
 	}
 
 	return totalIndexed;
