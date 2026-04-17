@@ -72,11 +72,11 @@ try {
 // Stripe webhook needs raw body — skip express.json() for this path
 app.use((req, res, next) => {
     if (req.originalUrl === '/billing/webhook') return next();
-    express.json()(req, res, next);
+    express.json({ limit: '25mb' })(req, res, next);
 });
 app.use((req, res, next) => {
     if (req.originalUrl === '/billing/webhook') return next();
-    express.urlencoded({ extended: true })(req, res, next);
+    express.urlencoded({ extended: true, limit: '25mb' })(req, res, next);
 });
 app.use(cookieParser());
 
