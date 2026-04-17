@@ -265,6 +265,29 @@ export async function getCollectionCounts(host_id) {
 }
 
 /**
+ * Get document count for a specific collection, optionally filtered by project.
+ * Uses Typesense search with per_page=0 to get only the count.
+ */
+export async function getFilteredCount(host_id, type, projectId) {
+	const ts = getTypesenseClient();
+	const collectionName = `${type}_${host_id}`;
+	try {
+		const search = {
+			q: '*',
+			query_by: 'title',
+			per_page: 0,
+			exclude_fields: _ts_exlude_default,
+		};
+		if (projectId) search.filter_by = `project_id:=${projectId}`;
+		const result = await ts.collections(collectionName).documents().search(search);
+		return result.found || 0;
+	} catch (err) {
+		console.error(`getFilteredCount: ${collectionName} failed:`, err.message);
+		return 0;
+	}
+}
+
+/**
  * Reindex all documents from MongoDB into Typesense for a host.
  * Drops and recreates collections, then bulk imports from MongoDB.
  */

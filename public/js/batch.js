@@ -1,135 +1,198 @@
 // Batch selection & actions for notes, memories, urls
 (function () {
-    const toolbar = document.getElementById('batch-toolbar');
-    if (!toolbar) return;
+	const toolbar = document.getElementById('batch-toolbar');
+	if (!toolbar) return;
 
-    const batchType = toolbar.dataset.type;
-    const batchActions = document.getElementById('batch-actions');
-    const selectAllCb = document.getElementById('select-all-cb');
-    const batchCount = document.getElementById('batch-count');
-    const batchDeleteBtn = document.getElementById('batch-delete-btn');
-    const batchMoveBtn = document.getElementById('batch-move-btn');
-    const batchCopyBtn = document.getElementById('batch-copy-btn');
+	const batchType = toolbar.dataset.type;
+	const batchActions = document.getElementById('batch-actions');
+	const selectAllCb = document.getElementById('select-all-cb');
+	const batchCount = document.getElementById('batch-count');
+	const batchDeleteBtn = document.getElementById('batch-delete-btn');
+	const batchMoveBtn = document.getElementById('batch-move-btn');
+	const batchCopyBtn = document.getElementById('batch-copy-btn');
+	const selectAllBanner = document.getElementById('select-all-records-banner');
 
-    function getSelected() {
-        return Array.from(document.querySelectorAll('.batch-cb:checked')).map((cb) => cb.value);
-    }
+	let selectAllRecords = false;
+	let totalRecordCount = 0;
 
-    function getAllCheckboxes() {
-        return document.querySelectorAll('.batch-cb');
-    }
+	function getSelected() {
+		return Array.from(document.querySelectorAll('.batch-cb:checked')).map((cb) => cb.value);
+	}
 
-    function updateBatchBar() {
-        const selected = getSelected();
-        const count = selected.length;
-        batchCount.textContent = `${count} selected`;
+	function getAllCheckboxes() {
+		return document.querySelectorAll('.batch-cb');
+	}
 
-        if (count > 0) {
-            batchActions.classList.remove('d-none');
-        } else {
-            batchActions.classList.add('d-none');
-        }
+	function clearSelectAllRecords() {
+		selectAllRecords = false;
+		totalRecordCount = 0;
+		if (selectAllBanner) selectAllBanner.classList.add('d-none');
+	}
 
-        const all = getAllCheckboxes();
-        selectAllCb.checked = all.length > 0 && count === all.length;
-        selectAllCb.indeterminate = count > 0 && count < all.length;
-    }
+	function updateBatchBar() {
+		const selected = getSelected();
+		const count = selectAllRecords ? totalRecordCount : selected.length;
 
-    function resetBatch() {
-        selectAllCb.checked = false;
-        selectAllCb.indeterminate = false;
-        batchActions.classList.add('d-none');
-    }
+		if (selectAllRecords) {
+			batchCount.textContent = `All ${totalRecordCount} selected`;
+		} else {
+			batchCount.textContent = `${count} selected`;
+		}
 
-    selectAllCb.addEventListener('change', () => {
-        const checked = selectAllCb.checked;
-        getAllCheckboxes().forEach((cb) => {
-            cb.checked = checked;
-        });
-        updateBatchBar();
-    });
+		if (count > 0) {
+			batchActions.classList.remove('d-none');
+		} else {
+			batchActions.classList.add('d-none');
+		}
 
-    let lastChecked = null;
+		const all = getAllCheckboxes();
+		selectAllCb.checked = all.length > 0 && selected.length === all.length;
+		selectAllCb.indeterminate = selected.length > 0 && selected.length < all.length;
+	}
 
-    document.addEventListener('change', (e) => {
-        if (e.target.classList.contains('batch-cb')) {
-            updateBatchBar();
-        }
-    });
+	function resetBatch() {
+		selectAllCb.checked = false;
+		selectAllCb.indeterminate = false;
+		batchActions.classList.add('d-none');
+		clearSelectAllRecords();
+	}
 
-    // Shift+click range selection and prevent checkbox clicks from triggering list-item click
-    document.addEventListener('click', (e) => {
-        const cb = e.target.classList.contains('batch-cb')
-            ? e.target
-            : e.target.closest('.batch-cb-wrap')?.querySelector('.batch-cb');
+	selectAllCb.addEventListener('change', async () => {
+		const checked = selectAllCb.checked;
+		getAllCheckboxes().forEach((cb) => {
+			cb.checked = checked;
+		});
 
-        if (!cb) return;
+		if (!checked) {
+			clearSelectAllRecords();
+		}
 
-        if (e.target.closest('.batch-cb-wrap')) {
-            e.stopPropagation();
-        }
+		updateBatchBar();
 
-        if (e.shiftKey && lastChecked && lastChecked !== cb) {
-            const all = Array.from(getAllCheckboxes());
-            const start = all.indexOf(lastChecked);
-            const end = all.indexOf(cb);
-            if (start !== -1 && end !== -1) {
-                const low = Math.min(start, end);
-                const high = Math.max(start, end);
-                const checked = cb.checked;
-                for (let i = low; i <= high; i++) {
-                    all[i].checked = checked;
-                }
-                updateBatchBar();
-            }
-        }
+		if (checked && selectAllBanner) {
+			const params = new URLSearchParams({ type: batchType });
+			if (currentProjectId) params.set('project', currentProjectId);
+			try {
+				const { count } = await api('GET', `/batch/count?${params}`);
+				totalRecordCount = count;
+				const visibleCount = getAllCheckboxes().length;
 
-        lastChecked = cb;
-    }, true);
+				if (count > visibleCount) {
+					selectAllBanner.innerHTML = `All ${visibleCount} items on this page are selected. <a href="#" id="select-all-records-link">Select all ${count} items</a>`;
+					selectAllBanner.classList.remove('d-none');
+				}
+			} catch (e) {
+				// Silently fail — user can still use normal batch actions
+			}
+		}
+	});
 
-    batchDeleteBtn.addEventListener('click', async () => {
-        const ids = getSelected();
-        if (!ids.length) return;
-        const confirmed = await confirmAction('Move to Trash', `${ids.length} item(s) will be moved to trash.`);
-        if (!confirmed) return;
+	if (selectAllBanner) {
+		selectAllBanner.addEventListener('click', (e) => {
+			if (e.target.id === 'select-all-records-link') {
+				e.preventDefault();
+				selectAllRecords = true;
+				batchCount.textContent = `All ${totalRecordCount} selected`;
+				selectAllBanner.innerHTML = `All ${totalRecordCount} items are selected. <a href="#" id="clear-all-records-link">Clear selection</a>`;
+			} else if (e.target.id === 'clear-all-records-link') {
+				e.preventDefault();
+				selectAllCb.checked = false;
+				getAllCheckboxes().forEach((cb) => { cb.checked = false; });
+				clearSelectAllRecords();
+				updateBatchBar();
+			}
+		});
+	}
 
-        await api('POST', '/batch/delete', { type: batchType, ids });
-        showSuccess(`${ids.length} moved to trash`);
-        resetBatch();
-        window.dispatchEvent(new CustomEvent('batch-done'));
-    });
+	let lastChecked = null;
 
-    async function pickProject(action) {
-        const ids = getSelected();
-        if (!ids.length) return;
+	document.addEventListener('change', (e) => {
+		if (e.target.classList.contains('batch-cb')) {
+			if (selectAllRecords && !e.target.checked) {
+				clearSelectAllRecords();
+			}
+			updateBatchBar();
+		}
+	});
 
-        const { projects } = await api('GET', '/projects');
-        const others = projects.filter((p) => p._id !== currentProjectId);
-        if (!others.length) {
-            showError('No other projects available');
-            return;
-        }
+	// Shift+click range selection and prevent checkbox clicks from triggering list-item click
+	document.addEventListener('click', (e) => {
+		const cb = e.target.classList.contains('batch-cb')
+			? e.target
+			: e.target.closest('.batch-cb-wrap')?.querySelector('.batch-cb');
 
-        const { Swal } = await import('/static/js/vendor.js');
-        const options = others.map((p) => `<option value="${p._id}">${p.name}</option>`).join('');
-        const { value: project } = await Swal.fire({
-            title: `${action === 'move' ? 'Move' : 'Copy'} to project`,
-            html: `<select id="batch-project-select" class="form-select">${options}</select>`,
-            showCancelButton: true,
-            confirmButtonText: action === 'move' ? 'Move' : 'Copy',
-            preConfirm: () => document.getElementById('batch-project-select').value,
-        });
-        if (!project) return;
+		if (!cb) return;
 
-        await api('POST', `/batch/${action}`, { type: batchType, ids, project });
-        showSuccess(`${ids.length} ${action === 'move' ? 'moved' : 'copied'}`);
-        resetBatch();
-        window.dispatchEvent(new CustomEvent('batch-done'));
-    }
+		if (e.target.closest('.batch-cb-wrap')) {
+			e.stopPropagation();
+		}
 
-    batchMoveBtn.addEventListener('click', () => pickProject('move'));
-    batchCopyBtn.addEventListener('click', () => pickProject('copy'));
+		if (e.shiftKey && lastChecked && lastChecked !== cb) {
+			const all = Array.from(getAllCheckboxes());
+			const start = all.indexOf(lastChecked);
+			const end = all.indexOf(cb);
+			if (start !== -1 && end !== -1) {
+				const low = Math.min(start, end);
+				const high = Math.max(start, end);
+				const checked = cb.checked;
+				for (let i = low; i <= high; i++) {
+					all[i].checked = checked;
+				}
+				updateBatchBar();
+			}
+		}
 
-    // Expose for list renderers to call after re-rendering items
-    window.updateBatchBar = updateBatchBar;
-})();
+		lastChecked = cb;
+	}, true);
+
+	function buildBatchBody(extra = {}) {
+		const body = { type: batchType, ...extra };
+		if (selectAllRecords) {
+			body.all = true;
+			if (currentProjectId) body.filterProject = currentProjectId;
+		} else {
+			body.ids = getSelected();
+		}
+		return body;
+	}
+
+	function getActionCount() {
+		return selectAllRecords ? totalRecordCount : getSelected().length;
+	}
+
+	batchDeleteBtn.addEventListener('click', async () => {
+		const count = getActionCount();
+		if (!count) return;
+		const confirmed = await confirmAction('Move to Trash', `${count} item(s) will be moved to trash.`);
+		if (!confirmed) return;
+
+		await api('POST', '/batch/delete', buildBatchBody());
+		showSuccess(`${count} moved to trash`);
+		resetBatch();
+		window.dispatchEvent(new CustomEvent('batch-done'));
+	});
+
+	async function pickProject(action) {
+		const count = getActionCount();
+		if (!count) return;
+
+		const { projects } = await api('GET', '/projects');
+		const others = projects.filter((p) => p._id !== currentProjectId);
+		if (!others.length) {
+			showError('No other projects available');
+			return;
+		}
+
+		const { Swal } = await import('/static/js/vendor.js');
+		const options = others.map((p) => `<option value="${p._id}">${p.name}</option>`).join('');
+		const { value: project } = await Swal.fire({
+			title: `${action === 'move' ? 'Move' : 'Copy'} to project`,
+			html: `<select id="batch-project-select" class="form-select">${options}</select>`,
+			showCancelButton: true,
+			confirmButtonText: action === 'move' ? 'Move' : 'Copy',
+			preConfirm: () => document.getElementById('batch-project-select').value,
+		});
+		if (!project) return;
+
+		await api('POST', `/batch/${action}`, buildBatchBody({ project }));
+		showSuccess(`${count} ${action === 'move' ? 'moved' : 'copied'}`);

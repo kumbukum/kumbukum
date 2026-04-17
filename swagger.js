@@ -444,13 +444,27 @@ const swaggerSpec = {
         },
 
         // ---- Batch Operations ----
+        '/batch/count': {
+            get: {
+                tags: ['Batch'],
+                summary: 'Get total item count for select-all',
+                description: 'Returns the total number of items of a given type, optionally filtered by project. Uses Typesense for performance.',
+                parameters: [
+                    { name: 'type', in: 'query', required: true, schema: { type: 'string', enum: ['notes', 'memories', 'urls'] } },
+                    { name: 'project', in: 'query', schema: { type: 'string' }, description: 'Filter by project ID' },
+                ],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { count: { type: 'integer' } } } } } },
+                },
+            },
+        },
         '/batch/delete': {
             post: {
                 tags: ['Batch'],
                 summary: 'Batch delete items',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } } }, required: ['type', 'ids'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, delete all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by project ID when all=true' } }, required: ['type'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, deleted: { type: 'integer' } } } } } },
@@ -463,7 +477,7 @@ const swaggerSpec = {
                 summary: 'Batch move items to a project',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, project: { type: 'string' } }, required: ['type', 'ids', 'project'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, move all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by source project ID when all=true' }, project: { type: 'string' } }, required: ['type', 'project'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, moved: { type: 'integer' } } } } } },
@@ -476,7 +490,7 @@ const swaggerSpec = {
                 summary: 'Batch copy items to a project',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, project: { type: 'string' } }, required: ['type', 'ids', 'project'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, copy all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by source project ID when all=true' }, project: { type: 'string' } }, required: ['type', 'project'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, copied: { type: 'integer' } } } } } },

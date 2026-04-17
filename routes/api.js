@@ -17,7 +17,7 @@ import { listConversations, deleteConversation } from '../modules/typesense.js';
 import * as trashService from '../services/trash_service.js';
 import { crawlSite } from '../modules/crawler.js';
 import { getProjectCounts } from '../services/project_service.js';
-import { reindexHost, searchCollection } from '../modules/typesense.js';
+import { reindexHost, searchCollection, getFilteredCount } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
@@ -271,11 +271,38 @@ router.post('/urls/search', async (req, res) => {
 
 // ---- Batch Operations ----
 
+const BATCH_TYPES = ['notes', 'memories', 'urls'];
+const TS_TYPE_MAP = { notes: 'notes', memories: 'memory', urls: 'urls' };
+
+async function resolveBatchIds(host_id, type, body) {
+	if (body.all) {
+		const Model = { notes: Note, memories: Memory, urls: Url }[type];
+		const query = { host_id, in_trash: { $ne: true } };
+		if (body.filterProject) query.project = body.filterProject;
+		return (await Model.find(query).select('_id').lean()).map((d) => d._id.toString());
+	}
+	return body.ids || [];
+}
+
+router.get('/batch/count', async (req, res) => {
+	try {
+		const { type, project } = req.query;
+		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'valid type required' });
+		const count = await getFilteredCount(req.host_id, TS_TYPE_MAP[type], project || null);
+		res.json({ count });
+	} catch (err) {
+		console.error('Batch count error:', err);
+		res.status(500).json({ error: 'Failed to get count' });
+	}
+});
+
 router.post('/batch/delete', async (req, res) => {
 	try {
-		const { type, ids } = req.body;
-		if (!ids?.length || !type) return res.status(400).json({ error: 'type and ids required' });
-		if (!['notes', 'memories', 'urls'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		const { type } = req.body;
+		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+
+		const ids = await resolveBatchIds(req.host_id, type, req.body);
+		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
 		const deleteFn = { notes: noteService.deleteNote, memories: memoryService.deleteMemory, urls: urlService.deleteUrl }[type];
 		const ctx = auditCtx(req);
@@ -290,9 +317,12 @@ router.post('/batch/delete', async (req, res) => {
 
 router.post('/batch/move', async (req, res) => {
 	try {
-		const { type, ids, project } = req.body;
-		if (!ids?.length || !type || !project) return res.status(400).json({ error: 'type, ids, and project required' });
-		if (!['notes', 'memories', 'urls'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		const { type, project } = req.body;
+		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (!project) return res.status(400).json({ error: 'project required' });
+
+		const ids = await resolveBatchIds(req.host_id, type, req.body);
+		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
 		const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl }[type];
 		const ctx = auditCtx(req);
@@ -308,9 +338,12 @@ router.post('/batch/move', async (req, res) => {
 
 router.post('/batch/copy', async (req, res) => {
 	try {
-		const { type, ids, project } = req.body;
-		if (!ids?.length || !type || !project) return res.status(400).json({ error: 'type, ids, and project required' });
-		if (!['notes', 'memories', 'urls'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		const { type, project } = req.body;
+		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (!project) return res.status(400).json({ error: 'project required' });
+
+		const ids = await resolveBatchIds(req.host_id, type, req.body);
+		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
 		const Model = { notes: Note, memories: Memory, urls: Url }[type];
 		const docs = await Model.find({ _id: { $in: ids }, host_id: req.host_id }).lean();
