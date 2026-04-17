@@ -1,23 +1,23 @@
 # MCP Server
 
-Kumbukum includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes 28 tools for LLM clients like Claude Desktop, Cursor, and other MCP-compatible applications.
+Kumbukum includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes 28 tools for Claude Desktop, Cursor, and other MCP-compatible clients.
+
+Connect once, then let every compatible AI tool retrieve trusted notes, memories, URLs, and links from the same shared memory layer.
 
 ## Features
 
 - **28 tools** across notes, memories, URLs, projects, graph, search, and AI chat
+- **Shared memory across tools** — capture once, retrieve everywhere
+- **Fast setup** — connect most MCP clients in about a minute
 - **Automatic default project** — tools work without specifying a project
 - **Three transports**: stdio (default), SSE, and Streamable HTTP
-- **Token-based auth** via `Authorization: Bearer` header or `ACCESS-TOKEN` env var
+- **Token-based auth** via `Authorization: Bearer`, `access-token`, or stdio env vars
 
 ## Quick Start
 
 ```bash
-# Set your access token
-export ACCESS-TOKEN=your-access-token
-export API-BASE-URL=https://your-instance.com
-
 # Run with stdio transport (default)
-node apps/mcp/server.js
+env 'ACCESS-TOKEN'=your-access-token API_BASE_URL=https://your-instance.com node apps/mcp/server.js
 
 # Run with HTTP transport
 node apps/mcp/server.js --transport http --port 3002

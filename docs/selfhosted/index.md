@@ -1,6 +1,6 @@
 # Self-Hosted
 
-Run Kumbukum on your own infrastructure. The self-hosted edition is fully open source and includes all the same features as [Kumbukum Cloud](/cloud/).
+Run Kumbukum on infrastructure you control. The self-hosted edition is fully open source and includes the same product features as [Kumbukum Cloud](/cloud/).
 
 ## System Requirements
 
@@ -25,4 +25,4 @@ Kumbukum is open source under the [AGPL v3 license](https://github.com/kumbukum/
 git clone https://github.com/kumbukum/kumbukum.git
 ```
 
-Prefer a managed setup? Try [Kumbukum Cloud](/cloud/) instead.
+Prefer a managed setup with the same shared memory layer? Try [Kumbukum Cloud](/cloud/) instead.

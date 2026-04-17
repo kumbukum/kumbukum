@@ -1,6 +1,6 @@
 # Memories API
 
-Memories are personal knowledge entries scoped to the authenticated user.
+Memories are short-form context entries scoped to the authenticated user.
 
 ## List Memories
 

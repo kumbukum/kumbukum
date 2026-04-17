@@ -2,13 +2,13 @@
 
 Welcome to Kumbukum — The memory layer for AI-native teams.
 
-Kumbukum is a place that turns scattered company knowledge into AI-ready context every assistant can use. It collects everything worth remembering: notes you write, things you want to remember, and links you come across. Over time it becomes your team's memory — searchable, connected, and always available to you and your AI tools.
+Kumbukum is a place that turns scattered company knowledge into AI-ready context every assistant can use. It gives your team trusted memory you can inspect, control, and reuse across AI tools. Over time, notes, memories, URLs, and relationships compound into shared context instead of resetting every session.
 
 ## Philosophy
 
-The idea behind Kumbukum is simple: knowledge is most powerful when it's connected and easily accessible. By bringing together notes, memories, and URLs in one place, and layering on AI chat and MCP integration, we create a system where your knowledge isn't just stored — it's alive. It learns with you, surfaces insights when you need them, and becomes a shared memory that your whole team can tap into.
+The idea behind Kumbukum is simple: context compounds when it is connected, searchable, and reusable. By bringing together notes, memories, and URLs in one place, then layering on AI chat and MCP integration, Kumbukum gives your team a shared memory system instead of another black-box prompt history.
 
-Most AI vendors hide the memory layer in a black box. With Kumbukum, you have full control and visibility over your knowledge. Therefore, we created a whole app, where you can edit, add, organize it, connect it, and use it in whatever way makes sense for you and your team.
+Most AI vendors hide the memory layer in a black box. With Kumbukum, you can inspect what is stored, edit it, organize it, connect it, and reuse it however your team works best.
 
 ## What's Inside
 
@@ -22,7 +22,7 @@ Memories are primarily used by your AI tools to provide context and improve resp
 
 ### URLs
 
-Save links with a single click. Kumbukum automatically extracts the title, description, and page content so you can search through your bookmarks by what they contain, not just their URL. Furthermore, you can enable full-site crawling to capture dynamic content and deeper context from the pages you save (think your entire knowledge base).
+Save links with a single click. Kumbukum automatically extracts the title, description, and page content so you can search through your bookmarks by what they contain, not just their URL. You can also enable full-site crawling to capture deeper context from the sites your team relies on.
 
 ### Knowledge Graph
 
@@ -38,7 +38,7 @@ There are a few ways to get things into Kumbukum:
 - **AI Chat** — Ask the built-in chat to create notes, save URLs, or store memories for you
 - **MCP Server** — Connect Claude Desktop, Cursor, or any MCP-compatible AI tool and let it read and write directly
 
-The MCP integration is where Kumbukum really shines. Instead of losing context between AI conversations, your AI assistant can store what it learns and recall it later. It becomes a shared memory layer between you and your tools.
+The MCP integration is where Kumbukum really shines. Instead of losing context between AI conversations, your assistant can store what it learns and recall it later. It becomes shared memory across your tools, sessions, and workflows.
 
 
 ## Next Steps

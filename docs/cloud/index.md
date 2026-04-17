@@ -1,23 +1,25 @@
 # Kumbukum Cloud
 
-Kumbukum Cloud is the fully managed edition — we handle hosting, updates, backups, and infrastructure so you can focus on your knowledge.
+Kumbukum Cloud is the fully managed edition of Kumbukum. You get the same shared memory layer for your team without running the infrastructure yourself.
 
 ## Get Started
 
 1. Sign up at [app.kumbukum.com](https://app.kumbukum.com)
 2. Create your first project
-3. Start adding notes, memories, and URLs
+3. Generate a personal access token and connect your AI tools
+4. Start capturing notes, memories, and URLs that your assistants can reuse
 
 ## What's Included
 
-- **Managed Infrastructure** — MongoDB, Redis, Typesense, and the MCP server are all provisioned for you
-- **Automatic Updates** — Always running the latest version
-- **Daily Backups** — Your data is backed up automatically
+- **Managed Infrastructure** — MongoDB, Redis, Typesense, and the MCP endpoint are already running for you
+- **Faster Setup** — Connect Claude Desktop, Cursor, or another MCP client in about a minute
+- **Automatic Updates** — Stay on the latest version without scheduling maintenance windows
+- **Daily Backups** — Your workspace data is backed up automatically
 - **SSL & Security** — HTTPS by default with managed certificates
 
 ## Cloud vs Self-Hosted
 
-Kumbukum Cloud and the self-hosted edition share the exact same features. The only difference is who runs the infrastructure.
+Kumbukum Cloud and the self-hosted edition share the same product features. The difference is who runs the infrastructure.
 
 | | Cloud | Self-Hosted |
 | --- | --- | --- |

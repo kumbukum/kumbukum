@@ -1,5 +1,7 @@
 # MCP Server Setup
 
+Most MCP clients can be connected in about a minute. Use Cloud for the fastest path, or point a self-hosted client at your own Kumbukum instance.
+
 ## Prerequisites
 
 - A running Kumbukum instance
@@ -33,7 +35,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
             "args": ["/path/to/kumbukum/apps/mcp/server.js"],
             "env": {
                 "ACCESS-TOKEN": "your-access-token",
-                "API-BASE-URL": "https://your-instance.com"
+                "API_BASE_URL": "https://your-instance.com"
             }
         }
     }
@@ -57,6 +59,7 @@ No additional setup required — the server is always running.
 
 == Self-Hosted
 ```bash
+env 'ACCESS-TOKEN'=your-access-token API_BASE_URL=https://your-instance.com \
 node apps/mcp/server.js --transport http --port 3002
 ```
 
@@ -69,10 +72,18 @@ In Docker Compose, the MCP server runs as a separate service on port 3002.
 
 | Variable              | Description                           | Default                  |
 | --------------------- | ------------------------------------- | ------------------------ |
-| `ACCESS-TOKEN`        | Personal access token (required)      | —                        |
-| `API-BASE-URL`        | Base URL of the Kumbukum instance     | `http://localhost:3000`  |
-| `PROJECT-ID`          | Override default project ID           | Auto-detected            |
+| `ACCESS-TOKEN`        | Personal access token for stdio transport | —                    |
+| `API_BASE_URL`        | Base URL of the Kumbukum instance     | `http://localhost:3000`  |
+| `PROJECT-ID`          | Override default project for stdio    | Auto-detected            |
 | `PORT`                | HTTP transport port                   | `3002`                   |
+
+::: tip Shell syntax note
+`ACCESS-TOKEN` and `PROJECT-ID` contain hyphens because they are read directly by the MCP server. In shell commands, pass them with `env`, for example:
+
+```bash
+env 'ACCESS-TOKEN'=your-access-token 'PROJECT-ID'=your-project-id API_BASE_URL=https://your-instance.com node apps/mcp/server.js
+```
+:::
 
 ::: tip HTTP Transport Headers
 When using the HTTP or SSE transport, pass your credentials as headers instead of environment variables:
@@ -87,4 +98,4 @@ When using the HTTP or SSE transport, pass your credentials as headers instead o
 
 On startup, the MCP server calls `GET /projects` and picks the project with `is_default: true`. All create tools (`create_note`, `store_memory`, `save_url`) fall back to this project when `project_id` is omitted.
 
-Set `PROJECT-ID` (env var for stdio) or the `X-Project-Id` header (HTTP/SSE) to override this behavior.
+Set `PROJECT-ID` (passed via `env` for stdio) or the `X-Project-Id` header (HTTP/SSE) to override this behavior.

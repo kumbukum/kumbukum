@@ -3,8 +3,8 @@ layout: home
 
 hero:
     name: Kumbukum
-    text: Turn scattered company knowledge into AI-ready context
-    tagline: Notes, Memory, URLs, Knowledge Graph — with AI Chat and MCP integration. Available as a managed cloud service or self-hosted.
+    text: Turn scattered company knowledge into AI-ready context.
+    tagline: Open source memory infrastructure for teams. Stop reset loops. Give every AI tool trusted memory you can inspect, control, and reuse.
     actions:
         - theme: brand
           text: Get Started
@@ -20,13 +20,13 @@ features:
     - title: Notes
       details: Rich-text notes with full-text and semantic search powered by Typesense.
     - title: Memories
-      details: Persistent AI memory — store decisions, context, and learnings that survive across sessions.
+      details: Persistent AI memory for decisions, context, and learnings that survive across sessions.
     - title: URL Bookmarks
       details: Save URLs with auto-extracted content. Optional full-site crawling with Playwright.
     - title: Knowledge Graph
       details: Connect notes, memories, and URLs with manual, tag-based, and semantic links.
     - title: AI Chat
-      details: Chat with your knowledge base. Semantic search across all data types with LLM context building.
+      details: Search, analyze, and manage your shared memory system with natural language.
     - title: MCP Server
       details: 28 tools for Claude Desktop and other LLM clients via Model Context Protocol.
     - title: Browser Extension

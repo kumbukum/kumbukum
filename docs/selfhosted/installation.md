@@ -3,13 +3,21 @@
 ## Running with Docker Compose
 
 ```bash
-git clone https://github.com/kumbukum/kumbukum.git
-cd kumbukum
-cp .env.example .env  # edit with your settings
-docker compose up -d
+curl -O https://raw.githubusercontent.com/kumbukum/kumbukum/main/compose.prod.yml
+
+APP_URL=https://your-instance.com \
+SESSION_SECRET=your-session-secret \
+JWT_SECRET=your-jwt-secret \
+TYPESENSE_API_KEY=your-typesense-key \
+SMTP_HOST=smtp.example.com \
+SMTP_USER=you@example.com \
+SMTP_PASS=your-smtp-password \
+SMTP_FROM=noreply@example.com \
+GOOGLE_API_KEY=your-google-api-key \
+docker compose -f compose.prod.yml up -d
 ```
 
-The app will be available at `http://localhost:3000`.
+The app will be available at your configured `APP_URL`.
 
 ## Services
 
@@ -30,12 +38,12 @@ See [Configuration](/selfhosted/configuration) for the full list. Key variables:
 | ---------------- | -------------------------------------------- |
 | `MONGO_URI`      | MongoDB connection string                    |
 | `REDIS_URL`      | Redis connection string                      |
-| `SESSION_SECRET`  | Express session secret                       |
+| `SESSION_SECRET` | Express session secret                       |
 | `JWT_SECRET`     | JWT signing secret                           |
 | `APP_URL`        | Public URL of the application                |
-| `LLM_PROVIDER`   | AI provider: openai, google, groq, cerebras  |
-| `LLM_API_KEY`    | API key for the LLM provider                 |
-| `LLM_MODEL`      | Model name to use                            |
+| `TYPESENSE_API_KEY` | Typesense API key                         |
+| `GOOGLE_API_KEY` | Google AI API key                            |
+| `OPENAI_API_KEY` | OpenAI API key                               |
 
 ## Local Development
 

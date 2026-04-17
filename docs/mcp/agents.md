@@ -1,6 +1,6 @@
 # Agent Configuration
 
-To get the most out of Kumbukum with AI coding agents (GitHub Copilot, Cursor, Windsurf, Claude Code, etc.), add an `AGENTS.md` file to the root of your project. This tells agents how to use Kumbukum as their persistent memory and knowledge store.
+To get the most out of Kumbukum with AI coding agents (GitHub Copilot, Cursor, Windsurf, Claude Code, etc.), add an `AGENTS.md` file to the root of your project. This tells agents how to use Kumbukum as their persistent memory layer and shared knowledge store.
 
 ## Why?
 
@@ -9,7 +9,7 @@ Without instructions, AI agents don't know Kumbukum exists. An `AGENTS.md` file 
 - **Search before acting** — Check Kumbukum for existing context before starting work
 - **Store learnings** — Save decisions, patterns, and outcomes after completing tasks
 - **Use notes for documentation** — Keep project knowledge in Kumbukum, not scattered in files
-- **Connect knowledge** — Link related items in the knowledge graph
+- **Connect knowledge** — Link related items so context compounds instead of resetting
 
 ## Recommended AGENTS.md
 
