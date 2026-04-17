@@ -12,24 +12,27 @@ let client = null;
 const streams = [];
 let healthInterval = null;
 
-// ── Concurrency limiter ─────────────────────────────────────────────
-const MAX_CONCURRENT = 1;
-let _running = 0;
+// ── Serial async queue ──────────────────────────────────────────────
+// Events are processed one at a time to avoid overwhelming Typesense.
 const _queue = [];
+let _processing = false;
 
 function enqueue(fn) {
-	return new Promise((resolve, reject) => {
-		_queue.push(() => fn().then(resolve, reject));
-		_drain();
-	});
+	_queue.push(fn);
+	if (!_processing) _processQueue();
 }
 
-function _drain() {
-	while (_running < MAX_CONCURRENT && _queue.length) {
-		_running++;
+async function _processQueue() {
+	_processing = true;
+	while (_queue.length) {
 		const task = _queue.shift();
-		task().finally(() => { _running--; _drain(); });
+		try {
+			await task();
+		} catch (err) {
+			console.error('Change stream queue error:', err.message);
+		}
 	}
+	_processing = false;
 }
 
 // ── ensureCollections cache (per host, per process) ─────────────────
@@ -59,59 +62,32 @@ async function withRetry(fn, label, maxAttempts = 3) {
 	}
 }
 
-// ── Batch queue per collection ──────────────────────────────────────
-const FLUSH_INTERVAL_MS = 500;
-const _batches = new Map(); // key: collectionName → { items, removes, timer }
+// ── Index or remove a single change event ───────────────────────────
+async function processChange(change, typesenseType, dbCollection) {
+	const { operationType, fullDocument } = change;
 
-function getBatch(collectionName) {
-	if (!_batches.has(collectionName)) {
-		_batches.set(collectionName, { items: new Map(), removes: new Set(), timer: null });
+	if ((operationType === 'insert' || operationType === 'update' || operationType === 'replace') && fullDocument) {
+		const host_id = fullDocument.host_id;
+		if (!host_id) return;
+
+		// Skip events where only is_indexed changed (avoids infinite loop)
+		if (operationType === 'update' && change.updateDescription) {
+			const fields = Object.keys(change.updateDescription.updatedFields || {});
+			if (fields.length === 1 && fields[0] === 'is_indexed') return;
+		}
+
+		const docId = fullDocument._id.toString();
+
+		if (fullDocument.in_trash) {
+			await withRetry(() => removeDocument(host_id, typesenseType, docId), `remove [${typesenseType}/${docId}]`);
+		} else {
+			await ensureCollectionsCached(host_id);
+			const tsDoc = toTypesenseDoc(typesenseType, fullDocument);
+			await withRetry(() => indexDocument(host_id, typesenseType, tsDoc), `index [${typesenseType}/${docId}]`);
+			dbCollection.updateOne({ _id: fullDocument._id }, { $set: { is_indexed: true } }).catch(() => {});
+		}
 	}
-	return _batches.get(collectionName);
-}
-
-function scheduleBatchFlush(collectionName, typesenseType, dbCollection) {
-	const batch = getBatch(collectionName);
-	if (batch.timer) return;
-	batch.timer = setTimeout(() => flushBatch(collectionName, typesenseType, dbCollection), FLUSH_INTERVAL_MS);
-}
-
-async function flushBatch(collectionName, typesenseType, dbCollection) {
-	const batch = _batches.get(collectionName);
-	if (!batch) return;
-	batch.timer = null;
-
-	const items = new Map(batch.items);
-	const removes = new Set(batch.removes);
-	batch.items.clear();
-	batch.removes.clear();
-
-	// Process removes
-	for (const docId of removes) {
-		enqueue(async () => {
-			try {
-				// host_id embedded in the docId entry: stored as "host_id:docId"
-				const [host_id, id] = docId.split(':');
-				await withRetry(() => removeDocument(host_id, typesenseType, id), `remove [${typesenseType}/${id}]`);
-			} catch (err) {
-				console.error(`Change stream remove error [${typesenseType}]:`, err.message);
-			}
-		});
-	}
-
-	// Process upserts
-	for (const [docId, { host_id, fullDocument }] of items) {
-		enqueue(async () => {
-			try {
-				await ensureCollectionsCached(host_id);
-				const tsDoc = toTypesenseDoc(typesenseType, fullDocument);
-				await withRetry(() => indexDocument(host_id, typesenseType, tsDoc), `index [${typesenseType}/${docId}]`);
-				dbCollection.updateOne({ _id: fullDocument._id }, { $set: { is_indexed: true } }).catch(() => {});
-			} catch (err) {
-				console.error(`Change stream error [${typesenseType}]:`, err.message);
-			}
-		});
-	}
+	// Deletes: cleanup handled at the service layer (trash_service) before MongoDB delete
 }
 
 function watchCollection(db, collectionName, typesenseType) {
@@ -119,37 +95,9 @@ function watchCollection(db, collectionName, typesenseType) {
 	const stream = collection.watch([], { fullDocument: 'updateLookup' });
 
 	stream.on('change', (change) => {
-		try {
-			const { operationType, fullDocument } = change;
-
-			if ((operationType === 'insert' || operationType === 'update' || operationType === 'replace') && fullDocument) {
-				const host_id = fullDocument.host_id;
-				if (!host_id) return;
-
-				// Skip events where only is_indexed changed (avoids infinite loop)
-				if (operationType === 'update' && change.updateDescription) {
-					const fields = Object.keys(change.updateDescription.updatedFields || {});
-					if (fields.length === 1 && fields[0] === 'is_indexed') return;
-				}
-
-				const docId = fullDocument._id.toString();
-				const batch = getBatch(collectionName);
-
-				// If trashed, remove from Typesense instead of indexing
-				if (fullDocument.in_trash) {
-					batch.items.delete(docId);
-					batch.removes.add(`${host_id}:${docId}`);
-				} else {
-					batch.removes.delete(`${host_id}:${docId}`);
-					batch.items.set(docId, { host_id, fullDocument });
-				}
-
-				scheduleBatchFlush(collectionName, typesenseType, collection);
-			}
-			// Deletes: cleanup handled at the service layer (trash_service) before MongoDB delete
-		} catch (err) {
+		enqueue(() => processChange(change, typesenseType, collection).catch((err) => {
 			console.error(`Change stream error [${typesenseType}]:`, err.message);
-		}
+		}));
 	});
 
 	stream.on('error', (err) => {
@@ -203,11 +151,9 @@ export async function stopChangeStreams() {
 		healthInterval = null;
 	}
 
-	// Clear pending batch timers
-	for (const [, batch] of _batches) {
-		if (batch.timer) clearTimeout(batch.timer);
-	}
-	_batches.clear();
+	// Drain pending queue items
+	_queue.length = 0;
+	_processing = false;
 	_ensuredHosts.clear();
 
 	for (const stream of streams) {
