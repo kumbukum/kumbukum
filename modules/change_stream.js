@@ -13,7 +13,7 @@ const streams = [];
 let healthInterval = null;
 
 // ── Concurrency limiter ─────────────────────────────────────────────
-const MAX_CONCURRENT = 3;
+const MAX_CONCURRENT = 1;
 let _running = 0;
 const _queue = [];
 
@@ -47,7 +47,7 @@ async function withRetry(fn, label, maxAttempts = 3) {
 		try {
 			return await fn();
 		} catch (err) {
-			const isTimeout = /timeout|ECONNABORTED|ECONNRESET|ECONNREFUSED/i.test(err.message);
+			const isTimeout = /timeout|ECONNABORTED|ECONNRESET|ECONNREFUSED|Lagging/i.test(err.message);
 			if (attempt < maxAttempts && isTimeout) {
 				const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
 				console.warn(`${label}: attempt ${attempt} failed (${err.message}), retrying in ${delay}ms...`);
