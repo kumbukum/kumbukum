@@ -26,7 +26,9 @@ function parseTypesenseConfig() {
 			},
 		],
 		apiKey: process.env.TYPESENSE_API_KEY || 'kumbukum-dev-key',
-		connectionTimeoutSeconds: 30,
+		connectionTimeoutSeconds: 60,
+		retryIntervalSeconds: 1,
+		numRetries: 2,
 	};
 }
 

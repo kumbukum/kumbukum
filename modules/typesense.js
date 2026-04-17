@@ -57,11 +57,11 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
-				num_dim: 1024,
+				num_dim: 384,
 				embed: {
 					from: ['title', 'text_content'],
 					model_config: {
-						model_name: 'ts/multilingual-e5-large',
+						model_name: 'ts/multilingual-e5-small',
 					},
 				},
 			},
@@ -84,11 +84,11 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
-				num_dim: 1024,
+				num_dim: 384,
 				embed: {
 					from: ['title', 'content'],
 					model_config: {
-						model_name: 'ts/multilingual-e5-large',
+						model_name: 'ts/multilingual-e5-small',
 					},
 				},
 			},
@@ -111,11 +111,11 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
-				num_dim: 1024,
+				num_dim: 384,
 				embed: {
 					from: ['title', 'description', 'text_content'],
 					model_config: {
-						model_name: 'ts/multilingual-e5-large',
+						model_name: 'ts/multilingual-e5-small',
 					},
 				},
 			},
@@ -137,11 +137,11 @@ const schemas = {
 			{
 				name: 'embedding',
 				type: 'float[]',
-				num_dim: 1024,
+				num_dim: 384,
 				embed: {
 					from: ['title', 'text_content'],
 					model_config: {
-						model_name: 'ts/multilingual-e5-large',
+						model_name: 'ts/multilingual-e5-small',
 					},
 				},
 			},
