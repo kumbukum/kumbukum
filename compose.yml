@@ -127,9 +127,10 @@ services:
         extends:
             file: ./compose.base.yml
             service: base
-        command: ["npm", "run", "start:scheduler"]
+        command: ["npm", "run", "start"]
         environment:
             <<: *env
+            SERVER_MODE: scheduler
         restart: unless-stopped
         depends_on:
             init:

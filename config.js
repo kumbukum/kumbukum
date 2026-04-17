@@ -10,7 +10,10 @@ function parseTypesenseConfig() {
 			if (!parsed.nodes || !Array.isArray(parsed.nodes)) {
 				throw new Error('TYPESENSE_NODES must include a "nodes" array');
 			}
-			return parsed;
+			return {
+				connectionTimeoutSeconds: 900,
+				...parsed,
+			};
 		} catch (err) {
 			console.error('Invalid TYPESENSE_NODES JSON:', err.message);
 			console.error('TYPESENSE_NODES raw value:', JSON.stringify(nodesEnv));
@@ -26,9 +29,7 @@ function parseTypesenseConfig() {
 			},
 		],
 		apiKey: process.env.TYPESENSE_API_KEY || 'kumbukum-dev-key',
-		connectionTimeoutSeconds: 60,
-		retryIntervalSeconds: 1,
-		numRetries: 2,
+		connectionTimeoutSeconds: 900,
 	};
 }
 

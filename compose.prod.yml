@@ -62,7 +62,7 @@ services:
 
   ws:
     image: ghcr.io/kumbukum/kumbukum:latest
-    command: ["npm", "run", "start:ws"]
+    command: ["npm", "run", "start"]
     ports:
       - "3001:3001"
     environment:
@@ -100,8 +100,10 @@ services:
 
   scheduler:
     image: ghcr.io/kumbukum/kumbukum:latest
-    command: ["npm", "run", "start:scheduler"]
-    environment: *environment
+    command: ["npm", "run", "start"]
+    environment:
+      <<: *environment
+      SERVER_MODE: scheduler
     volumes:
       - assets_data:/opt/kumbukum/assets
     depends_on:

@@ -193,13 +193,18 @@ async function start() {
 	await initRedis();
 	await initTypesense();
 
+	if (SERVER_MODE === 'scheduler') {
+		const { startScheduler } = await import('./modules/scheduler.js');
+		startScheduler();
+		console.log(`Kumbukum scheduler running [${config.env}]`);
+		return;
+	}
+
 	const server = app.listen(config.port, () => {
 		console.log(`Kumbukum ${SERVER_MODE} running on port ${config.port} [${config.env}]`);
 	});
 
 	await setupSocketIO(server, sessionMiddleware);
-
-
 }
 
 process.on('unhandledRejection', (reason, promise) => {

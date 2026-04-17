@@ -54,7 +54,7 @@ export function startScheduler() {
 	new Cron('*/20 * * * * *', async () => {
 		try {
 			const indexed = await indexMissing({ Note, Memory, Url });
-			console.log(`Index batch complete: indexed ${indexed} document(s)`);
+			if (indexed > 0) console.log(`Index batch complete: indexed ${indexed} document(s)`);
 		} catch (err) {
 			console.error('Index batch error:', err);
 		}
