@@ -1,4 +1,4 @@
-import { searchAll, conversationSearch, ensureConversationModel, getCollectionCounts } from '../modules/typesense.js';
+import { searchAll, conversationSearch, getCollectionCounts } from '../modules/typesense.js';
 import { nlSearchCompletion, chatModelCompletion } from '../modules/llm_client.js';
 import * as noteService from './note_service.js';
 import * as memoryService from './memory_service.js';
@@ -79,9 +79,6 @@ async function classifyIntent(query) {
  * @returns {{ answer: string, results: object, action: object|null, conversationId: string, displayIn: 'panel'|'chat' }}
  */
 export async function processChat({ hostId, userId, query, conversationId, projectId, ctx = {} }) {
-	// Ensure conversation model exists (idempotent, fast after first call)
-	await ensureConversationModel(hostId, userId);
-
 	// Classify intent
 	const intent = await classifyIntent(query);
 

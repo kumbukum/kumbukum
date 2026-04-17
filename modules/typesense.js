@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto';
 import Typesense from 'typesense';
 import config from '../config.js';
 import { emitToTenant } from './socket.js';
+import { getRedisClient } from './redis.js';
 
 let client;
 
@@ -10,6 +12,33 @@ const _token_separators = ['+', '-', '@', '.', '_', ' ', '=', '\\', ';', ',', ':
 
 // Track conversation models whose api_key has been synced this process lifetime
 const syncedConvoModels = new Set();
+
+function getConversationModelSyncKey(modelId) {
+	return `conversation-model-sync:${modelId}`;
+}
+
+function buildConversationModelSignature(modelName, apiKey, maxBytes = 102400) {
+	const keyHash = createHash('sha256').update(apiKey || '').digest('hex');
+	return JSON.stringify({ modelName, keyHash, maxBytes });
+}
+
+async function getStoredConversationModelSignature(modelId) {
+	try {
+		const redis = getRedisClient();
+		return await redis.get(getConversationModelSyncKey(modelId));
+	} catch {
+		return null;
+	}
+}
+
+async function setStoredConversationModelSignature(modelId, signature) {
+	try {
+		const redis = getRedisClient();
+		await redis.set(getConversationModelSyncKey(modelId), signature, 'EX', 86400);
+	} catch {
+		// ignore cache failures
+	}
+}
 
 export function getTypesenseClient() {
 	if (!client) {
@@ -366,6 +395,16 @@ export async function reindexHost(host_id, models) {
 		}
 	}
 
+	const totalQueued = Object.values(results).reduce((sum, entry) => sum + (entry.queued || 0), 0);
+	if (totalQueued > 0) {
+		await setStoredReindexStatus(host_id, {
+			total_queued: totalQueued,
+			started_at: new Date().toISOString(),
+		});
+	} else {
+		await clearStoredReindexStatus(host_id);
+	}
+
 	return results;
 }
 
@@ -389,6 +428,39 @@ export async function initTypesense() {
  * then batch-imports up to BATCH_LIMIT docs per host via Typesense import().
  */
 const BATCH_LIMIT = 100;
+const REINDEX_STATUS_TTL_SECONDS = 3600;
+
+function getReindexStatusKey(host_id) {
+	return `reindex-status:${host_id}`;
+}
+
+async function getStoredReindexStatus(host_id) {
+	try {
+		const redis = getRedisClient();
+		const raw = await redis.get(getReindexStatusKey(host_id));
+		return raw ? JSON.parse(raw) : null;
+	} catch {
+		return null;
+	}
+}
+
+async function setStoredReindexStatus(host_id, data) {
+	try {
+		const redis = getRedisClient();
+		await redis.set(getReindexStatusKey(host_id), JSON.stringify(data), 'EX', REINDEX_STATUS_TTL_SECONDS);
+	} catch {
+		// ignore status cache failures — reindex still works
+	}
+}
+
+async function clearStoredReindexStatus(host_id) {
+	try {
+		const redis = getRedisClient();
+		await redis.del(getReindexStatusKey(host_id));
+	} catch {
+		// ignore status cache failures
+	}
+}
 
 async function countPendingForHost(host_id, typeModelMap) {
 	const counts = await Promise.all(
@@ -472,20 +544,30 @@ export async function indexMissing(models) {
 	}
 
 	for (const [host_id, progress] of hostProgress.entries()) {
+		const reindexState = await getStoredReindexStatus(host_id);
+		if (!reindexState?.total_queued) continue;
+
 		const remaining = await countPendingForHost(host_id, typeModelMap);
+		const totalQueued = Math.max(reindexState.total_queued, remaining);
+		const indexedTotal = Math.max(totalQueued - remaining, 0);
 		const status = remaining === 0 ? 'complete' : 'progress';
-		const itemLabel = progress.indexed === 1 ? 'item' : 'items';
+		const itemLabel = indexedTotal === 1 ? 'item' : 'items';
 		const message = status === 'complete'
-			? `Reindex complete. Indexed ${progress.indexed} ${itemLabel}.`
-			: `Reindexing... ${progress.indexed} ${itemLabel} indexed, ${remaining} remaining.`;
+			? `Reindex complete. Indexed ${indexedTotal} ${itemLabel}.`
+			: `Reindexing... ${indexedTotal} ${itemLabel} indexed, ${remaining} remaining.`;
 
 		emitToTenant(host_id, 'reindex:status', {
 			status,
-			indexed: progress.indexed,
+			indexed: indexedTotal,
 			remaining,
+			total_queued: totalQueued,
 			by_type: progress.by_type,
 			message,
 		});
+
+		if (status === 'complete') {
+			await clearStoredReindexStatus(host_id);
+		}
 	}
 
 	if (totalIndexed > 0) {
@@ -596,6 +678,7 @@ export async function ensureConversationModel(hostId, userId) {
 		tsModelName = `${tsProvider}/${tsModelName}`;
 	}
 	const apiKey = tsProvider === 'google' ? config.llm.googleApiKey : config.llm.openaiApiKey;
+	const desiredSignature = buildConversationModelSignature(tsModelName, apiKey);
 
 	// 3. Check if conversation model exists and sync if needed
 	let existing = null;
@@ -608,6 +691,12 @@ export async function ensureConversationModel(hostId, userId) {
 	if (existing) {
 		// Model exists — check if key settings need updating
 		if (!syncedConvoModels.has(modelId)) {
+			const storedSignature = await getStoredConversationModelSignature(modelId);
+			if (storedSignature === desiredSignature) {
+				syncedConvoModels.add(modelId);
+				return;
+			}
+
 			const updateFields = { api_key: apiKey };
 			if (existing.model_name !== tsModelName) {
 				updateFields.model_name = tsModelName;
@@ -617,6 +706,7 @@ export async function ensureConversationModel(hostId, userId) {
 			}
 			try {
 				await _updateConversationModel(modelId, updateFields);
+				await setStoredConversationModelSignature(modelId, desiredSignature);
 				syncedConvoModels.add(modelId);
 			} catch (err) {
 				console.error(`Error updating conversation model ${modelId}:`, err.message);
@@ -648,6 +738,7 @@ export async function ensureConversationModel(hostId, userId) {
 			const body = await createResp.text();
 			if (createResp.status === 409) {
 				console.log(`Conversation model ${modelId} already exists`);
+				await setStoredConversationModelSignature(modelId, desiredSignature);
 				syncedConvoModels.add(modelId);
 				return;
 			}
@@ -660,6 +751,7 @@ export async function ensureConversationModel(hostId, userId) {
 			console.warn(`Conversation model ${modelId} created but system_prompt update failed: ${updateResp.status}`);
 		}
 
+		await setStoredConversationModelSignature(modelId, desiredSignature);
 		syncedConvoModels.add(modelId);
 		console.log(`Created conversation model: ${modelId}`);
 	} catch (err) {
