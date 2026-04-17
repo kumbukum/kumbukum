@@ -63,6 +63,52 @@ async function classifyIntent(query) {
 	return { intent: 'search', query, action_type: null, params: {} };
 }
 
+const EXPLICIT_ACTION_PATTERNS = [
+	/\b(create|add|save|store|remember|delete|remove|move|copy|update|edit|rename|trash|archive)\b/i,
+	/\bmake\s+(?:a|an|this|that|new)?\s*(?:note|memory)\b/i,
+	/\bsave\s+this\s+url\b/i,
+];
+
+const FOLLOW_UP_REFERENCE_PATTERNS = [
+	/^\s*(which|what|who|why|how|when)\b/i,
+	/^\s*(tell me more|summarize|compare|explain|expand|continue)\b/i,
+	/\b(the|those|these)\s+(results|items|notes|memories|urls)\b/i,
+	/\b(that|those|them|it|one)\b/i,
+];
+
+function hasExplicitActionLanguage(query = '', intent = {}) {
+	if (!query.trim()) return false;
+	if (intent.action_type === 'save_url' && /https?:\/\//i.test(query)) return true;
+	return EXPLICIT_ACTION_PATTERNS.some((pattern) => pattern.test(query));
+}
+
+function looksLikeFollowUpReference(query = '') {
+	if (!query.trim()) return false;
+	return FOLLOW_UP_REFERENCE_PATTERNS.some((pattern) => pattern.test(query));
+}
+
+export function normalizeIntentForConversationFollowup(intent, query, conversationId) {
+	if (!conversationId || !intent?.intent) return intent;
+
+	if (intent.intent === 'action' && !hasExplicitActionLanguage(query, intent)) {
+		return {
+			...intent,
+			intent: 'conversation',
+			action_type: null,
+			params: {},
+		};
+	}
+
+	if ((intent.intent === 'search' || intent.intent === 'analysis') && looksLikeFollowUpReference(query)) {
+		return {
+			...intent,
+			intent: 'conversation',
+		};
+	}
+
+	return intent;
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Main Chat Orchestrator
 // ────────────────────────────────────────────────────────────────────
@@ -80,7 +126,8 @@ async function classifyIntent(query) {
  */
 export async function processChat({ hostId, userId, query, conversationId, projectId, ctx = {} }) {
 	// Classify intent
-	const intent = await classifyIntent(query);
+	const classifiedIntent = await classifyIntent(query);
+	const intent = normalizeIntentForConversationFollowup(classifiedIntent, query, conversationId);
 
 	switch (intent.intent) {
 		case 'action':
