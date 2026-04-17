@@ -4,6 +4,20 @@ import { extractUrlContent } from '../modules/url_content_extractor.js';
 import { emitToTenant } from '../modules/socket.js';
 import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
 import * as audit from './audit_service.js';
+import { saveScreenshot, signScreenshotUrl } from '../modules/screenshot.js';
+
+function attachScreenshotUrl(doc) {
+	if (!doc) return doc;
+	const obj = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
+	if (obj.screenshot) {
+		obj.screenshot_url = signScreenshotUrl(obj.screenshot);
+	}
+	return obj;
+}
+
+function attachScreenshotUrls(docs) {
+	return docs.map(attachScreenshotUrl);
+}
 
 export async function saveUrl(userId, host_id, data, ctx = {}) {
 	let extracted = {};
@@ -28,6 +42,14 @@ export async function saveUrl(userId, host_id, data, ctx = {}) {
 	emitToTenant(host_id, 'url:created', urlDoc);
 	invalidateGraphCache(host_id).catch(() => {});
 	audit.log({ action: 'create', resource: 'url', resource_id: urlDoc._id.toString(), user_id: userId, host_id, ...ctx });
+
+	// Fire-and-forget: capture screenshot in background
+	saveScreenshot(data.url).then((filename) => {
+		if (filename) {
+			Url.updateOne({ _id: urlDoc._id }, { $set: { screenshot: filename } }).catch(() => {});
+		}
+	}).catch((err) => console.error('Screenshot capture error:', err.message));
+
 	return urlDoc;
 }
 
@@ -35,15 +57,17 @@ export async function listUrls(host_id, projectId, { page = 1, limit = 50 } = {}
 	const query = { host_id, in_trash: { $ne: true } };
 	if (projectId) query.project = projectId;
 
-	return Url.find(query)
+	const docs = await Url.find(query)
 		.select('-text_content')
 		.sort({ updatedAt: -1 })
 		.skip((page - 1) * limit)
 		.limit(limit);
+	return attachScreenshotUrls(docs);
 }
 
 export async function getUrl(host_id, urlId) {
-	return Url.findOne({ _id: urlId, host_id });
+	const doc = await Url.findOne({ _id: urlId, host_id });
+	return attachScreenshotUrl(doc);
 }
 
 export async function updateUrl(host_id, urlId, data, ctx = {}) {

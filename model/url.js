@@ -6,6 +6,7 @@ const urlSchema = new mongoose.Schema(
 		title: { type: String, default: '' },
 		description: { type: String, default: '' },
 		og_image: { type: String, default: '' },
+		screenshot: { type: String, default: '' },
 		text_content: { type: String, default: '' },
 		crawl_enabled: { type: Boolean, default: false },
 		last_crawled: { type: Date },

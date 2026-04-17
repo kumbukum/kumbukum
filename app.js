@@ -15,6 +15,7 @@ import { initRedis } from './modules/redis.js';
 import { resolveTenant } from './modules/tenancy.js';
 import { startChangeStreams } from './modules/change_stream.js';
 import { createApiLimiter } from './middleware/rate_limit.js';
+import { verifyScreenshotSignature, resolveScreenshotPath } from './modules/screenshot.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger.js';
 import authRoutes from './routes/auth.js';
@@ -144,6 +145,28 @@ app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 		persistAuthorization: true,
 	},
 }));
+
+// Screenshot serving — signed URLs, no auth middleware required
+app.get('/api/v1/screenshots/:filename', (req, res) => {
+	const { filename } = req.params;
+	const { expires, sig } = req.query;
+
+	if (!verifyScreenshotSignature(filename, expires, sig)) {
+		return res.status(403).json({ error: 'Invalid or expired signature' });
+	}
+
+	const filePath = resolveScreenshotPath(filename);
+	if (!filePath) return res.status(400).json({ error: 'Invalid filename' });
+
+	res.sendFile(filePath, {
+		headers: {
+			'Content-Type': 'image/png',
+			'Cache-Control': 'public, max-age=3600',
+		},
+	}, (err) => {
+		if (err && !res.headersSent) res.status(404).json({ error: 'Screenshot not found' });
+	});
+});
 
 app.use('/', authRoutes);
 app.use('/', billingRoutes);

@@ -401,8 +401,9 @@ function rmPopulate(type, record) {
 		const ogWrap = document.getElementById('rm-url-og-wrap');
 		const ogImg = document.getElementById('rm-url-og-image');
 		ogWrap.classList.add('d-none');
-		if (record.og_image) {
-			ogImg.src = record.og_image;
+		const previewSrc = record.screenshot_url || record.og_image;
+		if (previewSrc) {
+			ogImg.src = previewSrc;
 			ogWrap.classList.remove('d-none');
 		}
 	}

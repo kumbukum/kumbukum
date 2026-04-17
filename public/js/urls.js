@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					<div class="batch-cb-wrap">
 						<input type="checkbox" class="form-check-input batch-cb" value="${u._id}">
 					</div>
-					${u.og_image ? `<img src="${u.og_image}" class="og-image-thumb rounded flex-shrink-0" alt="">` : ''}
+					${u.screenshot_url || u.og_image ? `<img src="${u.screenshot_url || u.og_image}" class="og-image-thumb rounded flex-shrink-0" alt="">` : ''}
 					<div class="flex-grow-1 overflow-hidden">
 						<div class="d-flex justify-content-between align-items-center gap-2">
 							<strong class="text-truncate">${u.title || u.url}</strong>

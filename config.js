@@ -118,6 +118,9 @@ const config = {
 	},
 
 	gitEncryptionKey: process.env.GIT_ENCRYPTION_KEY || '',
+
+	screenshotUrl: process.env.SCREENSHOT_URL || '',
+	screenshotSecret: process.env.SCREENSHOT_SECRET || 'change-me-screenshot-secret',
 };
 
 export default config;

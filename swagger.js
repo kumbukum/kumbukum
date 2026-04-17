@@ -63,6 +63,8 @@ const swaggerSpec = {
                     _id: { type: 'string' },
                     title: { type: 'string' },
                     url: { type: 'string', format: 'uri' },
+                    screenshot: { type: 'string', description: 'Screenshot filename (hash)' },
+                    screenshot_url: { type: 'string', description: 'Signed URL to screenshot image (time-limited)' },
                     project: { type: 'string' },
                     crawl_enabled: { type: 'boolean' },
                     host_id: { type: 'string' },
@@ -417,6 +419,26 @@ const swaggerSpec = {
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { results: { type: 'array', items: { $ref: '#/components/schemas/Url' } } } } } } },
+                },
+            },
+        },
+
+        // ---- Screenshots ----
+        '/screenshots/{filename}': {
+            get: {
+                tags: ['Screenshots'],
+                summary: 'Get a screenshot image (signed URL)',
+                description: 'Serves a screenshot image. Requires valid HMAC signature and unexpired timestamp. No authentication needed.',
+                security: [],
+                parameters: [
+                    { name: 'filename', in: 'path', required: true, schema: { type: 'string' }, description: 'Screenshot filename (SHA-256 hash + .png)' },
+                    { name: 'expires', in: 'query', required: true, schema: { type: 'integer' }, description: 'Expiration timestamp (Unix epoch seconds)' },
+                    { name: 'sig', in: 'query', required: true, schema: { type: 'string' }, description: 'HMAC-SHA256 signature' },
+                ],
+                responses: {
+                    200: { description: 'PNG image', content: { 'image/png': { schema: { type: 'string', format: 'binary' } } } },
+                    403: { description: 'Invalid or expired signature', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    404: { description: 'Screenshot not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
         },

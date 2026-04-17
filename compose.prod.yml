@@ -37,6 +37,7 @@ x-environment: &environment
   PORT: 3000
   GIT_ENCRYPTION_KEY: ${GIT_ENCRYPTION_KEY:-}
   SCREENSHOT_URL: "http://screenshot:3000"
+  SCREENSHOT_SECRET: ${SCREENSHOT_SECRET}
 
 services:
   app:
@@ -45,6 +46,8 @@ services:
     ports:
       - "3000:3000"
     environment: *environment
+    volumes:
+      - assets_data:/opt/kumbukum/assets
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
       interval: 30s
@@ -99,6 +102,8 @@ services:
     image: ghcr.io/kumbukum/kumbukum:latest
     command: ["npm", "run", "start:scheduler"]
     environment: *environment
+    volumes:
+      - assets_data:/opt/kumbukum/assets
     depends_on:
       - mongo
       - redis
@@ -155,4 +160,5 @@ volumes:
   mongo_data:
   typesense_data:
   redis_data:
+  assets_data:
 
