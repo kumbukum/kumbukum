@@ -779,7 +779,7 @@ router.delete('/passkeys/:id', async (req, res) => {
 // ---- Notes File Import ----
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const IMPORT_DIR = path.join(__dirname, '..', 'import');
+const IMPORT_DIR = path.join(__dirname, '..', 'assets', 'import');
 if (!fs.existsSync(IMPORT_DIR)) fs.mkdirSync(IMPORT_DIR, { recursive: true });
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB

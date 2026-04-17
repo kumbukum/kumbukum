@@ -27,9 +27,11 @@ x-env: &env
     OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
     APP_URL: http://localhost:3000
     WS_URL: ""
+    API_BASE_URL: http://app:3000
+    SCREENSHOT_URL: http://screenshot:3000
+    SCREENSHOT_SECRET: "${SCREENSHOT_SECRET:-change-me-screenshot-secret}" # openssl rand -hex 32
     SYSADMIN_EMAIL: "sysadmin@localhost"
     SYSADMIN_PASSWORD: "sysadminpassword"
-    API_BASE_URL: http://app:3000
     ENABLE_OPENPANEL: "${ENABLE_OPENPANEL:-false}"
     OPENPANEL_CLIENT_ID: "${OPENPANEL_CLIENT_ID:-}"
     OPENPANEL_CLIENT_SECRET: "${OPENPANEL_CLIENT_SECRET:-}"

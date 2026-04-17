@@ -19,7 +19,7 @@ import { getRedisClient } from '../modules/redis.js';
 import { emitToTenant } from '../modules/socket.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const GIT_REPOS_DIR = path.join(__dirname, '..', 'import', 'git-repos');
+const GIT_REPOS_DIR = path.join(__dirname, '..', 'assets', 'git-repos');
 fs.mkdirSync(GIT_REPOS_DIR, { recursive: true });
 
 const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });

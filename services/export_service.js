@@ -11,7 +11,7 @@ import { GraphLink } from '../model/graph_link.js';
 import { sendExportReadyEmail } from './email_service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const EXPORT_DIR = path.join(__dirname, '..', 'export');
+const EXPORT_DIR = path.join(__dirname, '..', 'assets', 'export');
 fs.mkdirSync(EXPORT_DIR, { recursive: true });
 
 const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
