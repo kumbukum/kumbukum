@@ -36,6 +36,7 @@ x-environment: &environment
   NODE_ENV: production
   PORT: 3000
   GIT_ENCRYPTION_KEY: ${GIT_ENCRYPTION_KEY:-}
+  SCREENSHOT_URL: "http://screenshot:3000"
 
 services:
   app:
@@ -138,6 +139,17 @@ services:
     volumes:
       - typesense_data:/data
     restart: unless-stopped
+
+  screenshot:
+    image: ghcr.io/kumbukum/screenshot:latest
+    restart: unless-stopped
+    init: true
+    ports:
+      - 3000
+    environment:
+      PORT: 3000
+    shm_size: '2g'
+    hostname: screenshot
 
 volumes:
   mongo_data:

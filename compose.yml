@@ -205,6 +205,18 @@ services:
         dns:
             - 100.100.100.100
 
+    screenshot:
+        image: ghcr.io/kumbukum/screenshot:latest
+        restart: unless-stopped
+        init: true
+        ports:
+            - 3000
+        environment:
+            PORT: 3000
+        shm_size: '2g'
+        hostname: screenshot
+
+
 volumes:
     node_modules:
     pnpm_store:
