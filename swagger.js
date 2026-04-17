@@ -558,7 +558,28 @@ const swaggerSpec = {
                 tags: ['Utility'],
                 summary: 'Reindex Typesense collections',
                 responses: {
-                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        message: { type: 'string' },
+                                        total_queued: { type: 'integer' },
+                                        results: {
+                                            type: 'object',
+                                            properties: {
+                                                notes: { type: 'object', properties: { queued: { type: 'integer' } } },
+                                                memory: { type: 'object', properties: { queued: { type: 'integer' } } },
+                                                urls: { type: 'object', properties: { queued: { type: 'integer' } } },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
             },
         },

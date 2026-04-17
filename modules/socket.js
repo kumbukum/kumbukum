@@ -4,6 +4,111 @@ import Redis from 'ioredis';
 import config from '../config.js';
 
 let io;
+let bridgePublisher;
+let bridgeSubscriber;
+
+const TENANT_EVENT_BRIDGE_CHANNEL = 'tenant-events';
+
+function createRedisClient() {
+	const opts = config.redisOptions;
+	const isSentinel = typeof opts === 'object' && opts.sentinels && Array.isArray(opts.sentinels);
+
+	if (typeof opts === 'string') {
+		return new Redis(opts, { lazyConnect: true });
+	}
+
+	if (isSentinel) {
+		return new Redis({
+			sentinels: opts.sentinels,
+			name: opts.name,
+			lazyConnect: true,
+			keepAlive: 10000,
+			enableOfflineQueue: true,
+			sentinelRetryStrategy(times) {
+				return Math.min(times * 100, 5000);
+			},
+			connectTimeout: 10000,
+			commandTimeout: 5000,
+			sentinelCommandTimeout: 10000,
+			enableReadyCheck: false,
+			maxRetriesPerRequest: null,
+			retryStrategy(times) {
+				return Math.min(times * 100, 5000);
+			},
+			sentinelMaxConnections: 3,
+			updateSentinels: true,
+			failoverDetector: false,
+		});
+	}
+
+	return new Redis({ ...opts, lazyConnect: true });
+}
+
+function isTransientRedisError(msg) {
+	return msg.includes('sentinels are unreachable') ||
+		msg.includes('EHOSTUNREACH') ||
+		msg.includes('ECONNREFUSED') ||
+		msg.includes('Connection is closed');
+}
+
+function attachRedisErrorHandler(redisClient, label) {
+	redisClient.on('error', (err) => {
+		const msg = err?.message || '';
+		if (isTransientRedisError(msg)) return;
+		console.warn(`${label}:`, msg);
+	});
+}
+
+function emitToTenantRoom(host_id, event, data) {
+	if (!io) return;
+	const delay = config.socketEmitDelay;
+	if (delay > 0) {
+		setTimeout(() => io.to(`tenant:${host_id}`).emit(event, data), delay);
+	} else {
+		io.to(`tenant:${host_id}`).emit(event, data);
+	}
+}
+
+async function ensureBridgePublisher() {
+	if (!config.socketRedis) return null;
+	if (bridgePublisher) return bridgePublisher;
+
+	bridgePublisher = createRedisClient();
+	attachRedisErrorHandler(bridgePublisher, 'Socket.IO bridge publisher error');
+	await bridgePublisher.connect();
+	return bridgePublisher;
+}
+
+async function setupTenantEventBridge() {
+	if (!config.socketRedis || bridgeSubscriber) return;
+
+	bridgeSubscriber = createRedisClient();
+	attachRedisErrorHandler(bridgeSubscriber, 'Socket.IO bridge subscriber error');
+	bridgeSubscriber.on('message', (channel, message) => {
+		if (channel !== TENANT_EVENT_BRIDGE_CHANNEL) return;
+		try {
+			const payload = JSON.parse(message);
+			if (!payload?.host_id || !payload?.event) return;
+			emitToTenantRoom(payload.host_id, payload.event, payload.data);
+		} catch (err) {
+			console.warn('Socket.IO bridge payload error:', err.message);
+		}
+	});
+	await bridgeSubscriber.connect();
+	await bridgeSubscriber.subscribe(TENANT_EVENT_BRIDGE_CHANNEL);
+	console.log('Socket.IO tenant event bridge connected');
+}
+
+function publishTenantEvent(host_id, event, data) {
+	ensureBridgePublisher()
+		.then((publisher) => {
+			if (!publisher) return;
+			return publisher.publish(TENANT_EVENT_BRIDGE_CHANNEL, JSON.stringify({ host_id, event, data }));
+		})
+		.catch((err) => {
+			console.warn('Socket.IO bridge publish failed:', err.message);
+		});
+}
 
 export function getIO() {
 	return io;
@@ -31,43 +136,8 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 	if (config.socketRedis) {
 		let redisClient;
 		try {
-			const opts = config.redisOptions;
-			const isSentinel = typeof opts === 'object' && opts.sentinels && Array.isArray(opts.sentinels);
-
-			if (typeof opts === 'string') {
-				redisClient = new Redis(opts, { lazyConnect: true });
-			} else if (isSentinel) {
-				redisClient = new Redis({
-					sentinels: opts.sentinels,
-					name: opts.name,
-					lazyConnect: true,
-					keepAlive: 10000,
-					enableOfflineQueue: true,
-					sentinelRetryStrategy(times) {
-						return Math.min(times * 100, 5000);
-					},
-					connectTimeout: 10000,
-					commandTimeout: 5000,
-					sentinelCommandTimeout: 10000,
-					enableReadyCheck: false,
-					maxRetriesPerRequest: null,
-					retryStrategy(times) {
-						return Math.min(times * 100, 5000);
-					},
-					sentinelMaxConnections: 3,
-					updateSentinels: true,
-					failoverDetector: false,
-				});
-			} else {
-				redisClient = new Redis({ ...opts, lazyConnect: true });
-			}
-			// Persistent handler prevents unhandled error events during reconnects
-			redisClient.on('error', (err) => {
-				const msg = err?.message || '';
-				// Transient sentinel errors are auto-recovered — only log unexpected ones
-				if (msg.includes('sentinels are unreachable') || msg.includes('EHOSTUNREACH') || msg.includes('ECONNREFUSED')) return;
-				console.warn('Socket.IO Redis client error:', msg);
-			});
+			redisClient = createRedisClient();
+			attachRedisErrorHandler(redisClient, 'Socket.IO Redis client error');
 			await redisClient.connect();
 			io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
 			console.log('Socket.IO Redis streams adapter connected');
@@ -76,6 +146,8 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
 			if (redisClient) redisClient.disconnect();
 		}
 	}
+
+	await setupTenantEventBridge();
 
 	io.on('connection', (socket) => {
 		// Client subscribes to a tenant room
@@ -100,11 +172,10 @@ export async function setupSocketIO(httpServer, sessionMiddleware) {
  * Cluster, Redis Sentinel). Default 500 ms; set to 0 for instant emit.
  */
 export function emitToTenant(host_id, event, data) {
-	if (!io) return;
-	const delay = config.socketEmitDelay;
-	if (delay > 0) {
-		setTimeout(() => io.to(`tenant:${host_id}`).emit(event, data), delay);
-	} else {
-		io.to(`tenant:${host_id}`).emit(event, data);
+	if (io) {
+		emitToTenantRoom(host_id, event, data);
+		return;
 	}
+
+	publishTenantEvent(host_id, event, data);
 }

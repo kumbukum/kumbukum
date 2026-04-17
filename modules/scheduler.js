@@ -44,9 +44,7 @@ export function startScheduler() {
 				);
 			}
 
-			if (users.length > 0) {
-				console.log(`Sent ${users.length} trial-ending reminder(s)`);
-			}
+			console.log(`Trial reminder run complete: sent ${users.length} reminder(s)`);
 		} catch (err) {
 			console.error('Trial reminder error:', err);
 		}
@@ -55,7 +53,8 @@ export function startScheduler() {
 	// Batch indexing: find documents with is_indexed:false and batch-import to Typesense
 	new Cron('*/20 * * * * *', async () => {
 		try {
-			await indexMissing({ Note, Memory, Url });
+			const indexed = await indexMissing({ Note, Memory, Url });
+			console.log(`Index batch complete: indexed ${indexed} document(s)`);
 		} catch (err) {
 			console.error('Index batch error:', err);
 		}
@@ -64,7 +63,8 @@ export function startScheduler() {
 	// Cleanup expired export files every hour
 	new Cron('0 * * * *', async () => {
 		try {
-			await cleanupExpiredExports();
+			const cleaned = await cleanupExpiredExports();
+			console.log(`Export cleanup complete: removed ${cleaned} export(s)`);
 		} catch (err) {
 			console.error('Export cleanup error:', err);
 		}
@@ -73,7 +73,8 @@ export function startScheduler() {
 	// Git repo sync every 10 minutes
 	new Cron('*/10 * * * *', async () => {
 		try {
-			await runScheduledSync();
+			const summary = await runScheduledSync();
+			console.log(`Git sync run complete: checked ${summary.checked} repo(s), due ${summary.due}, synced ${summary.synced}, failed ${summary.failed}`);
 		} catch (err) {
 			console.error('Git sync scheduler error:', err);
 		}

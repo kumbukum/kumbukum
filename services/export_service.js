@@ -118,4 +118,6 @@ export async function cleanupExpiredExports() {
 	if (cleaned > 0) {
 		console.log(`Cleaned up ${cleaned} expired export(s)`);
 	}
+
+	return cleaned;
 }

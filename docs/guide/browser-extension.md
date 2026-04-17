@@ -12,7 +12,7 @@ Save URLs, create notes, or both — directly from any webpage without leaving y
 
 | Browser | Download |
 | ------- | -------- |
-| Chrome | [Chrome Web Store](https://chromewebstore.google.com) |
+| Chrome | [Chrome Web Store](https://chrome.google.com/webstore/detail/gnpfejkkamggccmpdpbddjhinkehnchf) |
 | Firefox | [Firefox Add-ons](https://addons.mozilla.org) |
 
 ## Setup

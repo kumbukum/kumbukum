@@ -1,5 +1,6 @@
 import Typesense from 'typesense';
 import config from '../config.js';
+import { emitToTenant } from './socket.js';
 
 let client;
 
@@ -304,43 +305,18 @@ export async function getFilteredCount(host_id, type, projectId) {
 }
 
 /**
- * Reindex all documents from MongoDB into Typesense for a host.
- * Drops and recreates collections, then bulk imports from MongoDB.
+ * Queue all documents for scheduler-based reindexing for a host.
+ * Drops and recreates collections, then marks MongoDB records as unindexed
+ * so indexMissing() can repopulate Typesense in batches.
  */
 export async function reindexHost(host_id, models) {
 	const ts = getTypesenseClient();
 	const { Note, Memory, Url } = models;
 
 	const typeModelMap = [
-		{ type: 'notes', model: Note, transform: (doc) => ({
-			id: doc._id.toString(),
-			title: doc.title || '',
-			text_content: doc.text_content || '',
-			project_id: doc.project.toString(),
-			tags: doc.tags || [],
-			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
-			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
-		})},
-		{ type: 'memory', model: Memory, transform: (doc) => ({
-			id: doc._id.toString(),
-			title: doc.title || '',
-			content: doc.content || '',
-			project_id: doc.project.toString(),
-			tags: doc.tags || [],
-			source: doc.source || '',
-			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
-			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
-		})},
-		{ type: 'urls', model: Url, transform: (doc) => ({
-			id: doc._id.toString(),
-			url: doc.url || '',
-			title: doc.title || '',
-			description: doc.description || '',
-			text_content: doc.text_content || '',
-			project_id: doc.project.toString(),
-			created_at: Math.floor(new Date(doc.createdAt).getTime() / 1000),
-			updated_at: Math.floor(new Date(doc.updatedAt).getTime() / 1000),
-		})},
+		{ type: 'notes', model: Note },
+		{ type: 'memory', model: Memory },
+		{ type: 'urls', model: Url },
 	];
 
 	const results = {};
@@ -361,36 +337,23 @@ export async function reindexHost(host_id, models) {
 	// Clear synced conversation model tracking
 	syncedConvoModels.clear();
 
-	for (const { type, model, transform } of typeModelMap) {
-		const collectionName = `${type}_${host_id}`;
+	for (const { type, model } of typeModelMap) {
 		const schemaFn = schemas[type];
 		if (!schemaFn) continue;
 
-		// Recreate
+		// Recreate empty collection so scheduler can repopulate it
 		try {
 			await ts.collections().create(schemaFn(host_id));
+			console.log(`Created empty collection for reindex: ${type}_${host_id}`);
 		} catch (createErr) {
 			if (createErr.httpStatus !== 409) throw createErr;
 		}
 
-		// Import all documents from MongoDB
-		const docs = await model.find({ host_id }).lean();
-		let imported = 0;
-		for (const doc of docs) {
-			try {
-				await ts.collections(collectionName).documents().upsert(transform(doc));
-				imported++;
-			} catch (err) {
-				console.error(`Reindex error [${type}/${doc._id}]:`, err.message);
-			}
-		}
-
-		// Mark all successfully imported documents as indexed
-		if (imported > 0) {
-			await model.updateMany({ host_id, in_trash: { $ne: true } }, { $set: { is_indexed: true } });
-		}
-
-		results[type] = { total: docs.length, imported };
+		const query = { host_id, in_trash: { $ne: true } };
+		const total = await model.countDocuments(query);
+		await model.updateMany(query, { $set: { is_indexed: false } });
+		results[type] = { queued: total };
+		console.log(`Queued ${total} ${type} docs for scheduler reindex on host ${host_id}`);
 	}
 
 	// Recreate pages collection (populated by crawling, not reindexed from DB)
@@ -427,6 +390,13 @@ export async function initTypesense() {
  */
 const BATCH_LIMIT = 100;
 
+async function countPendingForHost(host_id, typeModelMap) {
+	const counts = await Promise.all(
+		typeModelMap.map(({ model }) => model.countDocuments({ host_id, is_indexed: { $ne: true }, in_trash: { $ne: true } })),
+	);
+	return counts.reduce((sum, count) => sum + count, 0);
+}
+
 export async function indexMissing(models) {
 	const { Note, Memory, Url } = models;
 
@@ -437,6 +407,7 @@ export async function indexMissing(models) {
 	];
 
 	let totalIndexed = 0;
+	const hostProgress = new Map();
 
 	for (const { type, model } of typeModelMap) {
 		// Fast aggregate: get host_ids that have unindexed docs, sorted by most-recently-updated first
@@ -459,6 +430,15 @@ export async function indexMissing(models) {
 
 			if (!docs.length) continue;
 
+			let progress = hostProgress.get(host_id);
+			if (!progress) {
+				progress = {
+					indexed: 0,
+					by_type: { notes: 0, memory: 0, urls: 0 },
+				};
+				hostProgress.set(host_id, progress);
+			}
+
 			const tsDocs = docs.map((doc) => toTypesenseDoc(type, doc));
 			const results = await importDocuments(host_id, type, tsDocs);
 
@@ -477,6 +457,8 @@ export async function indexMissing(models) {
 			if (successIds.length) {
 				await model.updateMany({ _id: { $in: successIds } }, { $set: { is_indexed: true } });
 				totalIndexed += successIds.length;
+				progress.indexed += successIds.length;
+				progress.by_type[type] += successIds.length;
 			}
 
 			if (failedIds.length) {
@@ -487,6 +469,23 @@ export async function indexMissing(models) {
 				console.log(`indexMissing: imported ${successIds.length}/${docs.length} ${type} docs for host ${host_id}`);
 			}
 		}
+	}
+
+	for (const [host_id, progress] of hostProgress.entries()) {
+		const remaining = await countPendingForHost(host_id, typeModelMap);
+		const status = remaining === 0 ? 'complete' : 'progress';
+		const itemLabel = progress.indexed === 1 ? 'item' : 'items';
+		const message = status === 'complete'
+			? `Reindex complete. Indexed ${progress.indexed} ${itemLabel}.`
+			: `Reindexing... ${progress.indexed} ${itemLabel} indexed, ${remaining} remaining.`;
+
+		emitToTenant(host_id, 'reindex:status', {
+			status,
+			indexed: progress.indexed,
+			remaining,
+			by_type: progress.by_type,
+			message,
+		});
 	}
 
 	if (totalIndexed > 0) {

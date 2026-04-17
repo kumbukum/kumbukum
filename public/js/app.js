@@ -251,6 +251,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 		socket.on('connect', () => {
 			socket.emit('subscribe', `tenant:${__host_id}`);
 		});
+		socket.on('reindex:status', (data) => {
+			window.dispatchEvent(new CustomEvent('reindex-status', { detail: data || {} }));
+			if (data?.status === 'complete') {
+				refreshCounts();
+				loadTrashCount();
+			}
+		});
 		const crudEvents = [
 			'note:created', 'note:updated', 'note:deleted',
 			'memory:created', 'memory:updated', 'memory:deleted',

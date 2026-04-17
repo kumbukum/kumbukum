@@ -476,8 +476,21 @@ router.get('/counts', async (req, res) => {
 
 router.post('/reindex', async (req, res) => {
 	try {
-		await reindexHost(req.host_id, { Note, Memory, Url });
-		res.json({ message: 'Reindex complete' });
+		const results = await reindexHost(req.host_id, { Note, Memory, Url });
+		const totalQueued = Object.values(results).reduce((sum, entry) => sum + (entry.queued || 0), 0);
+		const message = totalQueued > 0
+			? `Reindexing is queued for ${totalQueued} item${totalQueued === 1 ? '' : 's'}.`
+			: 'Search index is already up to date.';
+
+		emitToTenant(req.host_id, 'reindex:status', {
+			status: totalQueued > 0 ? 'queued' : 'complete',
+			total_queued: totalQueued,
+			remaining: totalQueued,
+			results,
+			message,
+		});
+
+		res.json({ message, total_queued: totalQueued, results });
 	} catch (err) {
 		console.error('Reindex error:', err);
 		res.status(500).json({ error: 'Reindex failed: ' + err.message });

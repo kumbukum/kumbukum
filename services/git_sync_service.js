@@ -446,17 +446,28 @@ function findMarkdownFiles(baseDir, syncBase) {
 export async function runScheduledSync() {
 	const now = new Date();
 	const repos = await GitRepo.find({ enabled: true }).lean();
+	const summary = {
+		checked: repos.length,
+		due: 0,
+		synced: 0,
+		failed: 0,
+	};
 
 	for (const repo of repos) {
 		const intervalMs = (repo.sync_interval || 10) * 60 * 1000;
 		const lastSync = repo.last_synced_at ? new Date(repo.last_synced_at).getTime() : 0;
 		if (now.getTime() - lastSync < intervalMs) continue;
 		if (repo.last_sync_status === 'in_progress') continue;
+		summary.due++;
 
 		try {
 			await syncRepo(repo._id.toString(), repo.owner.toString(), repo.host_id);
+			summary.synced++;
 		} catch (err) {
+			summary.failed++;
 			console.error(`Git sync failed for repo ${repo._id}:`, err.message);
 		}
 	}
+
+	return summary;
 }

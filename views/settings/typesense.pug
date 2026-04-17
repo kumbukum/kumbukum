@@ -17,18 +17,34 @@ block scripts
 	script.
 		document.addEventListener('DOMContentLoaded', function() {
 			var reindexBtn = document.getElementById('reindex-btn');
+			var resultEl = document.getElementById('reindex-result');
+
+			function renderReindexStatus(data) {
+				if (!resultEl || !data) return;
+				var status = data.status || 'queued';
+				var alertClass = status === 'complete' ? 'alert-success' : 'alert-info';
+				var message = data.message || 'Reindexing status updated.';
+				resultEl.innerHTML = '<div class="alert ' + alertClass + '">' + message + '</div>';
+				resultEl.classList.remove('d-none');
+			}
+
+			window.addEventListener('reindex-status', function(event) {
+				renderReindexStatus(event.detail || {});
+			});
+
 			reindexBtn && reindexBtn.addEventListener('click', async function() {
 				var confirmed = await confirmAction('Reindex All Data', 'This will rebuild all search indexes.');
 				if (!confirmed) return;
 
 				reindexBtn.disabled = true;
 				reindexBtn.textContent = 'Reindexing...';
-				var resultEl = document.getElementById('reindex-result');
 
 				try {
 					var data = await api('POST', '/reindex');
-					resultEl.innerHTML = '<div class="alert alert-success">Reindex complete.</div>';
-					resultEl.classList.remove('d-none');
+					renderReindexStatus({
+						status: data.total_queued > 0 ? 'queued' : 'complete',
+						message: data.message,
+					});
 				} catch (err) {
 					resultEl.innerHTML = '<div class="alert alert-danger">' + err.message + '</div>';
 					resultEl.classList.remove('d-none');
