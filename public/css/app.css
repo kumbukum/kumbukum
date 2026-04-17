@@ -484,9 +484,22 @@ small,
 	margin-bottom: 0;
 }
 
-/* SweetAlert2 — prevent body height override from collapsing flex layout */
-body.swal2-height-auto {
+/* SweetAlert2 — prevent body height override from collapsing flex layout.
+   Double-class selector raises specificity above SweetAlert2's injected <style>,
+   which otherwise wins when both use !important at equal specificity. */
+body.swal2-height-auto.swal2-height-auto {
 	height: 100vh !important;
+}
+
+/* SweetAlert2 — keep the overlay from breaking body flex layout */
+body:has(.sidebar) > .swal2-container {
+	position: fixed !important;
+}
+
+/* SweetAlert2 — navbar must stay above the overlay so the dropdown still works */
+body.swal2-shown .navbar {
+	z-index: 1070;
+	position: relative;
 }
 
 /* SweetAlert2 — confirm button always on the right */
