@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-All 28 tools available in the Kumbukum MCP server. Use `search_knowledge` first when you want the fastest path to relevant context across notes, memories, URLs, and pages. Parameters marked with `*` are required.
+All 38 tools available in the Kumbukum MCP server. Use `search_knowledge` first when you want the fastest path to relevant context across notes, memories, URLs, and pages. Parameters marked with `*` are required.
 
 ## Notes
 
@@ -189,6 +189,33 @@ Get a project by ID.
 | --------- | ------ | -------- |
 | `id`      | string | yes      |
 
+### `create_project`
+Create a new project.
+
+| Parameter | Type   | Required | Description              |
+| --------- | ------ | -------- | ------------------------ |
+| `name`    | string | yes      | Project name             |
+| `color`   | string | no       | Project color (hex code) |
+
+### `update_project`
+Update a project.
+
+| Parameter | Type   | Required | Description              |
+| --------- | ------ | -------- | ------------------------ |
+| `id`      | string | yes      | Project ID               |
+| `name`    | string | no       | Project name             |
+| `color`   | string | no       | Project color (hex code) |
+
+### `delete_project`
+Delete a project by ID (cannot delete the default project).
+
+| Parameter | Type   | Required |
+| --------- | ------ | -------- |
+| `id`      | string | yes      |
+
+### `get_project_counts`
+Get per-project document counts (notes, memories, URLs). No parameters.
+
 ## Knowledge Graph
 
 Links connect any two items (notes, memories, URLs) in the knowledge graph. After creating an item with `create_note`, `store_memory`, or `save_url`, use `create_link` to connect it to related items. This is a two-step pattern: create the item first, then link it.
@@ -234,3 +261,65 @@ Delete a link between two items.
 | Parameter | Type   | Required |
 | --------- | ------ | -------- |
 | `link_id` | string | yes      |
+
+## Git Sync
+
+### `list_git_repos`
+List git repos configured for a project.
+
+| Parameter    | Type   | Required | Description                |
+| ------------ | ------ | -------- | -------------------------- |
+| `project_id` | string | no       | Project ID (default: auto) |
+
+### `add_git_repo`
+Add a git repository to sync with a project. Syncs markdown files as notes/memories.
+
+| Parameter       | Type   | Required | Description                                        |
+| --------------- | ------ | -------- | -------------------------------------------------- |
+| `repo_url`      | string | yes      | HTTPS git repo URL                                 |
+| `name`          | string | no       | Friendly label for this repo                       |
+| `branch`        | string | no       | Branch to sync (default: main)                     |
+| `auth_token`    | string | no       | Personal access token for private repos            |
+| `notes_path`    | string | no       | Directory in repo mapped to notes (default: notes) |
+| `memories_path` | string | no       | Directory in repo mapped to memories               |
+| `sync_path`     | string | no       | Subfolder within repo to sync (default: /)         |
+| `sync_interval` | number | no       | Sync interval in minutes (default: 10)             |
+| `project_id`    | string | no       | Project ID (default: auto)                         |
+
+### `update_git_repo`
+Update settings of a configured git repo.
+
+| Parameter        | Type    | Required |
+| ---------------- | ------- | -------- |
+| `id`             | string  | yes      |
+| `name`           | string  | no       |
+| `repo_url`       | string  | no       |
+| `branch`         | string  | no       |
+| `auth_token`     | string  | no       |
+| `enabled`        | boolean | no       |
+| `notes_path`     | string  | no       |
+| `memories_path`  | string  | no       |
+| `sync_path`      | string  | no       |
+| `sync_interval`  | number  | no       |
+| `trash_on_delete` | boolean | no       |
+
+### `remove_git_repo`
+Remove a git repo configuration and its local working copy.
+
+| Parameter | Type   | Required |
+| --------- | ------ | -------- |
+| `id`      | string | yes      |
+
+### `trigger_git_sync`
+Manually trigger a sync for a git repo (pull from git + push to git).
+
+| Parameter | Type   | Required |
+| --------- | ------ | -------- |
+| `id`      | string | yes      |
+
+### `git_sync_status`
+Get the current sync status of a git repo.
+
+| Parameter | Type   | Required |
+| --------- | ------ | -------- |
+| `id`      | string | yes      |

@@ -59,7 +59,7 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
 - **Notes**: Rich text documents organized by project
 - **Memory**: Facts, decisions, context — your personal knowledge base
 - **URLs**: Saved web pages with extracted content, optionally with full-site crawling
-- **Projects**: Organize all data into projects`,
+- **Projects**: Organize all data into projects — create, update, delete, and list projects`,
   });
 
   // Register all tools, wrapping handlers to inject MCP client identity
