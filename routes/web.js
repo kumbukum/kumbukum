@@ -75,6 +75,23 @@ if (is_hosted) {
 	router.get('/settings/subscription', (req, res) => res.render('settings/subscription', { title: 'Subscription' }));
 }
 
+// ---- Ajax section partials (SPA navigation) ----
+
+router.get('/ajax/section/dashboard', (req, res) => res.render('ajax/section/dashboard'));
+router.get('/ajax/section/notes', (req, res) => res.render('ajax/section/notes'));
+router.get('/ajax/section/memories', (req, res) => res.render('ajax/section/memories'));
+router.get('/ajax/section/urls', (req, res) => res.render('ajax/section/urls'));
+router.get('/ajax/section/trash', (req, res) => res.render('ajax/section/trash'));
+router.get('/ajax/section/settings/profile', (req, res) => res.render('ajax/section/settings/profile', { title: 'Profile' }));
+router.get('/ajax/section/settings/security', (req, res) => res.render('ajax/section/settings/security', { title: 'Security' }));
+router.get('/ajax/section/settings/tokens', (req, res) => res.render('ajax/section/settings/tokens', { title: 'Access Tokens' }));
+router.get('/ajax/section/settings/typesense', (req, res) => res.render('ajax/section/settings/typesense', { title: 'Typesense' }));
+router.get('/ajax/section/settings/usage', (req, res) => res.render('ajax/section/settings/usage', { title: 'Usage' }));
+router.get('/ajax/section/settings/export', (req, res) => res.render('ajax/section/settings/export', { title: 'Export' }));
+if (is_hosted) {
+	router.get('/ajax/section/settings/subscription', (req, res) => res.render('ajax/section/settings/subscription', { title: 'Subscription' }));
+}
+
 // ---- Ajax partials ----
 
 router.get('/ajax/project-list', async (req, res) => {

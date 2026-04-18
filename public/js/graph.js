@@ -147,17 +147,25 @@
         `;
     }
 
+    function showLoading(show) {
+        const el = document.getElementById('graph-loading');
+        if (el) el.classList.toggle('d-none', !show);
+    }
+
     async function loadGraph() {
         const params = new URLSearchParams();
         if (state.projectId) params.set('project_id', state.projectId);
         params.set('include_tags', state.includeTags);
         params.set('include_semantic', state.includeSemantic);
 
+        showLoading(true);
         try {
             const data = await api('GET', `/graph?${params.toString()}`);
             renderGraph(data);
         } catch (err) {
             console.error('Failed to load graph:', err);
+        } finally {
+            showLoading(false);
         }
     }
 

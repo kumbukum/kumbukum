@@ -1,7 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
-	const createBtn = document.getElementById('create-token');
-	const nameInput = document.getElementById('token-name');
-	const tokensList = document.getElementById('tokens-list');
+// Tokens — IIFE (loaded dynamically via SPA partial)
+(function () {
+	var createBtn = document.getElementById('create-token');
+	var nameInput = document.getElementById('token-name');
+	var tokensList = document.getElementById('tokens-list');
 
 	loadTokens();
 
@@ -87,8 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function escapeHtml(str) {
-		const div = document.createElement('div');
+		var div = document.createElement('div');
 		div.textContent = str;
 		return div.innerHTML;
 	}
-});
+})();

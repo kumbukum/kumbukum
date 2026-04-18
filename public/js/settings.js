@@ -1,9 +1,10 @@
-document.addEventListener('DOMContentLoaded', () => {
-	const profileForm = document.getElementById('profile-form');
+// Settings profile — IIFE (loaded dynamically via SPA partial)
+(function () {
+	var profileForm = document.getElementById('profile-form');
 
-	profileForm?.addEventListener('submit', async (e) => {
+	profileForm?.addEventListener('submit', async function (e) {
 		e.preventDefault();
-		const data = {
+		var data = {
 			name: document.getElementById('profile-name').value.trim(),
 			email: document.getElementById('profile-email').value.trim(),
 			timezone: document.getElementById('profile-timezone').value.trim(),
@@ -11,4 +12,4 @@ document.addEventListener('DOMContentLoaded', () => {
 		await api('PUT', '/profile', data);
 		showSuccess('Profile updated');
 	});
-});
+})();

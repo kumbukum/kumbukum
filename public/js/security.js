@@ -1,10 +1,11 @@
-document.addEventListener('DOMContentLoaded', () => {
+// Security — IIFE (loaded dynamically via SPA partial)
+(function () {
 
 	// ---- 2FA ----
 
-	const setup2faBtn = document.getElementById('setup-2fa');
-	const disable2faBtn = document.getElementById('disable-2fa');
-	const twoFaSetupArea = document.getElementById('2fa-setup-area');
+	var setup2faBtn = document.getElementById('setup-2fa');
+	var disable2faBtn = document.getElementById('disable-2fa');
+	var twoFaSetupArea = document.getElementById('2fa-setup-area');
 
 	setup2faBtn?.addEventListener('click', async () => {
 		try {
@@ -43,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!res.ok) return showError(data.error || 'Invalid code');
 
 			showSuccess('2FA enabled');
-			setTimeout(() => location.reload(), 1200);
+			setTimeout(function () { window.navigateTo ? window.navigateTo('/settings/security') : location.reload(); }, 1200);
 		} catch (err) {
 			showError(err.message);
 		}
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		try {
 			await api('POST', '/2fa/disable');
 			showSuccess('2FA disabled');
-			setTimeout(() => location.reload(), 1200);
+			setTimeout(function () { window.navigateTo ? window.navigateTo('/settings/security') : location.reload(); }, 1200);
 		} catch (err) {
 			showError(err.message);
 		}
@@ -222,20 +223,20 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function detectBrowserInfo() {
-		const ua = navigator.userAgent;
-		let browser = 'Unknown';
+		var ua = navigator.userAgent;
+		var browser = 'Unknown';
 		if (ua.includes('Firefox/')) browser = 'Firefox';
 		else if (ua.includes('Edg/')) browser = 'Edge';
 		else if (ua.includes('Chrome/') && !ua.includes('Edg/')) browser = 'Chrome';
 		else if (ua.includes('Safari/') && !ua.includes('Chrome/')) browser = 'Safari';
 
-		let os = 'Unknown';
+		var os = 'Unknown';
 		if (ua.includes('Mac OS')) os = 'macOS';
 		else if (ua.includes('Windows')) os = 'Windows';
 		else if (ua.includes('Linux')) os = 'Linux';
 		else if (ua.includes('Android')) os = 'Android';
 		else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
 
-		return `${browser} on ${os}`;
+		return browser + ' on ' + os;
 	}
-});
+})();

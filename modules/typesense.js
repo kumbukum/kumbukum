@@ -257,15 +257,56 @@ export async function removeDocument(host_id, type, docId) {
 export async function searchCollection(host_id, type, query, options = {}) {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
-	return ts.collections(collectionName).documents().search({
+	const params = {
 		q: query,
-		query_by: options.queryBy || 'embedding',
+		query_by: options.queryBy || 'title',
 		prefix: false,
 		per_page: options.perPage || 10,
 		page: options.page || 1,
 		exclude_fields: options.exclude_fields || _ts_exlude_default,
 		...options.extra,
-	});
+	};
+	if (options.include_fields) params.include_fields = options.include_fields;
+	if (options.filter_by) params.filter_by = options.filter_by;
+	return ts.collections(collectionName).documents().search(params);
+}
+
+/**
+ * List documents from a collection with minimal fields.
+ * Uses q=* with title query_by to avoid embedding computation.
+ * Automatically paginates if limit > 250 (Typesense max per_page).
+ */
+export async function listDocuments(host_id, type, options = {}) {
+	const ts = getTypesenseClient();
+	const collectionName = `${type}_${host_id}`;
+	const limit = options.perPage || 250;
+	const baseParams = {
+		q: '*',
+		query_by: 'title',
+		include_fields: options.include_fields || 'id,title,tags,project_id,created_at',
+		exclude_fields: 'embedding',
+	};
+	if (options.filter_by) baseParams.filter_by = options.filter_by;
+	if (options.sort_by) baseParams.sort_by = options.sort_by;
+
+	if (limit <= 250) {
+		return ts.collections(collectionName).documents().search({ ...baseParams, per_page: limit, page: options.page || 1 });
+	}
+
+	// Paginate to collect up to limit hits
+	const allHits = [];
+	let page = 1;
+	let found = 0;
+	while (allHits.length < limit) {
+		const res = await ts.collections(collectionName).documents().search({ ...baseParams, per_page: 250, page });
+		found = res.found || 0;
+		if (!res.hits?.length) break;
+		allHits.push(...res.hits);
+		if (allHits.length >= found) break;
+		page++;
+	}
+	if (allHits.length > limit) allHits.length = limit;
+	return { hits: allHits, found };
 }
 
 /**
