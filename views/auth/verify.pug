@@ -18,11 +18,10 @@ block body
 							.mt-3.text-center
 								a(href="/signup") Sign up again
 						else
-							h3.mb-4.text-center Confirm your account
-							p.text-center Click the button below to activate your account.
-							form(method="POST" action="/auth/verify")
+							h3.mb-4 Confirm your account
+							form(method="POST" action="/verify")
 								input(type="hidden" name="token" value=token)
-								button.btn.btn-primary.w-100(type="submit") Activate Account
+								button.btn.btn-primary.w-100(type="submit") Yes, activate my account
 
 block scripts
 	script(src=`/static/v-${v}/js/vendor.js` type="module")
