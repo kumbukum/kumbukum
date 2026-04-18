@@ -6,11 +6,12 @@ block head
 block body
 	.container
 		.row.justify-content-center.mt-5
-			.col-md-5
+			.col-md-5.my-auto
 				.card.shadow
-					.card-body.p-4
-						.text-center.mb-4.logo-form
-							include ../includes/logo_black
+					.card-body
+						.text-center.logo-form
+							.mb-5
+								include ../includes/logo_white
 
 						#login-form
 							if error
@@ -19,35 +20,37 @@ block body
 								.mb-3
 									label.form-label(for="email") Email
 									input.form-control#email(type="email" name="email" required autofocus)
-								.mb-3
-									label.form-label(for="password") Password
+								.mb-4
+									.d-flex.align-items-center.w-100
+										label.form-label(for="password") Password
+										.ms-auto
+											a.small(href="/forgot-password") Forgot password?
 									input.form-control#password(type="password" name="password" required)
-								.mb-2.text-end
-									a.small(href="/forgot-password") Forgot password?
+								
 								button.btn.btn-primary.w-100(type="submit") Sign In
 
-							hr
+							hr.my-3
+							.small.mb-2 Sign in with one of the following
 							.d-grid.gap-2
 								button.btn.btn-outline-secondary#magic-link-btn(type="button")
-									i.bi.bi-envelope.me-2
-									| Sign in with Magic Link
+									i.bi.bi-envelope
+									span.ms-2 Magic Link
 								button.btn.btn-outline-secondary#passkey-btn(type="button")
-									i.bi.bi-fingerprint.me-2
-									| Sign in with Passkey
+									i.bi.bi-fingerprint
+									span.ms-2 Passkey
 
-							if process.env.ENABLE_SIGNUP === "true"
-								.text-center.mt-3
-									a(href="/signup") Create an account
+						if process.env.ENABLE_SIGNUP === "true"
+							.text-center.mt-5#create-account
+								a(href="/signup") Create an account
 
 						#magic-link-form.d-none
-							h5.text-center.mb-3 Enter your email to receive a magic link
+							h5.mb-3 Enter your email to receive a magic link
 							form(id="form-magic-link")
-								.mb-3
-									label.form-label(for="magic-link-email") Email
+								.mb-1
 									input.form-control#magic-link-email(type="email" name="email" required autofocus)
 								button.btn.btn-primary.w-100(type="submit") Send Magic Link
-							.text-center.mt-3
-								a.small#magic-link-back(href="#") Back to login
+							.mt-5
+								a#magic-link-back(href="#") Back to login
 
 						#totp-form.d-none
 							form(id="form-2fa")

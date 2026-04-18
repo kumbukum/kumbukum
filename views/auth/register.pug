@@ -6,30 +6,28 @@ block head
 block body
 	.container
 		.row.justify-content-center.mt-5
-			.col-md-5
+			.col-md-5.my-auto
 				.card.shadow
-					.card-body.p-4
-						.text-center.mb-4.logo-form
-							include ../includes/logo_black
+					.card-body
+						.text-center.logo-form
+							.mb-5
+								include ../includes/logo_white
 
 						if process.env.ENABLE_SIGNUP === "true"
-							h3.text-center.mb-4 Create your account
-
 							#signup-result
-
 							form#signup-form
+								h3.mb-4 Create your account
 								.mb-3
 									label.form-label(for="name") Name
 									input.form-control#name(type="text" name="name" required autofocus)
-								.mb-3
+								.mb-4
 									label.form-label(for="email") Email
 									input.form-control#email(type="email" name="email" required)
 								button.btn.btn-primary.w-100(type="submit") Sign Up
-
-							.text-center.mt-3
-								a(href="/login") Already have an account? Sign in
+								.mt-5.text-center
+									a(href="/login") Already have an account?
 						else
-							h3.text-center.mb-4 Sign up is currently disabled
+							h3.mb-4 Sign up is currently disabled
 
 block scripts
 	script(src=`/static/v-${v}/js/vendor.js` type="module")

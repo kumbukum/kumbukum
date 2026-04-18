@@ -30,6 +30,16 @@
 		}
 	});
 
+	document.getElementById('cancel-2fa-btn')?.addEventListener('click', () => {
+		twoFaSetupArea.classList.add('d-none');
+		setup2faBtn.classList.remove('d-none');
+		document.getElementById('2fa-code').value = '';
+		const qrImg = document.getElementById('2fa-qr');
+		qrImg.src = '';
+		qrImg.classList.add('d-none');
+		document.getElementById('2fa-secret').textContent = '';
+	});
+
 	document.getElementById('confirm-2fa-btn')?.addEventListener('click', async () => {
 		const code = document.getElementById('2fa-code').value.trim();
 		if (!code) return showError('Enter the 6-digit code');
@@ -120,7 +130,7 @@
 				if (pk.browser_info) details.push(escapeHtml(pk.browser_info));
 				if (pk.device_type === 'multiDevice') details.push('Synced');
 				if (pk.backed_up) details.push('Backed up');
-				const detailStr = details.length ? `<small class="text-muted d-block">${details.join(' · ')}</small>` : '';
+				const detailStr = details.length ? `<small class="text-muted d-block fs-7 ms-4 ps-1">${details.join(' · ')}</small>` : '';
 				const lastUsed = pk.last_used_at ? `<small class="text-muted">Last used ${new Date(pk.last_used_at).toLocaleDateString()}</small>` : '';
 
 				return `
@@ -132,8 +142,10 @@
 							<button class="btn btn-sm btn-link p-0 ms-2 rename-passkey" data-id="${pk._id}" data-name="${escapeHtml(pk.name || 'Passkey')}" title="Rename">
 								<i class="bi bi-pencil"></i>
 							</button>
-							<small class="text-muted ms-2">Added ${new Date(pk.createdAt).toLocaleDateString()}</small>
-							${lastUsed ? `<span class="ms-2">${lastUsed}</span>` : ''}
+						</div>
+						<div class="ms-4 ps-1">
+							<small class="text-muted fs-7">Added ${new Date(pk.createdAt).toLocaleDateString()}</small>
+							${lastUsed ? `<small class="text-muted ms-2">Last used ${new Date(pk.last_used_at).toLocaleDateString()}</small>` : ''}
 						</div>
 						${detailStr}
 					</div>

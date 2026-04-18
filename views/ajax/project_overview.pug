@@ -1,55 +1,44 @@
-.d-flex.justify-content-between.align-items-center.mb-4
+- const createdAt = new Date(project.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+- const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0 }
+
+.d-flex.justify-content-between.align-items-center.mb-2
 	.d-flex.align-items-center.gap-2
 		span.project-color(style=`background:${project.color}; width:16px; height:16px`)
 		h4.mb-0= project.name
-		if project.is_default
-			span.badge.bg-warning.text-dark Default
-	.d-flex.gap-2
-		span.text-muted.fs-7.me-2.align-self-center.user-select-all= project._id
-		button.btn.btn-sm.btn-outline-secondary(onclick=`editProject('${project._id}')`)
-			i.bi.bi-pencil.me-1
-			| Edit
-		if !project.is_default
-			button.btn.btn-sm.btn-outline-danger(onclick=`deleteProject('${project._id}')`)
-				i.bi.bi-trash.me-1
-				| Delete
+	.ms-auto
+		button.btn.btn-sm.btn-outline-secondary(onclick=`editProject('${project._id}')`) Edit Project
+		
 
-- const createdAt = new Date(project.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-- const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0 }
-p.text-muted.small Created #{createdAt}
+p.text-muted.small.mb-4.fs-7 Project ID: #{project._id} &middot; Created #{createdAt}
 
-.row.g-3.mt-2
+.row.g-3.mb-5
 	.col-md-4
 		a.text-decoration-none.project-section-link(href="/notes" data-project=project._id)
 			.card.h-100
 				.card-body.text-center
-					i.bi.bi-journal-text.d-block.mb-2(style="font-size:1.5rem; color:#0d6efd")
 					.fs-3.fw-bold= pc.notes
 					.text-muted Notes
 	.col-md-4
 		a.text-decoration-none.project-section-link(href="/memories" data-project=project._id)
 			.card.h-100
 				.card-body.text-center
-					i.bi.bi-lightbulb.d-block.mb-2(style="font-size:1.5rem; color:#6f42c1")
 					.fs-3.fw-bold= pc.memory
 					.text-muted Memories
 	.col-md-4
 		a.text-decoration-none.project-section-link(href="/urls" data-project=project._id)
 			.card.h-100
 				.card-body.text-center
-					i.bi.bi-link-45deg.d-block.mb-2(style="font-size:1.5rem; color:#198754")
 					.fs-3.fw-bold= pc.urls
 					.text-muted URLs
 
+
 if gitSyncEnabled
-	hr.my-4
+	.my-4
 	.d-flex.justify-content-between.align-items-center.mb-3
 		h5.mb-0
-			i.bi.bi-git.me-2
-			| Git Sync
-		button.btn.btn-sm.btn-outline-primary(onclick=`addGitRepo('${project._id}')`)
-			i.bi.bi-plus.me-1
-			| Add Repo
+			i.bi.bi-git
+			span.ms-2 Git Sync
+		button.btn.btn-sm.btn-outline-primary(onclick=`addGitRepo('${project._id}')`) Add Repo
 
 	if gitRepos && gitRepos.length
 		.list-group

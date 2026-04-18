@@ -20,6 +20,22 @@ function initChat() {
 	// Populate project filter
 	loadProjectFilter();
 
+	// Welcome state — hide on first interaction
+	const chatWelcome = document.getElementById('chat-welcome');
+	function hideWelcome() {
+		if (chatWelcome) chatWelcome.classList.add('d-none');
+	}
+	function showWelcome() {
+		if (chatWelcome) chatWelcome.classList.remove('d-none');
+	}
+	document.querySelectorAll('.chat-example-btn').forEach((btn) => {
+		btn.addEventListener('click', () => {
+			input.value = btn.textContent;
+			hideWelcome();
+			sendMessage();
+		});
+	});
+
 	// Close results panel — restore page content
 	closeResultsBtn?.addEventListener('click', () => {
 		resultsPanel.classList.add('d-none');
@@ -32,22 +48,43 @@ function initChat() {
 
 		const avatarHtml = role === 'user'
 			? makeAvatar(__user_name, 'xs')
-			: '<span class="avatar avatar-xs" style="background:#6c757d" title="AI"><i class="bi bi-robot" style="font-size:0.625rem"></i></span>';
+			: '<span class="avatar avatar-xs" style="background:#253055;color:#7C6AF7;font-weight:700;font-size:0.625rem" title="Kumbukum">K</span>';
 
 		const bubble = document.createElement('div');
 		bubble.className = `chat-message ${role}`;
-		bubble.textContent = text;
+		if (role === 'assistant' && window.marked) {
+			bubble.innerHTML = window.marked.parse(text);
+		} else {
+			bubble.textContent = text;
+		}
 
 		row.innerHTML = avatarHtml;
 		row.appendChild(bubble);
+		var scrollBefore = messagesEl.scrollTop;
 		messagesEl.appendChild(row);
-		messagesEl.scrollTop = messagesEl.scrollHeight;
+		if (role === 'user') {
+			messagesEl.scrollTop = messagesEl.scrollHeight;
+		} else {
+			messagesEl.scrollTop = scrollBefore;
+		}
+		return bubble;
+	}
+
+	function createAssistantRow() {
+		const row = document.createElement('div');
+		row.className = 'chat-msg-row assistant';
+		row.innerHTML = '<span class="avatar avatar-xs" style="background:#253055;color:#7C6AF7;font-weight:700;font-size:0.625rem" title="Kumbukum">K</span>';
+		const bubble = document.createElement('div');
+		bubble.className = 'chat-message assistant';
+		row.appendChild(bubble);
+		messagesEl.appendChild(row);
 		return bubble;
 	}
 
 	async function sendMessage() {
 		const query = input.value.trim();
 		if (!query) return;
+		hideWelcome();
 
 		addMessage('user', query);
 		input.value = '';
@@ -56,7 +93,7 @@ function initChat() {
 		// Show thinking indicator
 		const thinkingRow = document.createElement('div');
 		thinkingRow.className = 'chat-msg-row assistant';
-		thinkingRow.innerHTML = '<span class="avatar avatar-xs" style="background:#6c757d" title="AI"><i class="bi bi-robot" style="font-size:0.625rem"></i></span>';
+		thinkingRow.innerHTML = '<span class="avatar avatar-xs" style="background:#253055;color:#7C6AF7;font-weight:700;font-size:0.625rem" title="Kumbukum">K</span>';
 		const thinkingBubble = document.createElement('div');
 		thinkingBubble.className = 'chat-message assistant';
 		thinkingBubble.innerHTML = '<span class="chat-thinking"><span>.</span><span>.</span><span>.</span></span>';
@@ -66,39 +103,93 @@ function initChat() {
 
 		try {
 			const projectId = projectFilter?.value || undefined;
-			const res = await api('POST', '/chat', {
+			const body = {
 				query,
 				conversation_id: currentConversationId,
 				project_id: projectId,
+			};
+
+			const res = await fetch('/api/v1/chat/stream', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body),
 			});
 
-			// Track conversation
-			if (res.conversation_id) {
-				currentConversationId = res.conversation_id;
+			if (res.status === 401 || (res.redirected && new URL(res.url).pathname.startsWith('/login'))) {
+				window.location.href = '/login';
+				return;
 			}
 
-			if (res.conversation_reset) {
-				addMessage('assistant', 'Your previous chat thread expired, so I started a new conversation for this reply.');
+			if (!res.ok || !res.body) {
+				throw new Error('Stream request failed');
 			}
 
-			// Show answer in chat
-			if (res.answer) {
-				addMessage('assistant', res.answer);
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+			let sseBuffer = '';
+			let markdown = '';
+			let bubble = null;
+			let currentEvent = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				sseBuffer += decoder.decode(value, { stream: true });
+				const lines = sseBuffer.split('\n');
+				sseBuffer = lines.pop() || '';
+
+				for (const line of lines) {
+					if (line.startsWith('event: ')) {
+						currentEvent = line.slice(7).trim();
+					} else if (line.startsWith('data: ')) {
+						const payload = line.slice(6);
+						try {
+							const data = JSON.parse(payload);
+
+							if (currentEvent === 'token') {
+								if (!bubble) {
+									thinkingRow.remove();
+									bubble = createAssistantRow();
+								}
+								markdown += data.text;
+								if (window.marked) {
+									bubble.innerHTML = window.marked.parse(markdown);
+								} else {
+									bubble.textContent = markdown;
+								}
+							} else if (currentEvent === 'done') {
+								if (data.conversation_id) {
+									currentConversationId = data.conversation_id;
+								}
+								if (data.conversation_reset) {
+									addMessage('assistant', 'Your previous chat thread expired, so I started a new conversation for this reply.');
+								}
+								if (data.results?.length && data.display_in === 'panel') {
+									renderResults(data.results, resultsList, resultsPanel);
+								}
+								if (data.action?.completed) {
+									addMessage('assistant', `✓ Action completed: ${data.action.type}`);
+								}
+							} else if (currentEvent === 'error') {
+								throw new Error(data.error || 'Stream error');
+							}
+						} catch (parseErr) {
+							if (currentEvent === 'error') throw parseErr;
+						}
+						currentEvent = '';
+					}
+				}
 			}
 
-			// Show results in main panel
-			if (res.results?.length && res.display_in === 'panel') {
-				renderResults(res.results, resultsList, resultsPanel);
-			}
-
-			// Show action confirmation
-			if (res.action?.completed) {
-				addMessage('assistant', `✓ Action completed: ${res.action.type}`);
+			// If no tokens were received, remove thinking indicator
+			if (!bubble) {
+				thinkingRow.remove();
 			}
 		} catch (err) {
+			thinkingRow.remove();
 			addMessage('assistant', 'Error: ' + (err.message || 'Failed to send message'));
 		} finally {
-			thinkingRow.remove();
 			sendBtn.disabled = false;
 			input.focus();
 		}
@@ -118,6 +209,8 @@ function initChat() {
 		messagesEl.innerHTML = '';
 		resultsPanel?.classList.add('d-none');
 		pageContent?.classList.remove('d-none');
+		showWelcome();
+		messagesEl.appendChild(chatWelcome);
 	});
 
 	// Conversation history

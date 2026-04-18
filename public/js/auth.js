@@ -136,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const email = document.getElementById('email').value.trim();
 		if (!email) {
 			document.getElementById('login-form').classList.add('d-none');
+			document.getElementById('create-account').classList.add('d-none');
 			document.getElementById('magic-link-form').classList.remove('d-none');
 			document.getElementById('magic-link-email').focus();
 			return;

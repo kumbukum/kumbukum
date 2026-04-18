@@ -172,7 +172,7 @@ small,
 .section-link {
 	display: flex;
 	font-size: 0.85rem;
-	color: var(--tag-color);
+	color: var(--text);
 	text-decoration: none;
 }
 
@@ -322,10 +322,7 @@ small,
 }
 
 .batch-actions {
-	padding: 0.25rem 0.5rem;
-	background: #f8f9fa;
-	border: 1px solid #dee2e6;
-	border-radius: 0.375rem;
+	padding: 0;
 }
 
 .batch-cb-wrap {

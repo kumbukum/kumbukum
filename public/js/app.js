@@ -351,6 +351,7 @@ document.addEventListener('click', function (e) {
 	if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey) return;
 	var link = e.target.closest('a[href]');
 	if (!link || link.target === '_blank') return;
+	if (link.classList.contains('kk-navbtn') || link.classList.contains('navbar-brand')) return;
 	var href = link.getAttribute('href');
 	if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript')) return;
 	var pathname = href.split('?')[0];

@@ -1,7 +1,7 @@
 // Batch selection & actions for notes, memories, urls — mount/unmount for SPA navigation
 (function () {
 	var toolbar, batchType, batchActions, selectAllCb, batchCount;
-	var batchDeleteBtn, batchMoveBtn, batchCopyBtn, selectAllBanner;
+	var batchDeleteBtn, batchMoveBtn, batchCopyBtn, selectAllBanner, batchDismissBtn;
 	var selectAllRecords = false;
 	var totalRecordCount = 0;
 	var lastChecked = null;
@@ -189,6 +189,7 @@
 		batchMoveBtn = document.getElementById('batch-move-btn');
 		batchCopyBtn = document.getElementById('batch-copy-btn');
 		selectAllBanner = document.getElementById('select-all-records-banner');
+		batchDismissBtn = document.getElementById('batch-dismiss-btn');
 
 		selectAllRecords = false;
 		totalRecordCount = 0;
@@ -199,6 +200,7 @@
 		batchDeleteBtn?.addEventListener('click', onDelete);
 		batchMoveBtn?.addEventListener('click', function () { pickProject('move'); });
 		batchCopyBtn?.addEventListener('click', function () { pickProject('copy'); });
+		batchDismissBtn?.addEventListener('click', function () { resetBatch(); getAllCheckboxes().forEach(function (cb) { cb.checked = false; }); });
 
 		addDocListener('change', onDocChange);
 		addDocListener('click', onDocClick, true);
@@ -222,6 +224,7 @@
 		batchMoveBtn = null;
 		batchCopyBtn = null;
 		selectAllBanner = null;
+		batchDismissBtn = null;
 		window.updateBatchBar = null;
 	}
 

@@ -9,8 +9,9 @@ html(lang="en")
 			{ "imports": { "/static/js/vendor.js": "/static/v-#{v}/js/vendor.js" } }
 		link(href=`/static/v-${v}/css/vendor.css` rel="stylesheet")
 		link(href=`/static/v-${v}/css/app.css` rel="stylesheet")
+		link(href=`/static/v-${v}/css/kumbukum-template1-strict.css` rel="stylesheet")
 		block head
-	body
+	body.kk-template1
 		block body
 			include includes/avatar
 			if impersonating
@@ -24,7 +25,10 @@ html(lang="en")
 				.container-fluid
 					a.navbar-brand(href="/dashboard")
 						include includes/logo_white
-					.d-flex.align-items-center
+					nav.kk-topnav
+						a.kk-navbtn(href="/dashboard" class={active: page !== 'graph'}) Projects
+						a.kk-navbtn(href="/graph" class={active: page === 'graph'}) Graph
+					.ms-auto.d-flex.align-items-center
 						if user
 							.dropdown
 								button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
@@ -43,7 +47,7 @@ html(lang="en")
 									li: hr.dropdown-divider
 									li: a.dropdown-item(href="#" onclick="logout()") Logout
 
-			.container-fluid.flex-grow-1.overflow-hidden
+			.container-fluid.flex-grow-1
 				.row.h-100
 					aside.col-md-2.bg-light.p-3.sidebar#sidebar
 						block sidebar
@@ -52,14 +56,10 @@ html(lang="en")
 								button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
 									i.bi.bi-plus
 							#project-list
-							hr.my-3
-							a.d-flex.align-items-center.text-decoration-none.text-muted.small(href="/graph")
-								i.bi.bi-diagram-3.me-2
-								| Graph
-							hr.my-3
+							
 							a.d-flex.align-items-center.text-decoration-none.text-muted.small(href="/trash")
-								i.bi.bi-trash.me-2
-								| Trash
+								i.bi.bi-trash.ms-2
+								span.ms-2 Global Trash
 								span.ms-auto.d-none#trash-count-badge
 
 					main.col-md-7.p-4#main-content
