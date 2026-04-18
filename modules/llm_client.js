@@ -95,7 +95,7 @@ async function googleChat({ messages, model, stream, apiKey, maxTokens = 4096 })
 	const systemInstruction = messages.find((m) => m.role === 'system');
 
 	const endpoint = stream ? 'streamGenerateContent' : 'generateContent';
-	const url = `${PROVIDERS.google.baseUrl}/models/${model}:${endpoint}?key=${apiKey}`;
+	const url = `${PROVIDERS.google.baseUrl}/models/${model}:${endpoint}?key=${apiKey}${stream ? '&alt=sse' : ''}`;
 
 	const body = { contents, generationConfig: { maxOutputTokens: maxTokens } };
 	if (systemInstruction) {
@@ -142,4 +142,46 @@ export async function chatModelCompletion({ messages, stream = false, maxTokens 
 		model: config.llm.chatModel,
 		maxTokens,
 	});
+}
+
+/**
+ * Parse an LLM streaming response body into an async iterator of text chunks.
+ * Handles both OpenAI-compatible SSE and Google Gemini SSE formats.
+ */
+export async function* parseStreamChunks(body, providerName) {
+	const decoder = new TextDecoder();
+	let buffer = '';
+	const isGoogle = providerName === 'google';
+
+	for await (const chunk of body) {
+		buffer += decoder.decode(chunk, { stream: true });
+		const lines = buffer.split('\n');
+		buffer = lines.pop() || '';
+
+		for (const line of lines) {
+			if (!line.startsWith('data: ')) continue;
+			const payload = line.slice(6).trim();
+			if (payload === '[DONE]') return;
+
+			try {
+				const json = JSON.parse(payload);
+				let text;
+				if (isGoogle) {
+					text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+				} else {
+					text = json.choices?.[0]?.delta?.content;
+				}
+				if (text) yield text;
+			} catch {
+				// skip malformed chunks
+			}
+		}
+	}
+}
+
+/**
+ * Resolve the current chat provider name.
+ */
+export function getChatProviderName() {
+	return config.llm.chatProvider || 'google';
 }

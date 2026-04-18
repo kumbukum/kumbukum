@@ -12,7 +12,7 @@ import { extractText } from '../services/import_service.js';
 import { detectFileType } from '../modules/file_detect.js';
 import * as memoryService from '../services/memory_service.js';
 import * as urlService from '../services/url_service.js';
-import { searchKnowledge, aiChatSearch, processChat } from '../services/ai_chat_service.js';
+import { searchKnowledge, aiChatSearch, processChat, processChatStream } from '../services/ai_chat_service.js';
 import { listConversations, deleteConversation } from '../modules/typesense.js';
 import * as trashService from '../services/trash_service.js';
 import { crawlSite } from '../modules/crawler.js';
@@ -541,6 +541,66 @@ router.post('/chat', createChatLimiter(), async (req, res) => {
 		console.error('AI Chat error:', err);
 		res.status(500).json({ error: 'AI Chat failed' });
 	}
+});
+
+router.post('/chat/stream', createChatLimiter(), async (req, res) => {
+	res.setHeader('Content-Type', 'text/event-stream');
+	res.setHeader('Cache-Control', 'no-cache');
+	res.setHeader('Connection', 'keep-alive');
+	res.setHeader('X-Accel-Buffering', 'no');
+	res.flushHeaders();
+
+	let closed = false;
+	req.on('close', () => { closed = true; });
+
+	function sendSSE(event, data) {
+		if (closed) return;
+		res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+	}
+
+	try {
+		const { query, conversation_id, project_id } = req.body;
+		if (!query) {
+			sendSSE('error', { error: 'query required' });
+			return res.end();
+		}
+
+		const { stream, answer, metadata } = await processChatStream({
+			hostId: req.host_id,
+			userId: req.userId,
+			query,
+			conversationId: conversation_id,
+			projectId: project_id,
+			ctx: auditCtx(req),
+		});
+
+		const conversationReset = !!conversation_id
+			&& !!metadata.conversationId
+			&& metadata.conversationId !== conversation_id;
+
+		if (stream) {
+			for await (const text of stream) {
+				if (closed) break;
+				sendSSE('token', { text });
+			}
+		} else if (answer) {
+			sendSSE('token', { text: answer });
+		}
+
+		sendSSE('done', {
+			conversation_id: metadata.conversationId,
+			results: metadata.results,
+			action: metadata.action,
+			display_in: metadata.displayIn,
+			conversation_reset: conversationReset,
+			previous_conversation_id: conversationReset ? conversation_id : undefined,
+		});
+	} catch (err) {
+		console.error('AI Chat stream error:', err);
+		sendSSE('error', { error: 'AI Chat failed' });
+	}
+
+	res.end();
 });
 
 router.get('/chat/conversations', async (req, res) => {

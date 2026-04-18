@@ -1,5 +1,5 @@
 import { searchAll, conversationSearch, getCollectionCounts } from '../modules/typesense.js';
-import { nlSearchCompletion, chatModelCompletion } from '../modules/llm_client.js';
+import { nlSearchCompletion, chatModelCompletion, parseStreamChunks, getChatProviderName } from '../modules/llm_client.js';
 import * as noteService from './note_service.js';
 import * as memoryService from './memory_service.js';
 import * as urlService from './url_service.js';
@@ -148,6 +148,45 @@ export async function processChat({ hostId, userId, query, conversationId, proje
 	}
 }
 
+/**
+ * Streaming variant of processChat.
+ * Returns { stream: AsyncGenerator|null, answer: string|null, metadata: object }.
+ * If stream is set, the caller should iterate it for text tokens; answer will be null.
+ * If answer is set, the response is already complete (no streaming needed).
+ */
+export async function processChatStream({ hostId, userId, query, conversationId, projectId, ctx = {} }) {
+	const classifiedIntent = await classifyIntent(query);
+	const intent = normalizeIntentForConversationFollowup(classifiedIntent, query, conversationId);
+
+	switch (intent.intent) {
+		case 'action': {
+			const result = await handleAction({ hostId, userId, query, conversationId, projectId, intent, ctx });
+			return { stream: null, answer: result.answer, metadata: { results: result.results, action: result.action, conversationId: result.conversationId, displayIn: result.displayIn } };
+		}
+
+		case 'stats': {
+			const result = await handleStatsStream({ hostId, query, conversationId });
+			return { stream: result.stream, answer: null, metadata: { results: [], action: null, conversationId: result.conversationId, displayIn: 'chat' } };
+		}
+
+		case 'analysis': {
+			const result = await handleAnalysisStream({ hostId, userId, query, conversationId, projectId, intent });
+			return { stream: result.stream, answer: null, metadata: { results: result.results, action: null, conversationId: result.conversationId, displayIn: 'panel' } };
+		}
+
+		case 'conversation': {
+			const result = await handleConversation({ hostId, userId, query, conversationId, projectId });
+			return { stream: null, answer: result.answer, metadata: { results: result.results, action: result.action, conversationId: result.conversationId, displayIn: result.displayIn } };
+		}
+
+		case 'search':
+		default: {
+			const result = await handleSearch({ hostId, userId, query, conversationId, projectId, intent });
+			return { stream: null, answer: result.answer, metadata: { results: result.results, action: result.action, conversationId: result.conversationId, displayIn: result.displayIn } };
+		}
+	}
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Search Handler
 // ────────────────────────────────────────────────────────────────────
@@ -244,6 +283,72 @@ async function handleAnalysis({ hostId, userId, query, conversationId, projectId
 		action: null,
 		conversationId: conversation.conversationId,
 		displayIn: 'panel',
+	};
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Streaming Stats Handler
+// ────────────────────────────────────────────────────────────────────
+
+async function handleStatsStream({ hostId, query, conversationId }) {
+	const counts = await getCollectionCounts(hostId);
+	const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+	const statsContext = `Collection counts: ${counts.notes} notes, ${counts.memory} memories, ${counts.urls} URLs. Total items: ${total}.`;
+
+	const body = await chatModelCompletion({
+		messages: [
+			{
+				role: 'system',
+				content: `You are Kumbukum, a knowledge assistant. Answer the user's question using the stats below. Be concise.\n\nSTATS:\n${statsContext}`,
+			},
+			{ role: 'user', content: query },
+		],
+		stream: true,
+		maxTokens: 256,
+	});
+
+	return {
+		stream: parseStreamChunks(body, getChatProviderName()),
+		conversationId: conversationId || null,
+	};
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Streaming Analysis Handler
+// ────────────────────────────────────────────────────────────────────
+
+async function handleAnalysisStream({ hostId, userId, query, conversationId, projectId, intent }) {
+	const searchQuery = intent.query || query;
+
+	const { results, conversation } = await conversationSearch(hostId, userId, searchQuery, {
+		conversationId,
+		projectId,
+		perPage: 10,
+	});
+
+	const flatResults = flattenResults(results);
+
+	const context = flatResults.map((r) => {
+		const snippet = (r.text_content || r.content || r.description || '').slice(0, 500);
+		return `[${r._type}] ${r.title || r.url || 'Untitled'}: ${snippet}`;
+	}).join('\n\n');
+
+	const body = await chatModelCompletion({
+		messages: [
+			{
+				role: 'system',
+				content: `You are Kumbukum, a knowledge assistant. The user wants an analysis of their knowledge items. Be concise and insightful. Use the context below.\n\nCONTEXT:\n${context}`,
+			},
+			{ role: 'user', content: query },
+		],
+		stream: true,
+		maxTokens: 2048,
+	});
+
+	return {
+		stream: parseStreamChunks(body, getChatProviderName()),
+		results: flatResults,
+		conversationId: conversation.conversationId,
 	};
 }
 

@@ -617,6 +617,23 @@ const swaggerSpec = {
                 },
             },
         },
+        '/chat/stream': {
+            post: {
+                tags: ['AI Chat'],
+                summary: 'AI-powered chat with streaming SSE response',
+                description: 'Same intent classification as POST /chat, but streams the answer as Server-Sent Events. For stats and analysis intents, LLM tokens are streamed incrementally. For search/conversation/action intents, the answer is sent as a single token event. A final "done" event contains metadata (conversation_id, results, action, display_in).',
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string', description: 'User message or query' }, conversation_id: { type: 'string', description: 'Continue an existing conversation (optional)' }, project_id: { type: 'string', description: 'Scope search/actions to a project (optional)' } }, required: ['query'] } } },
+                },
+                responses: {
+                    200: {
+                        description: 'SSE stream with events: token ({"text":"..."}), done ({"conversation_id":"...", "results":[], "action":null, "display_in":"panel|chat"}), error ({"error":"..."})',
+                        content: { 'text/event-stream': { schema: { type: 'string' } } },
+                    },
+                },
+            },
+        },
         '/chat/conversations': {
             get: {
                 tags: ['AI Chat'],
