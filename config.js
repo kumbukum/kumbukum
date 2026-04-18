@@ -11,10 +11,10 @@ function parseTypesenseConfig() {
 				throw new Error('TYPESENSE_NODES must include a "nodes" array');
 			}
 			return {
-				connectionTimeoutSeconds: 30,
-				healthcheckIntervalSeconds: 15,
-				maxRetries: 8,
-				retryIntervalSeconds: 5,
+				connectionTimeoutSeconds: 900,
+				healthcheckIntervalSeconds: 30,
+				maxRetries: 2,
+				retryIntervalSeconds: 10,
 				...parsed,
 			};
 		} catch (err) {
@@ -32,10 +32,10 @@ function parseTypesenseConfig() {
 			},
 		],
 		apiKey: process.env.TYPESENSE_API_KEY || 'kumbukum-dev-key',
-		connectionTimeoutSeconds: 30,
-		healthcheckIntervalSeconds: 15,
-		maxRetries: 8,
-		retryIntervalSeconds: 5,
+		connectionTimeoutSeconds: 900,
+		healthcheckIntervalSeconds: 30,
+		maxRetries: 2,
+		retryIntervalSeconds: 10,
 	};
 }
 
