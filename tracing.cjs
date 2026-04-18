@@ -58,6 +58,7 @@ try {
     var { resourceFromAttributes } = require('@opentelemetry/resources');
     var { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, ATTR_SERVICE_NAMESPACE } = require('@opentelemetry/semantic-conventions');
 } catch (err) {
+
     console.warn('OpenTelemetry packages not available, tracing disabled:', err.message);
     const noop = () => {};
     const noOpSpan = { setAttribute: noop, setStatus: noop, end: noop, recordException: noop, addEvent: noop };
@@ -81,6 +82,35 @@ try {
         getCurrentTraceInfo: () => ({ traceId: null, spanId: null }),
     };
     return;
+}
+
+// Initialize Sentry inside OTel pipeline when both are configured.
+// Sentry v10 uses OTel internally; skipOpenTelemetrySetup lets us add its
+// SentrySpanProcessor to the shared SDK so both SigNoz and Sentry receive data.
+let _sentrySpanProcessor;
+if (process.env.SENTRY_DSN) {
+    try {
+        const Sentry = require('@sentry/node');
+        const { nodeProfilingIntegration } = require('@sentry/profiling-node');
+        Sentry.init({
+            dsn: process.env.SENTRY_DSN,
+            skipOpenTelemetrySetup: true,
+            integrations: [
+                nodeProfilingIntegration(),
+                Sentry.consoleLoggingIntegration({ levels: ['log', 'warn', 'error'] }),
+            ],
+            enableLogs: true,
+            tracesSampleRate: 1.0,
+            profileSessionSampleRate: 1.0,
+            profileLifecycle: 'trace',
+            sendDefaultPii: true,
+        });
+        const { SentrySpanProcessor } = require('@sentry/opentelemetry');
+        _sentrySpanProcessor = new SentrySpanProcessor();
+        console.log('[OTEL] Sentry integrated with OpenTelemetry pipeline');
+    } catch (err) {
+        console.warn('[OTEL] Could not integrate Sentry:', err.message);
+    }
 }
 
 // Wrapper exporter that strips known benign exceptions so they don't
@@ -138,13 +168,17 @@ var _resource = resourceFromAttributes({
 console.log('[OTEL] Initializing gRPC exporters → endpoint:', process.env.OTEL_EXPORTER_OTLP_ENDPOINT, '| service:', _serviceName);
 
 try {
-    sdk = new opentelemetry.NodeSDK({
+    const sdkConfig = {
         resource: _resource,
         traceExporter,
         metricReader,
         logRecordProcessors,
         instrumentations: [getNodeAutoInstrumentations(), new IORedisInstrumentation()],
-    });
+    };
+    if (_sentrySpanProcessor) {
+        sdkConfig.spanProcessors = [_sentrySpanProcessor];
+    }
+    sdk = new opentelemetry.NodeSDK(sdkConfig);
 
     sdk.start();
     console.log('[OTEL] SDK started successfully');
@@ -261,6 +295,10 @@ if (sdk) {
         isShuttingDown = true;
         try {
             await sdk.shutdown();
+            if (process.env.SENTRY_DSN) {
+                const Sentry = require('@sentry/node');
+                await Sentry.close(2000);
+            }
             console.log('OpenTelemetry tracing terminated gracefully');
         } catch (error) {
             console.log('Error terminating tracing', error);
