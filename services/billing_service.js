@@ -16,11 +16,13 @@ function resolvePlanFromSubscription(subscription) {
 
 /**
  * Create a Stripe Checkout session with a free trial that collects the card upfront.
+ * Accepts an optional plan ('starter' or 'pro'); defaults to 'starter'.
  * Returns the Checkout URL to redirect the user to.
  */
-export async function createCheckoutSession(user) {
-    if (!config.stripe.priceId) {
-        throw new Error('STRIPE_PRICE_ID is not configured');
+export async function createCheckoutSession(user, plan = 'starter') {
+    const priceId = plan === 'pro' ? config.stripe.proPriceId : config.stripe.starterPriceId;
+    if (!priceId) {
+        throw new Error(`Stripe price ID is not configured for plan: ${plan}`);
     }
     const stripe = getStripe();
 
@@ -40,7 +42,7 @@ export async function createCheckoutSession(user) {
         customer: customerId,
         mode: 'subscription',
         payment_method_collection: 'always',
-        line_items: [{ price: config.stripe.priceId, quantity: 1 }],
+        line_items: [{ price: priceId, quantity: 1 }],
         subscription_data: {
             trial_period_days: config.stripe.trialDays,
         },

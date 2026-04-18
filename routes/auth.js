@@ -58,15 +58,41 @@ router.post('/signup', async (req, res) => {
 	}
 });
 
-// ---- Email Verification (creates the account) ----
+// ---- Email Verification (two-step: GET shows confirm page, POST creates account) ----
+// GET only renders a button so that email-client prefetch / link-preview cannot consume the token.
 
 router.get('/verify', async (req, res) => {
 	try {
 		const { token } = req.query;
-		if (!token) return res.status(400).json({ error: 'Token required' });
+		if (!token) return res.render('auth/verify', { error: 'Token required' });
 
 		const pending = await PendingSignup.findOne({ token, expires_at: { $gt: new Date() } });
-		if (!pending) return res.status(404).send('Invalid or expired verification link.');
+		if (!pending) {
+			// Token may already have been used — check if account exists
+			return res.render('auth/verify', { error: 'This verification link has already been used or has expired.' });
+		}
+
+		// Check if email was taken in the meantime
+		const existing = await User.findOne({ email: pending.email });
+		if (existing) {
+			await PendingSignup.deleteOne({ _id: pending._id });
+			return res.redirect('/login?already_verified=true');
+		}
+
+		res.render('auth/verify', { token });
+	} catch (err) {
+		console.error('Verification page error:', err);
+		res.render('auth/verify', { error: 'Something went wrong. Please try again.' });
+	}
+});
+
+router.post('/verify', async (req, res) => {
+	try {
+		const { token } = req.body;
+		if (!token) return res.render('auth/verify', { error: 'Token required' });
+
+		const pending = await PendingSignup.findOne({ token, expires_at: { $gt: new Date() } });
+		if (!pending) return res.render('auth/verify', { error: 'This verification link has already been used or has expired.' });
 
 		// Check again if email was taken in the meantime
 		const existing = await User.findOne({ email: pending.email });
@@ -116,7 +142,7 @@ router.get('/verify', async (req, res) => {
 		res.redirect('/dashboard');
 	} catch (err) {
 		console.error('Verification error:', err);
-		res.status(500).json({ error: 'Verification failed' });
+		res.render('auth/verify', { error: 'Verification failed. Please try again.' });
 	}
 });
 

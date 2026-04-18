@@ -38,7 +38,8 @@ router.get('/billing/checkout', requireAuth, requireTenant, async (req, res) => 
             return res.redirect('/dashboard');
         }
 
-        const checkoutUrl = await createCheckoutSession(user);
+        const plan = req.query.plan === 'pro' ? 'pro' : 'starter';
+        const checkoutUrl = await createCheckoutSession(user, plan);
         res.redirect(checkoutUrl);
     } catch (err) {
         console.error('Checkout error:', err);
