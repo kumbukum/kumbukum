@@ -27,10 +27,7 @@ async function api(method, path, body) {
 	return res.json();
 }
 
-// Handle bfcache restoration — force reload so the server can check the session
-window.addEventListener('pageshow', (event) => {
-	if (event.persisted) window.location.reload();
-});
+// (pageshow bfcache handler removed — SPA handles navigation)
 
 // SweetAlert2 confirm helper
 async function confirmAction(title, text) {
@@ -71,30 +68,23 @@ async function loadProjects() {
 		list.innerHTML = html;
 
 		list.querySelectorAll('.project-item').forEach((el) => {
-			// Clicking project name -> dashboard with ?g=
+			// Clicking project name -> SPA navigate to dashboard
 			el.addEventListener('click', (e) => {
 				if (e.target.closest('a')) return;
 				currentProjectId = el.dataset.id;
-				document.querySelectorAll('.project-item').forEach((e) => e.classList.remove('active'));
+				document.querySelectorAll('.project-item').forEach((p) => p.classList.remove('active'));
 				el.classList.add('active');
-				window.dispatchEvent(new CustomEvent('project-changed', { detail: currentProjectId }));
-				if (document.getElementById('project-overview')) {
-					const g = JSURL.stringify({ project_id: currentProjectId });
-					history.replaceState(null, '', `/dashboard?g=${g}`);
-					loadProjectOverview(currentProjectId);
-				} else {
-					const g = JSURL.stringify({ project_id: currentProjectId });
-					window.location.href = `/dashboard?g=${g}`;
-				}
+				navigateTo('/dashboard');
 			});
 
-			// Intercept section links (Notes, Memories, URLs) to pass ?g=
+			// Intercept section links (Notes, Memories, URLs) — SPA navigate with project context
 			el.querySelectorAll('.project-item-section a').forEach((link) => {
 				link.addEventListener('click', (e) => {
 					e.preventDefault();
-					const projectId = el.dataset.id;
-					const g = JSURL.stringify({ project_id: projectId });
-					window.location.href = `${link.getAttribute('href')}?g=${g}`;
+					currentProjectId = el.dataset.id;
+					document.querySelectorAll('.project-item').forEach((p) => p.classList.remove('active'));
+					el.classList.add('active');
+					navigateTo(link.getAttribute('href'));
 				});
 			});
 		});
@@ -123,13 +113,15 @@ async function loadProjectOverview(projectId) {
 		const html = await res.text();
 		container.innerHTML = html;
 
-		// Intercept overview card links to pass ?g=
+		// Intercept overview card links for SPA navigation
 		container.querySelectorAll('.project-section-link').forEach((link) => {
 			link.addEventListener('click', (e) => {
 				e.preventDefault();
 				const pid = link.dataset.project;
-				const g = JSURL.stringify({ project_id: pid });
-				window.location.href = `${link.getAttribute('href')}?g=${g}`;
+				if (pid) {
+					currentProjectId = pid;
+				}
+				navigateTo(link.getAttribute('href'));
 			});
 		});
 	} catch (err) {
@@ -231,6 +223,158 @@ function logout() {
 	fetch('/logout', { method: 'POST' }).then(() => (window.location.href = '/login'));
 }
 
+// ── SPA Router ──
+
+var __currentRoute = null;
+var __isNavigating = false;
+
+var ROUTES = {
+	'/dashboard': { section: 'dashboard', title: 'Dashboard', partial: '/ajax/section/dashboard' },
+	'/notes': { section: 'notes', title: 'Notes', partial: '/ajax/section/notes', batch: true },
+	'/memories': { section: 'memories', title: 'Memories', partial: '/ajax/section/memories', batch: true },
+	'/urls': { section: 'urls', title: 'URLs', partial: '/ajax/section/urls', batch: true },
+	'/trash': { section: 'trash', title: 'Trash', partial: '/ajax/section/trash' },
+	'/settings/profile': { title: 'Profile', partial: '/ajax/section/settings/profile' },
+	'/settings/security': { title: 'Security', partial: '/ajax/section/settings/security' },
+	'/settings/tokens': { title: 'API Tokens', partial: '/ajax/section/settings/tokens' },
+	'/settings/typesense': { title: 'Search', partial: '/ajax/section/settings/typesense' },
+	'/settings/usage': { title: 'Usage', partial: '/ajax/section/settings/usage' },
+	'/settings/export': { title: 'Export', partial: '/ajax/section/settings/export' },
+	'/settings/subscription': { title: 'Subscription', partial: '/ajax/section/settings/subscription' },
+};
+
+// Dashboard section — managed here since it depends on app.js functions
+window.__sections = window.__sections || {};
+window.__sections.dashboard = {
+	mount: function () {
+		if (currentProjectId) loadProjectOverview(currentProjectId);
+	},
+	unmount: function () {},
+};
+
+function executeScripts(container) {
+	var scripts = container.querySelectorAll('script');
+	scripts.forEach(function (old) {
+		var el = document.createElement('script');
+		Array.from(old.attributes).forEach(function (attr) {
+			el.setAttribute(attr.name, attr.value);
+		});
+		if (!old.src) el.textContent = old.textContent;
+		old.parentNode.replaceChild(el, old);
+	});
+}
+
+function unmountCurrent() {
+	if (!__currentRoute) return;
+	var route = ROUTES[__currentRoute];
+	if (!route) return;
+	if (route.batch && window.__sections?.batch) window.__sections.batch.unmount();
+	if (route.section && window.__sections?.[route.section]) window.__sections[route.section].unmount();
+}
+
+function mountCurrent(path) {
+	var route = ROUTES[path];
+	if (!route) return;
+	__currentRoute = path;
+	if (route.section && window.__sections?.[route.section]) window.__sections[route.section].mount();
+	if (route.batch && window.__sections?.batch) window.__sections.batch.mount();
+}
+
+async function navigateTo(path, opts) {
+	opts = opts || {};
+	var route = ROUTES[path];
+	if (!route) {
+		window.location.href = path;
+		return;
+	}
+	if (__isNavigating) return;
+	__isNavigating = true;
+
+	try {
+		unmountCurrent();
+
+		var pageContent = document.getElementById('page-content');
+		pageContent.style.opacity = '0.5';
+
+		var res = await fetch(route.partial);
+		if (isLoginRedirect(res)) return redirectToLogin();
+		if (!res.ok) throw new Error('Failed to load section');
+
+		var html = await res.text();
+		pageContent.innerHTML = html;
+		pageContent.style.opacity = '';
+
+		executeScripts(pageContent);
+		mountCurrent(path);
+
+		document.title = route.title + ' — Kumbukum';
+
+		if (!opts.popstate) {
+			var qs = '';
+			if (currentProjectId) qs = '?g=' + JSURL.stringify({ project_id: currentProjectId });
+			history.pushState({ spaPath: path }, '', path + qs);
+		}
+	} catch (err) {
+		console.error('Navigation error:', err);
+		var pc = document.getElementById('page-content');
+		if (pc) pc.style.opacity = '';
+		window.location.href = path;
+	} finally {
+		__isNavigating = false;
+	}
+}
+
+window.navigateTo = navigateTo;
+
+// Popstate for back/forward
+window.addEventListener('popstate', function (e) {
+	var state = e.state;
+	if (state && state.spaPath) {
+		// Restore project context from URL
+		var params = new URLSearchParams(window.location.search);
+		var g = params.get('g');
+		if (g) {
+			var parsed = JSURL.tryParse(g, {});
+			if (parsed.project_id) {
+				currentProjectId = parsed.project_id;
+				document.querySelectorAll('.project-item').forEach(function (el) {
+					el.classList.toggle('active', el.dataset.id === currentProjectId);
+				});
+			}
+		}
+		navigateTo(state.spaPath, { popstate: true });
+	}
+});
+
+// Global link interception for SPA routes
+document.addEventListener('click', function (e) {
+	if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey) return;
+	var link = e.target.closest('a[href]');
+	if (!link || link.target === '_blank') return;
+	var href = link.getAttribute('href');
+	if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript')) return;
+	var pathname = href.split('?')[0];
+	if (ROUTES[pathname]) {
+		e.preventDefault();
+		// Extract g param if present
+		var qIdx = href.indexOf('?');
+		if (qIdx !== -1) {
+			var params = new URLSearchParams(href.slice(qIdx));
+			var g = params.get('g');
+			if (g) {
+				var parsed = JSURL.tryParse(g, {});
+				if (parsed.project_id) {
+					currentProjectId = parsed.project_id;
+					document.querySelectorAll('.project-item').forEach(function (el) {
+						el.classList.toggle('active', el.dataset.id === currentProjectId);
+					});
+				}
+			}
+		}
+		navigateTo(pathname);
+	}
+});
+
 // Init
 document.addEventListener('DOMContentLoaded', async () => {
 	const params = new URLSearchParams(window.location.search);
@@ -241,7 +385,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	await loadProjects();
 	loadTrashCount();
-	if (hasExplicitProject && currentProjectId) loadProjectOverview(currentProjectId);
+
+	// Mount initial section for SPA
+	var path = window.location.pathname;
+	if (ROUTES[path]) {
+		history.replaceState({ spaPath: path }, '');
+		mountCurrent(path);
+	}
+
 	if (typeof initResultModalHandlers === 'function') initResultModalHandlers();
 	if (typeof initChat === 'function') initChat();
 

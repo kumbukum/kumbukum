@@ -54,8 +54,13 @@ block content
 					option(value=p._id)= p.name
 
 	.row
-		.col-md-9
+		.col-md-9.position-relative
 			#graph-container
+			#graph-loading.position-absolute.top-0.start-0.w-100.h-100.d-flex.align-items-center.justify-content-center(style="background:var(--bs-body-bg);z-index:10;border-radius:0.375rem")
+				.text-center
+					.spinner-border.text-primary(role="status")
+						span.visually-hidden Loading...
+					p.text-muted.small.mt-2 Loading graph…
 		.col-md-3
 			#graph-info-panel
 				.text-muted.small.text-center.py-5
@@ -75,16 +80,19 @@ block content
 						div
 							span.graph-legend-dot(style="background:#E8943A")
 							| URLs
-					.mt-2.d-flex.flex-column.gap-1.small
+					.mt-2.d-flex.flex-column.gap-2.small
 						div
 							span.text-muted — 
 							| Manual link
+							p.text-muted.mb-0(style="font-size:.7rem") Connections you created yourself between items
 						div
 							span.text-muted - - 
 							| Shared tag
+							p.text-muted.mb-0(style="font-size:.7rem") Items linked because they share the same tag
 						div
 							span.text-muted ··· 
 							| Semantic similarity
+							p.text-muted.mb-0(style="font-size:.7rem") AI-detected connections between items with similar meaning
 
 	script(type="module" src=`/static/v-${v}/js/graph_bundle.js`)
 	script(src=`/static/v-${v}/js/graph.js` defer)

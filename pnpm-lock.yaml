@@ -171,9 +171,9 @@ importers:
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
-      jsurl:
-        specifier: ^0.1.5
-        version: 0.1.5
+      jsurl2:
+        specifier: ^2.2.0
+        version: 2.2.0
       keyv:
         specifier: ^5.6.0
         version: 5.6.0
@@ -3590,8 +3590,8 @@ packages:
   jstransformer@1.0.0:
     resolution: {integrity: sha512-C9YK3Rf8q6VAPDCCU9fnqo3mAfOH6vUGnMcP4AQAYIEpWtfGLpwOTmZ+igtdK5y+VvI2n3CyYSzy4Qh34eq24A==}
 
-  jsurl@0.1.5:
-    resolution: {integrity: sha512-HyrafsIRCa+VlJAsvuvxWUM0iMeZd6+2J4JngECGF0JTRi5moUFV/mLxgyYfDizGF4ofLLYRpvD/Kt1d9wlUUg==}
+  jsurl2@2.2.0:
+    resolution: {integrity: sha512-jFwgc2G7eVMF6/uyxsF+7DbNEg7fj7SRWmJuVfu/SAOK0iIH9gOpLK9FL1jLvENCXS7kYsYcmFxRFQFyQEb7jg==}
 
   jszip@3.10.1:
     resolution: {integrity: sha512-xXDvecyTpGLrqFrvkrUSoxxfJI5AH7U8zxxtVclpsUtMCq4JQ290LY8AW5c7Ggnr/Y/oK+bQMbqK2qmtk3pN4g==}
@@ -8842,7 +8842,7 @@ snapshots:
       is-promise: 2.2.2
       promise: 7.3.1
 
-  jsurl@0.1.5: {}
+  jsurl2@2.2.0: {}
 
   jszip@3.10.1:
     dependencies:

@@ -1,0 +1,60 @@
+.row
+	.col-md-3
+		include _sidebar
+	.col-md-9
+		h4.mb-4 Security Settings
+
+		.card.mb-4
+			.card-body
+				h5.card-title
+					i.bi.bi-lock.me-2
+					| Reset Password
+				p.text-muted A new random password will be generated. Copy it before closing.
+				button.btn.btn-warning#reset-password-btn Reset Password
+				#password-result.d-none.mt-3
+					.alert.alert-success
+						p Your new password:
+						.input-group
+							input.form-control#new-password-value(type="text" readonly)
+							button.btn.btn-outline-secondary#copy-password-btn
+								i.bi.bi-clipboard
+								|  Copy
+						button.btn.btn-primary.mt-2#password-copied-btn I copied the password
+
+		.card.mb-4
+			.card-body
+				h5.card-title
+					i.bi.bi-shield-lock.me-2
+					| Two-Factor Authentication
+				if user.totp_enabled
+					p.text-success
+						i.bi.bi-check-circle.me-1
+						| 2FA is enabled
+					button.btn.btn-outline-danger#disable-2fa Disable 2FA
+				else
+					p.text-muted 2FA is not enabled
+					button.btn.btn-primary#setup-2fa Enable 2FA
+					#2fa-setup-area.d-none.mt-3
+						.card.bg-light
+							.card-body
+								p Scan this QR code with your authenticator app:
+								img.d-none.mb-3#2fa-qr(alt="QR Code")
+								p.small
+									| Or enter this secret manually:
+									code.ms-2#2fa-secret
+								.input-group.mt-3
+									input.form-control#2fa-code(type="text" placeholder="Enter 6-digit code" maxlength="6")
+									button.btn.btn-primary#confirm-2fa-btn Verify
+
+		.card
+			.card-body
+				h5.card-title
+					i.bi.bi-fingerprint.me-2
+					| Passkeys
+				#passkey-list.mb-3
+				button.btn.btn-primary#add-passkey Add Passkey
+
+include _logs_modal
+
+script(src=`/static/v-${v}/js/simplewebauthn-browser.min.js`)
+script(src=`/static/v-${v}/js/security.js`)

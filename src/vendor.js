@@ -2,7 +2,7 @@
 export { Collapse, Dropdown, Modal, Offcanvas, Tab, Toast, Tooltip } from 'bootstrap';
 export { default as Swal } from 'sweetalert2';
 export { default as Huebee } from 'huebee';
-import * as JSURL from 'jsurl';
+import * as JSURL from 'jsurl2';
 export { JSURL };
 import * as FilePond from 'filepond';
 export { FilePond };

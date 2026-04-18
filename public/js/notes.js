@@ -1,70 +1,56 @@
-document.addEventListener('DOMContentLoaded', () => {
-	const listEl = document.getElementById('notes-list');
-	const newBtn = document.getElementById('new-note-btn');
+// Notes section — mount/unmount for SPA navigation
+(function () {
+	var listEl, newBtn, pond;
+	var windowListeners = [];
 
-	const batchToolbar = document.getElementById('batch-toolbar');
-	const dropZoneEl = document.getElementById('notes-drop-zone');
+	function addWindowListener(event, handler) {
+		window.addEventListener(event, handler);
+		windowListeners.push([event, handler]);
+	}
 
 	async function loadNotes() {
 		if (!listEl) return;
-		const params = currentProjectId ? `?project=${currentProjectId}` : '';
-		const { notes } = await api('GET', `/notes${params}`);
+		var params = currentProjectId ? '?project=' + currentProjectId : '';
+		var data = await api('GET', '/notes' + params);
+		if (!listEl) return;
+		var notes = data.notes;
 
 		listEl.innerHTML = notes.length
 			? notes
-				.map(
-					(n) => {
-						const excerpt = n.text_content?.slice(0, 200) || '';
-						const date = new Date(n.updatedAt).toLocaleDateString();
-						return `
-				<div class="list-group-item list-group-item-action note-item" data-id="${n._id}">
-					<div class="d-flex align-items-start gap-2">
-						<div class="batch-cb-wrap">
-							<input type="checkbox" class="form-check-input batch-cb" value="${n._id}">
-						</div>
-						<div class="flex-grow-1 overflow-hidden">
-							<div class="d-flex justify-content-between align-items-center gap-2">
-								<strong class="text-truncate">${n.title}</strong>
-								<small class="text-muted text-nowrap flex-shrink-0">${date}</small>
-							</div>
-							${excerpt ? `<p class="mb-0 text-muted small text-truncate">${excerpt}</p>` : ''}
-							<div class="text-muted small">${n.tags?.map((t) => `<span class="badge text-bg-secondary tag-badge rounded-pill me-1">${t}</span>`).join('') || ''}</div>
-						</div>
-					</div>
-				</div>`;
-					},
-				)
+				.map(function (n) {
+					var excerpt = n.text_content?.slice(0, 200) || '';
+					var date = new Date(n.updatedAt).toLocaleDateString();
+					return '<div class="list-group-item list-group-item-action note-item" data-id="' + n._id + '">'
+						+ '<div class="d-flex align-items-start gap-2">'
+						+ '<div class="batch-cb-wrap"><input type="checkbox" class="form-check-input batch-cb" value="' + n._id + '"></div>'
+						+ '<div class="flex-grow-1 overflow-hidden">'
+						+ '<div class="d-flex justify-content-between align-items-center gap-2">'
+						+ '<strong class="text-truncate">' + n.title + '</strong>'
+						+ '<small class="text-muted text-nowrap flex-shrink-0">' + date + '</small>'
+						+ '</div>'
+						+ (excerpt ? '<p class="mb-0 text-muted small text-truncate">' + excerpt + '</p>' : '')
+						+ '<div class="text-muted small">' + (n.tags?.map(function (t) { return '<span class="badge text-bg-secondary tag-badge rounded-pill me-1">' + t + '</span>'; }).join('') || '') + '</div>'
+						+ '</div></div></div>';
+				})
 				.join('')
 			: '<p class="text-muted p-3">No notes yet. Create one!</p>';
 
-		listEl.querySelectorAll('.note-item').forEach((el) => {
-			el.addEventListener('click', (e) => {
+		listEl.querySelectorAll('.note-item').forEach(function (el) {
+			el.addEventListener('click', function (e) {
 				if (e.target.closest('.batch-cb-wrap')) return;
 				window.openItemModal('notes', el.dataset.id);
 			});
 		});
 	}
 
-	newBtn?.addEventListener('click', () => window.openItemModal('notes'));
+	function setupFilePond() {
+		var dropZone = document.getElementById('notes-drop-zone');
+		var dropOverlay = document.getElementById('drop-overlay');
+		var filepondInput = document.getElementById('import-filepond');
 
-	window.addEventListener('project-changed', loadNotes);
-	window.addEventListener('batch-done', loadNotes);
-	window.addEventListener('item-modal-saved', (e) => { if (e.detail?.type === 'notes') loadNotes(); });
-	window.addEventListener('item-modal-deleted', (e) => { if (e.detail?.type === 'notes') loadNotes(); });
-	loadNotes();
+		if (!dropZone || !dropOverlay || !filepondInput || !window.FilePond) return;
 
-	// Auto-open note from ?open= query param
-	const openId = new URLSearchParams(window.location.search).get('open');
-	if (openId) window.openItemModal('notes', openId);
-
-	// ---- File Import via Drag & Drop (FilePond) ----
-
-	const dropZone = document.getElementById('notes-drop-zone');
-	const dropOverlay = document.getElementById('drop-overlay');
-	const filepondInput = document.getElementById('import-filepond');
-
-	if (dropZone && dropOverlay && filepondInput && window.FilePond) {
-		const pond = FilePond.create(filepondInput, {
+		pond = FilePond.create(filepondInput, {
 			name: 'file',
 			allowMultiple: true,
 			credits: false,
@@ -73,88 +59,99 @@ document.addEventListener('DOMContentLoaded', () => {
 					url: '/api/v1/notes/import',
 					method: 'POST',
 					headers: {},
-					ondata: (formData) => {
-						if (currentProjectId) {
-							formData.append('project', currentProjectId);
-						}
+					ondata: function (formData) {
+						if (currentProjectId) formData.append('project', currentProjectId);
 						return formData;
 					},
-					onload: (response) => response,
-					onerror: (response) => response,
+					onload: function (response) { return response; },
+					onerror: function (response) { return response; },
 				},
 			},
 		});
 
-		const pondRoot = dropZone.querySelector('.filepond--root');
+		var pondRoot = dropZone.querySelector('.filepond--root');
+		var successCount = 0;
+		var errorCount = 0;
 
-		// Show FilePond panel when files are added
-		pond.on('addfile', () => {
+		pond.on('addfile', function () {
 			if (pondRoot) pondRoot.classList.add('filepond--active');
 		});
 
-		let successCount = 0;
-		let errorCount = 0;
-
-		pond.on('processfile', (error) => {
-			if (error) {
-				errorCount++;
-			} else {
-				successCount++;
-			}
+		pond.on('processfile', function (error) {
+			if (error) errorCount++;
+			else successCount++;
 		});
 
-		pond.on('processfiles', () => {
+		pond.on('processfiles', function () {
 			if (successCount > 0) {
-				showSuccess(`${successCount} file${successCount > 1 ? 's' : ''} imported as notes`);
+				showSuccess(successCount + ' file' + (successCount > 1 ? 's' : '') + ' imported as notes');
 				loadNotes();
 			}
 			if (errorCount > 0) {
-				showError(`${errorCount} file${errorCount > 1 ? 's' : ''} could not be imported`);
+				showError(errorCount + ' file' + (errorCount > 1 ? 's' : '') + ' could not be imported');
 			}
 			successCount = 0;
 			errorCount = 0;
-			// Hide FilePond panel after a brief delay so user sees final state
-			setTimeout(() => {
+			setTimeout(function () {
 				pond.removeFiles();
 				if (pondRoot) pondRoot.classList.remove('filepond--active');
 			}, 2000);
 		});
 
-		pond.on('warning', (error) => {
+		pond.on('warning', function (error) {
 			if (error?.body) showError(error.body);
 		});
 
-		// Drag & drop overlay logic
-		let dragCounter = 0;
-
-		dropZone.addEventListener('dragenter', (e) => {
+		var dragCounter = 0;
+		dropZone.addEventListener('dragenter', function (e) {
 			e.preventDefault();
 			dragCounter++;
-			if (dragCounter === 1) {
-				dropOverlay.classList.remove('d-none');
-			}
+			if (dragCounter === 1) dropOverlay.classList.remove('d-none');
 		});
-
-		dropZone.addEventListener('dragover', (e) => {
-			e.preventDefault();
-		});
-
-		dropZone.addEventListener('dragleave', (e) => {
+		dropZone.addEventListener('dragover', function (e) { e.preventDefault(); });
+		dropZone.addEventListener('dragleave', function (e) {
 			e.preventDefault();
 			dragCounter--;
-			if (dragCounter <= 0) {
-				dragCounter = 0;
-				dropOverlay.classList.add('d-none');
-			}
+			if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.add('d-none'); }
 		});
-
-		dropZone.addEventListener('drop', (e) => {
+		dropZone.addEventListener('drop', function (e) {
 			e.preventDefault();
 			dragCounter = 0;
 			dropOverlay.classList.add('d-none');
-			if (e.dataTransfer?.files?.length) {
-				pond.addFiles(Array.from(e.dataTransfer.files));
-			}
+			if (e.dataTransfer?.files?.length) pond.addFiles(Array.from(e.dataTransfer.files));
 		});
 	}
-});
+
+	function onModalSaved(e) { if (e.detail?.type === 'notes') loadNotes(); }
+	function onModalDeleted(e) { if (e.detail?.type === 'notes') loadNotes(); }
+
+	function mount() {
+		listEl = document.getElementById('notes-list');
+		newBtn = document.getElementById('new-note-btn');
+		newBtn?.addEventListener('click', function () { window.openItemModal('notes'); });
+
+		addWindowListener('project-changed', loadNotes);
+		addWindowListener('batch-done', loadNotes);
+		addWindowListener('item-modal-saved', onModalSaved);
+		addWindowListener('item-modal-deleted', onModalDeleted);
+
+		loadNotes();
+		setupFilePond();
+
+		var openId = new URLSearchParams(window.location.search).get('open');
+		if (openId) window.openItemModal('notes', openId);
+	}
+
+	function unmount() {
+		for (var i = 0; i < windowListeners.length; i++) {
+			window.removeEventListener(windowListeners[i][0], windowListeners[i][1]);
+		}
+		windowListeners.length = 0;
+		if (pond) { pond.destroy(); pond = null; }
+		listEl = null;
+		newBtn = null;
+	}
+
+	window.__sections = window.__sections || {};
+	window.__sections.notes = { mount: mount, unmount: unmount };
+})();
