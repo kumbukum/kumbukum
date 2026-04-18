@@ -2,7 +2,7 @@ import { GraphLink } from '../model/graph_link.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
-import { searchCollection } from '../modules/typesense.js';
+import { searchCollection, listDocuments } from '../modules/typesense.js';
 import { cacheGet, cacheSet, cacheInvalidate } from '../modules/redis.js';
 import * as audit from './audit_service.js';
 
@@ -126,20 +126,38 @@ export async function removeLinksForItem(hostId, itemId) {
 export async function getGraphData(hostId, options = {}) {
 	const { projectId, includeTags = true, includeSemantic = false, semanticThreshold = SEMANTIC_THRESHOLD } = options;
 
-	// Step A: Fetch all non-trashed items as nodes
-	const query = { host_id: hostId, in_trash: { $ne: true } };
-	if (projectId) query.project = projectId;
+	// Step A: Fetch all non-trashed items as nodes from Typesense (minimal fields)
+	const filter = projectId ? `project_id:=${projectId}` : undefined;
+	const listOpts = {
+		perPage: MAX_NODES,
+		filter_by: filter,
+		include_fields: 'id,title,tags,project_id,created_at',
+	};
+	const urlListOpts = {
+		perPage: MAX_NODES,
+		filter_by: filter,
+		include_fields: 'id,title,url,tags,project_id,created_at',
+	};
 
-	const [notes, memories, urls] = await Promise.all([
-		Note.find(query).select('title tags project createdAt updatedAt').limit(MAX_NODES).lean(),
-		Memory.find(query).select('title tags project createdAt updatedAt').limit(MAX_NODES).lean(),
-		Url.find(query).select('url title tags project createdAt updatedAt').limit(MAX_NODES).lean(),
+	const [notesRes, memoriesRes, urlsRes] = await Promise.all([
+		listDocuments(hostId, 'notes', listOpts).catch((e) => { console.error('Graph listDocuments notes:', e.message); return { hits: [] }; }),
+		listDocuments(hostId, 'memory', listOpts).catch((e) => { console.error('Graph listDocuments memory:', e.message); return { hits: [] }; }),
+		listDocuments(hostId, 'urls', urlListOpts).catch((e) => { console.error('Graph listDocuments urls:', e.message); return { hits: [] }; }),
 	]);
 
 	const nodes = [];
-	for (const n of notes) nodes.push({ id: n._id.toString(), name: n.title, type: 'notes', tags: n.tags || [], project_id: n.project?.toString(), created_at: n.createdAt });
-	for (const m of memories) nodes.push({ id: m._id.toString(), name: m.title, type: 'memory', tags: m.tags || [], project_id: m.project?.toString(), created_at: m.createdAt });
-	for (const u of urls) nodes.push({ id: u._id.toString(), name: u.title || u.url, type: 'urls', tags: u.tags || [], project_id: u.project?.toString(), created_at: u.createdAt });
+	for (const hit of notesRes.hits || []) {
+		const d = hit.document;
+		nodes.push({ id: d.id, name: d.title, type: 'notes', tags: d.tags || [], project_id: d.project_id, created_at: d.created_at });
+	}
+	for (const hit of memoriesRes.hits || []) {
+		const d = hit.document;
+		nodes.push({ id: d.id, name: d.title, type: 'memory', tags: d.tags || [], project_id: d.project_id, created_at: d.created_at });
+	}
+	for (const hit of urlsRes.hits || []) {
+		const d = hit.document;
+		nodes.push({ id: d.id, name: d.title || d.url, type: 'urls', tags: d.tags || [], project_id: d.project_id, created_at: d.created_at });
+	}
 
 	// Cap total nodes
 	if (nodes.length > MAX_NODES) nodes.length = MAX_NODES;
@@ -188,7 +206,7 @@ export async function getGraphData(hostId, options = {}) {
 		edges.push(...semanticEdges);
 	}
 
-	return { nodes, edges };
+	return { nodes, edges: edges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target)) };
 }
 
 // ---- Tag edge computation ----
@@ -251,6 +269,7 @@ async function computeSemanticEdges(hostId, nodes, threshold) {
 			const results = await searchCollection(hostId, node.type, node.name, {
 				queryBy,
 				perPage: 4,
+				include_fields: 'id',
 			});
 
 			for (const hit of (results.hits || [])) {
