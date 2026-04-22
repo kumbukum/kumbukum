@@ -141,7 +141,7 @@ services:
     restart: unless-stopped
 
   typesense:
-    image: typesense/typesense:31.1
+    image: typesense/typesense:30.2
     command: --data-dir /data --api-key=${TYPESENSE_API_KEY}
     volumes:
       - typesense_data:/data
