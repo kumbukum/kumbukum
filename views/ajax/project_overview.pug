@@ -6,8 +6,12 @@
 		span.project-color(style=`background:${project.color}; width:16px; height:16px`)
 		h4.mb-0= project.name
 	.ms-auto
-		button.btn.btn-sm.btn-outline-secondary(onclick=`editProject('${project._id}')`) Edit Project
-		
+		if !project.is_default
+			if canDelete
+				button.btn.btn-sm.btn-link.me-3.fs-7(onclick=`deleteProject('${project._id}')`) Delete
+			button.btn.btn-sm.btn-outline-secondary(onclick=`editProject('${project._id}')`) Edit Project
+		else
+			button.btn.btn-sm.btn-outline-secondary(onclick=`editProject('${project._id}')`) Edit Project
 
 p.text-muted.small.mb-4.fs-7 Project ID: #{project._id} &middot; Created #{createdAt}
 
@@ -70,3 +74,7 @@ if gitSyncEnabled
 								i.bi.bi-trash
 	else
 		p.text-muted.small No git repos configured. Add one to sync markdown files.
+
+//- Delete hint (always at bottom, outside gitSyncEnabled block)
+if !project.is_default && !canDelete
+	p.text-muted.fs-7.mt-auto.pt-4 Projects can only be deleted when all notes, memories, URLs, and git repos have been removed.

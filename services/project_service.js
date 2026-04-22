@@ -2,6 +2,7 @@ import { Project } from '../model/project.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { GitRepo } from '../model/git_repo.js';
 import { emitToTenant } from '../modules/socket.js';
 import * as audit from './audit_service.js';
 
@@ -56,6 +57,21 @@ export async function deleteProject(host_id, projectId, ctx = {}) {
 	const project = await Project.findOne({ _id: projectId, host_id });
 	if (!project) return null;
 	if (project.is_default) throw new Error('Cannot delete the default project');
+
+	const filter = { project: projectId, host_id, in_trash: { $ne: true } };
+	const [notes, memory, urls, gitRepos] = await Promise.all([
+		Note.countDocuments(filter),
+		Memory.countDocuments(filter),
+		Url.countDocuments(filter),
+		GitRepo.countDocuments({ project: projectId, host_id }),
+	]);
+
+	const parts = [];
+	if (notes) parts.push(`${notes} note${notes > 1 ? 's' : ''}`);
+	if (memory) parts.push(`${memory} ${memory > 1 ? 'memories' : 'memory'}`);
+	if (urls) parts.push(`${urls} URL${urls > 1 ? 's' : ''}`);
+	if (gitRepos) parts.push(`${gitRepos} git repo${gitRepos > 1 ? 's' : ''}`);
+	if (parts.length) throw new Error(`Cannot delete project: has ${parts.join(', ')}`);
 
 	project.is_active = false;
 	await project.save();

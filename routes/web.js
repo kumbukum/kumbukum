@@ -113,7 +113,9 @@ router.get('/ajax/project-overview/:id', async (req, res) => {
 		const plan = tenant?.plan || 'free';
 		const gitSyncEnabled = plan === 'pro' || plan === 'free';
 		const gitRepos = gitSyncEnabled ? await listGitRepos(req.host_id, req.params.id) : [];
-		res.render('ajax/project_overview', { project, counts, gitSyncEnabled, gitRepos });
+		const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0 };
+		const canDelete = !project.is_default && pc.notes === 0 && pc.memory === 0 && pc.urls === 0 && gitRepos.length === 0;
+		res.render('ajax/project_overview', { project, counts, gitSyncEnabled, gitRepos, canDelete });
 	} catch (err) {
 		res.status(500).send('<div class="text-danger">Failed to load project</div>');
 	}
