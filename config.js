@@ -126,6 +126,11 @@ const config = {
 		password: process.env.SYSADMIN_PASSWORD || '',
 	},
 
+	sentry: {
+		dsn: process.env.SENTRY_DSN || '',
+		clientEnabled: !!(process.env.SENTRY_DSN),
+	},
+
 	gitEncryptionKey: process.env.GIT_ENCRYPTION_KEY || '',
 
 	screenshotUrl: process.env.SCREENSHOT_URL || '',

@@ -25,6 +25,7 @@ import webRoutes from './routes/web.js';
 import adminRoutes from './routes/admin.js';
 import billingRoutes from './routes/billing.js';
 import healthRoutes from './routes/health.js';
+import sentryTunnelRoutes from './routes/sentry_tunnel.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -62,6 +63,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Make OpenPanel config available to all templates
 app.locals.openpanel = config.openpanel;
+app.locals.sentry = config.sentry;
 
 // Cache-busting build ID — embedded in static asset paths: /static/v-{hash}/...
 try {
@@ -70,15 +72,18 @@ try {
     app.locals.v = Date.now().toString(36);
 }
 
-// Stripe webhook needs raw body — skip express.json() for this path
+// Stripe webhook and Sentry tunnel need raw body — skip express.json() for these paths
 app.use((req, res, next) => {
-    if (req.originalUrl === '/billing/webhook') return next();
+    if (req.originalUrl === '/billing/webhook' || req.originalUrl === '/sentun') return next();
     express.json({ limit: '25mb' })(req, res, next);
 });
 app.use((req, res, next) => {
-    if (req.originalUrl === '/billing/webhook') return next();
+    if (req.originalUrl === '/billing/webhook' || req.originalUrl === '/sentun') return next();
     express.urlencoded({ extended: true, limit: '25mb' })(req, res, next);
 });
+
+// Sentry envelope tunnel — mounted before session (no auth needed)
+app.use('/sentun', sentryTunnelRoutes);
 app.use(cookieParser());
 
 // --- Static file cache control ---
