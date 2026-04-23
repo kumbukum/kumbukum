@@ -9,6 +9,7 @@ import { ApiClient } from './lib/api-client.js';
 import { noteTools } from './tools/notes.js';
 import { memoryTools } from './tools/memory.js';
 import { urlTools } from './tools/urls.js';
+import { emailTools } from './tools/emails.js';
 import { projectTools } from './tools/projects.js';
 import { graphTools } from './tools/graph.js';
 import { gitSyncTools } from './tools/git_sync.js';
@@ -38,6 +39,17 @@ async function resolveDefaultProjectId(api, projectIdOverride) {
 async function createServer(token, { projectId } = {}) {
   const api = new ApiClient(API_BASE_URL, token);
   const defaultProjectId = await resolveDefaultProjectId(api, projectId);
+  let emailFeatureEnabled = true;
+  let gitSyncFeatureEnabled = true;
+  try {
+    const { features } = await api.get('/features');
+    emailFeatureEnabled = features?.email_ingest !== false;
+    gitSyncFeatureEnabled = features?.git_sync !== false;
+  } catch {
+    // Fallback for older API versions: keep enabled by default.
+    emailFeatureEnabled = true;
+    gitSyncFeatureEnabled = true;
+  }
 
   const server = new McpServer({
     name: 'kumbukum',
@@ -59,6 +71,7 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
 - **Notes**: Rich text documents organized by project
 - **Memory**: Facts, decisions, context — your personal knowledge base
 - **URLs**: Saved web pages with extracted content, optionally with full-site crawling
+- **Emails**: Ingested emails with subject, recipients, body text, and thread references
 - **Projects**: Organize all data into projects — create, update, delete, and list projects`,
   });
 
@@ -67,9 +80,10 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
     ...noteTools(api, defaultProjectId),
     ...memoryTools(api, defaultProjectId),
     ...urlTools(api, defaultProjectId),
+    ...(emailFeatureEnabled ? emailTools(api, defaultProjectId) : {}),
     ...projectTools(api),
     ...graphTools(api),
-    ...gitSyncTools(api, defaultProjectId),
+    ...(gitSyncFeatureEnabled ? gitSyncTools(api, defaultProjectId) : {}),
   };
 
   for (const [name, tool] of Object.entries(allTools)) {

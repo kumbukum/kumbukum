@@ -1,0 +1,87 @@
+import { z } from 'zod';
+
+/**
+ * MCP tool definitions: Emails
+ */
+export function emailTools(api, defaultProjectId) {
+	return {
+		ingest_email: {
+			description: 'Ingest an email into the knowledge base (raw RFC822 or parsed payload)',
+			inputSchema: {
+				project_id: z.string().optional().describe('Project ID (defaults to the default project)'),
+				raw_email: z.string().optional().describe('Raw RFC822 email content'),
+				parsed_email: z.any().optional().describe('Pre-parsed mailparser-like JSON payload'),
+			},
+			handler: async (args) => {
+				const payload = {
+					project: args.project_id || defaultProjectId,
+				};
+				if (args.raw_email) payload.raw_email = args.raw_email;
+				if (args.parsed_email) payload.parsed_email = args.parsed_email;
+				const { email } = await api.post('/emails', payload);
+				return { content: [{ type: 'text', text: JSON.stringify(email, null, 2) }] };
+			},
+		},
+
+		read_email: {
+			description: 'Read an email by ID',
+			inputSchema: {
+				id: z.string().describe('Email ID'),
+			},
+			handler: async (args) => {
+				const { email } = await api.get(`/emails/${args.id}`);
+				return { content: [{ type: 'text', text: JSON.stringify(email, null, 2), cache_control: { type: 'ephemeral' } }] };
+			},
+		},
+
+		list_emails: {
+			description: 'List emails, optionally filtered by project',
+			inputSchema: {
+				project_id: z.string().optional().describe('Project ID filter'),
+				page: z.number().optional(),
+				limit: z.number().optional(),
+			},
+			handler: async (args) => {
+				const params = new URLSearchParams();
+				if (args.project_id) params.set('project', args.project_id);
+				if (args.page) params.set('page', args.page);
+				if (args.limit) params.set('limit', args.limit);
+				const { emails } = await api.get(`/emails?${params}`);
+				return { content: [{ type: 'text', text: JSON.stringify(emails, null, 2), cache_control: { type: 'ephemeral' } }] };
+			},
+		},
+
+		search_emails: {
+			description: 'Search emails using semantic/text search',
+			inputSchema: {
+				query: z.string().describe('Search query'),
+			},
+			handler: async (args) => {
+				const { results } = await api.post('/emails/search', { query: args.query });
+				return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
+			},
+		},
+
+		get_email_thread: {
+			description: 'Get the message thread linked by message_id/references',
+			inputSchema: {
+				id: z.string().describe('Email ID'),
+			},
+			handler: async (args) => {
+				const { thread } = await api.get(`/emails/${args.id}/thread`);
+				return { content: [{ type: 'text', text: JSON.stringify(thread, null, 2), cache_control: { type: 'ephemeral' } }] };
+			},
+		},
+
+		delete_email: {
+			description: 'Delete an email by ID',
+			inputSchema: {
+				id: z.string().describe('Email ID'),
+			},
+			handler: async (args) => {
+				await api.delete(`/emails/${args.id}`);
+				return { content: [{ type: 'text', text: 'Email deleted' }] };
+			},
+		},
+	};
+}

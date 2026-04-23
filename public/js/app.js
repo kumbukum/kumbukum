@@ -107,7 +107,7 @@ async function loadProjects() {
 				navigateTo('/dashboard');
 			});
 
-			// Intercept section links (Notes, Memories, URLs) — SPA navigate with project context
+			// Intercept section links (Notes, Memories, URLs, Emails) — SPA navigate with project context
 			el.querySelectorAll('.project-item-section a').forEach((link) => {
 				link.addEventListener('click', (e) => {
 					e.preventDefault();
@@ -283,6 +283,7 @@ var ROUTES = {
 	'/notes': { section: 'notes', title: 'Notes', partial: '/ajax/section/notes', batch: true },
 	'/memories': { section: 'memories', title: 'Memories', partial: '/ajax/section/memories', batch: true },
 	'/urls': { section: 'urls', title: 'URLs', partial: '/ajax/section/urls', batch: true },
+	'/emails': { section: 'emails', title: 'Emails', partial: '/ajax/section/emails', batch: true },
 	'/trash': { section: 'trash', title: 'Trash', partial: '/ajax/section/trash' },
 	'/settings/profile': { title: 'Profile', partial: '/ajax/section/settings/profile' },
 	'/settings/security': { title: 'Security', partial: '/ajax/section/settings/security' },
@@ -492,6 +493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			'note:created', 'note:updated', 'note:deleted',
 			'memory:created', 'memory:updated', 'memory:deleted',
 			'url:created', 'url:updated', 'url:deleted',
+			'email:created', 'email:updated', 'email:deleted',
 			'counts:refresh',
 		];
 		for (const evt of crudEvents) {
@@ -528,20 +530,22 @@ async function refreshCounts() {
 			const counts = await api('GET', '/counts');
 			document.querySelectorAll('.project-item').forEach(el => {
 				const pid = el.dataset.id;
-				const pc = counts[pid] || { notes: 0, memory: 0, urls: 0 };
+				const pc = counts[pid] || { notes: 0, memory: 0, urls: 0, emails: 0 };
 				const sectionCounts = el.querySelectorAll('.section-count');
 				if (sectionCounts[0]) sectionCounts[0].textContent = pc.notes;
 				if (sectionCounts[1]) sectionCounts[1].textContent = pc.memory;
 				if (sectionCounts[2]) sectionCounts[2].textContent = pc.urls;
+				if (sectionCounts[3]) sectionCounts[3].textContent = pc.emails;
 			});
 			// Also update overview cards if visible
 			const overview = document.getElementById('project-overview');
 			if (overview && currentProjectId) {
-				const pc = counts[currentProjectId] || { notes: 0, memory: 0, urls: 0 };
+				const pc = counts[currentProjectId] || { notes: 0, memory: 0, urls: 0, emails: 0 };
 				const cards = overview.querySelectorAll('.fw-bold');
 				if (cards[0]) cards[0].textContent = pc.notes;
 				if (cards[1]) cards[1].textContent = pc.memory;
 				if (cards[2]) cards[2].textContent = pc.urls;
+				if (cards[3]) cards[3].textContent = pc.emails;
 			}
 		} catch (err) {
 			console.error('Failed to refresh counts:', err);

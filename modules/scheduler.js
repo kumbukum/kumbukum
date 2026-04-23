@@ -5,6 +5,7 @@ import { User } from '../model/user.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { Email } from '../model/email.js';
 import { sendTrialEndingEmail } from '../services/email_service.js';
 import { cleanupExpiredExports } from '../services/export_service.js';
 import { runScheduledSync } from '../services/git_sync_service.js';
@@ -57,7 +58,7 @@ export function startScheduler() {
 	// Batch indexing: find documents with is_indexed:false and batch-import to Typesense
 	new Cron('*/20 * * * * *', async () => {
 		try {
-			const indexed = await indexMissing({ Note, Memory, Url });
+			const indexed = await indexMissing({ Note, Memory, Url, Email });
 			if (indexed > 0) console.log(`Index batch complete: indexed ${indexed} document(s)`);
 		} catch (err) {
 			console.error('Index batch error:', err);

@@ -35,7 +35,7 @@ POST /api/v1/search/knowledge
 }
 ```
 
-This endpoint queries both notes and memories in parallel using Typesense BM25 search.
+This endpoint queries notes, memories, URLs, emails, and crawled pages in parallel using Typesense semantic + text search.
 
 - `workspace_id` is optional — omit to search notes across all workspaces the user can access
 - Use `document_tags` to filter results by tags
@@ -49,6 +49,7 @@ For searching within a single type:
 | Notes    | `POST /api/v1/files/notes/search` |
 | Memories | `POST /api/v1/memories/search`    |
 | URLs     | via `search_urls` MCP tool        |
+| Emails   | `POST /api/v1/emails/search`      |
 
 ## AI Chat
 

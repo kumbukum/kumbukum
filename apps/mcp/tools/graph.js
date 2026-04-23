@@ -6,12 +6,12 @@ import { z } from 'zod';
 export function graphTools(api) {
     return {
         create_link: {
-            description: 'Create a link between two items (notes, memories, or URLs)',
+            description: 'Create a link between two items (notes, memories, URLs, or emails)',
             inputSchema: {
                 source_id: z.string().describe('Source item ID'),
-                source_type: z.enum(['notes', 'memory', 'urls']).describe('Source item type'),
+                source_type: z.enum(['notes', 'memory', 'urls', 'emails']).describe('Source item type'),
                 target_id: z.string().describe('Target item ID'),
-                target_type: z.enum(['notes', 'memory', 'urls']).describe('Target item type'),
+                target_type: z.enum(['notes', 'memory', 'urls', 'emails']).describe('Target item type'),
                 label: z.string().optional().describe('Link label/description'),
             },
             handler: async (args) => {

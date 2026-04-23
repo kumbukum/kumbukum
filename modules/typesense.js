@@ -147,6 +147,18 @@ export function toTypesenseDoc(type, doc) {
 			return { ...base, title: doc.title || '', content: doc.content || '', tags: doc.tags || [], source: doc.source || '' };
 		case 'urls':
 			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', text_content: doc.text_content || '' };
+		case 'emails':
+			return {
+				...base,
+				subject: doc.subject || '',
+				text_content: doc.text_content || '',
+				attachment_text_content: doc.attachment_text_content || '',
+				to: doc.to || [],
+				cc: doc.cc || [],
+				bcc: doc.bcc || [],
+				message_id: doc.message_id || '',
+				references: doc.references || [],
+			};
 		default:
 			return base;
 	}
@@ -222,6 +234,37 @@ const schemas = {
 				num_dim: 384,
 				embed: {
 					from: ['title', 'description', 'text_content'],
+					model_config: {
+						model_name: 'ts/multilingual-e5-small',
+					},
+				},
+			},
+		],
+		default_sorting_field: 'updated_at',
+		token_separators: _token_separators,
+	}),
+
+	emails: (host_id) => ({
+		name: `emails_${host_id}`,
+		enable_nested_fields: true,
+		fields: [
+			{ name: 'subject', type: 'string', optional: true },
+			{ name: 'text_content', type: 'string', optional: true },
+			{ name: 'attachment_text_content', type: 'string', optional: true },
+			{ name: 'to', type: 'string[]', optional: true },
+			{ name: 'cc', type: 'string[]', optional: true },
+			{ name: 'bcc', type: 'string[]', optional: true },
+			{ name: 'message_id', type: 'string', optional: true },
+			{ name: 'references', type: 'string[]', optional: true },
+			{ name: 'project_id', type: 'string', facet: true },
+			{ name: 'created_at', type: 'int64' },
+			{ name: 'updated_at', type: 'int64' },
+			{
+				name: 'embedding',
+				type: 'float[]',
+				num_dim: 384,
+				embed: {
+					from: ['subject', 'text_content', 'attachment_text_content', 'to', 'cc', 'bcc'],
 					model_config: {
 						model_name: 'ts/multilingual-e5-small',
 					},
@@ -430,7 +473,8 @@ export async function listDocuments(host_id, type, options = {}) {
  */
 export async function searchAll(host_id, query, options = {}) {
 	const ts = getTypesenseClient();
-	const types = ['notes', 'memory', 'urls', 'pages'];
+	const includeEmails = options.includeEmails !== false;
+	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
 	const searches = types.map((type) => ({
 		collection: `${type}_${host_id}`,
 		q: query,
@@ -463,7 +507,7 @@ export async function searchAll(host_id, query, options = {}) {
 export async function getCollectionCounts(host_id) {
 	const ts = getTypesenseClient();
 	const counts = {};
-	for (const type of ['notes', 'memory', 'urls']) {
+	for (const type of ['notes', 'memory', 'urls', 'emails']) {
 		try {
 			const col = await withTypesenseResilience(
 				`collection stats ${type}_${host_id}`,
@@ -487,9 +531,10 @@ export async function getFilteredCount(host_id, type, projectId) {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
 	try {
+		const countQueryBy = type === 'emails' ? 'subject' : 'title';
 		const search = {
 			q: '*',
-			query_by: 'title',
+			query_by: countQueryBy,
 			per_page: 0,
 			exclude_fields: _ts_exlude_default,
 		};
@@ -513,12 +558,13 @@ export async function getFilteredCount(host_id, type, projectId) {
  */
 export async function reindexHost(host_id, models) {
 	const ts = getTypesenseClient();
-	const { Note, Memory, Url } = models;
+	const { Note, Memory, Url, Email } = models;
 
 	const typeModelMap = [
 		{ type: 'notes', model: Note },
 		{ type: 'memory', model: Memory },
 		{ type: 'urls', model: Url },
+		{ type: 'emails', model: Email },
 	];
 
 	const results = {};
@@ -647,12 +693,13 @@ async function countPendingForHost(host_id, typeModelMap) {
 }
 
 export async function indexMissing(models) {
-	const { Note, Memory, Url } = models;
+	const { Note, Memory, Url, Email } = models;
 
 	const typeModelMap = [
 		{ type: 'notes', model: Note },
 		{ type: 'memory', model: Memory },
 		{ type: 'urls', model: Url },
+		{ type: 'emails', model: Email },
 	];
 
 	let totalIndexed = 0;
@@ -683,7 +730,7 @@ export async function indexMissing(models) {
 			if (!progress) {
 				progress = {
 					indexed: 0,
-					by_type: { notes: 0, memory: 0, urls: 0 },
+					by_type: { notes: 0, memory: 0, urls: 0, emails: 0 },
 				};
 				hostProgress.set(host_id, progress);
 			}
@@ -764,7 +811,7 @@ export async function indexMissing(models) {
  */
 function buildConversationSystemPrompt() {
 	const now = new Date();
-	return `You are Kumbukum, a personal knowledge assistant. You help users find, organize, and manage their notes, memories, and saved URLs.
+	return `You are Kumbukum, a personal knowledge assistant. You help users find, organize, and manage their notes, memories, saved URLs, and emails.
 
 ## CURRENT TIMESTAMP
 ${now.toISOString()}
@@ -774,6 +821,7 @@ The user's knowledge base contains:
 - **Notes**: Rich text documents with title, text_content, project_id, tags
 - **Memories**: Facts, decisions, context with title, content, project_id, tags, source
 - **URLs**: Saved web pages with url, title, description, text_content, project_id
+- **Emails**: Ingested email messages with subject, recipients, text_content, attachments text, message_id, references, project_id
 - **Pages**: Crawled sub-pages with url, title, text_content, parent_url_id, project_id
 
 ## RESPONSE FORMAT
@@ -806,8 +854,8 @@ Action types and params:
 - create_note: { "title": "...", "content": "...", "project_id": "..." }
 - create_memory: { "title": "...", "content": "...", "project_id": "..." }
 - save_url: { "url": "...", "project_id": "..." }
-- move_to_project: { "item_ids": ["..."], "item_type": "notes|memories|urls", "project_id": "..." }
-- delete: { "item_ids": ["..."], "item_type": "notes|memories|urls", "confirmation_required": true }
+- move_to_project: { "item_ids": ["..."], "item_type": "notes|memories|urls|emails", "project_id": "..." }
+- delete: { "item_ids": ["..."], "item_type": "notes|memories|urls|emails", "confirmation_required": true }
 
 Always include project_id in action params. If the user doesn't specify a project, ask which project to use.`;
 }
@@ -982,10 +1030,10 @@ async function _updateConversationModel(modelId, fields) {
 export async function conversationSearch(hostId, userId, query, options = {}) {
 	const ts = getTypesenseClient();
 	const convoModelId = `convo-${userId}`;
-	const { conversationId, projectId, perPage = 10 } = options;
+	const { conversationId, projectId, perPage = 10, includeEmails = true } = options;
 
 	// Build per-collection search requests
-	const types = ['notes', 'memory', 'urls', 'pages'];
+	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
 	const searches = types.map((type) => {
 		const search = {
 			collection: `${type}_${hostId}`,

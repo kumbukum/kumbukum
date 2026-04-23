@@ -36,9 +36,9 @@ describe('MCP Server — Streamable HTTP transport', () => {
     });
 
     describe('tools/list', () => {
-        it('should list all 23 tools', async () => {
+        it('should list all 33 tools', async () => {
             const { tools } = await client.listTools();
-            assert.equal(tools.length, 23);
+            assert.equal(tools.length, 33);
         });
 
         it('should include expected tool names', async () => {
@@ -49,6 +49,7 @@ describe('MCP Server — Streamable HTTP transport', () => {
                 'store_memory', 'recall_memory', 'search_memory', 'read_memory', 'update_memory', 'delete_memory',
                 'suggest_memory_tags', 'search_knowledge', 'chat',
                 'save_url', 'list_urls', 'search_urls', 'read_url', 'update_url', 'delete_url',
+                'ingest_email', 'read_email', 'list_emails', 'search_emails', 'get_email_thread', 'delete_email',
                 'list_projects', 'get_project',
             ];
             for (const name of expected) {

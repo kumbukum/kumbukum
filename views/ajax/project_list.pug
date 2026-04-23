@@ -1,5 +1,5 @@
 each p in projects
-	- const pc = counts[p._id.toString()] || { notes: 0, memory: 0, urls: 0 }
+	- const pc = counts[p._id.toString()] || { notes: 0, memory: 0, urls: 0, emails: 0 }
 	.card.project-item.mb-3.position-relative(data-id=p._id class=(p._id.toString() === activeProjectId ? 'active' : ''))
 		.project-drop-overlay.d-none
 			.project-drop-overlay-inner
@@ -29,3 +29,18 @@ each p in projects
 					span URLs
 				.ms-auto.section-link
 					span.section-count= pc.urls
+			if emailFeatureEnabled
+				.d-flex.align-items-center.py-1.pe-3.bg-hover-light.project-item-section.position-relative
+					a.stretched-link(href="/emails")
+					.pe-2.section-link
+						span Emails
+					.ms-auto.section-link
+						span.section-count= pc.emails
+			else
+				.d-flex.align-items-center.py-1.pe-3.bg-light-subtle.project-item-section
+					.pe-2.section-link.text-muted
+						span
+							i.bi.bi-lock-fill.me-1
+							| Emails (Pro)
+					if is_hosted
+						a.ms-auto.section-link.small(href="/settings/subscription") Upgrade

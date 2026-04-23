@@ -336,6 +336,8 @@ let rmUrlPagesPerPage = 100;
 let rmUrlPagesTotal = 0;
 let rmUrlPagesLoaded = 0;
 let rmUrlCrawlEnabled = false;
+let rmEmailBodyText = '';
+let rmEmailBodyLoaded = false;
 
 /**
  * Open the universal item modal.
@@ -358,6 +360,7 @@ async function openItemModal(type, id, defaults = {}) {
 	document.getElementById('result-modal-note').classList.add('d-none');
 	document.getElementById('result-modal-memory').classList.add('d-none');
 	document.getElementById('result-modal-url').classList.add('d-none');
+	document.getElementById('result-modal-email').classList.add('d-none');
 	loadingEl.classList.add('d-none');
 	saveBtn.classList.remove('d-none');
 
@@ -409,6 +412,9 @@ async function openResultModal(item) {
 	if (editableTypes.includes(item._type) && item.id) {
 		return openItemModal(item._type, item.id, item);
 	}
+	if (item._type === 'emails' && item.id) {
+		return openEmailModal(item);
+	}
 	// Pages or unknown — read-only preview
 	const modalEl = document.getElementById('chat-result-modal');
 	if (!modalEl) return;
@@ -417,6 +423,7 @@ async function openResultModal(item) {
 	document.getElementById('result-modal-note').classList.add('d-none');
 	document.getElementById('result-modal-memory').classList.add('d-none');
 	document.getElementById('result-modal-url').classList.add('d-none');
+	document.getElementById('result-modal-email').classList.add('d-none');
 	document.getElementById('rm-save-btn').classList.add('d-none');
 	document.getElementById('rm-delete-btn').classList.add('d-none');
 
@@ -428,12 +435,137 @@ async function openResultModal(item) {
 	loadingEl.classList.remove('d-none');
 	let html = '';
 	if (item.url) html += `<div class="mb-2"><a href="${escapeHtml(item.url)}" target="_blank">${escapeHtml(item.url)}</a></div>`;
-	const text = item.text_content || item.content || item.description || '';
+	const text = item.text_content || item.attachment_text_content || item.content || item.description || '';
 	if (text) html += `<div class="text-muted" style="white-space:pre-wrap">${escapeHtml(text.slice(0, 3000))}</div>`;
 	loadingEl.innerHTML = html || '<p class="text-muted">No content available</p>';
 
 	const modal = new BsModal(modalEl);
 	modal.show();
+}
+
+function formatList(values) {
+	if (!Array.isArray(values) || !values.length) return '—';
+	return values.join(', ');
+}
+
+function rmShowEmailDetails() {
+	document.getElementById('rm-email-tab-details')?.classList.add('active');
+	document.getElementById('rm-email-tab-body')?.classList.remove('active');
+	document.getElementById('rm-email-pane-details')?.classList.remove('d-none');
+	document.getElementById('rm-email-pane-body')?.classList.add('d-none');
+}
+
+function rmShowEmailBody() {
+	document.getElementById('rm-email-tab-details')?.classList.remove('active');
+	document.getElementById('rm-email-tab-body')?.classList.add('active');
+	document.getElementById('rm-email-pane-details')?.classList.add('d-none');
+	document.getElementById('rm-email-pane-body')?.classList.remove('d-none');
+	const bodyEl = document.getElementById('rm-email-content');
+	if (!bodyEl || rmEmailBodyLoaded) return;
+	bodyEl.textContent = rmEmailBodyText || 'No content available.';
+	rmEmailBodyLoaded = true;
+}
+
+function rmResetEmailView() {
+	rmEmailBodyText = '';
+	rmEmailBodyLoaded = false;
+	const bodyEl = document.getElementById('rm-email-content');
+	if (bodyEl) bodyEl.textContent = 'Open the Body tab to load content.';
+	if (document.getElementById('rm-email-thread')) {
+		document.getElementById('rm-email-thread').innerHTML = '';
+	}
+	rmShowEmailDetails();
+}
+
+function renderEmailThread(thread = [], currentId) {
+	const threadEl = document.getElementById('rm-email-thread');
+	if (!threadEl) return;
+	if (!thread.length) {
+		threadEl.innerHTML = '<div class="list-group-item text-muted">No linked thread items.</div>';
+		return;
+	}
+	threadEl.innerHTML = thread.map((msg) => {
+		const msgId = msg._id || msg.id || '';
+		const subject = escapeHtml(msg.subject || '(No subject)');
+		const date = msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : '';
+		const active = msgId === currentId ? ' active' : '';
+		return `<button type="button" class="list-group-item list-group-item-action${active}" data-email-id="${msgId}">
+			<div class="fw-semibold text-truncate">${subject}</div>
+			<small class="text-muted">${escapeHtml(date)}</small>
+		</button>`;
+	}).join('');
+	threadEl.querySelectorAll('[data-email-id]').forEach((btn) => {
+		btn.addEventListener('click', () => {
+			const emailId = btn.dataset.emailId;
+			if (!emailId) return;
+			openEmailModal({ _type: 'emails', id: emailId });
+		});
+	});
+}
+
+function renderEmailDetails(email, thread = []) {
+	document.getElementById('rm-email-subject').value = email.subject || '(No subject)';
+	document.getElementById('rm-email-to').value = formatList(email.to);
+	document.getElementById('rm-email-cc').value = formatList(email.cc);
+	document.getElementById('rm-email-bcc').value = formatList(email.bcc);
+	document.getElementById('rm-email-message-id').value = email.message_id || '—';
+	document.getElementById('rm-email-references').value = formatList(email.references);
+	rmEmailBodyText = [email.text_content, email.attachment_text_content]
+		.filter(Boolean)
+		.join('\n\n');
+	rmEmailBodyLoaded = false;
+	document.getElementById('rm-email-content').textContent = 'Open the Body tab to load content.';
+	renderEmailThread(thread, email._id);
+}
+
+async function openEmailModal(item) {
+	const modalEl = document.getElementById('chat-result-modal');
+	if (!modalEl) return;
+	const loadingEl = document.getElementById('result-modal-loading');
+	const saveBtn = document.getElementById('rm-save-btn');
+	const deleteBtn = document.getElementById('rm-delete-btn');
+	const titleEl = document.getElementById('result-modal-title');
+	const badgeEl = document.getElementById('result-modal-badge');
+
+	rmCleanup();
+	rmCurrentType = 'emails';
+	rmCurrentId = item.id || null;
+	document.getElementById('result-modal-note').classList.add('d-none');
+	document.getElementById('result-modal-memory').classList.add('d-none');
+	document.getElementById('result-modal-url').classList.add('d-none');
+	document.getElementById('result-modal-email').classList.remove('d-none');
+	saveBtn.classList.add('d-none');
+	deleteBtn.classList.add('d-none');
+	loadingEl.classList.remove('d-none');
+	document.getElementById('rm-email-subject').value = '(Loading...)';
+	document.getElementById('rm-email-to').value = '—';
+	document.getElementById('rm-email-cc').value = '—';
+	document.getElementById('rm-email-bcc').value = '—';
+	document.getElementById('rm-email-message-id').value = '—';
+	document.getElementById('rm-email-references').value = '—';
+	rmResetEmailView();
+
+	titleEl.textContent = item.title || '(No subject)';
+	badgeEl.className = `badge bg-${typeBadgeColor('emails')} me-2`;
+	badgeEl.textContent = 'Email';
+
+	const modal = new BsModal(modalEl);
+	modal.show();
+
+	try {
+		const [emailRes, threadRes] = await Promise.all([
+			api('GET', `/emails/${item.id}`),
+			api('GET', `/emails/${item.id}/thread`).catch(() => ({ thread: [] })),
+		]);
+		const email = emailRes.email || emailRes;
+		const thread = threadRes.thread || [];
+		rmCurrentId = email._id || item.id || null;
+		titleEl.textContent = email.subject || '(No subject)';
+		renderEmailDetails(email, thread);
+		loadingEl.classList.add('d-none');
+	} catch (err) {
+		loadingEl.innerHTML = `<p class="text-danger">Failed to load email: ${escapeHtml(err.message || 'Unknown error')}</p>`;
+	}
 }
 
 function rmSetUrlPagesState({ visible, metaText, pages = [], append = false, showLoadMore = false, loadingMore = false }) {
@@ -730,8 +862,8 @@ function rmGetEditorContent() {
 
 // ── Link search (all item types) ─────────────────────────────────
 
-const rmTypeIcons = { notes: 'bi-file-text', memory: 'bi-lightbulb', urls: 'bi-link-45deg' };
-const rmTypeLabels = { notes: 'Note', memory: 'Memory', urls: 'URL' };
+const rmTypeIcons = { notes: 'bi-file-text', memory: 'bi-lightbulb', urls: 'bi-link-45deg', emails: 'bi-envelope' };
+const rmTypeLabels = { notes: 'Note', memory: 'Memory', urls: 'URL', emails: 'Email' };
 
 function rmGetActiveLinkContainer() {
 	const panels = ['result-modal-note', 'result-modal-memory', 'result-modal-url'];
@@ -846,7 +978,7 @@ function rmHighlightDropdownItem(idx) {
 }
 
 async function rmSyncLinks(itemId, itemType) {
-	const typeMap = { notes: 'notes', memory: 'memory', urls: 'urls' };
+	const typeMap = { notes: 'notes', memory: 'memory', urls: 'urls', emails: 'emails' };
 	const currentType = typeMap[itemType] || itemType;
 
 	// Find removed links (were in original but not in current)
@@ -886,6 +1018,7 @@ function rmCleanup() {
 	rmUrlCrawlEnabled = false;
 	rmSetUrlPagesState({ visible: false, metaText: '', pages: [] });
 	rmSetUrlCrawlActionState();
+	rmResetEmailView();
 	if (rmEditor) { rmEditor.destroy(); rmEditor = null; }
 	rmCurrentId = null;
 	rmCurrentType = null;
@@ -905,6 +1038,7 @@ function rmCleanup() {
 	document.getElementById('result-modal-note')?.classList.add('d-none');
 	document.getElementById('result-modal-memory')?.classList.add('d-none');
 	document.getElementById('result-modal-url')?.classList.add('d-none');
+	document.getElementById('result-modal-email')?.classList.add('d-none');
 	rmShowUrlDetails();
 }
 
@@ -921,6 +1055,8 @@ function initResultModalHandlers() {
 	document.getElementById('rm-memory-tab-edit')?.addEventListener('click', rmShowMemoryEdit);
 	document.getElementById('rm-url-tab-details')?.addEventListener('click', rmShowUrlDetails);
 	document.getElementById('rm-url-tab-pages')?.addEventListener('click', rmShowUrlPages);
+	document.getElementById('rm-email-tab-details')?.addEventListener('click', rmShowEmailDetails);
+	document.getElementById('rm-email-tab-body')?.addEventListener('click', rmShowEmailBody);
 	document.getElementById('rm-url-crawl-load-more-btn')?.addEventListener('click', () => {
 		if (rmCurrentType !== 'urls' || !rmCurrentId) return;
 		rmLoadUrlPages(rmCurrentId, { append: true });
@@ -946,7 +1082,6 @@ function initResultModalHandlers() {
 			showError('Delete failed: ' + (err.message || 'Unknown error'));
 		}
 	});
-
 	// Link search (all item types)
 	document.querySelectorAll('.rm-link-search').forEach(input => {
 		input.addEventListener('input', () => {
@@ -1058,6 +1193,7 @@ function initResultModalHandlers() {
 
 // Expose globally so page scripts can use it
 window.openItemModal = openItemModal;
+window.openResultModal = openResultModal;
 window.initResultModalHandlers = initResultModalHandlers;
 
 function escapeHtml(str) {
@@ -1071,6 +1207,7 @@ function typeBadgeColor(type) {
 		case 'notes': return 'primary';
 		case 'memory': return 'success';
 		case 'urls': return 'warning';
+		case 'emails': return 'secondary';
 		case 'pages': return 'info';
 		default: return 'secondary';
 	}

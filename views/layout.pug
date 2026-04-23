@@ -183,6 +183,41 @@ html(lang="en")
 								.list-group#rm-url-crawl-list
 								button.btn.btn-sm.btn-outline-secondary.mt-2.d-none(type="button")#rm-url-crawl-load-more-btn Load more
 
+						//- Email details (read-only)
+						#result-modal-email.d-none
+							ul.nav.nav-tabs.mb-3.px-3
+								li.nav-item
+									button.nav-link.active#rm-email-tab-details(type="button") Details
+								li.nav-item
+									button.nav-link#rm-email-tab-body(type="button") Body
+							#rm-email-pane-details.px-3
+								.row.g-3
+									.col-md-8
+										.mb-2
+											.form-text Subject
+											input.form-control#rm-email-subject(type="text" readonly)
+										.mb-2
+											.form-text To
+											input.form-control#rm-email-to(type="text" readonly)
+										.mb-2
+											.form-text Cc
+											input.form-control#rm-email-cc(type="text" readonly)
+										.mb-2
+											.form-text Bcc
+											input.form-control#rm-email-bcc(type="text" readonly)
+										.mb-2
+											.form-text Message ID
+											textarea.form-control#rm-email-message-id(rows="2" readonly)
+										.mb-2
+											.form-text References
+											textarea.form-control#rm-email-references(rows="3" readonly)
+									.col-md-4
+										.form-text Thread
+										#rm-email-thread.list-group.small
+							#rm-email-pane-body.d-none.px-3.pb-2
+								.form-text Body / Attachment Text
+								#rm-email-content.preview-container.border.rounded.p-3(style="min-height:220px; white-space:pre-wrap")
+
 						//- Loading placeholder
 						#result-modal-loading.text-center.py-4.d-none
 							.spinner-border.spinner-border-sm
@@ -219,6 +254,7 @@ html(lang="en")
 		script(src=`/static/v-${v}/js/notes.js`)
 		script(src=`/static/v-${v}/js/memories.js`)
 		script(src=`/static/v-${v}/js/urls.js`)
+		script(src=`/static/v-${v}/js/emails.js`)
 		script(src=`/static/v-${v}/js/trash.js`)
 		script(src=`/static/v-${v}/js/batch.js`)
 		include includes/openpanel

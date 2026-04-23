@@ -3,6 +3,7 @@ import { nlSearchCompletion, chatModelCompletion, parseStreamChunks, getChatProv
 import * as noteService from './note_service.js';
 import * as memoryService from './memory_service.js';
 import * as urlService from './url_service.js';
+import * as emailIngestService from './email_ingest_service.js';
 import { listProjects } from './project_service.js';
 
 // ────────────────────────────────────────────────────────────────────
@@ -13,7 +14,7 @@ const INTENT_PROMPT = `You classify user messages for a knowledge management sys
 Respond with JSON only. No markdown, no text outside JSON.
 
 Intent types:
-- "search": User wants to find notes, memories, URLs, or pages (e.g. "find my notes about X", "what do I know about Y")
+- "search": User wants to find notes, memories, URLs, emails, or pages (e.g. "find my notes about X", "what do I know about Y")
 - "stats": User wants counts, totals, or statistics about their knowledge base (e.g. "how many notes do I have", "what's in my knowledge base", "show me stats", "how many items")
 - "action": User wants to create, update, move, or delete items (e.g. "create a note about X", "save this URL", "move these to project Y", "remember that X")
 - "analysis": User wants a summary, comparison, or deeper insight from their knowledge (e.g. "summarize my notes about X", "compare these topics")
@@ -23,14 +24,14 @@ Respond:
 {"intent": "search|stats|action|analysis|conversation", "query": "extracted search keywords (for search/analysis)", "action_type": "create_note|create_memory|save_url|move_to_project|delete|null", "params": {}, "limit": null, "types": null}
 
 Rules for "limit": if the user specifies a count (e.g. "show me 3 notes", "latest 5 URLs"), set limit to that number. Otherwise null.
-Rules for "types": if the user specifies a content type (e.g. "notes", "memories", "urls"), set types to an array like ["notes"] or ["notes","memory"]. Use these type names: notes, memory, urls, pages. Otherwise null (search all).
+Rules for "types": if the user specifies a content type (e.g. "notes", "memories", "urls", "emails"), set types to an array like ["notes"] or ["notes","memory"]. Use these type names: notes, memory, urls, emails, pages. Otherwise null (search all).
 
 For action intents, extract params from the user message:
 - create_note: {"title": "...", "content": "..."}
 - create_memory: {"title": "...", "content": "..."} (also triggered by "remember this/that")
 - save_url: {"url": "..."}
-- move_to_project: {"item_type": "notes|memories|urls", "project_name": "..."}
-- delete: {"item_type": "notes|memories|urls"}`;
+- move_to_project: {"item_type": "notes|memories|urls|emails", "project_name": "..."}
+- delete: {"item_type": "notes|memories|urls|emails"}`;
 
 /**
  * Classify user intent using the lightweight NL search model.
@@ -72,7 +73,7 @@ const EXPLICIT_ACTION_PATTERNS = [
 const FOLLOW_UP_REFERENCE_PATTERNS = [
 	/^\s*(which|what|who|why|how|when)\b/i,
 	/^\s*(tell me more|summarize|compare|explain|expand|continue)\b/i,
-	/\b(the|those|these)\s+(results|items|notes|memories|urls)\b/i,
+	/\b(the|those|these)\s+(results|items|notes|memories|urls|emails)\b/i,
 	/\b(that|those|them|it|one)\b/i,
 ];
 
@@ -124,27 +125,27 @@ export function normalizeIntentForConversationFollowup(intent, query, conversati
  * @param {string} opts.projectId - Scope to project (optional)
  * @returns {{ answer: string, results: object, action: object|null, conversationId: string, displayIn: 'panel'|'chat' }}
  */
-export async function processChat({ hostId, userId, query, conversationId, projectId, ctx = {} }) {
+export async function processChat({ hostId, userId, query, conversationId, projectId, includeEmails = true, ctx = {} }) {
 	// Classify intent
 	const classifiedIntent = await classifyIntent(query);
 	const intent = normalizeIntentForConversationFollowup(classifiedIntent, query, conversationId);
 
 	switch (intent.intent) {
 		case 'action':
-			return handleAction({ hostId, userId, query, conversationId, projectId, intent, ctx });
+			return handleAction({ hostId, userId, query, conversationId, projectId, intent, includeEmails, ctx });
 
 		case 'stats':
-			return handleStats({ hostId, userId, query, conversationId, projectId, intent });
+			return handleStats({ hostId, userId, query, conversationId, projectId, intent, includeEmails });
 
 		case 'analysis':
-			return handleAnalysis({ hostId, userId, query, conversationId, projectId, intent });
+			return handleAnalysis({ hostId, userId, query, conversationId, projectId, intent, includeEmails });
 
 		case 'conversation':
-			return handleConversation({ hostId, userId, query, conversationId, projectId });
+			return handleConversation({ hostId, userId, query, conversationId, projectId, includeEmails });
 
 		case 'search':
 		default:
-			return handleSearch({ hostId, userId, query, conversationId, projectId, intent });
+			return handleSearch({ hostId, userId, query, conversationId, projectId, intent, includeEmails });
 	}
 }
 
@@ -154,34 +155,34 @@ export async function processChat({ hostId, userId, query, conversationId, proje
  * If stream is set, the caller should iterate it for text tokens; answer will be null.
  * If answer is set, the response is already complete (no streaming needed).
  */
-export async function processChatStream({ hostId, userId, query, conversationId, projectId, ctx = {} }) {
+export async function processChatStream({ hostId, userId, query, conversationId, projectId, includeEmails = true, ctx = {} }) {
 	const classifiedIntent = await classifyIntent(query);
 	const intent = normalizeIntentForConversationFollowup(classifiedIntent, query, conversationId);
 
 	switch (intent.intent) {
 		case 'action': {
-			const result = await handleAction({ hostId, userId, query, conversationId, projectId, intent, ctx });
+			const result = await handleAction({ hostId, userId, query, conversationId, projectId, intent, includeEmails, ctx });
 			return { stream: null, answer: result.answer, metadata: { results: result.results, action: result.action, conversationId: result.conversationId, displayIn: result.displayIn } };
 		}
 
 		case 'stats': {
-			const result = await handleStatsStream({ hostId, query, conversationId });
+			const result = await handleStatsStream({ hostId, query, conversationId, includeEmails });
 			return { stream: result.stream, answer: null, metadata: { results: [], action: null, conversationId: result.conversationId, displayIn: 'chat' } };
 		}
 
 		case 'analysis': {
-			const result = await handleAnalysisStream({ hostId, userId, query, conversationId, projectId, intent });
+			const result = await handleAnalysisStream({ hostId, userId, query, conversationId, projectId, intent, includeEmails });
 			return { stream: result.stream, answer: null, metadata: { results: result.results, action: null, conversationId: result.conversationId, displayIn: 'panel' } };
 		}
 
 		case 'conversation': {
-			const result = await handleConversation({ hostId, userId, query, conversationId, projectId });
+			const result = await handleConversation({ hostId, userId, query, conversationId, projectId, includeEmails });
 			return { stream: null, answer: result.answer, metadata: { results: result.results, action: result.action, conversationId: result.conversationId, displayIn: result.displayIn } };
 		}
 
 		case 'search':
 		default: {
-			const result = await handleSearch({ hostId, userId, query, conversationId, projectId, intent });
+			const result = await handleSearch({ hostId, userId, query, conversationId, projectId, intent, includeEmails });
 			return { stream: null, answer: result.answer, metadata: { results: result.results, action: result.action, conversationId: result.conversationId, displayIn: result.displayIn } };
 		}
 	}
@@ -191,7 +192,7 @@ export async function processChatStream({ hostId, userId, query, conversationId,
 // Search Handler
 // ────────────────────────────────────────────────────────────────────
 
-async function handleSearch({ hostId, userId, query, conversationId, projectId, intent }) {
+async function handleSearch({ hostId, userId, query, conversationId, projectId, intent, includeEmails = true }) {
 	const searchQuery = intent.query || query;
 	const limit = intent.limit || null;
 	const types = intent.types || null;
@@ -200,6 +201,7 @@ async function handleSearch({ hostId, userId, query, conversationId, projectId, 
 		conversationId,
 		projectId,
 		perPage: limit || 10,
+		includeEmails,
 	});
 
 	let flat = flattenResults(results, types);
@@ -218,11 +220,12 @@ async function handleSearch({ hostId, userId, query, conversationId, projectId, 
 // Stats Handler
 // ────────────────────────────────────────────────────────────────────
 
-async function handleStats({ hostId, query, conversationId }) {
+async function handleStats({ hostId, query, conversationId, includeEmails = true }) {
 	const counts = await getCollectionCounts(hostId);
+	if (!includeEmails) counts.emails = 0;
 	const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
-	const statsContext = `Collection counts: ${counts.notes} notes, ${counts.memory} memories, ${counts.urls} URLs. Total items: ${total}.`;
+	const statsContext = `Collection counts: ${counts.notes} notes, ${counts.memory} memories, ${counts.urls} URLs, ${counts.emails || 0} emails. Total items: ${total}.`;
 
 	const answer = await chatModelCompletion({
 		messages: [
@@ -248,7 +251,7 @@ async function handleStats({ hostId, query, conversationId }) {
 // Analysis Handler
 // ────────────────────────────────────────────────────────────────────
 
-async function handleAnalysis({ hostId, userId, query, conversationId, projectId, intent }) {
+async function handleAnalysis({ hostId, userId, query, conversationId, projectId, intent, includeEmails = true }) {
 	const searchQuery = intent.query || query;
 
 	// First, search for relevant items
@@ -256,6 +259,7 @@ async function handleAnalysis({ hostId, userId, query, conversationId, projectId
 		conversationId,
 		projectId,
 		perPage: 10,
+		includeEmails,
 	});
 
 	const flatResults = flattenResults(results);
@@ -290,10 +294,11 @@ async function handleAnalysis({ hostId, userId, query, conversationId, projectId
 // Streaming Stats Handler
 // ────────────────────────────────────────────────────────────────────
 
-async function handleStatsStream({ hostId, query, conversationId }) {
+async function handleStatsStream({ hostId, query, conversationId, includeEmails = true }) {
 	const counts = await getCollectionCounts(hostId);
+	if (!includeEmails) counts.emails = 0;
 	const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
-	const statsContext = `Collection counts: ${counts.notes} notes, ${counts.memory} memories, ${counts.urls} URLs. Total items: ${total}.`;
+	const statsContext = `Collection counts: ${counts.notes} notes, ${counts.memory} memories, ${counts.urls} URLs, ${counts.emails || 0} emails. Total items: ${total}.`;
 
 	const body = await chatModelCompletion({
 		messages: [
@@ -317,13 +322,14 @@ async function handleStatsStream({ hostId, query, conversationId }) {
 // Streaming Analysis Handler
 // ────────────────────────────────────────────────────────────────────
 
-async function handleAnalysisStream({ hostId, userId, query, conversationId, projectId, intent }) {
+async function handleAnalysisStream({ hostId, userId, query, conversationId, projectId, intent, includeEmails = true }) {
 	const searchQuery = intent.query || query;
 
 	const { results, conversation } = await conversationSearch(hostId, userId, searchQuery, {
 		conversationId,
 		projectId,
 		perPage: 10,
+		includeEmails,
 	});
 
 	const flatResults = flattenResults(results);
@@ -356,7 +362,7 @@ async function handleAnalysisStream({ hostId, userId, query, conversationId, pro
 // Action Handler
 // ────────────────────────────────────────────────────────────────────
 
-async function handleAction({ hostId, userId, query, conversationId, projectId, intent, ctx = {} }) {
+async function handleAction({ hostId, userId, query, conversationId, projectId, intent, includeEmails = true, ctx = {} }) {
 	const actionType = intent.action_type;
 	const params = intent.params || {};
 
@@ -460,7 +466,7 @@ async function handleAction({ hostId, userId, query, conversationId, projectId, 
 					};
 				}
 				const itemType = params.item_type || 'notes';
-				const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl }[itemType];
+				const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl, emails: includeEmails ? emailIngestService.updateEmail : null }[itemType];
 				if (!updateFn) {
 					return { answer: `Unknown item type: ${itemType}`, results: [], action: null, conversationId, displayIn: 'chat' };
 				}
@@ -511,12 +517,13 @@ async function handleAction({ hostId, userId, query, conversationId, projectId, 
 // Conversation Handler (follow-ups)
 // ────────────────────────────────────────────────────────────────────
 
-async function handleConversation({ hostId, userId, query, conversationId, projectId }) {
+async function handleConversation({ hostId, userId, query, conversationId, projectId, includeEmails = true }) {
 	// Use the conversation model for context-aware follow-up
 	const { results, conversation, action } = await conversationSearch(hostId, userId, query, {
 		conversationId,
 		projectId,
 		perPage: 5,
+		includeEmails,
 	});
 
 	const flatResults = flattenResults(results);
@@ -546,12 +553,12 @@ async function handleConversation({ hostId, userId, query, conversationId, proje
  * @returns {object} Raw Typesense results keyed by type
  */
 export async function searchKnowledge(hostId, query, options = {}) {
-	const { projectId, perPage = 5 } = options;
+	const { projectId, perPage = 5, includeEmails = true } = options;
+	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
 
 	if (projectId) {
 		// Search with project filter
 		const ts = (await import('../modules/typesense.js')).getTypesenseClient();
-		const types = ['notes', 'memory', 'urls', 'pages'];
 		const searches = types.map((type) => ({
 			collection: `${type}_${hostId}`,
 			q: query,
@@ -568,7 +575,7 @@ export async function searchKnowledge(hostId, query, options = {}) {
 		return merged;
 	}
 
-	return searchAll(hostId, query, { perPage });
+	return searchAll(hostId, query, { perPage, includeEmails });
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -580,7 +587,7 @@ export async function searchKnowledge(hostId, query, options = {}) {
  */
 function flattenResults(results, types = null) {
 	const items = [];
-	const typeMap = { notes: 'notes', memory: 'memory', urls: 'urls', pages: 'pages' };
+	const typeMap = { notes: 'notes', memory: 'memory', urls: 'urls', emails: 'emails', pages: 'pages' };
 
 	for (const [type, data] of Object.entries(results)) {
 		const mappedType = typeMap[type] || type;
@@ -631,6 +638,11 @@ function buildLegacyContext(results) {
 	if (results.urls?.found > 0) {
 		const urlItems = results.urls.hits.map((h) => `[URL] ${h.document.title} (${h.document.url}): ${h.document.text_content?.slice(0, 500)}`);
 		sections.push('SAVED URLS:\n' + urlItems.join('\n'));
+	}
+
+	if (results.emails?.found > 0) {
+		const emailItems = results.emails.hits.map((h) => `[Email] ${h.document.subject || '(No subject)'}: ${(h.document.text_content || '').slice(0, 500)}`);
+		sections.push('EMAILS:\n' + emailItems.join('\n'));
 	}
 
 	if (results.pages?.found > 0) {

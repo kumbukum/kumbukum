@@ -12,6 +12,7 @@ import { extractText } from '../services/import_service.js';
 import { detectFileType } from '../modules/file_detect.js';
 import * as memoryService from '../services/memory_service.js';
 import * as urlService from '../services/url_service.js';
+import * as emailIngestService from '../services/email_ingest_service.js';
 import { searchKnowledge, aiChatSearch, processChat, processChatStream } from '../services/ai_chat_service.js';
 import { listConversations, deleteConversation } from '../modules/typesense.js';
 import * as trashService from '../services/trash_service.js';
@@ -22,6 +23,7 @@ import { emitToTenant } from '../modules/socket.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { Email } from '../model/email.js';
 import { User } from '../model/user.js';
 import { UserPasskey } from '../model/user_passkey.js';
 import * as graphService from '../services/graph_service.js';
@@ -29,9 +31,11 @@ import * as exportService from '../services/export_service.js';
 import * as auditService from '../services/audit_service.js';
 import * as gitSyncService from '../services/git_sync_service.js';
 import { createChatLimiter } from '../middleware/rate_limit.js';
+import config from '../config.js';
 import crypto from 'node:crypto';
 
 const router = Router();
+const is_hosted = new URL(config.appUrl).hostname.endsWith('kumbukum.com');
 
 router.use(requireAuth, requireTenant);
 
@@ -64,6 +68,13 @@ router.get('/projects/:id', async (req, res) => {
 	res.json({ project });
 });
 
+router.get('/features', async (req, res) => {
+	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
+	const plan = tenant?.plan || 'free';
+	const proOnlyFeatureEnabled = !is_hosted || plan === 'pro';
+	res.json({ features: { email_ingest: proOnlyFeatureEnabled, git_sync: proOnlyFeatureEnabled } });
+});
+
 router.put('/projects/:id', async (req, res) => {
 	const project = await projectService.updateProject(req.host_id, req.params.id, req.body, auditCtx(req));
 	if (!project) return res.status(404).json({ error: 'Project not found' });
@@ -85,8 +96,23 @@ router.delete('/projects/:id', async (req, res) => {
 async function requireGitSyncAccess(req, res, next) {
 	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
 	const plan = tenant?.plan || 'free';
-	if (plan !== 'pro' && plan !== 'free') {
+	const enabled = !is_hosted || plan === 'pro';
+	if (!enabled) {
 		return res.status(403).json({ error: 'Git Sync is available on the Pro plan' });
+	}
+	next();
+}
+
+async function getEmailFeatureAccess(host_id) {
+	if (!is_hosted) return true;
+	const tenant = await Tenant.findOne({ host_id }).select('plan').lean();
+	return tenant?.plan === 'pro';
+}
+
+async function requireEmailFeatureAccess(req, res, next) {
+	const enabled = await getEmailFeatureAccess(req.host_id);
+	if (!enabled) {
+		return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
 	}
 	next();
 }
@@ -226,6 +252,53 @@ router.get('/memories/tags/suggest', async (req, res) => {
 	res.json({ tags });
 });
 
+// ---- Emails ----
+
+router.get('/emails', requireEmailFeatureAccess, async (req, res) => {
+	const emails = await emailIngestService.listEmails(req.host_id, req.query.project, {
+		page: parseInt(req.query.page, 10) || 1,
+		limit: parseInt(req.query.limit, 10) || 50,
+	});
+	res.json({ emails });
+});
+
+router.post('/emails', requireEmailFeatureAccess, async (req, res) => {
+	try {
+		const email = await emailIngestService.ingestEmail(req.userId, req.host_id, req.body, auditCtx(req));
+		res.status(201).json({ email });
+	} catch (err) {
+		res.status(400).json({ error: err.message });
+	}
+});
+
+router.get('/emails/:id', requireEmailFeatureAccess, async (req, res) => {
+	const email = await emailIngestService.getEmail(req.host_id, req.params.id);
+	if (!email) return res.status(404).json({ error: 'Email not found' });
+	res.json({ email });
+});
+
+router.get('/emails/:id/thread', requireEmailFeatureAccess, async (req, res) => {
+	const thread = await emailIngestService.getEmailThread(req.host_id, req.params.id);
+	res.json({ thread });
+});
+
+router.put('/emails/:id', requireEmailFeatureAccess, async (req, res) => {
+	const email = await emailIngestService.updateEmail(req.host_id, req.params.id, req.body, auditCtx(req));
+	if (!email) return res.status(404).json({ error: 'Email not found' });
+	res.json({ email });
+});
+
+router.delete('/emails/:id', requireEmailFeatureAccess, async (req, res) => {
+	const email = await emailIngestService.deleteEmail(req.host_id, req.params.id, auditCtx(req));
+	if (!email) return res.status(404).json({ error: 'Email not found' });
+	res.json({ message: 'Email deleted' });
+});
+
+router.post('/emails/search', requireEmailFeatureAccess, async (req, res) => {
+	const results = await emailIngestService.searchEmails(req.host_id, req.body.query, req.body.options);
+	res.json({ results });
+});
+
 // ---- URLs ----
 
 router.get('/urls', async (req, res) => {
@@ -340,12 +413,12 @@ router.post('/urls/search', async (req, res) => {
 
 // ---- Batch Operations ----
 
-const BATCH_TYPES = ['notes', 'memories', 'urls'];
-const TS_TYPE_MAP = { notes: 'notes', memories: 'memory', urls: 'urls' };
+const BATCH_TYPES = ['notes', 'memories', 'urls', 'emails'];
+const TS_TYPE_MAP = { notes: 'notes', memories: 'memory', urls: 'urls', emails: 'emails' };
 
 async function resolveBatchIds(host_id, type, body) {
 	if (body.all) {
-		const Model = { notes: Note, memories: Memory, urls: Url }[type];
+		const Model = { notes: Note, memories: Memory, urls: Url, emails: Email }[type];
 		const query = { host_id, in_trash: { $ne: true } };
 		if (body.filterProject) query.project = body.filterProject;
 		return (await Model.find(query).select('_id').lean()).map((d) => d._id.toString());
@@ -357,6 +430,9 @@ router.get('/batch/count', async (req, res) => {
 	try {
 		const { type, project } = req.query;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'valid type required' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 		const count = await getFilteredCount(req.host_id, TS_TYPE_MAP[type], project || null);
 		res.json({ count });
 	} catch (err) {
@@ -369,11 +445,14 @@ router.post('/batch/delete', async (req, res) => {
 	try {
 		const { type } = req.body;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 
 		const ids = await resolveBatchIds(req.host_id, type, req.body);
 		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
-		const deleteFn = { notes: noteService.deleteNote, memories: memoryService.deleteMemory, urls: urlService.deleteUrl }[type];
+		const deleteFn = { notes: noteService.deleteNote, memories: memoryService.deleteMemory, urls: urlService.deleteUrl, emails: emailIngestService.deleteEmail }[type];
 		const ctx = auditCtx(req);
 		const results = await Promise.all(ids.map((id) => deleteFn(req.host_id, id, ctx).catch(() => null)));
 		const deleted = results.filter(Boolean).length;
@@ -388,12 +467,15 @@ router.post('/batch/move', async (req, res) => {
 	try {
 		const { type, project } = req.body;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 		if (!project) return res.status(400).json({ error: 'project required' });
 
 		const ids = await resolveBatchIds(req.host_id, type, req.body);
 		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
-		const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl }[type];
+		const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl, emails: emailIngestService.updateEmail }[type];
 		const ctx = auditCtx(req);
 		const results = await Promise.all(ids.map((id) => updateFn(req.host_id, id, { project }, ctx).catch(() => null)));
 		const moved = results.filter(Boolean).length;
@@ -409,15 +491,27 @@ router.post('/batch/copy', async (req, res) => {
 	try {
 		const { type, project } = req.body;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 		if (!project) return res.status(400).json({ error: 'project required' });
 
 		const ids = await resolveBatchIds(req.host_id, type, req.body);
 		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
-		const Model = { notes: Note, memories: Memory, urls: Url }[type];
+		const Model = { notes: Note, memories: Memory, urls: Url, emails: Email }[type];
 		const docs = await Model.find({ _id: { $in: ids }, host_id: req.host_id }).lean();
 		const copies = docs.map((doc) => {
 			const { _id, __v, createdAt, updatedAt, ...rest } = doc;
+			if (type === 'emails') {
+				return {
+					...rest,
+					project,
+					message_id: '',
+					references: [],
+					in_reply_to: '',
+				};
+			}
 			return { ...rest, project };
 		});
 		const inserted = await Model.insertMany(copies);
@@ -435,12 +529,14 @@ router.post('/search/all', async (req, res) => {
 	try {
 		const query = req.body.query;
 		if (!query) return res.status(400).json({ error: 'query required' });
+		const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
 		const types = [
 			{ type: 'notes', queryBy: 'embedding' },
 			{ type: 'memory', queryBy: 'embedding' },
 			{ type: 'urls', queryBy: 'embedding' },
 		];
+		if (emailEnabled) types.push({ type: 'emails', queryBy: 'embedding' });
 
 		const results = [];
 		for (const { type, queryBy } of types) {
@@ -466,17 +562,20 @@ router.post('/search/all', async (req, res) => {
 router.post('/resolve', async (req, res) => {
 	const ids = req.body.ids;
 	if (!ids?.length) return res.json({ items: [] });
+	const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
-	const [notes, memories, urls] = await Promise.all([
+	const [notes, memories, urls, emails] = await Promise.all([
 		Note.find({ _id: { $in: ids }, host_id: req.host_id }, 'title').lean(),
 		Memory.find({ _id: { $in: ids }, host_id: req.host_id }, 'title').lean(),
 		Url.find({ _id: { $in: ids }, host_id: req.host_id }, 'title url').lean(),
+		emailEnabled ? Email.find({ _id: { $in: ids }, host_id: req.host_id }, 'subject').lean() : Promise.resolve([]),
 	]);
 
 	const items = [];
 	for (const n of notes) items.push({ id: n._id.toString(), title: n.title, _type: 'notes' });
 	for (const m of memories) items.push({ id: m._id.toString(), title: m.title, _type: 'memory' });
 	for (const u of urls) items.push({ id: u._id.toString(), title: u.title || u.url, _type: 'urls' });
+	for (const e of emails) items.push({ id: e._id.toString(), title: e.subject || '(No subject)', _type: 'emails' });
 
 	res.json({ items });
 });
@@ -545,7 +644,7 @@ router.get('/counts', async (req, res) => {
 
 router.post('/reindex', async (req, res) => {
 	try {
-		const results = await reindexHost(req.host_id, { Note, Memory, Url });
+		const results = await reindexHost(req.host_id, { Note, Memory, Url, Email });
 		const totalQueued = Object.values(results).reduce((sum, entry) => sum + (entry.queued || 0), 0);
 		const message = totalQueued > 0
 			? `Reindexing is queued for ${totalQueued} item${totalQueued === 1 ? '' : 's'}.`
@@ -569,9 +668,11 @@ router.post('/reindex', async (req, res) => {
 // ---- Search / Knowledge ----
 
 router.post('/search/knowledge', async (req, res) => {
+	const emailEnabled = await getEmailFeatureAccess(req.host_id);
 	const results = await searchKnowledge(req.host_id, req.body.query, {
 		projectId: req.body.project_id,
 		perPage: req.body.per_page,
+		includeEmails: emailEnabled,
 		...req.body.options,
 	});
 	res.json({ results });
@@ -583,6 +684,7 @@ router.post('/chat', createChatLimiter(), async (req, res) => {
 	try {
 		const { query, conversation_id, project_id } = req.body;
 		if (!query) return res.status(400).json({ error: 'query required' });
+		const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
 		const result = await processChat({
 			hostId: req.host_id,
@@ -590,6 +692,7 @@ router.post('/chat', createChatLimiter(), async (req, res) => {
 			query,
 			conversationId: conversation_id,
 			projectId: project_id,
+			includeEmails: emailEnabled,
 			ctx: auditCtx(req),
 		});
 
@@ -633,6 +736,7 @@ router.post('/chat/stream', createChatLimiter(), async (req, res) => {
 			sendSSE('error', { error: 'query required' });
 			return res.end();
 		}
+		const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
 		const { stream, answer, metadata } = await processChatStream({
 			hostId: req.host_id,
@@ -640,6 +744,7 @@ router.post('/chat/stream', createChatLimiter(), async (req, res) => {
 			query,
 			conversationId: conversation_id,
 			projectId: project_id,
+			includeEmails: emailEnabled,
 			ctx: auditCtx(req),
 		});
 
@@ -773,7 +878,7 @@ router.post('/trash/restore', async (req, res) => {
 router.delete('/trash/:type/:id', async (req, res) => {
 	try {
 		const { type, id } = req.params;
-		if (!['notes', 'memories', 'urls'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (!['notes', 'memories', 'urls', 'emails'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
 		const doc = await trashService.permanentDelete(req.host_id, type, id);
 		if (!doc) return res.status(404).json({ error: 'Item not found in trash' });

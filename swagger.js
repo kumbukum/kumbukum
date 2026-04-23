@@ -72,6 +72,24 @@ const swaggerSpec = {
                     updatedAt: { type: 'string', format: 'date-time' },
                 },
             },
+            Email: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    message_id: { type: 'string' },
+                    references: { type: 'array', items: { type: 'string' } },
+                    to: { type: 'array', items: { type: 'string' } },
+                    cc: { type: 'array', items: { type: 'string' } },
+                    bcc: { type: 'array', items: { type: 'string' } },
+                    subject: { type: 'string' },
+                    text_content: { type: 'string' },
+                    attachment_text_content: { type: 'string' },
+                    project: { type: 'string' },
+                    host_id: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' },
+                },
+            },
             Error: {
                 type: 'object',
                 properties: {
@@ -105,9 +123,9 @@ const swaggerSpec = {
                 properties: {
                     _id: { type: 'string' },
                     source_id: { type: 'string' },
-                    source_type: { type: 'string', enum: ['notes', 'memory', 'urls'] },
+                    source_type: { type: 'string', enum: ['notes', 'memory', 'urls', 'emails'] },
                     target_id: { type: 'string' },
-                    target_type: { type: 'string', enum: ['notes', 'memory', 'urls'] },
+                    target_type: { type: 'string', enum: ['notes', 'memory', 'urls', 'emails'] },
                     label: { type: 'string' },
                     owner: { type: 'string' },
                     host_id: { type: 'string' },
@@ -118,7 +136,7 @@ const swaggerSpec = {
                 properties: {
                     _id: { type: 'string' },
                     action: { type: 'string', enum: ['create', 'update', 'delete', 'search', 'login', 'export', 'import', 'restore', 'reindex'] },
-                    resource: { type: 'string', enum: ['note', 'memory', 'url', 'project', 'link', 'user', 'passkey', 'conversation', 'trash'] },
+                    resource: { type: 'string', enum: ['note', 'memory', 'url', 'email', 'project', 'link', 'user', 'passkey', 'conversation', 'trash'] },
                     resource_id: { type: 'string' },
                     user_id: { type: 'string' },
                     host_id: { type: 'string' },
@@ -351,6 +369,101 @@ const swaggerSpec = {
             },
         },
 
+        // ---- Emails ----
+        '/emails': {
+            get: {
+                tags: ['Emails'],
+                summary: 'List emails',
+                parameters: [
+                    { $ref: '#/components/parameters/page' },
+                    { $ref: '#/components/parameters/limit' },
+                    { $ref: '#/components/parameters/project' },
+                ],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { emails: { type: 'array', items: { $ref: '#/components/schemas/Email' } } } } } } },
+                },
+            },
+            post: {
+                tags: ['Emails'],
+                summary: 'Ingest an email (raw or parsed)',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    project: { type: 'string' },
+                                    raw_email: { type: 'string', description: 'Raw RFC822 email content' },
+                                    parsed_email: { type: 'object', description: 'Mailparser-like JSON payload' },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    201: { description: 'Created', content: { 'application/json': { schema: { type: 'object', properties: { email: { $ref: '#/components/schemas/Email' } } } } } },
+                    400: { description: 'Invalid payload', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/emails/{id}': {
+            get: {
+                tags: ['Emails'],
+                summary: 'Get an email',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { email: { $ref: '#/components/schemas/Email' } } } } } },
+                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+            put: {
+                tags: ['Emails'],
+                summary: 'Update an email',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { type: 'object', properties: { subject: { type: 'string' }, text_content: { type: 'string' }, to: { type: 'array', items: { type: 'string' } }, cc: { type: 'array', items: { type: 'string' } }, bcc: { type: 'array', items: { type: 'string' } }, project: { type: 'string' } } } } },
+                },
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { email: { $ref: '#/components/schemas/Email' } } } } } },
+                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+            delete: {
+                tags: ['Emails'],
+                summary: 'Delete an email',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/emails/{id}/thread': {
+            get: {
+                tags: ['Emails'],
+                summary: 'Get thread by message references',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { thread: { type: 'array', items: { $ref: '#/components/schemas/Email' } } } } } } },
+                },
+            },
+        },
+        '/emails/search': {
+            post: {
+                tags: ['Emails'],
+                summary: 'Search emails',
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string' }, options: { type: 'object' } }, required: ['query'] } } },
+                },
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { results: { type: 'array', items: { $ref: '#/components/schemas/Email' } } } } } } },
+                },
+            },
+        },
+
         // ---- URLs ----
         '/urls': {
             get: {
@@ -451,7 +564,7 @@ const swaggerSpec = {
                 summary: 'Get total item count for select-all',
                 description: 'Returns the total number of items of a given type, optionally filtered by project. Uses Typesense for performance.',
                 parameters: [
-                    { name: 'type', in: 'query', required: true, schema: { type: 'string', enum: ['notes', 'memories', 'urls'] } },
+                    { name: 'type', in: 'query', required: true, schema: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] } },
                     { name: 'project', in: 'query', schema: { type: 'string' }, description: 'Filter by project ID' },
                 ],
                 responses: {
@@ -465,7 +578,7 @@ const swaggerSpec = {
                 summary: 'Batch delete items',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, delete all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by project ID when all=true' } }, required: ['type'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, delete all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by project ID when all=true' } }, required: ['type'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, deleted: { type: 'integer' } } } } } },
@@ -478,7 +591,7 @@ const swaggerSpec = {
                 summary: 'Batch move items to a project',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, move all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by source project ID when all=true' }, project: { type: 'string' } }, required: ['type', 'project'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, move all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by source project ID when all=true' }, project: { type: 'string' } }, required: ['type', 'project'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, moved: { type: 'integer' } } } } } },
@@ -491,7 +604,7 @@ const swaggerSpec = {
                 summary: 'Batch copy items to a project',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, copy all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by source project ID when all=true' }, project: { type: 'string' } }, required: ['type', 'project'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] }, ids: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean', description: 'When true, copy all items of the given type (ids is ignored)' }, filterProject: { type: 'string', description: 'Filter by source project ID when all=true' }, project: { type: 'string' } }, required: ['type', 'project'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, copied: { type: 'integer' } } } } } },
@@ -516,7 +629,7 @@ const swaggerSpec = {
         '/search/knowledge': {
             post: {
                 tags: ['Search'],
-                summary: 'Search knowledge (notes + memories + URLs + pages)',
+                summary: 'Search knowledge (notes + memories + URLs + emails + pages)',
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string' }, project_id: { type: 'string', description: 'Filter by project (optional)' }, per_page: { type: 'integer', description: 'Results per collection (default 5)' }, options: { type: 'object' } }, required: ['query'] } } },
@@ -574,6 +687,7 @@ const swaggerSpec = {
                                                 notes: { type: 'object', properties: { queued: { type: 'integer' } } },
                                                 memory: { type: 'object', properties: { queued: { type: 'integer' } } },
                                                 urls: { type: 'object', properties: { queued: { type: 'integer' } } },
+                                                emails: { type: 'object', properties: { queued: { type: 'integer' } } },
                                             },
                                         },
                                     },
@@ -677,7 +791,7 @@ const swaggerSpec = {
                 tags: ['Trash'],
                 summary: 'List trashed items',
                 parameters: [
-                    { name: 'type', in: 'query', schema: { type: 'string', enum: ['notes', 'memories', 'urls'] } },
+                    { name: 'type', in: 'query', schema: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] } },
                     { $ref: '#/components/parameters/page' },
                     { $ref: '#/components/parameters/limit' },
                 ],
@@ -709,7 +823,7 @@ const swaggerSpec = {
                 summary: 'Restore a trashed item',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls'] }, id: { type: 'string' } }, required: ['type', 'id'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] }, id: { type: 'string' } }, required: ['type', 'id'] } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, item: { type: 'object' } } } } } },
@@ -722,7 +836,7 @@ const swaggerSpec = {
                 tags: ['Trash'],
                 summary: 'Permanently delete a trashed item',
                 parameters: [
-                    { name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['notes', 'memories', 'urls'] } },
+                    { name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] } },
                     { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
                 ],
                 responses: {
@@ -763,7 +877,7 @@ const swaggerSpec = {
                 summary: 'Create a link between two items',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { source_id: { type: 'string' }, source_type: { type: 'string', enum: ['notes', 'memory', 'urls'] }, target_id: { type: 'string' }, target_type: { type: 'string', enum: ['notes', 'memory', 'urls'] }, label: { type: 'string' } }, required: ['source_id', 'source_type', 'target_id', 'target_type'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { source_id: { type: 'string' }, source_type: { type: 'string', enum: ['notes', 'memory', 'urls', 'emails'] }, target_id: { type: 'string' }, target_type: { type: 'string', enum: ['notes', 'memory', 'urls', 'emails'] }, label: { type: 'string' } }, required: ['source_id', 'source_type', 'target_id', 'target_type'] } } },
                 },
                 responses: {
                     201: { description: 'Link created', content: { 'application/json': { schema: { type: 'object', properties: { link: { $ref: '#/components/schemas/GraphLink' } } } } } },

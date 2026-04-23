@@ -10,6 +10,7 @@ import express from 'express';
 import { noteTools } from '../../../apps/mcp/tools/notes.js';
 import { memoryTools } from '../../../apps/mcp/tools/memory.js';
 import { urlTools } from '../../../apps/mcp/tools/urls.js';
+import { emailTools } from '../../../apps/mcp/tools/emails.js';
 import { projectTools } from '../../../apps/mcp/tools/projects.js';
 
 import { FIXTURES } from './fixtures.js';
@@ -28,6 +29,7 @@ export function buildMcpServer(api) {
         ...noteTools(api, defaultProjectId),
         ...memoryTools(api, defaultProjectId),
         ...urlTools(api, defaultProjectId),
+        ...emailTools(api, defaultProjectId),
         ...projectTools(api),
     };
 
