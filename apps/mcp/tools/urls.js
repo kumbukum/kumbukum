@@ -34,7 +34,7 @@ export function urlTools(api, defaultProjectId) {
         if (args.page) params.set('page', args.page);
         if (args.limit) params.set('limit', args.limit);
         const { urls } = await api.get(`/urls?${params}`);
-        return { content: [{ type: 'text', text: JSON.stringify(urls, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(urls, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -45,7 +45,7 @@ export function urlTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { results } = await api.post('/urls/search', { query: args.query });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -56,7 +56,7 @@ export function urlTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { url } = await api.get(`/urls/${args.id}`);
-        return { content: [{ type: 'text', text: JSON.stringify(url, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(url, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 

@@ -13,7 +13,7 @@ export function gitSyncTools(api, defaultProjectId) {
 			handler: async (args) => {
 				const pid = args.project_id || defaultProjectId;
 				const { repos } = await api.get(`/projects/${pid}/git-repos`);
-				return { content: [{ type: 'text', text: JSON.stringify(repos, null, 2) }] };
+				return { content: [{ type: 'text', text: JSON.stringify(repos, null, 2), cache_control: { type: 'ephemeral' } }] };
 			},
 		},
 
@@ -89,7 +89,7 @@ export function gitSyncTools(api, defaultProjectId) {
 			},
 			handler: async (args) => {
 				const status = await api.get(`/git-repos/${args.id}/status`);
-				return { content: [{ type: 'text', text: JSON.stringify(status, null, 2) }] };
+				return { content: [{ type: 'text', text: JSON.stringify(status, null, 2), cache_control: { type: 'ephemeral' } }] };
 			},
 		},
 	};

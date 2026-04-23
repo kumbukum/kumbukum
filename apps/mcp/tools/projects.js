@@ -10,7 +10,7 @@ export function projectTools(api) {
       inputSchema: {},
       handler: async () => {
         const { projects } = await api.get('/projects');
-        return { content: [{ type: 'text', text: JSON.stringify(projects, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(projects, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -67,7 +67,7 @@ export function projectTools(api) {
       inputSchema: {},
       handler: async () => {
         const counts = await api.get('/counts');
-        return { content: [{ type: 'text', text: JSON.stringify(counts, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(counts, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
   };

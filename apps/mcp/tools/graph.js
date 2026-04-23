@@ -27,7 +27,7 @@ export function graphTools(api) {
             },
             handler: async (args) => {
                 const { links } = await api.get(`/links/${args.item_id}`);
-                return { content: [{ type: 'text', text: JSON.stringify(links, null, 2) }] };
+                return { content: [{ type: 'text', text: JSON.stringify(links, null, 2), cache_control: { type: 'ephemeral' } }] };
             },
         },
 
@@ -46,7 +46,7 @@ export function graphTools(api) {
                 if (args.include_semantic !== undefined) params.set('include_semantic', args.include_semantic);
                 if (args.semantic_threshold !== undefined) params.set('semantic_threshold', args.semantic_threshold);
                 const data = await api.get(`/graph?${params.toString()}`);
-                return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+                return { content: [{ type: 'text', text: JSON.stringify(data, null, 2), cache_control: { type: 'ephemeral' } }] };
             },
         },
 
@@ -71,6 +71,7 @@ export function graphTools(api) {
                             links,
                             connected_item_ids: [...connectedIds],
                         }, null, 2),
+                        cache_control: { type: 'ephemeral' },
                     }],
                 };
             },

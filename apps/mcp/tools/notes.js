@@ -28,7 +28,7 @@ export function noteTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { note } = await api.get(`/notes/${args.id}`);
-        return { content: [{ type: 'text', text: JSON.stringify(note, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(note, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -72,7 +72,7 @@ export function noteTools(api, defaultProjectId) {
         if (args.page) params.set('page', args.page);
         if (args.limit) params.set('limit', args.limit);
         const { notes } = await api.get(`/notes?${params}`);
-        return { content: [{ type: 'text', text: JSON.stringify(notes, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(notes, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -83,7 +83,7 @@ export function noteTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { results } = await api.post('/notes/search', { query: args.query });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
   };

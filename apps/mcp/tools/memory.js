@@ -28,7 +28,7 @@ export function memoryTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { results } = await api.post('/memories/search', { query: args.query });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -39,7 +39,7 @@ export function memoryTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { results } = await api.post('/memories/search', { query: args.query });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -50,7 +50,7 @@ export function memoryTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { memory } = await api.get(`/memories/${args.id}`);
-        return { content: [{ type: 'text', text: JSON.stringify(memory, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(memory, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -85,7 +85,7 @@ export function memoryTools(api, defaultProjectId) {
       inputSchema: {},
       handler: async () => {
         const { tags } = await api.get('/memories/tags/suggest');
-        return { content: [{ type: 'text', text: JSON.stringify(tags, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(tags, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -102,7 +102,7 @@ export function memoryTools(api, defaultProjectId) {
           project_id: args.project_id,
           per_page: args.per_page,
         });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -119,7 +119,7 @@ export function memoryTools(api, defaultProjectId) {
           conversation_id: args.conversation_id,
           project_id: args.project_id,
         });
-        return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
+        return { content: [{ type: 'text', text: JSON.stringify(res, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
   };
