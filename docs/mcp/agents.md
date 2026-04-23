@@ -95,4 +95,4 @@ See **[Cursor (IDE)](./cursor-ide)** for:
 
 - Paste-ready **global User Rules** (every repository on your machine)
 - How **`alwaysApply`** project rules complement `AGENTS.md`
-- MCP server naming in Cursor (e.g. `user-kumbukum` vs `kumbukum`)
+- MCP server safety in Cursor (server name `kumbukum` on `https://mcp.kumbukum.com/mcp`, never localhost)

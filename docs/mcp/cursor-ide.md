@@ -21,7 +21,7 @@ When Kumbukum MCP is enabled in Cursor for this profile:
 
 **After completing meaningful work**: call `store_memory` (title + content + tags) for outcomes and learnings; use `create_note` for structured specs or ADRs when appropriate. Use `suggest_memory_tags` before inventing new tags. Use `create_link` to connect related items when useful.
 
-**MCP server id**: invoke tools on the Kumbukum server Cursor shows for this workspace (often `user-kumbukum` in the MCP panel, not necessarily `kumbukum`). If a tool call fails with “server does not exist”, check the exact server name in **Cursor Settings → MCP**.
+**MCP server + endpoint safety**: invoke tools on the server whose name is `kumbukum` (its tool id may appear as `user-kumbukum` in Cursor) and ensure it targets `https://mcp.kumbukum.com/mcp`. Do not write via localhost/127.0.0.1 MCP endpoints. If the `kumbukum` server is not available, stop writes and fix **Cursor Settings → MCP** first.
 
 If Kumbukum MCP is unavailable, continue work and say so in the reply so the user can fix MCP or capture notes manually.
 
@@ -47,7 +47,7 @@ Cursor loads **`AGENTS.md`** as a simple alternative to `.cursor/rules`. Use the
 
 ## 4. Connect the MCP server
 
-Follow [MCP setup](./setup) (token, URL or stdio). After adding the server in **Cursor Settings → MCP**, confirm tools appear and note the **exact server label** (e.g. `user-kumbukum`) for `call_mcp_tool` / automation.
+Follow [MCP setup](./setup) (token, URL or stdio). After adding the server in **Cursor Settings → MCP**, confirm tools appear for server name **`kumbukum`** (often shown with a `user-` prefix in tool ids) and verify the URL is **`https://mcp.kumbukum.com/mcp`**.
 
 ## 5. Related docs
 

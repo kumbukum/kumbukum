@@ -70,6 +70,7 @@
 		});
 
 		var pondRoot = dropZone.querySelector('.filepond--root');
+		if (pondRoot) pondRoot.classList.add('d-none');
 		var successCount = 0;
 		var errorCount = 0;
 
