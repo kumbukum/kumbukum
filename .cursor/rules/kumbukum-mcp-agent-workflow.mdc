@@ -1,0 +1,16 @@
+---
+description: Kumbukum MCP workflow for Cursor Agent (search before, store after)
+alwaysApply: true
+---
+
+# Kumbukum (this repository)
+
+Follow root **[AGENTS.md](AGENTS.md)** for full project conventions.
+
+## MCP workflow (Agent)
+
+1. **Before non-trivial work**: use Kumbukum **`search_knowledge`** or **`recall_memory`** with a short query; **`search_notes`** for specs. Apply findings to the plan or implementation.
+2. **After meaningful changes**: **`store_memory`** (title, content, tags) and/or **`create_note`** for structured write-ups; **`suggest_memory_tags`** before new tags; **`create_link`** when connecting graph items helps.
+3. **Server name**: use the MCP server id shown in Cursor for this workspace (commonly **`user-kumbukum`**). If tools are missing, fix **Cursor Settings → MCP** before relying on memory calls.
+
+If MCP is down, proceed and state that storage was skipped.

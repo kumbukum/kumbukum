@@ -99,3 +99,7 @@ When using the HTTP or SSE transport, pass your credentials as headers instead o
 On startup, the MCP server calls `GET /projects` and picks the project with `is_default: true`. All create tools (`create_note`, `store_memory`, `save_url`) fall back to this project when `project_id` is omitted.
 
 Set `PROJECT-ID` (passed via `env` for stdio) or the `X-Project-Id` header (HTTP/SSE) to override this behavior.
+
+## Cursor (IDE)
+
+After the MCP server appears under **Cursor Settings → MCP**, configure **global User Rules** and optional **project rules** so Agent chats search and store memories consistently. See **[Cursor (IDE)](./cursor-ide)**.

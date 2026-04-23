@@ -7,13 +7,15 @@
 ## Knowledge Management
 This project uses Kumbukum as its knowledge store via MCP.
 
+For **Cursor** (global User Rules, `.cursor/rules`, MCP server naming such as `user-kumbukum`), see [docs/mcp/cursor-ide.md](docs/mcp/cursor-ide.md) in this repo — VitePress: **MCP → Cursor (IDE)**.
+
 ### Before Starting Any Task
 1. Call `recall_memory` or `search_knowledge` with a query describing the task to check for relevant prior context, decisions, or notes
 2. Review any related notes with `search_notes`
 3. Use the returned context to inform your approach
 
 ### After Completing Significant Work
-1. Call `store_memory` to save key decisions, outcomes, and context for future sessions
+1. Call `store_memory` to save key decisions, outcomes, and context for future sessions; use `create_note` when the outcome is structured documentation (specs, ADRs)
 2. Use descriptive titles and tag memories for easy retrieval
 3. Use `create_link` to connect newly created items to related notes, memories, or URLs in the knowledge graph
 

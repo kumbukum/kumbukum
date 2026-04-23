@@ -80,11 +80,19 @@ Adapt the template to your workflow. Common additions:
 
 ## Where to Place It
 
-| AI Client | File Location |
+| AI Client | File location |
 | --- | --- |
 | GitHub Copilot | `AGENTS.md` in repo root (or any directory) |
-| Cursor | `.cursor/rules/` directory |
+| Cursor | `AGENTS.md` **and/or** `.cursor/rules/*.mdc` (versioned project rules) **and/or** **User Rules** in Cursor Settings (global, all repos) |
 | Windsurf | `.windsurfrules` file |
 | Claude Code | `CLAUDE.md` in repo root |
 
-The content is the same — only the file name and location differ per client.
+The markdown template above is the same across clients; only where you paste it changes.
+
+### Cursor-specific
+
+See **[Cursor (IDE)](./cursor-ide)** for:
+
+- Paste-ready **global User Rules** (every repository on your machine)
+- How **`alwaysApply`** project rules complement `AGENTS.md`
+- MCP server naming in Cursor (e.g. `user-kumbukum` vs `kumbukum`)

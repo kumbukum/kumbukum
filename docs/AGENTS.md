@@ -7,6 +7,7 @@
 Kumbukum is not a note taking or second brain app. Refer to it as a "memory layer for AI-native teams" or "a place that turns scattered company knowledge into AI-ready context every assistant can use". Avoid calling it a "personal knowledge library" or "second brain".
 
 ## Documentation
+- For **Cursor** + Kumbukum MCP (global User Rules, project rules): maintain [MCP → Cursor (IDE)](/mcp/cursor-ide) from `docs/mcp/cursor-ide.md`.
 - IMPORTANT: BEFORE EXECUTING A REGEX SEARCH THROUGH OUR CODE BASE ALWAYS CHECK THE RAZUNA-MEMORY MCP SERVER FIRST
 - IMPORTANT: For each fix, change, update, etc., create a new documentation note in the RAZUNA-MEMORY MCP server. You can create markdown notes or store and recall memory. Use both as needed.
 - DO NOT store documentation files in the root of the project.
