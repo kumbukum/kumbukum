@@ -6,7 +6,7 @@ import { createTenant } from '../modules/tenancy.js';
 import { ensureCollections } from '../modules/typesense.js';
 import { generateToken } from '../middleware/auth.js';
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../services/email_service.js';
-import { sendMagicLink, verifyMagicLink } from '../services/magic_link_service.js';
+import { sendMagicLink, isMagicLinkValid, verifyMagicLink } from '../services/magic_link_service.js';
 import * as passkeyService from '../services/passkey_service.js';
 import config from '../config.js';
 
@@ -391,23 +391,50 @@ router.post('/magic-link', async (req, res) => {
 	}
 });
 
+router.head('/magic', (req, res) => {
+	res.set('Allow', 'GET, POST');
+	return res.status(405).end();
+});
+
 router.get('/magic', async (req, res) => {
 	try {
 		const { token } = req.query;
-		if (!token) return res.status(400).json({ error: 'Token required' });
+		if (!token) return res.render('auth/magic', { error: 'Token required' });
+
+		const isValid = await isMagicLinkValid(token);
+		if (!isValid) {
+			return res.render('auth/magic', { error: 'Invalid or expired magic link' });
+		}
+
+		return res.render('auth/magic', { token });
+	} catch (err) {
+		console.error('Magic link page error:', err);
+		return res.render('auth/magic', { error: 'Something went wrong. Please try again.' });
+	}
+});
+
+router.post('/magic', async (req, res) => {
+	try {
+		const { token } = req.body;
+		if (!token) return res.render('auth/magic', { error: 'Token required' });
 
 		const user = await verifyMagicLink(token);
-		if (!user) return res.status(401).json({ error: 'Invalid or expired magic link' });
+		if (!user) return res.render('auth/magic', { error: 'Invalid or expired magic link' });
 
 		req.session.userId = user._id.toString();
 		req.session.tenantId = user.tenant?.toString();
 		req.session.host_id = user.host_id;
 
-		res.redirect('/dashboard');
+		return res.redirect('/dashboard');
 	} catch (err) {
 		console.error('Magic link verify error:', err);
-		res.status(500).json({ error: 'Magic link verification failed' });
+		return res.render('auth/magic', { error: 'Magic link verification failed' });
 	}
+});
+
+router.all('/magic', (req, res) => {
+	res.set('Allow', 'GET, POST');
+	return res.status(405).json({ error: 'Method Not Allowed' });
 });
 
 // ---- Passkey ----

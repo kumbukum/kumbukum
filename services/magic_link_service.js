@@ -10,6 +10,16 @@ export async function sendMagicLink(email) {
 	await sendMagicLinkEmail(email, link.token);
 }
 
+export async function isMagicLinkValid(token) {
+	if (!token) return false;
+	const link = await MagicLink.findOne({
+		token,
+		used: false,
+		expires_at: { $gt: new Date() },
+	}).select('_id');
+	return Boolean(link);
+}
+
 export async function verifyMagicLink(token) {
 	const link = await MagicLink.verify(token);
 	if (!link) return null;

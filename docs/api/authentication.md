@@ -61,6 +61,15 @@ Access tokens do not expire and are ideal for integrations and the MCP server.
 
 The web interface also supports:
 
-- **Magic Links** — passwordless login via email (15-min expiry)
+- **Magic Links** — passwordless login via email (15-min expiry, prefetch-safe two-step confirm)
 - **Passkeys** — WebAuthn-based biometric/hardware key authentication
 - **2FA (TOTP)** — Time-based one-time passwords via authenticator apps
+
+## Magic Link Security Flow
+
+Magic links are intentionally a two-step browser flow to prevent email-client preview/prefetch requests from consuming one-time tokens:
+
+1. `GET /magic?token=...` only renders a confirmation page.
+2. `POST /magic` is the only endpoint that redeems the token and creates a session.
+
+This means link scanners that issue automatic `GET` requests cannot burn a login token before the user confirms.
