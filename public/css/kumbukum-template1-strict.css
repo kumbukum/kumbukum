@@ -785,3 +785,51 @@ body.kk-template1 .input-group-text {
   text-decoration: underline;
   font-weight: 600;
 }
+
+/* ── FilePond dark theme ── */
+body.kk-template1 .filepond--panel-root {
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 10px !important;
+}
+body.kk-template1 .filepond--drop-label {
+  color: var(--muted) !important;
+}
+body.kk-template1 .filepond--drop-label label {
+  color: var(--muted) !important;
+}
+body.kk-template1 .filepond--file {
+  color: var(--text) !important;
+}
+body.kk-template1 .filepond--file-info {
+  color: var(--muted) !important;
+}
+body.kk-template1 .filepond--file-info .filepond--file-info-main {
+  color: var(--text) !important;
+}
+body.kk-template1 .filepond--file-info .filepond--file-info-sub {
+  color: var(--muted) !important;
+}
+body.kk-template1 .filepond--item-panel {
+  background: #1a2650 !important;
+  border-radius: 8px !important;
+}
+body.kk-template1 .filepond--drip {
+  background: rgba(123, 108, 255, .08) !important;
+}
+
+/* ── Drop overlay card dark theme ── */
+body.kk-template1 .drop-overlay {
+  background: rgba(11, 16, 32, 0.7) !important;
+}
+body.kk-template1 .drop-overlay-card {
+  background: var(--panel) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--text) !important;
+}
+body.kk-template1 .drop-overlay-card h5 {
+  color: var(--muted) !important;
+}
+body.kk-template1 .drop-overlay-card p {
+  color: var(--muted) !important;
+}

@@ -52,8 +52,8 @@
 						+ '<small class="text-muted">Trashed ' + new Date(item.trashed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</small>'
 						+ '</div>'
 						+ '<div class="btn-group btn-group-sm ms-2">'
-						+ '<button class="btn btn-outline-success restore-btn" title="Restore"><i class="bi bi-arrow-counterclockwise"></i></button>'
-						+ '<button class="btn btn-outline-danger permanent-delete-btn" title="Delete forever"><i class="bi bi-x-circle"></i></button>'
+						+ '<button class="btn btn-link restore-btn" title="Restore"><i class="bi bi-arrow-counterclockwise"></i></button>'
+						+ '<button class="btn btn-link permanent-delete-btn" title="Delete forever"><i class="bi bi-trash"></i></button>'
 						+ '</div></div>';
 				})
 				.join('')

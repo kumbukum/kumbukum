@@ -56,6 +56,38 @@ async function showError(message) {
 // Current project
 window.currentProjectId = null;
 
+function setActiveProject(projectId) {
+	currentProjectId = projectId;
+	document.querySelectorAll('.project-item').forEach((el) => {
+		el.classList.toggle('active', el.dataset.id === projectId);
+	});
+}
+
+async function importFilesToProject(files, projectId) {
+	if (!files || !files.length || !projectId) return;
+	var ok = 0;
+	var fail = 0;
+	for (var i = 0; i < files.length; i++) {
+		var f = files[i];
+		if (f.size === 0) continue;
+		var fd = new FormData();
+		fd.append('file', f);
+		fd.append('project', projectId);
+		try {
+			var res = await fetch('/api/v1/notes/import', { method: 'POST', body: fd });
+			if (res.ok) ok++;
+			else fail++;
+		} catch (e) {
+			fail++;
+		}
+	}
+	if (ok > 0) {
+		showSuccess(ok + ' file' + (ok > 1 ? 's' : '') + ' imported as notes');
+		refreshCounts();
+	}
+	if (fail > 0) showError(fail + ' file' + (fail > 1 ? 's' : '') + ' could not be imported');
+}
+
 // Load projects sidebar with counts
 async function loadProjects() {
 	try {
@@ -71,9 +103,7 @@ async function loadProjects() {
 			// Clicking project name -> SPA navigate to dashboard
 			el.addEventListener('click', (e) => {
 				if (e.target.closest('a')) return;
-				currentProjectId = el.dataset.id;
-				document.querySelectorAll('.project-item').forEach((p) => p.classList.remove('active'));
-				el.classList.add('active');
+				setActiveProject(el.dataset.id);
 				navigateTo('/dashboard');
 			});
 
@@ -81,19 +111,39 @@ async function loadProjects() {
 			el.querySelectorAll('.project-item-section a').forEach((link) => {
 				link.addEventListener('click', (e) => {
 					e.preventDefault();
-					currentProjectId = el.dataset.id;
-					document.querySelectorAll('.project-item').forEach((p) => p.classList.remove('active'));
-					el.classList.add('active');
+					setActiveProject(el.dataset.id);
 					navigateTo(link.getAttribute('href'));
 				});
+			});
+
+			// Drag-and-drop upload on project card
+			var dragCount = 0;
+			var overlay = el.querySelector('.project-drop-overlay');
+			el.addEventListener('dragenter', (e) => {
+				e.preventDefault();
+				dragCount++;
+				if (dragCount === 1 && overlay) overlay.classList.remove('d-none');
+			});
+			el.addEventListener('dragover', (e) => { e.preventDefault(); });
+			el.addEventListener('dragleave', (e) => {
+				e.preventDefault();
+				dragCount--;
+				if (dragCount <= 0) { dragCount = 0; if (overlay) overlay.classList.add('d-none'); }
+			});
+			el.addEventListener('drop', (e) => {
+				e.preventDefault();
+				dragCount = 0;
+				if (overlay) overlay.classList.add('d-none');
+				if (e.dataTransfer?.files?.length) {
+					importFilesToProject(Array.from(e.dataTransfer.files), el.dataset.id);
+				}
 			});
 		});
 
 		if (!currentProjectId) {
 			const first = list.querySelector('.project-item');
 			if (first) {
-				currentProjectId = first.dataset.id;
-				first.classList.add('active');
+				setActiveProject(first.dataset.id);
 			}
 		}
 	} catch (err) {
@@ -248,9 +298,37 @@ window.__sections = window.__sections || {};
 window.__sections.dashboard = {
 	mount: function () {
 		if (currentProjectId) loadProjectOverview(currentProjectId);
+		setupOverviewDropZone();
 	},
 	unmount: function () {},
 };
+
+function setupOverviewDropZone() {
+	var zone = document.getElementById('project-overview');
+	if (!zone || zone.__dropBound) return;
+	zone.__dropBound = true;
+	var overlay = zone.querySelector('.project-drop-overlay');
+	var dragCount = 0;
+	zone.addEventListener('dragenter', function (e) {
+		e.preventDefault();
+		dragCount++;
+		if (dragCount === 1 && overlay) overlay.classList.remove('d-none');
+	});
+	zone.addEventListener('dragover', function (e) { e.preventDefault(); });
+	zone.addEventListener('dragleave', function (e) {
+		e.preventDefault();
+		dragCount--;
+		if (dragCount <= 0) { dragCount = 0; if (overlay) overlay.classList.add('d-none'); }
+	});
+	zone.addEventListener('drop', function (e) {
+		e.preventDefault();
+		dragCount = 0;
+		if (overlay) overlay.classList.add('d-none');
+		if (e.dataTransfer?.files?.length && currentProjectId) {
+			importFilesToProject(Array.from(e.dataTransfer.files), currentProjectId);
+		}
+	});
+}
 
 function executeScripts(container) {
 	var scripts = container.querySelectorAll('script');

@@ -1,6 +1,10 @@
 each p in projects
 	- const pc = counts[p._id.toString()] || { notes: 0, memory: 0, urls: 0 }
-	.card.project-item.mb-3(data-id=p._id class=(p._id.toString() === activeProjectId ? 'active' : ''))
+	.card.project-item.mb-3.position-relative(data-id=p._id class=(p._id.toString() === activeProjectId ? 'active' : ''))
+		.project-drop-overlay.d-none
+			.project-drop-overlay-inner
+				i.bi.bi-cloud-arrow-up
+				span Upload as notes
 		.card-body.p-0.pb-3
 			.d-flex.align-items-center.py-2.ps-2.p-3.bg-hover-light
 				span.project-color(style=`background:${p.color}`)

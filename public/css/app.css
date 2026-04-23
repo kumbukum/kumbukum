@@ -161,6 +161,45 @@ small,
 	margin-left: 0.5rem;
 }
 
+/* Project card drop overlay (sidebar) */
+.project-item .project-drop-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(253, 126, 20, 0.12);
+	border: 2px dashed #fd7e14;
+	border-radius: 0.5rem;
+	pointer-events: none;
+}
+
+.project-drop-overlay-inner {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #fd7e14;
+}
+
+.project-drop-overlay-inner i {
+	font-size: 1rem;
+}
+
+/* Project overview drop overlay (reuses .drop-overlay-card from notes) */
+#project-overview > .project-drop-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(108, 117, 125, 0.35);
+	border-radius: 0.5rem;
+}
+
 .project-color {
 	width: 12px;
 	height: 12px;
