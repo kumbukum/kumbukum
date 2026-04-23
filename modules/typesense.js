@@ -12,6 +12,84 @@ const _token_separators = ['+', '-', '@', '.', '_', ' ', '=', '\\', ';', ',', ':
 
 // Track conversation models whose api_key has been synced this process lifetime
 const syncedConvoModels = new Set();
+const TRANSIENT_TYPESENSE_HTTP_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+const TYPESENSE_CIRCUIT_OPEN_MS = 30_000;
+
+let typesenseCircuitOpenUntil = 0;
+let lastCircuitLogAt = 0;
+
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientTypesenseError(err) {
+	if (!err) return false;
+	if (TRANSIENT_TYPESENSE_HTTP_CODES.has(err.httpStatus)) return true;
+	const msg = (err.message || '').toLowerCase();
+	return msg.includes('econnrefused')
+		|| msg.includes('etimedout')
+		|| msg.includes('enotfound')
+		|| msg.includes('socket hang up')
+		|| msg.includes('service unavailable')
+		|| msg.includes('timed out');
+}
+
+function openTypesenseCircuit(err, operation) {
+	typesenseCircuitOpenUntil = Date.now() + TYPESENSE_CIRCUIT_OPEN_MS;
+	console.warn(
+		`[TYPESENSE] Circuit open for ${TYPESENSE_CIRCUIT_OPEN_MS / 1000}s after ${operation}: ${err?.message || err}`,
+	);
+}
+
+function isTypesenseCircuitOpen() {
+	return Date.now() < typesenseCircuitOpenUntil;
+}
+
+function logCircuitSkip(operation) {
+	const now = Date.now();
+	if (now - lastCircuitLogAt < 10_000) return;
+	lastCircuitLogAt = now;
+	const remaining = Math.max(Math.ceil((typesenseCircuitOpenUntil - now) / 1000), 0);
+	console.warn(`[TYPESENSE] Skipping ${operation}; circuit open (${remaining}s remaining)`);
+}
+
+async function withTypesenseResilience(operation, fn, options = {}) {
+	const {
+		maxAttempts = 3,
+		fallback,
+	} = options;
+
+	if (isTypesenseCircuitOpen()) {
+		logCircuitSkip(operation);
+		if (typeof fallback === 'function') return fallback();
+		if (fallback !== undefined) return fallback;
+		const err = new Error(`Typesense circuit open for ${operation}`);
+		err.code = 'TS_CIRCUIT_OPEN';
+		throw err;
+	}
+
+	let lastErr;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			return await fn();
+		} catch (err) {
+			lastErr = err;
+			const transient = isTransientTypesenseError(err);
+			const canRetry = transient && attempt < maxAttempts;
+			if (!canRetry) break;
+			const waitMs = Math.min(2000, 200 * (2 ** (attempt - 1))) + Math.floor(Math.random() * 150);
+			await sleep(waitMs);
+		}
+	}
+
+	if (isTransientTypesenseError(lastErr)) {
+		openTypesenseCircuit(lastErr, operation);
+	}
+
+	if (typeof fallback === 'function') return fallback(lastErr);
+	if (fallback !== undefined) return fallback;
+	throw lastErr;
+}
 
 function getConversationModelSyncKey(modelId) {
 	return `conversation-model-sync:${modelId}`;
@@ -218,7 +296,11 @@ export async function indexDocument(host_id, type, doc) {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
 	const tsDoc = doc.id ? doc : toTypesenseDoc(type, doc);
-	return ts.collections(collectionName).documents().upsert(tsDoc);
+	return withTypesenseResilience(
+		`upsert ${collectionName}`,
+		() => ts.collections(collectionName).documents().upsert(tsDoc),
+		{ fallback: null },
+	);
 }
 
 /**
@@ -230,7 +312,11 @@ export async function importDocuments(host_id, type, docs, action = 'upsert') {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
 	try {
-		return await ts.collections(collectionName).documents().import(docs, { action, dirty_values: 'coerce_or_drop' });
+		return await withTypesenseResilience(
+			`import ${collectionName}`,
+			() => ts.collections(collectionName).documents().import(docs, { action, dirty_values: 'coerce_or_drop' }),
+			{ fallback: [] },
+		);
 	} catch (err) {
 		console.error(`[TYPESENSE] import error (${docs.length} docs → ${collectionName}):`, err.message);
 		return err.importResults || [];
@@ -244,7 +330,25 @@ export async function removeDocument(host_id, type, docId) {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
 	try {
-		return await ts.collections(collectionName).documents(docId).delete();
+		return await withTypesenseResilience(
+			`delete ${collectionName}/${docId}`,
+			() => ts.collections(collectionName).documents(docId).delete(),
+			{ fallback: null },
+		);
+	} catch (err) {
+		if (err?.httpStatus === 404) return null;
+		throw err;
+	}
+}
+
+/**
+ * Remove documents by filter from a collection.
+ */
+export async function removeDocumentsByFilter(host_id, type, filterBy) {
+	const ts = getTypesenseClient();
+	const collectionName = `${type}_${host_id}`;
+	try {
+		return await ts.collections(collectionName).documents().delete({ filter_by: filterBy });
 	} catch (err) {
 		if (err?.httpStatus === 404) return null;
 		throw err;
@@ -268,7 +372,11 @@ export async function searchCollection(host_id, type, query, options = {}) {
 	};
 	if (options.include_fields) params.include_fields = options.include_fields;
 	if (options.filter_by) params.filter_by = options.filter_by;
-	return ts.collections(collectionName).documents().search(params);
+	return withTypesenseResilience(
+		`search ${collectionName}`,
+		() => ts.collections(collectionName).documents().search(params),
+		{ fallback: { hits: [], found: 0, out_of: 0, page: params.page || 1 } },
+	);
 }
 
 /**
@@ -290,7 +398,11 @@ export async function listDocuments(host_id, type, options = {}) {
 	if (options.sort_by) baseParams.sort_by = options.sort_by;
 
 	if (limit <= 250) {
-		return ts.collections(collectionName).documents().search({ ...baseParams, per_page: limit, page: options.page || 1 });
+		return withTypesenseResilience(
+			`list ${collectionName}`,
+			() => ts.collections(collectionName).documents().search({ ...baseParams, per_page: limit, page: options.page || 1 }),
+			{ fallback: { hits: [], found: 0 } },
+		);
 	}
 
 	// Paginate to collect up to limit hits
@@ -298,7 +410,11 @@ export async function listDocuments(host_id, type, options = {}) {
 	let page = 1;
 	let found = 0;
 	while (allHits.length < limit) {
-		const res = await ts.collections(collectionName).documents().search({ ...baseParams, per_page: 250, page });
+		const res = await withTypesenseResilience(
+			`list page ${collectionName}`,
+			() => ts.collections(collectionName).documents().search({ ...baseParams, per_page: 250, page }),
+			{ fallback: { hits: [], found: 0 } },
+		);
 		found = res.found || 0;
 		if (!res.hits?.length) break;
 		allHits.push(...res.hits);
@@ -324,7 +440,15 @@ export async function searchAll(host_id, query, options = {}) {
 		exclude_fields: options.exclude_fields || _ts_exlude_default,
 	}));
 
-	const results = await ts.multiSearch.perform({ searches });
+	const results = await withTypesenseResilience(
+		`multiSearch host ${host_id}`,
+		() => ts.multiSearch.perform({ searches }),
+		{
+			fallback: {
+				results: searches.map(() => ({ hits: [], found: 0, out_of: 0, page: 1 })),
+			},
+		},
+	);
 	const merged = {};
 	types.forEach((type, i) => {
 		merged[type] = results.results[i];
@@ -341,7 +465,11 @@ export async function getCollectionCounts(host_id) {
 	const counts = {};
 	for (const type of ['notes', 'memory', 'urls']) {
 		try {
-			const col = await ts.collections(`${type}_${host_id}`).retrieve({ 'exclude_fields': 'fields' });
+			const col = await withTypesenseResilience(
+				`collection stats ${type}_${host_id}`,
+				() => ts.collections(`${type}_${host_id}`).retrieve({ 'exclude_fields': 'fields' }),
+				{ fallback: { num_documents: 0 } },
+			);
 			counts[type] = col.num_documents || 0;
 		} catch (err) {
 			console.error(`getCollectionCounts: ${type}_${host_id} failed:`, err.message);
@@ -366,7 +494,11 @@ export async function getFilteredCount(host_id, type, projectId) {
 			exclude_fields: _ts_exlude_default,
 		};
 		if (projectId) search.filter_by = `project_id:=${projectId}`;
-		const result = await ts.collections(collectionName).documents().search(search);
+		const result = await withTypesenseResilience(
+			`count search ${collectionName}`,
+			() => ts.collections(collectionName).documents().search(search),
+			{ fallback: { found: 0 } },
+		);
 		return result.found || 0;
 	} catch (err) {
 		console.error(`getFilteredCount: ${collectionName} failed:`, err.message);
@@ -456,7 +588,10 @@ export async function reindexHost(host_id, models) {
 export async function initTypesense() {
 	try {
 		const ts = getTypesenseClient();
-		const health = await ts.health.retrieve({ 'exclude_fields': 'fields' });
+		const health = await withTypesenseResilience(
+			'health check',
+			() => ts.health.retrieve({ 'exclude_fields': 'fields' }),
+		);
 		const nodes = config.typesense.nodes.map(n => `${n.host}:${n.port}`).join(', ');
 		console.log(`Typesense connected (${health.ok ? 'healthy' : 'unhealthy'}): ${nodes}`);
 	} catch (err) {
@@ -995,14 +1130,18 @@ export async function listConversations(hostId, userId, { limit = 10 } = {}) {
 	const modelId = `convo-${userId}`;
 
 	try {
-		const result = await ts.collections(collectionName).documents().search({
-			q: '*',
-			query_by: 'conversation_id',
-			filter_by: `model_id:=${modelId}`,
-			sort_by: 'timestamp:desc',
-			per_page: limit * 5,
-			exclude_fields: _ts_exlude_default,
-		});
+		const result = await withTypesenseResilience(
+			`list conversations ${collectionName}`,
+			() => ts.collections(collectionName).documents().search({
+				q: '*',
+				query_by: 'conversation_id',
+				filter_by: `model_id:=${modelId}`,
+				sort_by: 'timestamp:desc',
+				per_page: limit * 5,
+				exclude_fields: _ts_exlude_default,
+			}),
+			{ fallback: { hits: [] } },
+		);
 
 		// Group by conversation_id, extract first user message as title
 		const conversationMap = new Map();
@@ -1050,7 +1189,11 @@ export async function listConversations(hostId, userId, { limit = 10 } = {}) {
 export async function deleteConversation(hostId, userId, conversationId) {
 	const ts = getTypesenseClient();
 	const collectionName = `conversation_store_${hostId}`;
-	return ts.collections(collectionName).documents().delete({
-		filter_by: `conversation_id:=${conversationId} && model_id:=convo-${userId}`,
-	});
+	return withTypesenseResilience(
+		`delete conversation ${collectionName}/${conversationId}`,
+		() => ts.collections(collectionName).documents().delete({
+			filter_by: `conversation_id:=${conversationId} && model_id:=convo-${userId}`,
+		}),
+		{ fallback: null },
+	);
 }

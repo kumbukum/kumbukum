@@ -355,6 +355,30 @@ small,
 	overflow: visible;
 }
 
+#rm-url-tab-pages-count {
+	background: rgba(124, 137, 188, 0.25);
+	color: #dce5ff;
+	font-weight: 500;
+}
+
+#rm-url-pane-pages .rm-crawl-item {
+	background: rgba(23, 33, 63, 0.55) !important;
+	border-color: rgba(151, 166, 206, 0.28) !important;
+	color: #e8edff !important;
+}
+
+#rm-url-pane-pages .rm-crawl-item:hover {
+	background: rgba(34, 47, 89, 0.85) !important;
+}
+
+#rm-url-pane-pages .rm-crawl-title {
+	color: #eef2ff;
+}
+
+#rm-url-pane-pages .rm-crawl-url {
+	color: #9fb0da;
+}
+
 /* Batch action toolbar */
 #batch-toolbar {
 	padding: 0.25rem 0;

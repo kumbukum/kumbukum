@@ -26,6 +26,7 @@
         includeSemantic: false,
         projectId: '',
     };
+    let graphReindexRequested = false;
 
     function initCytoscape() {
         cy = cytoscape({
@@ -155,6 +156,34 @@
         if (el) el.classList.toggle('d-none', !show);
     }
 
+    function showStatus(message, level = 'info') {
+        const el = document.getElementById('graph-status');
+        if (!el) return;
+        el.className = `alert alert-${level} py-2 px-3 mb-2 small`;
+        el.textContent = message;
+        el.classList.remove('d-none');
+    }
+
+    function hideStatus() {
+        const el = document.getElementById('graph-status');
+        if (!el) return;
+        el.classList.add('d-none');
+        el.textContent = '';
+    }
+
+    async function triggerGraphReindex(reason) {
+        if (graphReindexRequested) return;
+        graphReindexRequested = true;
+        showStatus(reason || 'Graph index appears stale. Starting reindex...', 'info');
+        try {
+            const res = await api('POST', '/reindex');
+            showStatus(res?.message || 'Reindex started. Graph will refresh when indexing completes.', 'info');
+        } catch (err) {
+            graphReindexRequested = false;
+            showStatus(`Could not start reindex: ${err.message || 'Unknown error'}`, 'warning');
+        }
+    }
+
     async function loadGraph() {
         const params = new URLSearchParams();
         if (state.projectId) params.set('project_id', state.projectId);
@@ -165,8 +194,14 @@
         try {
             const data = await api('GET', `/graph?${params.toString()}`);
             renderGraph(data);
+            if (!data?.nodes?.length) {
+                triggerGraphReindex('No indexed graph nodes found. Starting reindex...');
+            } else {
+                hideStatus();
+            }
         } catch (err) {
             console.error('Failed to load graph:', err);
+            triggerGraphReindex('Graph failed to load from search index. Starting reindex...');
         } finally {
             showLoading(false);
         }
@@ -277,6 +312,18 @@
             document.getElementById('graph-project-filter').value = projectId;
             state.projectId = projectId;
             loadGraph();
+        });
+
+        window.addEventListener('reindex-status', (e) => {
+            const data = e.detail || {};
+            if (!graphReindexRequested) return;
+            if (data?.message) {
+                showStatus(data.message, data.status === 'complete' ? 'success' : 'info');
+            }
+            if (data?.status === 'complete') {
+                graphReindexRequested = false;
+                loadGraph();
+            }
         });
     }
 

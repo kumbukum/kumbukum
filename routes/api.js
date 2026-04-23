@@ -17,7 +17,7 @@ import { listConversations, deleteConversation } from '../modules/typesense.js';
 import * as trashService from '../services/trash_service.js';
 import { crawlSite } from '../modules/crawler.js';
 import { getProjectCounts } from '../services/project_service.js';
-import { reindexHost, searchCollection, getFilteredCount } from '../modules/typesense.js';
+import { reindexHost, searchCollection, getFilteredCount, removeDocumentsByFilter } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
@@ -252,9 +252,78 @@ router.get('/urls/:id', async (req, res) => {
 	res.json({ url });
 });
 
+router.get('/urls/:id/pages', async (req, res) => {
+	const url = await urlService.getUrl(req.host_id, req.params.id);
+	if (!url) return res.status(404).json({ error: 'URL not found' });
+
+	const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+	const perPage = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 500);
+
+	try {
+		const results = await searchCollection(req.host_id, 'pages', '*', {
+			queryBy: 'title',
+			page,
+			perPage,
+			include_fields: 'id,url,title,crawled_at,parent_url_id',
+			filter_by: `parent_url_id:=${req.params.id}`,
+			extra: { sort_by: 'crawled_at:desc' },
+		});
+
+		const pages = (results.hits || []).map((hit) => ({
+			id: hit.document.id,
+			url: hit.document.url,
+			title: hit.document.title,
+			crawled_at: hit.document.crawled_at,
+		}));
+
+		res.json({
+			pages,
+			count: results.found || 0,
+			page,
+			per_page: perPage,
+		});
+	} catch (err) {
+		if (err?.httpStatus === 404) {
+			return res.json({ pages: [], count: 0, page, per_page: perPage });
+		}
+		console.error('URL pages fetch error:', err);
+		res.status(500).json({ error: 'Failed to load crawled pages' });
+	}
+});
+
+router.post('/urls/:id/resync', async (req, res) => {
+	const url = await urlService.getUrl(req.host_id, req.params.id);
+	if (!url) return res.status(404).json({ error: 'URL not found' });
+	if (!url.crawl_enabled) return res.status(400).json({ error: 'Crawling is not enabled for this URL' });
+
+	crawlSite(url).catch((err) => console.error('Manual URL resync error:', err.message));
+	res.json({ message: 'URL crawl resync started' });
+});
+
+router.delete('/urls/:id/pages', async (req, res) => {
+	const url = await urlService.getUrl(req.host_id, req.params.id);
+	if (!url) return res.status(404).json({ error: 'URL not found' });
+
+	try {
+		const result = await removeDocumentsByFilter(req.host_id, 'pages', `parent_url_id:=${req.params.id}`);
+		const deleted = typeof result?.num_deleted === 'number' ? result.num_deleted : 0;
+		res.json({ message: `${deleted} crawled page${deleted === 1 ? '' : 's'} deleted`, deleted });
+	} catch (err) {
+		console.error('Delete URL pages error:', err);
+		res.status(500).json({ error: 'Failed to delete crawled pages' });
+	}
+});
+
 router.put('/urls/:id', async (req, res) => {
+	const before = await urlService.getUrl(req.host_id, req.params.id);
 	const url = await urlService.updateUrl(req.host_id, req.params.id, req.body, auditCtx(req));
 	if (!url) return res.status(404).json({ error: 'URL not found' });
+
+	const shouldStartFirstCrawl = !!url.crawl_enabled && !before?.crawl_enabled;
+	if (shouldStartFirstCrawl) {
+		crawlSite(url).catch((err) => console.error('Background crawl error:', err.message));
+	}
+
 	res.json({ url });
 });
 
@@ -902,6 +971,8 @@ router.post('/notes/import', async (req, res) => {
 			uploadDir: IMPORT_DIR,
 			keepExtensions: true,
 			maxFileSize: MAX_FILE_SIZE,
+			allowEmptyFiles: true,
+			minFileSize: 0,
 			multiples: true,
 			filename: (name, ext) => `${crypto.randomUUID()}${ext}`,
 		});
@@ -911,12 +982,16 @@ router.post('/notes/import', async (req, res) => {
 
 		// formidable v3 wraps files in arrays
 		const fileList = files.file ? (Array.isArray(files.file) ? files.file : [files.file]) : [];
-		if (!fileList.length) {
+		const nonEmptyFiles = fileList.filter((file) => {
+			const size = typeof file?.size === 'number' ? file.size : 0;
+			return Boolean(file?.filepath) && size > 0;
+		});
+		if (!nonEmptyFiles.length) {
 			return res.status(400).type('text').send('No files uploaded');
 		}
 
 		// FilePond sends one file per request — handle accordingly
-		const f = fileList[0];
+		const f = nonEmptyFiles[0];
 		const originalName = f.originalFilename || 'Untitled';
 		const ext = path.extname(originalName).toLowerCase();
 		const title = path.basename(originalName, ext) || 'Untitled';
@@ -947,6 +1022,9 @@ router.post('/notes/import', async (req, res) => {
 		}
 	} catch (err) {
 		console.error('Notes import error:', err);
+		if (err?.code === 1010) {
+			return res.status(400).type('text').send('No files uploaded');
+		}
 		res.status(500).type('text').send('Import failed: ' + err.message);
 	}
 });

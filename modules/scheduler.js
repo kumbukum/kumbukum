@@ -1,5 +1,5 @@
 import { Cron } from 'croner';
-import { reindexAll } from './crawler.js';
+import { reindexDue } from './crawler.js';
 import { indexMissing } from './typesense.js';
 import { User } from '../model/user.js';
 import { Note } from '../model/note.js';
@@ -10,18 +10,22 @@ import { cleanupExpiredExports } from '../services/export_service.js';
 import { runScheduledSync } from '../services/git_sync_service.js';
 
 /**
- * Schedule crawl reindexing every 24 hours at 3 AM.
+ * Schedule crawl reindexing for due URLs every 10 minutes.
  * Schedule trial-ending reminders daily at 9 AM.
  * Schedule Typesense catch-up indexing every 5 minutes.
  */
 export function startScheduler() {
-	new Cron('0 3 * * *', async () => {
-		console.log('Starting scheduled reindex...');
+	let crawlReindexRunning = false;
+	new Cron('*/10 * * * *', async () => {
+		if (crawlReindexRunning) return;
+		crawlReindexRunning = true;
 		try {
-			await reindexAll();
-			console.log('Scheduled reindex complete');
+			const crawled = await reindexDue({ intervalHours: 24 });
+			if (crawled > 0) console.log(`Scheduled due crawl complete: crawled ${crawled} URL(s)`);
 		} catch (err) {
-			console.error('Scheduled reindex error:', err);
+			console.error('Scheduled due crawl error:', err);
+		} finally {
+			crawlReindexRunning = false;
 		}
 	});
 
@@ -80,5 +84,5 @@ export function startScheduler() {
 		}
 	});
 
-	console.log('Scheduler started: reindex at 03:00, trial reminders at 09:00, batch index every 20s, export cleanup hourly, git sync every 10min');
+	console.log('Scheduler started: due crawl every 10min, trial reminders at 09:00, batch index every 20s, export cleanup hourly, git sync every 10min');
 }

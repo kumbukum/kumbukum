@@ -105,6 +105,7 @@
     "nodemailer": "^8.0.5",
     "otplib": "^13.4.0",
     "pdfjs-parse": "^1.1.1",
+    "playwright": "^1.59.1",
     "pug": "^3.0.4",
     "rate-limit-redis": "^4.3.1",
     "sharp": "^0.34.5",

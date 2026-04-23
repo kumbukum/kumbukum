@@ -7,11 +7,12 @@ FROM node:lts-trixie-slim AS builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+ENV PLAYWRIGHT_BROWSERS_PATH="/ms-playwright"
 WORKDIR /opt/kumbukum
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    curl iputils-ping dnsutils git tini vim \
+    curl iputils-ping dnsutils git tini vim procps \
     ca-certificates && \
     npm i -g pnpm@10 && \
     npm remove -g yarn && \
@@ -48,6 +49,9 @@ COPY --link .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --link apps/mcp/package.json ./apps/mcp/
 COPY --link docs/package.json ./docs/
 RUN pnpm install --prod
+RUN mkdir -p /ms-playwright && chmod 755 /ms-playwright
+RUN pnpm exec playwright install --with-deps chromium
+RUN chown -R node:node /ms-playwright
 
 COPY --link . .
 
