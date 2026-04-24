@@ -39,7 +39,7 @@ Register WebAuthn passkeys for passwordless authentication. You can add multiple
 
 Create and manage API access tokens. The Access Tokens screen now includes two tabs:
 
-- **Access Tokens** — Personal API tokens for the REST API and stdio MCP setups
+- **Access Tokens** — Personal API tokens for the REST API and MCP setups
 - **OAuth** — OAuth client registration and connected-app management for HTTP MCP clients
 
 Tokens are used to authenticate with:

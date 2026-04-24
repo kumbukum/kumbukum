@@ -46,6 +46,20 @@ describe('MCP HTTP auth helper', () => {
 		assert.ok(result.apiAuth.token);
 	});
 
+	it('accepts personal access tokens in Bearer headers for legacy clients', () => {
+		const result = authenticateHttpRequest({ headers: { authorization: 'Bearer personal-access-token' } });
+		assert.equal(result.ok, true);
+		assert.equal(result.mode, 'legacy');
+		assert.equal(result.apiAuth, 'personal-access-token');
+	});
+
+	it('rejects JWT-shaped invalid bearer tokens as invalid OAuth tokens', () => {
+		const result = authenticateHttpRequest({ headers: { authorization: 'Bearer not.valid.jwt' } });
+		assert.equal(result.ok, false);
+		assert.equal(result.response.status, 401);
+		assert.equal(result.response.body.error, 'Invalid access token');
+	});
+
 	it('computes elevated scope requirements for write tool calls', () => {
 		const required = getRequiredScopesForRequestBody({
 			method: 'tools/call',
