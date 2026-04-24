@@ -133,18 +133,21 @@ function validateRedirectUri(uri) {
 	return parsed.toString();
 }
 
-function normalizeGrantTypes(value) {
+function normalizeGrantTypes(value, { strict = true } = {}) {
 	const grantTypes = Array.isArray(value) && value.length ? value : ['authorization_code', 'refresh_token'];
 	const normalized = [...new Set(grantTypes.map((item) => String(item || '').trim()).filter(Boolean))];
+	const supported = [];
 	for (const grantType of normalized) {
 		if (!OAUTH_GRANT_TYPES.includes(grantType)) {
+			if (!strict) continue;
 			throw new OAuthError('invalid_client_metadata', `Unsupported grant type: ${grantType}`, 400);
 		}
+		supported.push(grantType);
 	}
-	if (!normalized.includes('authorization_code')) {
+	if (!supported.includes('authorization_code')) {
 		throw new OAuthError('invalid_client_metadata', 'authorization_code grant type is required', 400);
 	}
-	return normalized;
+	return supported;
 }
 
 function normalizeResponseTypes(value) {
@@ -169,7 +172,7 @@ function normalizeAuthMethod(value) {
 	return authMethod;
 }
 
-function normalizeRegistrationPayload(payload) {
+function normalizeRegistrationPayload(payload, { strictGrantTypes = true } = {}) {
 	const redirectUris = Array.isArray(payload.redirect_uris)
 		? payload.redirect_uris
 		: [];
@@ -188,7 +191,7 @@ function normalizeRegistrationPayload(payload) {
 		client_uri: validateOptionalHttpsUrl(payload.client_uri, 'client_uri'),
 		logo_uri: validateOptionalHttpsUrl(payload.logo_uri, 'logo_uri'),
 		redirect_uris: normalizedRedirectUris,
-		grant_types: normalizeGrantTypes(payload.grant_types),
+		grant_types: normalizeGrantTypes(payload.grant_types, { strict: strictGrantTypes }),
 		response_types: normalizeResponseTypes(payload.response_types),
 		token_endpoint_auth_method: normalizeAuthMethod(payload.token_endpoint_auth_method),
 	};
@@ -259,7 +262,7 @@ async function fetchClientMetadataDocument(clientId) {
 		throw new OAuthError('invalid_client', 'client_id metadata value must exactly match the document URL', 400);
 	}
 
-	const normalized = normalizeRegistrationPayload(json);
+	const normalized = normalizeRegistrationPayload(json, { strictGrantTypes: false });
 	const metadata = {
 		client_id: url,
 		registration_source: 'metadata',
