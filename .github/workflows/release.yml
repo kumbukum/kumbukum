@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  issues: read
+  pull-requests: read
 
 jobs:
   create-release:
@@ -42,29 +44,7 @@ jobs:
             exit 0
           fi
 
-          PREV_TAG=$(git tag --sort=-creatordate | grep -v "^$TAG$" | head -n 1)
-
-          {
-            echo "Docker image: $IMAGE"
-            echo
-            echo "What's Changed"
-            echo
-
-            gh api "repos/$GITHUB_REPOSITORY/compare/$PREV_TAG...$TAG" \
-              --jq '.commits[].commit.message' \
-              | grep -Eo '#[0-9]+' \
-              | sort -u \
-              | while read issue; do
-                  num="${issue#\#}"
-                  title=$(gh issue view "$num" --repo "$GITHUB_REPOSITORY" --json title --jq .title 2>/dev/null || true)
-                  if [ -n "$title" ]; then
-                    echo "$issue: $title"
-                  fi
-                done
-
-            echo
-            echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$PREV_TAG...$TAG"
-          } > release-notes.md
+          node scripts/generate-release-notes.mjs > release-notes.md
 
           gh release create "$TAG" \
             --title "$TAG" \
