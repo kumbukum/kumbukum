@@ -49,6 +49,8 @@ Tokens are used for:
 
 Tokens do not expire. You can revoke them at any time from the settings page.
 
+For OAuth-capable MCP clients, Kumbukum asks for approval on a themed consent screen. Confirm the requesting app, account, and requested access before approving. Previously approved apps can be reviewed or revoked from the **OAuth** tab.
+
 ## Usage & Limits
 
 View your current workspace usage at **Settings > Usage**:

@@ -47,6 +47,8 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 For remote MCP access via Streamable HTTP, Kumbukum now supports standard OAuth 2.1 discovery for MCP clients. OAuth-capable clients should connect to the MCP endpoint directly and follow the `WWW-Authenticate` challenge + Protected Resource Metadata flow automatically.
 
+When a client needs approval, Kumbukum shows a simple OAuth consent screen in the same Kumbukum theme as the rest of authentication. The screen shows the requesting app, the active Kumbukum account, the exact requested access, and a collapsed technical details section with the client ID, redirect URI, and MCP resource.
+
 :::tabs
 == Cloud
 The Cloud MCP endpoint is available at:
@@ -118,6 +120,8 @@ For manual ChatGPT setup, start with **User-Defined OAuth Client**:
     - `client_secret_post` only if you want ChatGPT to use a client secret
 6. Copy the created **Client ID** back into ChatGPT
 7. Copy the **Client Secret** too only if you created a confidential client
+
+When ChatGPT redirects you to Kumbukum, review the consent screen and click **Allow access** only if the app name, account, and requested access look correct.
 
 ### ChatGPT field mapping
 

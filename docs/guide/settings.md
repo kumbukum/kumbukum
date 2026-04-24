@@ -63,6 +63,8 @@ Use the **OAuth** tab under **Settings > Access Tokens** to:
 - Revoke previously authorized apps
 - Create and manage pre-registered OAuth clients for MCP HTTP integrations
 
+When an MCP client asks for OAuth access, Kumbukum presents a consent screen before issuing tokens. Review the app name, the active account, and the requested access before choosing **Allow access**. Technical OAuth values such as the client ID, redirect URI, and MCP resource are available under **App details** on the consent screen.
+
 ## Role-based visibility
 
 Some settings are available only to account owners and admins.
