@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { copyFileSync, mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,17 +38,22 @@ await build({
 });
 console.log('Vendor CSS built → public/css/vendor.css');
 
-// Copy Bootstrap Icons font files
-const iconsDir = join(__dirname, 'node_modules/bootstrap-icons/font/fonts');
-const outFontsDir = join(__dirname, 'public/css/fonts');
-if (!existsSync(outFontsDir)) mkdirSync(outFontsDir, { recursive: true });
-for (const f of ['bootstrap-icons.woff', 'bootstrap-icons.woff2']) {
-	const src = join(iconsDir, f);
-	if (existsSync(src)) {
-		copyFileSync(src, join(outFontsDir, f));
+const vendorCssPath = join(__dirname, 'public/css/vendor.css');
+let vendorCss = readFileSync(vendorCssPath, 'utf8');
+const phosphorWoff2 = vendorCss.match(/url\("\.\/(Phosphor-Light-[^"]+\.woff2)"\) format\("woff2"\)/)?.[1];
+if (phosphorWoff2) {
+	vendorCss = vendorCss.replace(
+		/src:\s*\n\s*url\("\.\/Phosphor-Light-[^"]+\.woff2"\) format\("woff2"\),\n\s*url\("\.\/Phosphor-Light-[^"]+\.woff"\) format\("woff"\),\n\s*url\("\.\/Phosphor-Light-[^"]+\.ttf"\) format\("truetype"\),\n\s*url\("\.\/Phosphor-Light-[^"]+\.svg#Phosphor-Light"\) format\("svg"\);/,
+		`src: url("./${phosphorWoff2}") format("woff2");`
+	);
+	writeFileSync(vendorCssPath, vendorCss);
+	for (const entry of readdirSync(join(__dirname, 'public/css'))) {
+		if (entry.startsWith('Phosphor-Light-') && entry !== phosphorWoff2) {
+			unlinkSync(join(__dirname, 'public/css', entry));
+		}
 	}
+	console.log('Phosphor font optimized → WOFF2 only');
 }
-console.log('Icon fonts copied → public/css/fonts/');
 
 // TipTap Editor
 await build({

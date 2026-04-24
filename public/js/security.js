@@ -76,6 +76,7 @@
 	// ---- Passkeys ----
 
 	loadPasskeys();
+	loadOauthSection();
 
 	document.getElementById('add-passkey')?.addEventListener('click', async () => {
 		try {
@@ -137,10 +138,10 @@
 				<div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
 					<div class="flex-grow-1">
 						<div class="d-flex align-items-center">
-							<i class="bi bi-fingerprint me-2"></i>
+							<i class="ph-light ph-fingerprint me-2"></i>
 							<strong class="passkey-name">${escapeHtml(pk.name || 'Passkey')}</strong>
 							<button class="btn btn-sm btn-link p-0 ms-2 rename-passkey" data-id="${pk._id}" data-name="${escapeHtml(pk.name || 'Passkey')}" title="Rename">
-								<i class="bi bi-pencil"></i>
+								<i class="ph-light ph-pencil"></i>
 							</button>
 						</div>
 						<div class="ms-4 ps-1">
@@ -150,7 +151,7 @@
 						${detailStr}
 					</div>
 					<button class="btn btn-sm btn-outline-danger delete-passkey ms-2" data-id="${pk._id}">
-						<i class="bi bi-trash"></i>
+						<i class="ph-light ph-trash"></i>
 					</button>
 				</div>
 			`}).join('');
@@ -197,6 +198,55 @@
 
 	// ---- Reset Password ----
 
+	document.getElementById('create-oauth-client')?.addEventListener('click', async () => {
+		const clientName = document.getElementById('oauth-client-name')?.value.trim() || '';
+		const clientUri = document.getElementById('oauth-client-uri')?.value.trim() || '';
+		const authMethod = document.getElementById('oauth-client-auth-method')?.value || 'none';
+		const redirectUris = (document.getElementById('oauth-client-redirect-uris')?.value || '')
+			.split(/\n|,/)
+			.map(function (item) { return item.trim(); })
+			.filter(Boolean);
+
+		if (!clientName) return showError('Client name is required');
+		if (!redirectUris.length) return showError('At least one redirect URI is required');
+
+		try {
+			const data = await api('POST', '/oauth/clients', {
+				client_name: clientName,
+				client_uri: clientUri || undefined,
+				redirect_uris: redirectUris,
+				token_endpoint_auth_method: authMethod,
+				grant_types: ['authorization_code', 'refresh_token'],
+				response_types: ['code'],
+			});
+
+			document.getElementById('oauth-client-name').value = '';
+			document.getElementById('oauth-client-uri').value = '';
+			document.getElementById('oauth-client-redirect-uris').value = '';
+			document.getElementById('oauth-client-auth-method').value = 'none';
+
+			const secretEl = document.getElementById('oauth-client-secret-result');
+			if (secretEl) {
+				if (data.client_secret) {
+					secretEl.classList.remove('d-none');
+					secretEl.innerHTML = '<strong>Client secret created.</strong> Copy it now — it will not be shown again.<div class="input-group mt-2"><input class="form-control" type="text" readonly value="' + escapeHtml(data.client_secret) + '"><button class="btn btn-outline-secondary oauth-copy-secret" type="button">Copy</button></div>';
+					secretEl.querySelector('.oauth-copy-secret')?.addEventListener('click', function () {
+						navigator.clipboard.writeText(data.client_secret);
+						showSuccess('Client secret copied');
+					});
+				} else {
+					secretEl.classList.add('d-none');
+					secretEl.innerHTML = '';
+				}
+			}
+
+			showSuccess('OAuth client created');
+			loadOauthClients();
+		} catch (err) {
+			showError(err.message);
+		}
+	});
+
 	document.getElementById('reset-password-btn')?.addEventListener('click', async () => {
 		const confirmed = await confirmAction('Reset Password', 'A new random password will be generated.');
 		if (!confirmed) return;
@@ -227,6 +277,203 @@
 	document.getElementById('password-copied-btn')?.addEventListener('click', () => {
 		document.getElementById('password-result').classList.add('d-none');
 	});
+
+	async function loadOauthSection() {
+		if (!document.getElementById('oauth-issuer')) return;
+
+		try {
+			const configResp = await api('GET', '/oauth/config');
+			renderOauthConfig(configResp.oauth || {});
+		} catch (err) {
+			console.error('Failed to load OAuth config:', err);
+		}
+
+		loadOauthConsents();
+		loadOauthClients();
+	}
+
+	async function loadOauthConsents() {
+		const list = document.getElementById('oauth-consents-list');
+		if (!list) return;
+
+		try {
+			const data = await api('GET', '/oauth/consents');
+			const consents = data.consents || [];
+			if (!consents.length) {
+				list.innerHTML = '<p class="text-muted">No apps have been authorized for this account yet.</p>';
+				return;
+			}
+
+			list.innerHTML = '<div class="list-group">' + consents.map(function (consent) {
+				return '<div class="list-group-item">'
+					+ '<div class="d-flex justify-content-between align-items-start gap-3">'
+						+ '<div class="flex-grow-1">'
+							+ '<div class="fw-semibold">' + escapeHtml(consent.client_name) + '</div>'
+							+ (consent.client_uri ? '<div><a class="small" href="' + escapeHtml(consent.client_uri) + '" target="_blank" rel="noopener">' + escapeHtml(consent.client_uri) + '</a></div>' : '')
+							+ '<div class="small text-muted mt-1">Granted ' + formatDate(consent.granted_at) + (consent.last_used_at ? ' · Last used ' + formatDate(consent.last_used_at) : '') + '</div>'
+							+ '<div class="d-flex flex-wrap gap-1 mt-2">' + (consent.scopes || []).map(function (scope) { return '<span class="badge text-bg-secondary">' + escapeHtml(scope) + '</span>'; }).join('') + '</div>'
+						+ '</div>'
+						+ '<button class="btn btn-sm btn-outline-danger oauth-revoke-consent" data-id="' + consent._id + '"><i class="ph-light ph-x-circle"></i></button>'
+					+ '</div>'
+				+ '</div>';
+			}).join('') + '</div>';
+
+			list.querySelectorAll('.oauth-revoke-consent').forEach(function (button) {
+				button.addEventListener('click', async function () {
+					var confirmed = await confirmAction('Revoke app access', 'This app will need a new OAuth approval before it can connect again.');
+					if (!confirmed) return;
+					try {
+						await api('DELETE', '/oauth/consents/' + button.dataset.id);
+						showSuccess('Authorized app revoked');
+						loadOauthConsents();
+					} catch (err) {
+						showError(err.message);
+					}
+				});
+			});
+		} catch (err) {
+			list.innerHTML = '<p class="text-danger">Failed to load authorized apps</p>';
+		}
+	}
+
+	async function loadOauthClients() {
+		const list = document.getElementById('oauth-clients-list');
+		if (!list) return;
+
+		try {
+			const data = await api('GET', '/oauth/clients');
+			const clients = data.clients || [];
+			if (!clients.length) {
+				return;
+			}
+
+			list.innerHTML = '<div class="list-group">' + clients.map(function (client) {
+				return '<div class="list-group-item">'
+					+ '<div class="d-flex justify-content-between align-items-start gap-3">'
+						+ '<div class="flex-grow-1">'
+							+ '<div class="fw-semibold">' + escapeHtml(client.client_name) + ' <span class="badge text-bg-light">' + escapeHtml(client.token_endpoint_auth_method) + '</span></div>'
+							+ '<div class="small text-muted mt-1">Client ID</div>'
+							+ '<code class="small d-block mb-2">' + escapeHtml(client.client_id) + '</code>'
+							+ '<div class="small text-muted">Redirect URIs</div>'
+							+ '<ul class="small mb-0">' + (client.redirect_uris || []).map(function (uri) { return '<li><code>' + escapeHtml(uri) + '</code></li>'; }).join('') + '</ul>'
+						+ '</div>'
+						+ '<button class="btn btn-sm btn-outline-danger oauth-delete-client" data-id="' + client._id + '"><i class="ph-light ph-trash"></i></button>'
+					+ '</div>'
+				+ '</div>';
+			}).join('') + '</div>';
+
+			list.querySelectorAll('.oauth-delete-client').forEach(function (button) {
+				button.addEventListener('click', async function () {
+					var confirmed = await confirmAction('Delete OAuth client', 'This client will stop working immediately and existing refresh tokens will be revoked.');
+					if (!confirmed) return;
+					try {
+						await api('DELETE', '/oauth/clients/' + button.dataset.id);
+						showSuccess('OAuth client deleted');
+						loadOauthClients();
+						loadOauthConsents();
+					} catch (err) {
+						showError(err.message);
+					}
+				});
+			});
+		} catch (err) {
+			if (err.message && /Team admin access/i.test(err.message)) {
+				list.innerHTML = '';
+				return;
+			}
+			list.innerHTML = '<p class="text-danger">Failed to load OAuth clients</p>';
+		}
+	}
+
+	function renderOauthConfig(oauth) {
+		setText('oauth-issuer', oauth.issuer);
+		setText('oauth-mcp-endpoint', oauth.mcp_endpoint);
+		setText('oauth-resource-metadata', oauth.resource_metadata_url);
+		setText('oauth-auth-metadata', oauth.authorization_server_metadata_url);
+		renderOauthRegistrationMethods(oauth.client_registration || {});
+		renderOauthChatGptGuide(oauth);
+	}
+
+	function renderOauthRegistrationMethods(clientRegistration) {
+		var badges = document.getElementById('oauth-registration-badges');
+		if (!badges) return;
+
+		var items = [];
+		if (clientRegistration.pre_registration_supported) {
+			items.push({
+				label: 'Pre-registration',
+				description: 'Create the OAuth client in Kumbukum first, then paste its client ID and optional secret into the external tool.',
+			});
+		}
+		if (clientRegistration.client_id_metadata_document_supported) {
+			items.push({
+				label: 'Client ID Metadata Documents',
+				description: 'Only use this if the client explicitly authenticates with a client metadata document URL as its client ID.',
+			});
+		}
+		if (clientRegistration.dynamic_registration_supported) {
+			items.push({
+				label: 'Dynamic Client Registration',
+				description: 'The client can register itself automatically with Kumbukum using the registration endpoint.',
+			});
+		}
+
+		if (!items.length) {
+			badges.innerHTML = '<div class="text-muted">No client registration methods advertised.</div>';
+			return;
+		}
+
+		badges.innerHTML = '<ul class="mb-0 ps-3">' + items.map(function (item) {
+			return '<li><strong>' + escapeHtml(item.label) + ':</strong> ' + escapeHtml(item.description) + '</li>';
+		}).join('') + '</ul>';
+	}
+
+	function renderOauthChatGptGuide(oauth) {
+		var container = document.getElementById('oauth-chatgpt-fields');
+		if (!container) return;
+
+		var issuer = oauth.issuer || '';
+		var authUrl = oauth.authorization_endpoint || '';
+		var tokenUrl = oauth.token_endpoint || '';
+		var registrationUrl = oauth.registration_endpoint || '';
+		var resource = oauth.mcp_base_url || oauth.mcp_endpoint || '';
+		var mcpEndpoint = oauth.mcp_endpoint || '';
+
+		container.innerHTML = ''
+			+ '<p class="small text-muted mb-3">If ChatGPT discovers OAuth automatically, you usually only need the MCP Server URL. The fields below are for manual entry when the connector asks for them.</p>'
+			+ '<div class="table-responsive">'
+			+ '<table class="table table-sm align-middle mb-3">'
+			+ '<thead><tr><th>ChatGPT field</th><th>What to put there</th></tr></thead>'
+			+ '<tbody>'
+			+ '<tr><td>MCP Server URL</td><td><code>' + escapeHtml(mcpEndpoint) + '</code></td></tr>'
+			+ '<tr><td>Registration method</td><td>User-Defined OAuth Client for manual setup, or Dynamic Client Registration if ChatGPT enables DCR.</td></tr>'
+			+ '<tr><td>Auth URL</td><td><code>' + escapeHtml(authUrl) + '</code></td></tr>'
+			+ '<tr><td>Token URL</td><td><code>' + escapeHtml(tokenUrl) + '</code></td></tr>'
+			+ '<tr><td>Registration URL</td><td><code>' + escapeHtml(registrationUrl) + '</code><div class="small text-muted">Only needed for Dynamic Client Registration.</div></td></tr>'
+			+ '<tr><td>Authorization server base</td><td><code>' + escapeHtml(issuer) + '</code></td></tr>'
+			+ '<tr><td>Resource</td><td><code>' + escapeHtml(resource) + '</code></td></tr>'
+			+ '<tr><td>OIDC</td><td>Leave disabled unless the client explicitly requires domain-claim OIDC. Kumbukum MCP auth does not need it.</td></tr>'
+			+ '</tbody>'
+			+ '</table>'
+			+ '</div>'
+			+ '<ul class="small text-muted ps-3 mb-0">'
+			+ '<li><strong>Callback URL:</strong> copy the callback URL shown by ChatGPT into Kumbukum\'s <em>Redirect URIs</em> field when creating a pre-registered OAuth client.</li>'
+			+ '<li><strong>OAuth Client ID:</strong> use the client ID from the Kumbukum OAuth client you create here.</li>'
+			+ '<li><strong>OAuth Client Secret:</strong> only fill this if you created a confidential client with <code>client_secret_post</code>. Leave it blank for public PKCE clients.</li>'
+			+ '<li><strong>Token endpoint auth method:</strong> use <code>none</code> for public PKCE clients or <code>client_secret_post</code> for confidential clients.</li>'
+			+ '</ul>';
+	}
+
+	function setText(id, value) {
+		var el = document.getElementById(id);
+		if (!el) return;
+		el.textContent = value || '—';
+	}
+
+	function formatDate(value) {
+		if (!value) return 'never';
+		return new Date(value).toLocaleString();
+	}
 
 	function escapeHtml(str) {
 		const div = document.createElement('div');

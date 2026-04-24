@@ -2,6 +2,7 @@ import { Project } from '../model/project.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { Email } from '../model/email.js';
 import { GitRepo } from '../model/git_repo.js';
 import { emitToTenant } from '../modules/socket.js';
 import * as audit from './audit_service.js';
@@ -59,10 +60,11 @@ export async function deleteProject(host_id, projectId, ctx = {}) {
 	if (project.is_default) throw new Error('Cannot delete the default project');
 
 	const filter = { project: projectId, host_id, in_trash: { $ne: true } };
-	const [notes, memory, urls, gitRepos] = await Promise.all([
+	const [notes, memory, urls, emails, gitRepos] = await Promise.all([
 		Note.countDocuments(filter),
 		Memory.countDocuments(filter),
 		Url.countDocuments(filter),
+		Email.countDocuments(filter),
 		GitRepo.countDocuments({ project: projectId, host_id }),
 	]);
 
@@ -70,6 +72,7 @@ export async function deleteProject(host_id, projectId, ctx = {}) {
 	if (notes) parts.push(`${notes} note${notes > 1 ? 's' : ''}`);
 	if (memory) parts.push(`${memory} ${memory > 1 ? 'memories' : 'memory'}`);
 	if (urls) parts.push(`${urls} URL${urls > 1 ? 's' : ''}`);
+	if (emails) parts.push(`${emails} email${emails > 1 ? 's' : ''}`);
 	if (gitRepos) parts.push(`${gitRepos} git repo${gitRepos > 1 ? 's' : ''}`);
 	if (parts.length) throw new Error(`Cannot delete project: has ${parts.join(', ')}`);
 
@@ -82,10 +85,10 @@ export async function deleteProject(host_id, projectId, ctx = {}) {
 
 /**
  * Get per-project document counts from MongoDB.
- * Returns { projectId: { notes: N, memory: N, urls: N }, ... }
+ * Returns { projectId: { notes: N, memory: N, urls: N, emails: N }, ... }
  */
 export async function getProjectCounts(host_id) {
-	const [noteCounts, memoryCounts, urlCounts] = await Promise.all([
+	const [noteCounts, memoryCounts, urlCounts, emailCounts] = await Promise.all([
 		Note.aggregate([
 			{ $match: { host_id, in_trash: { $ne: true } } },
 			{ $group: { _id: '$project', count: { $sum: 1 } } },
@@ -98,23 +101,32 @@ export async function getProjectCounts(host_id) {
 			{ $match: { host_id, in_trash: { $ne: true } } },
 			{ $group: { _id: '$project', count: { $sum: 1 } } },
 		]),
+		Email.aggregate([
+			{ $match: { host_id, in_trash: { $ne: true } } },
+			{ $group: { _id: '$project', count: { $sum: 1 } } },
+		]),
 	]);
 
 	const counts = {};
 	for (const { _id, count } of noteCounts) {
 		const pid = _id.toString();
-		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0 };
+		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0, emails: 0 };
 		counts[pid].notes = count;
 	}
 	for (const { _id, count } of memoryCounts) {
 		const pid = _id.toString();
-		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0 };
+		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0, emails: 0 };
 		counts[pid].memory = count;
 	}
 	for (const { _id, count } of urlCounts) {
 		const pid = _id.toString();
-		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0 };
+		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0, emails: 0 };
 		counts[pid].urls = count;
+	}
+	for (const { _id, count } of emailCounts) {
+		const pid = _id.toString();
+		if (!counts[pid]) counts[pid] = { notes: 0, memory: 0, urls: 0, emails: 0 };
+		counts[pid].emails = count;
 	}
 
 	return counts;

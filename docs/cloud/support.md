@@ -18,7 +18,7 @@ Kumbukum Cloud targets 99.9% uptime for all paid plans. See your plan details fo
 
 ## Data Export
 
-You can export your data at any time from **Settings > Export**. Exports include:
+Account owners and admins can export data at any time from **Settings > Export**. Exports include:
 
 - Notes (Markdown)
 - Memories (JSON)

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const ITEM_TYPES = ['notes', 'memory', 'urls'];
+const ITEM_TYPES = ['notes', 'memory', 'urls', 'emails'];
 
 const graphLinkSchema = new mongoose.Schema(
 	{

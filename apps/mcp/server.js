@@ -5,26 +5,64 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 
+import mcpConfig from './config.js';
 import { ApiClient } from './lib/api-client.js';
+import { authenticateHttpRequest, checkRequestScopes, extractRequestAuth } from './lib/http-auth.js';
 import { noteTools } from './tools/notes.js';
 import { memoryTools } from './tools/memory.js';
 import { urlTools } from './tools/urls.js';
+import { emailTools } from './tools/emails.js';
 import { projectTools } from './tools/projects.js';
 import { graphTools } from './tools/graph.js';
 import { gitSyncTools } from './tools/git_sync.js';
+import { MCP_SERVER_INSTRUCTIONS } from './instructions.js';
+import { buildProtectedResourceMetadata } from '../../modules/oauth.js';
 
-const PORT = parseInt(process.env.PORT, 10) || 3002;
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
+const PORT = mcpConfig.port;
+const API_BASE_URL = mcpConfig.apiBaseUrl;
+const MCP_TOOL_TELEMETRY = process.env.MCP_TOOL_TELEMETRY === 'true';
 
-/**
- * Extract the raw access token from the request.
- * Accepts: Authorization: Bearer <token>, Authorization: Token <token>, or access-token: <token>
- */
+function estimateTokens(value) {
+  return Math.ceil(String(value || '').length / 4);
+}
+
+function summarizeToolResult(result) {
+  const content = Array.isArray(result?.content) ? result.content : [];
+  const text = content
+    .filter((item) => item?.type === 'text')
+    .map((item) => item.text || '')
+    .join('\n');
+  return {
+    content_items: content.length,
+    text_chars: text.length,
+    estimated_tokens: estimateTokens(text),
+  };
+}
+
+function logToolTelemetry(event) {
+  if (!MCP_TOOL_TELEMETRY) return;
+  console.log(JSON.stringify({ event: 'mcp_tool_call', ...event }));
+}
+
 function extractToken(req) {
-    const auth = req.headers.authorization;
-    if (auth?.startsWith('Bearer ')) return auth.slice(7);
-    if (auth?.startsWith('Token ')) return auth.slice(6);
-    return req.headers['access-token'] || null;
+  return extractRequestAuth(req.headers)?.token || null;
+}
+
+function authKeyForContext(authContext) {
+  if (!authContext) return 'anon';
+  if (authContext.mode === 'oauth') {
+    return `${authContext.tokenClaims.sub}:${authContext.tokenClaims.client_id}`;
+  }
+  return `legacy:${authContext.apiAuth}`;
+}
+
+function sendAuthResponse(res, response) {
+  if (response?.headers) {
+    for (const [key, value] of Object.entries(response.headers)) {
+      res.setHeader(key, value);
+    }
+  }
+  return res.status(response?.status || 401).json(response?.body || { error: 'Authentication required' });
 }
 
 async function resolveDefaultProjectId(api, projectIdOverride) {
@@ -35,31 +73,25 @@ async function resolveDefaultProjectId(api, projectIdOverride) {
   return def._id;
 }
 
-async function createServer(token, { projectId } = {}) {
-  const api = new ApiClient(API_BASE_URL, token);
+async function createServer(apiAuth, { projectId } = {}) {
+  const api = new ApiClient(API_BASE_URL, apiAuth);
   const defaultProjectId = await resolveDefaultProjectId(api, projectId);
+  let emailFeatureEnabled = true;
+  let gitSyncFeatureEnabled = true;
+  try {
+    const { features } = await api.get('/features');
+    emailFeatureEnabled = features?.email_ingest !== false;
+    gitSyncFeatureEnabled = features?.git_sync !== false;
+  } catch {
+    // Fallback for older API versions: keep enabled by default.
+    emailFeatureEnabled = true;
+    gitSyncFeatureEnabled = true;
+  }
 
   const server = new McpServer({
     name: 'kumbukum',
     version: '0.1.0',
-    instructions: `You are connected to Kumbukum, a shared memory layer platform.
-
-## Primary Search
-Use \`search_knowledge\` as your primary tool for ANY search query — it returns results from notes, memories, URLs, and crawled pages in a single call.
-
-## Memory
-- You have persistent memory via the \`store_memory\` and \`recall_memory\` tools.
-- **Before starting any task**, call \`recall_memory\` with a query describing the task to check for relevant prior context, decisions, or notes.
-- **After completing significant work**, call \`store_memory\` to save key decisions, outcomes, or context for future sessions.
-- **Before creating tags**, call \`suggest_memory_tags\` to reuse existing tags and avoid duplicates.
-- You can also use \`search_memory\` (alias of \`recall_memory\`) if your client prefers search-style naming.
-- Memories are personal — scoped to the authenticated user — and searchable by meaning, not just keywords.
-
-## Data Types
-- **Notes**: Rich text documents organized by project
-- **Memory**: Facts, decisions, context — your personal knowledge base
-- **URLs**: Saved web pages with extracted content, optionally with full-site crawling
-- **Projects**: Organize all data into projects — create, update, delete, and list projects`,
+    instructions: MCP_SERVER_INSTRUCTIONS,
   });
 
   // Register all tools, wrapping handlers to inject MCP client identity
@@ -67,19 +99,47 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
     ...noteTools(api, defaultProjectId),
     ...memoryTools(api, defaultProjectId),
     ...urlTools(api, defaultProjectId),
+    ...(emailFeatureEnabled ? emailTools(api, defaultProjectId) : {}),
     ...projectTools(api),
     ...graphTools(api),
-    ...gitSyncTools(api, defaultProjectId),
+    ...(gitSyncFeatureEnabled ? gitSyncTools(api, defaultProjectId) : {}),
   };
 
   for (const [name, tool] of Object.entries(allTools)) {
     const originalHandler = tool.handler;
     const wrappedHandler = async (params, extra) => {
+      const started = Date.now();
       const cv = server.server.getClientVersion();
+      const client = cv ? `${cv.name || 'unknown'}/${cv.version || '?'}` : 'unknown';
       if (cv) {
-        api.setMcpClient(`${cv.name || 'unknown'}/${cv.version || '?'}`);
+        api.setMcpClient(client);
       }
-      return originalHandler(params, extra);
+      try {
+        const result = await originalHandler(params, extra);
+        logToolTelemetry({
+          tool: name,
+          client,
+          duration_ms: Date.now() - started,
+          args_chars: JSON.stringify(params || {}).length,
+          args_estimated_tokens: estimateTokens(JSON.stringify(params || {})),
+          requested_per_page: params?.per_page || params?.limit || null,
+          success: true,
+          result: summarizeToolResult(result),
+        });
+        return result;
+      } catch (err) {
+        logToolTelemetry({
+          tool: name,
+          client,
+          duration_ms: Date.now() - started,
+          args_chars: JSON.stringify(params || {}).length,
+          args_estimated_tokens: estimateTokens(JSON.stringify(params || {})),
+          requested_per_page: params?.per_page || params?.limit || null,
+          success: false,
+          error: err?.message || 'unknown',
+        });
+        throw err;
+      }
     };
     server.tool(name, tool.description, tool.inputSchema, wrappedHandler);
   }
@@ -112,6 +172,18 @@ if (transportArg === '--stdio' || !transportArg) {
     res.json({ status: 'ok', transport: 'http' });
   });
 
+  app.get('/.well-known/oauth-protected-resource', (_req, res) => {
+	res.json(buildProtectedResourceMetadata(mcpConfig.mcpBaseUrl));
+  });
+
+  app.get('/.well-known/oauth-protected-resource/mcp', (_req, res) => {
+	res.json(buildProtectedResourceMetadata(`${mcpConfig.mcpBaseUrl}/mcp`));
+  });
+
+  app.get('/.well-known/oauth-protected-resource/sse', (_req, res) => {
+	res.json(buildProtectedResourceMetadata(`${mcpConfig.mcpBaseUrl}/sse`));
+  });
+
   // MCP rate limiter — 120 req/min per token (in-memory store)
   const mcpLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -127,13 +199,18 @@ if (transportArg === '--stdio' || !transportArg) {
   const sseTransports = new Map();
 
   app.get('/sse', async (req, res) => {
-    const token = extractToken(req);
-    if (!token) return res.status(401).json({ error: 'Provide Authorization: Bearer <token>, Authorization: Token <token>, or access-token header' });
+    const authContext = authenticateHttpRequest(req);
+    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
 
     const projectId = req.headers['x-project-id'] || null;
-    const server = await createServer(token, { projectId });
+    const server = await createServer(authContext.apiAuth, { projectId });
     const transport = new SSEServerTransport('/messages', res);
-    sseTransports.set(transport.sessionId, { server, transport });
+    sseTransports.set(transport.sessionId, {
+		server,
+		transport,
+		authKey: authKeyForContext(authContext),
+		mode: authContext.mode,
+	});
 
     res.on('close', () => {
       sseTransports.delete(transport.sessionId);
@@ -143,20 +220,29 @@ if (transportArg === '--stdio' || !transportArg) {
   });
 
   app.post('/messages', (req, res) => {
+    const authContext = authenticateHttpRequest(req);
+    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
     const sessionId = req.query.sessionId;
     const session = sseTransports.get(sessionId);
     if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (session.authKey !== authKeyForContext(authContext)) {
+		return sendAuthResponse(res, authContext.response || { status: 401, body: { error: 'Session authentication mismatch' } });
+	}
+	const scopeResponse = checkRequestScopes(authContext, req.body);
+	if (scopeResponse) return sendAuthResponse(res, scopeResponse);
     session.transport.handlePostMessage(req, res);
   });
 
   // Streamable HTTP endpoint — stateless (no sessions)
   // Shared handler for all methods on /mcp
   const handleMcp = async (req, res) => {
-    const token = extractToken(req);
-    if (!token) return res.status(401).json({ error: 'Provide Authorization: Bearer <token>, Authorization: Token <token>, or access-token header' });
+    const authContext = authenticateHttpRequest(req);
+    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
+	const scopeResponse = checkRequestScopes(authContext, req.body);
+	if (scopeResponse) return sendAuthResponse(res, scopeResponse);
 
     const projectId = req.headers['x-project-id'] || null;
-    const server = await createServer(token, { projectId });
+    const server = await createServer(authContext.apiAuth, { projectId });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);

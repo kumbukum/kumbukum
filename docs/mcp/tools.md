@@ -50,11 +50,12 @@ List notes, optionally filtered by project.
 | `limit`      | number | no       |
 
 ### `search_notes`
-Search notes using semantic/text search.
+Search notes using semantic/text search. Use only for specs, docs, ADRs, structured write-ups, or when `search_knowledge` results point to notes.
 
-| Parameter | Type   | Required |
-| --------- | ------ | -------- |
-| `query`   | string | yes      |
+| Parameter  | Type   | Required |
+| ---------- | ------ | -------- |
+| `query`    | string | yes      |
+| `per_page` | number | no       |
 
 ## Memories
 
@@ -70,14 +71,20 @@ Store a new memory — persist conversation context, decisions, or learnings.
 | `project_id` | string | no       | Project ID (default: auto)    |
 
 ### `recall_memory`
-Search memories semantically — find by meaning, not keywords.
+Search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings.
 
-| Parameter | Type   | Required |
-| --------- | ------ | -------- |
-| `query`   | string | yes      |
+| Parameter  | Type   | Required |
+| ---------- | ------ | -------- |
+| `query`    | string | yes      |
+| `per_page` | number | no       |
 
 ### `search_memory`
 Alias for `recall_memory`.
+
+| Parameter  | Type   | Required |
+| ---------- | ------ | -------- |
+| `query`    | string | yes      |
+| `per_page` | number | no       |
 
 ### `read_memory`
 Read a specific memory by ID.
@@ -107,7 +114,7 @@ Delete a memory by ID.
 Get suggested tags based on existing memory tags. No parameters.
 
 ### `search_knowledge`
-Search across ALL data types (notes, memories, URLs, pages). **This is the primary search tool.**
+Search across ALL data types (notes, memories, URLs, pages). **Default first retrieval tool.** Use a specific query with `per_page: 3`, then broaden or raise `per_page` only if results are weak.
 
 | Parameter    | Type   | Required |
 | ------------ | ------ | -------- |

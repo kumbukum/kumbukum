@@ -1,5 +1,5 @@
 /* Vendor CSS bundle */
 @import "bootstrap/dist/css/bootstrap.css";
-@import "bootstrap-icons/font/bootstrap-icons.css";
+@import "@phosphor-icons/web/light";
 @import "huebee/huebee.css";
 @import "filepond/dist/filepond.css";

@@ -5,187 +5,37 @@ block content
 		.col-md-3
 			.list-group.mb-3
 				a.list-group-item.list-group-item-action(href="/settings/profile" class=(title === 'Profile' ? 'active' : ''))
-					i.bi.bi-person.me-2
+					i.ph-light.ph-user.me-2
 					| Profile
 				a.list-group-item.list-group-item-action(href="/settings/security" class=(title === 'Security' ? 'active' : ''))
-					i.bi.bi-shield-lock.me-2
+					i.ph-light.ph-shield-check.me-2
 					| Security
+				if can_manage_team
+					a.list-group-item.list-group-item-action(href="/settings/team" class=(title === 'My Team' ? 'active' : ''))
+						i.ph-light.ph-users.me-2
+						| My Team
 				a.list-group-item.list-group-item-action(href="/settings/tokens" class=(title === 'Access Tokens' ? 'active' : ''))
-					i.bi.bi-key.me-2
+					i.ph-light.ph-key.me-2
 					| Access Tokens
-				a.list-group-item.list-group-item-action(href="/settings/typesense" class=(title === 'Typesense' ? 'active' : ''))
-					i.bi.bi-search.me-2
-					| Search index
+				if can_manage_restricted_settings
+					a.list-group-item.list-group-item-action(href="/settings/typesense" class=(title === 'Typesense' ? 'active' : ''))
+						i.ph-light.ph-magnifying-glass.me-2
+						| Search index
 				a.list-group-item.list-group-item-action(href="/settings/usage" class=(title === 'Usage' ? 'active' : ''))
-					i.bi.bi-bar-chart.me-2
+					i.ph-light.ph-chart-bar.me-2
 					| Usage
-				a.list-group-item.list-group-item-action(href="/settings/export" class=(title === 'Export' ? 'active' : ''))
-					i.bi.bi-box-arrow-up.me-2
-					| Export
-				a.list-group-item.list-group-item-action(href="#modal" data-bs-toggle="modal" data-bs-target="#logsModal")
-					i.bi.bi-journal-text.me-2
-					| Activity Logs
+				if can_manage_restricted_settings
+					a.list-group-item.list-group-item-action(href="/settings/export" class=(title === 'Export' ? 'active' : ''))
+						i.ph-light.ph-box-arrow-up.me-2
+						| Export
+					a.list-group-item.list-group-item-action(href="#modal" data-bs-toggle="modal" data-bs-target="#logsModal")
+						i.ph-light.ph-notebook.me-2
+						| Activity Logs
 				if is_hosted
 					a.list-group-item.list-group-item-action(href="/settings/subscription" class=(title === 'Subscription' ? 'active' : ''))
-						i.bi.bi-credit-card.me-2
+						i.ph-light.ph-credit-card.me-2
 						| Subscription
 		.col-md-9
 			block settings
 
-	//- Activity Logs XL Modal
-	.modal.fade#logsModal(tabindex="-1" aria-labelledby="logsModalLabel" aria-hidden="true")
-		.modal-dialog.modal-xl.modal-dialog-scrollable
-			.modal-content
-				.modal-header
-					h5.modal-title#logsModalLabel Activity Logs
-					button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
-				.modal-body
-					.row.g-2.mb-3
-						.col-md-3
-							input.form-control.form-control-sm#log-search(type="text" placeholder="Search...")
-						.col-md-2
-							select.form-select.form-select-sm#log-resource
-								option(value="") All Types
-								option(value="note") Note
-								option(value="memory") Memory
-								option(value="url") URL
-								option(value="project") Project
-								option(value="link") Link
-								option(value="user") User
-								option(value="trash") Trash
-						.col-md-2
-							select.form-select.form-select-sm#log-action
-								option(value="") All Actions
-								option(value="create") Create
-								option(value="update") Update
-								option(value="delete") Delete
-								option(value="search") Search
-								option(value="restore") Restore
-								option(value="export") Export
-						.col-md-2
-							select.form-select.form-select-sm#log-channel
-								option(value="") All Channels
-								option(value="web") Web
-								option(value="api") API
-								option(value="mcp") MCP
-						.col-md-3
-							.input-group.input-group-sm
-								input.form-control#log-from(type="date")
-								span.input-group-text to
-								input.form-control#log-to(type="date")
-
-					.table-responsive
-						table.table.table-sm.table-hover
-							thead
-								tr
-									th Time
-									th Action
-									th Resource
-									th Channel
-									th Token / Client
-									th Details
-							tbody#log-table-body
-								tr
-									td(colspan="6")
-										.text-center.text-muted Loading...
-
-					nav
-						ul.pagination.pagination-sm.justify-content-center#log-pagination
-
-	script.
-		(function () {
-			const tbody = document.getElementById('log-table-body');
-			const pagination = document.getElementById('log-pagination');
-			let currentPage = 1;
-
-			const els = {
-				search: document.getElementById('log-search'),
-				resource: document.getElementById('log-resource'),
-				action: document.getElementById('log-action'),
-				channel: document.getElementById('log-channel'),
-				from: document.getElementById('log-from'),
-				to: document.getElementById('log-to'),
-			};
-
-			async function load(page) {
-				page = page || 1;
-				currentPage = page;
-				const params = new URLSearchParams({ page: page, per_page: 50 });
-				if (els.search.value) params.set('q', els.search.value);
-				if (els.resource.value) params.set('resource', els.resource.value);
-				if (els.action.value) params.set('action', els.action.value);
-				if (els.channel.value) params.set('channel', els.channel.value);
-				if (els.from.value) params.set('from', els.from.value);
-				if (els.to.value) params.set('to', els.to.value);
-
-				var res = await fetch('/api/v1/audit-logs?' + params);
-				var data = await res.json();
-				renderTable(data.logs || []);
-				renderPagination(data.page, data.pages);
-			}
-
-			function renderTable(logs) {
-				if (!logs.length) {
-					tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No activity logs found</td></tr>';
-					return;
-				}
-				tbody.innerHTML = logs.map(function (log) {
-					var time = new Date(log.createdAt).toLocaleString();
-					var badge = channelBadge(log.channel);
-					var tokenClient = log.mcp_client || log.token_label || '\u2014';
-					var details = log.details ? '<code class="small">' + escHtml(JSON.stringify(log.details)).slice(0, 100) + '</code>' : '\u2014';
-					return '<tr>'
-						+ '<td class="text-nowrap small">' + escHtml(time) + '</td>'
-						+ '<td><span class="badge bg-secondary">' + escHtml(log.action) + '</span></td>'
-						+ '<td>' + escHtml(log.resource) + (log.resource_id ? ' <span class="text-muted small">' + escHtml(log.resource_id.slice(-6)) + '</span>' : '') + '</td>'
-						+ '<td>' + badge + '</td>'
-						+ '<td class="small">' + escHtml(tokenClient) + '</td>'
-						+ '<td>' + details + '</td>'
-						+ '</tr>';
-				}).join('');
-			}
-
-			function channelBadge(ch) {
-				var colors = { web: 'primary', api: 'success', mcp: 'warning' };
-				return '<span class="badge bg-' + (colors[ch] || 'secondary') + '">' + escHtml(ch || '\u2014') + '</span>';
-			}
-
-			function renderPagination(page, pages) {
-				if (pages <= 1) { pagination.innerHTML = ''; return; }
-				var html = '';
-				if (page > 1) html += '<li class="page-item"><a class="page-link" href="#" data-page="' + (page - 1) + '">&laquo;</a></li>';
-				var start = Math.max(1, page - 2);
-				var end = Math.min(pages, page + 2);
-				for (var i = start; i <= end; i++) {
-					html += '<li class="page-item ' + (i === page ? 'active' : '') + '"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>';
-				}
-				if (page < pages) html += '<li class="page-item"><a class="page-link" href="#" data-page="' + (page + 1) + '">&raquo;</a></li>';
-				pagination.innerHTML = html;
-			}
-
-			pagination.addEventListener('click', function (e) {
-				e.preventDefault();
-				var p = e.target.closest('[data-page]');
-				if (p) load(parseInt(p.dataset.page, 10));
-			});
-
-			var debounce;
-			Object.keys(els).forEach(function (key) {
-				var el = els[key];
-				el.addEventListener(el.type === 'text' ? 'input' : 'change', function () {
-					clearTimeout(debounce);
-					debounce = setTimeout(function () { load(1); }, 300);
-				});
-			});
-
-			function escHtml(s) {
-				var d = document.createElement('div');
-				d.textContent = s || '';
-				return d.innerHTML;
-			}
-
-			var loaded = false;
-			document.getElementById('logsModal').addEventListener('shown.bs.modal', function () {
-				if (!loaded) { load(); loaded = true; }
-			});
-		})();
+	include ../ajax/section/settings/_logs_modal

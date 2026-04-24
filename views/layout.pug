@@ -12,12 +12,12 @@ html(lang="en")
 		link(href=`/static/v-${v}/css/kumbukum-template1-strict.css` rel="stylesheet")
 		include includes/sentry
 		block head
-	body.kk-template1
+	body.kk-template1(class=(hide_chat_sidebar ? 'kk-no-chat-sidebar' : ''))
 		block body
 			include includes/avatar
 			if impersonating
 				.alert.alert-warning.text-center.mb-0.rounded-0.py-1(style="position:sticky;top:0;z-index:1060")
-					i.bi.bi-shield-exclamation.me-2
+					i.ph-light.ph-shield-warning.me-2
 					strong Sysadmin
 					|  — viewing as #{impersonatingName}
 					button.btn.btn-sm.btn-outline-dark.ms-3#exit-impersonation Exit
@@ -31,6 +31,19 @@ html(lang="en")
 						a.kk-navbtn(href="/graph" class={active: page === 'graph'}) Graph
 					.ms-auto.d-flex.align-items-center
 						if user
+							if accessible_tenants && accessible_tenants.length > 1
+								.dropdown.me-2
+									button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
+										i.ph-light.ph-buildings
+										span= active_tenant ? active_tenant.name : 'Select account'
+									ul.dropdown-menu.dropdown-menu-end
+										each tenant in accessible_tenants
+											li
+												- var isCurrentTenant = active_tenant && tenant.tenantId === active_tenant.tenantId
+												a.dropdown-item.account-switch-link(href="#" data-tenant-id=tenant.tenantId class=(isCurrentTenant ? 'is-current' : '') aria-current=(isCurrentTenant ? 'true' : undefined) tabindex=(isCurrentTenant ? '-1' : undefined))
+													.d-flex.justify-content-between.align-items-center.gap-3
+														span= tenant.name
+														span.kk-account-role-badge= tenant.role
 							.dropdown
 								button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
 									+avatar(user.name, 'xs')
@@ -55,11 +68,11 @@ html(lang="en")
 							.d-flex.justify-content-between.align-items-center.mb-3
 								h6.mb-0 My Projects
 								button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
-									i.bi.bi-plus
+									i.ph-light.ph-plus
 							#project-list
 							
 							a.d-flex.align-items-center.text-decoration-none.text-muted.small(href="/trash")
-								i.bi.bi-trash.ms-2
+								i.ph-light.ph-trash.ms-2
 								span.ms-2 Global Trash
 								span.ms-auto.d-none#trash-count-badge
 
@@ -67,10 +80,10 @@ html(lang="en")
 						#chat-results-panel.d-none.mb-4
 							.d-flex.justify-content-between.align-items-center.mb-3
 								h6.mb-0
-									i.bi.bi-search.me-1
+									i.ph-light.ph-magnifying-glass.me-1
 									| Chat Results
 								button.btn.btn-sm.btn-outline-secondary#close-chat-results(title="Close results")
-									i.bi.bi-x-lg
+									i.ph-light.ph-x
 							#chat-results-list
 						#page-content
 							block content
@@ -106,7 +119,7 @@ html(lang="en")
 							.mb-3.position-relative
 								.form-text Links
 								.source-search-wrap
-									i.bi.bi-search.source-search-icon
+									i.ph-light.ph-magnifying-glass.source-search-icon
 									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 
@@ -131,34 +144,95 @@ html(lang="en")
 							.mb-3.position-relative
 								.form-text Links
 								.source-search-wrap
-									i.bi.bi-search.source-search-icon
+									i.ph-light.ph-magnifying-glass.source-search-icon
 									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 
 						//- URL form
 						#result-modal-url.d-none
-							.d-flex.mb-3.w-100.px-3
-								.d-none.pe-5.pt-4#rm-url-og-wrap
-									img.rounded#rm-url-og-image(alt="" style="object-fit:cover")
-								.flex-grow-1
-									.mb-3
-										.form-text URL
-										input.form-control#rm-url-input(type="url" autofocus)
-									.mb-3
-										.form-text Title (optional)
-										input.form-control#rm-url-title(type="text")
-									.mb-3.form-check
-										input.form-check-input#rm-url-crawl(type="checkbox")
-										label.form-check-label(for="rm-url-crawl") Enable full-site crawling
-									.mb-3
-										.form-text Description (optional)
-										textarea.form-control#rm-url-description(type="text" rows="3")
-							.mb-3.px-3.position-relative
-								.form-text Links (optional)
-								.source-search-wrap
-									i.bi.bi-search.source-search-icon
-									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
-								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
+							ul.nav.nav-tabs.mb-3.px-3
+								li.nav-item
+									button.nav-link.active#rm-url-tab-details(type="button") Details
+								li.nav-item
+									button.nav-link#rm-url-tab-pages(type="button")
+										| Crawled pages
+										span.badge.rounded-pill.ms-2#rm-url-tab-pages-count 0
+							#rm-url-pane-details
+								.d-flex.mb-3.w-100.px-3
+									.d-none.pe-5.pt-4#rm-url-og-wrap
+										img.rounded#rm-url-og-image(alt="" style="object-fit:cover")
+									.flex-grow-1
+										.mb-3
+											.form-text URL
+											input.form-control#rm-url-input(type="url" autofocus)
+										.mb-3
+											.form-text Title (optional)
+											input.form-control#rm-url-title(type="text")
+										.mb-3.form-check
+											input.form-check-input#rm-url-crawl(type="checkbox")
+											label.form-check-label(for="rm-url-crawl") Enable full-site crawling
+										.mb-3
+											.form-text Description (optional)
+											textarea.form-control#rm-url-description(type="text" rows="3")
+										.mb-3.d-none#rm-url-crawl-wrap
+											.form-text Crawled pages
+											.small.text-muted.mb-2#rm-url-crawl-meta
+								.mb-3.px-3.position-relative
+									.form-text Links (optional)
+									.source-search-wrap
+										i.ph-light.ph-magnifying-glass.source-search-icon
+										input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
+									.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
+							#rm-url-pane-pages.d-none.px-3.pb-2
+								.d-flex.justify-content-between.align-items-center.mb-2
+									.small.text-muted Crawled page URLs (opens in new tab)
+									.d-flex.gap-2
+										button.btn.btn-sm.btn-outline-secondary(type="button")#rm-url-resync-btn
+											i.ph-light.ph-arrows-clockwise.me-1
+											| Resync now
+										button.btn.btn-sm.btn-outline-danger(type="button")#rm-url-delete-pages-btn
+											i.ph-light.ph-trash.me-1
+											| Delete pages
+								.list-group#rm-url-crawl-list
+								button.btn.btn-sm.btn-outline-secondary.mt-2.d-none(type="button")#rm-url-crawl-load-more-btn Load more
+
+						//- Email details (read-only)
+						#result-modal-email.d-none
+							ul.nav.nav-tabs.mb-3.px-3
+								li.nav-item
+									button.nav-link.active#rm-email-tab-details(type="button") Details
+								li.nav-item
+									button.nav-link#rm-email-tab-body(type="button") Body
+							#rm-email-pane-details.px-3
+								.row.g-3
+										.col-md-8#rm-email-main-col
+										.mb-2
+											.form-text Subject
+											input.form-control#rm-email-subject(type="text" readonly)
+										.mb-2
+											.form-text From
+											input.form-control#rm-email-from(type="text" readonly)
+										.mb-2
+											.form-text To
+											input.form-control#rm-email-to(type="text" readonly)
+										.mb-2
+											.form-text Cc
+											input.form-control#rm-email-cc(type="text" readonly)
+										.mb-2
+											.form-text Bcc
+											input.form-control#rm-email-bcc(type="text" readonly)
+										.mb-2
+											.form-text Message ID
+											textarea.form-control#rm-email-message-id(rows="2" readonly)
+										.mb-2
+											.form-text References
+											textarea.form-control#rm-email-references(rows="3" readonly)
+										.col-md-4.d-none#rm-email-thread-col
+										.form-text Thread
+											#rm-email-thread.small
+							#rm-email-pane-body.d-none.px-3.pb-2
+								.form-text Body / Attachment Text
+								#rm-email-content.preview-container.border.rounded.p-3(style="min-height:220px; white-space:pre-wrap")
 
 						//- Loading placeholder
 						#result-modal-loading.text-center.py-4.d-none
@@ -167,11 +241,11 @@ html(lang="en")
 
 					.modal-footer
 						button.btn.btn-outline-danger.btn-sm.me-auto.d-none#rm-delete-btn
-							i.bi.bi-trash.me-1
+							i.ph-light.ph-trash.me-1
 							| Delete
 						button.btn.btn-secondary.btn-sm(type="button" data-bs-dismiss="modal") Close
 						button.btn.btn-primary.btn-sm#rm-save-btn
-							i.bi.bi-check-lg.me-1
+							i.ph-light.ph-check.me-1
 							| Save
 
 		script(src="/socket.io/socket.io.js")
@@ -196,6 +270,7 @@ html(lang="en")
 		script(src=`/static/v-${v}/js/notes.js`)
 		script(src=`/static/v-${v}/js/memories.js`)
 		script(src=`/static/v-${v}/js/urls.js`)
+		script(src=`/static/v-${v}/js/emails.js`)
 		script(src=`/static/v-${v}/js/trash.js`)
 		script(src=`/static/v-${v}/js/batch.js`)
 		include includes/openpanel

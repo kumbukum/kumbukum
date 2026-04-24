@@ -8,9 +8,10 @@ Kumbukum is a memory layer for AI-native teams. It's available as a managed clou
 == Cloud
 **Kumbukum Cloud** — We handle hosting, updates, backups, and MCP infrastructure.
 
-1. Sign up at [app.kumbukum.com](https://app.kumbukum.com)
-2. Create your first project
-3. Generate a personal access token and connect your AI tools
+1. Sign up at [app.kumbukum.com](https://app.kumbukum.com) or accept a team invite
+2. If you join an existing account, you land in that shared account instead of creating a separate workspace
+3. Use the account switcher in the top-right nav if your login belongs to more than one account
+4. Generate a personal access token in **Settings > Access Tokens** and connect your AI tools
 
 [Cloud documentation →](/cloud/)
 
@@ -34,6 +35,13 @@ docker compose -f compose.prod.yml up -d
 
 [Installation guide →](/selfhosted/installation)
 :::
+
+## Teams and accounts
+
+- Each account has its own projects, notes, memories, URLs, exports, and members
+- Owners and admins can invite teammates from **Settings > My Team**
+- A single user can belong to multiple accounts and switch the active account from the navbar
+- New projects and saved content go into the currently active account
 
 ## Next Steps
 

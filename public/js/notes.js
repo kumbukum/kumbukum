@@ -70,16 +70,35 @@
 		});
 
 		var pondRoot = dropZone.querySelector('.filepond--root');
+		if (pondRoot) pondRoot.classList.add('d-none');
 		var successCount = 0;
 		var errorCount = 0;
 
-		pond.on('addfile', function () {
-			if (pondRoot) pondRoot.classList.add('filepond--active');
+		function updatePondVisibility() {
+			if (!pondRoot || !pond) return;
+			if (pond.getFiles().length > 0) pondRoot.classList.add('filepond--active');
+			else pondRoot.classList.remove('filepond--active');
+		}
+
+		function removePondItem(fileItem) {
+			if (!pond || !fileItem) return;
+			pond.removeFile(fileItem.id);
+			updatePondVisibility();
+		}
+
+		pond.on('addfile', function (error, fileItem) {
+			if (error) return;
+			if (fileItem && fileItem.fileSize === 0) {
+				removePondItem(fileItem);
+				return;
+			}
+			updatePondVisibility();
 		});
 
-		pond.on('processfile', function (error) {
+		pond.on('processfile', function (error, fileItem) {
 			if (error) errorCount++;
 			else successCount++;
+			removePondItem(fileItem);
 		});
 
 		pond.on('processfiles', function () {
@@ -92,10 +111,7 @@
 			}
 			successCount = 0;
 			errorCount = 0;
-			setTimeout(function () {
-				pond.removeFiles();
-				if (pondRoot) pondRoot.classList.remove('filepond--active');
-			}, 2000);
+			updatePondVisibility();
 		});
 
 		pond.on('warning', function (error) {

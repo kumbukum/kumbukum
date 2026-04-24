@@ -9,7 +9,7 @@ export async function setSetting(key, value, category = 'general', description =
 	return SystemSetting.findOneAndUpdate(
 		{ key },
 		{ $set: { key, value, category, description } },
-		{ upsert: true, new: true },
+		{ upsert: true, returnDocument: 'after' },
 	);
 }
 

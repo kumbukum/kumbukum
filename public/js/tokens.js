@@ -19,7 +19,7 @@
 					<strong>Token created!</strong> Copy it now — it won't be shown again.
 					<div class="input-group mt-2">
 						<input class="form-control" type="text" value="${data.token}" readonly id="new-token-value">
-						<button class="btn btn-outline-secondary" id="copy-new-token"><i class="bi bi-clipboard"></i> Copy</button>
+						<button class="btn btn-outline-secondary" id="copy-new-token"><i class="ph-light ph-clipboard"></i> Copy</button>
 					</div>
 					<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 				</div>
@@ -49,7 +49,6 @@
 			const tableEl = document.getElementById('tokens-table');
 
 			if (!data.tokens?.length) {
-				tableEl.innerHTML = '<p class="text-muted mt-3">No access tokens</p>';
 				return;
 			}
 
@@ -62,7 +61,7 @@
 								<small class="text-muted ms-2">Created ${new Date(t.created_at).toLocaleDateString()}</small>
 							</div>
 							<button class="btn btn-sm btn-outline-danger delete-token" data-id="${t._id}">
-								<i class="bi bi-trash"></i>
+								<i class="ph-light ph-trash"></i>
 							</button>
 						</div>
 					`).join('')}

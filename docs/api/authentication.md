@@ -40,7 +40,7 @@ JWT tokens expire after 7 days.
 
 ## Access Token (Personal Token)
 
-Generate a personal access token in **Settings > Tokens** within the app. Use it as:
+Generate a personal access token in **Settings > Access Tokens** within the app. Use it as:
 
 :::tabs
 == Cloud

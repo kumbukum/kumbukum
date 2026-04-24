@@ -2,6 +2,7 @@ import { GraphLink } from '../model/graph_link.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { Email } from '../model/email.js';
 import { searchCollection, listDocuments } from '../modules/typesense.js';
 import { cacheGet, cacheSet, cacheInvalidate } from '../modules/redis.js';
 import * as audit from './audit_service.js';
@@ -10,6 +11,7 @@ const MODEL_MAP = {
 	notes: Note,
 	memory: Memory,
 	urls: Url,
+	emails: Email,
 };
 
 const MAX_NODES = 500;

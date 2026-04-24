@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					document.getElementById('login-form').classList.add('d-none');
 					document.getElementById('totp-form').classList.remove('d-none');
 				} else if (data.token) {
-					window.location.href = '/dashboard';
+					window.location.href = data.redirect_to || '/dashboard';
 				} else {
 					Swal.fire({ icon: 'error', title: 'Login failed', text: data.error || 'Invalid credentials' });
 				}
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 				const data = await res.json();
 				if (data.token) {
-					window.location.href = '/dashboard';
+					window.location.href = data.redirect_to || '/dashboard';
 				} else {
 					Swal.fire({ icon: 'error', title: '2FA failed', text: data.error || '2FA verification failed' });
 				}
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			const data = await verifyRes.json();
 			if (data.token) {
-				window.location.href = '/dashboard';
+				window.location.href = data.redirect_to || '/dashboard';
 			} else {
 				Swal.fire({ icon: 'error', title: 'Passkey login failed', text: data.error || 'Passkey login failed' });
 			}

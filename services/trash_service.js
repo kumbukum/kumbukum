@@ -1,6 +1,7 @@
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { Email } from '../model/email.js';
 import { indexDocument, removeDocument } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 import { removeLinksForItem } from './graph_service.js';
@@ -9,6 +10,7 @@ const MODEL_MAP = {
 	notes: { model: Note, tsType: 'notes' },
 	memories: { model: Memory, tsType: 'memory' },
 	urls: { model: Url, tsType: 'urls' },
+	emails: { model: Email, tsType: 'emails' },
 };
 
 function getModelEntry(type) {

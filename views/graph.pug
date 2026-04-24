@@ -70,18 +70,18 @@ block content
 			h5.mb-0 Knowledge Graph
 			.input-group.input-group-sm(style="width:200px")
 				span.input-group-text
-					i.bi.bi-search
+					i.ph-light.ph-magnifying-glass
 				input.form-control.form-control-sm#graph-search(type="text" placeholder="Search nodes...")
 		.d-flex.gap-2.align-items-center
 			.btn-group.btn-group-sm(role="group")
 				button.btn.btn-outline-primary.active#toggle-manual(type="button" title="Manual links")
-					i.bi.bi-link-45deg.me-1
+					i.ph-light.ph-link.me-1
 					| Links
 				button.btn.btn-outline-success.active#toggle-tags(type="button" title="Shared tag connections")
-					i.bi.bi-tag.me-1
+					i.ph-light.ph-tag.me-1
 					| Tags
 				button.btn.btn-outline-warning#toggle-semantic(type="button" title="AI similarity connections")
-					i.bi.bi-stars.me-1
+					i.ph-light.ph-sparkle.me-1
 					| Semantic
 			select.form-select.form-select-sm#graph-project-filter(style="width:auto")
 				option(value="") All projects
@@ -90,6 +90,7 @@ block content
 
 	.graph-wrapper
 		.graph-main
+			.alert.alert-info.py-2.px-3.mb-2.small.d-none#graph-status
 			#graph-container
 			#graph-loading.position-absolute.top-0.start-0.w-100.h-100.d-flex.align-items-center.justify-content-center(style="background:var(--bg, var(--bs-body-bg));z-index:10;border-radius:12px")
 				.text-center
@@ -98,7 +99,7 @@ block content
 					p.text-muted.small.mt-2 Loading graph…
 		#graph-info-panel
 			.text-muted.small.text-center.py-5
-				i.bi.bi-cursor.d-block.fs-3.mb-2
+				i.ph-light.ph-cursor.d-block.fs-3.mb-2
 				| Click a node to see details
 
 			//- Legend

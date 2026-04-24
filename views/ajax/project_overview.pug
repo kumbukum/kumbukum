@@ -1,5 +1,5 @@
 - const createdAt = new Date(project.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-- const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0 }
+- const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0, emails: 0 }
 
 .d-flex.justify-content-between.align-items-center.mb-2
 	.d-flex.align-items-center.gap-2
@@ -16,31 +16,46 @@
 p.text-muted.small.mb-4.fs-7 Project ID: #{project._id} &middot; Created #{createdAt}
 
 .row.g-3.mb-5
-	.col-md-4
+	.col-md-3
 		a.text-decoration-none.project-section-link(href="/notes" data-project=project._id)
 			.card.h-100
 				.card-body.text-center
 					.fs-3.fw-bold= pc.notes
 					.text-muted Notes
-	.col-md-4
+	.col-md-3
 		a.text-decoration-none.project-section-link(href="/memories" data-project=project._id)
 			.card.h-100
 				.card-body.text-center
 					.fs-3.fw-bold= pc.memory
 					.text-muted Memories
-	.col-md-4
+	.col-md-3
 		a.text-decoration-none.project-section-link(href="/urls" data-project=project._id)
 			.card.h-100
 				.card-body.text-center
 					.fs-3.fw-bold= pc.urls
 					.text-muted URLs
+	.col-md-3
+		if emailFeatureEnabled
+			a.text-decoration-none.project-section-link(href="/emails" data-project=project._id)
+				.card.h-100
+					.card-body.text-center
+						.fs-3.fw-bold= pc.emails
+						.text-muted Emails
+		else
+			.card.h-100.border-warning-subtle
+				.card-body.text-center
+					.fs-3.fw-bold.text-muted
+						i.ph-light.ph-lock
+					.text-muted.mb-2 Emails (Pro)
+					if is_hosted
+						a.btn.btn-sm.btn-outline-warning(href="/settings/subscription") Upgrade
 
 
 if gitSyncEnabled
 	.my-4
 	.d-flex.justify-content-between.align-items-center.mb-3
 		h5.mb-0
-			i.bi.bi-git
+			i.ph-light.ph-git-branch
 			span.ms-2 Git Sync
 		button.btn.btn-sm.btn-outline-primary(onclick=`addGitRepo('${project._id}')`) Add Repo
 
@@ -67,14 +82,24 @@ if gitSyncEnabled
 									span.text-muted.small= 'Synced ' + new Date(repo.last_synced_at).toLocaleString()
 						.d-flex.gap-1
 							button.btn.btn-sm.btn-outline-primary(onclick=`triggerGitSync('${repo._id}')` title="Sync now")
-								i.bi.bi-arrow-repeat
+								i.ph-light.ph-arrows-clockwise
 							button.btn.btn-sm.btn-outline-secondary(onclick=`editGitRepo('${repo._id}')` title="Settings")
-								i.bi.bi-gear
-							button.btn.btn-sm.btn-outline-danger(onclick=`deleteGitRepo('${repo._id}')` title="Remove")
-								i.bi.bi-trash
+								i.ph-light.ph-gear
+							button.btn.btn-sm.btn-outline-secondary(onclick=`deleteGitRepo('${repo._id}')` title="Remove")
+								i.ph-light.ph-trash
 	else
 		p.text-muted.small No git repos configured. Add one to sync markdown files.
+else
+	.my-4
+		.card.border-warning-subtle
+			.card-body
+				h5.mb-2
+					i.ph-light.ph-lock.me-2
+					| Git Sync (Pro)
+				p.text-muted.mb-2 Sync markdown files from your repository into project notes and memories.
+				if is_hosted
+					a.btn.btn-sm.btn-outline-warning(href="/settings/subscription") Upgrade to Pro
 
 //- Delete hint (always at bottom, outside gitSyncEnabled block)
 if !project.is_default && !canDelete
-	p.text-muted.fs-7.mt-auto.pt-4 Projects can only be deleted when all notes, memories, URLs, and git repos have been removed.
+	p.text-muted.fs-7.mt-auto.pt-4 Projects can only be deleted when all notes, memories, URLs, emails, and git repos have been removed.

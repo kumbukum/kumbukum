@@ -330,6 +330,14 @@ let rmTagConnections = [];
 let rmRelDropdown = null;
 let rmRelDebounce = null;
 let rmRelHighlightIdx = -1;
+let rmUrlPagesRequestSeq = 0;
+let rmUrlPagesPage = 1;
+let rmUrlPagesPerPage = 100;
+let rmUrlPagesTotal = 0;
+let rmUrlPagesLoaded = 0;
+let rmUrlCrawlEnabled = false;
+let rmEmailBodyText = '';
+let rmEmailBodyLoaded = false;
 
 /**
  * Open the universal item modal.
@@ -352,6 +360,7 @@ async function openItemModal(type, id, defaults = {}) {
 	document.getElementById('result-modal-note').classList.add('d-none');
 	document.getElementById('result-modal-memory').classList.add('d-none');
 	document.getElementById('result-modal-url').classList.add('d-none');
+	document.getElementById('result-modal-email').classList.add('d-none');
 	loadingEl.classList.add('d-none');
 	saveBtn.classList.remove('d-none');
 
@@ -403,6 +412,9 @@ async function openResultModal(item) {
 	if (editableTypes.includes(item._type) && item.id) {
 		return openItemModal(item._type, item.id, item);
 	}
+	if (item._type === 'emails' && item.id) {
+		return openEmailModal(item);
+	}
 	// Pages or unknown — read-only preview
 	const modalEl = document.getElementById('chat-result-modal');
 	if (!modalEl) return;
@@ -411,6 +423,7 @@ async function openResultModal(item) {
 	document.getElementById('result-modal-note').classList.add('d-none');
 	document.getElementById('result-modal-memory').classList.add('d-none');
 	document.getElementById('result-modal-url').classList.add('d-none');
+	document.getElementById('result-modal-email').classList.add('d-none');
 	document.getElementById('rm-save-btn').classList.add('d-none');
 	document.getElementById('rm-delete-btn').classList.add('d-none');
 
@@ -422,12 +435,279 @@ async function openResultModal(item) {
 	loadingEl.classList.remove('d-none');
 	let html = '';
 	if (item.url) html += `<div class="mb-2"><a href="${escapeHtml(item.url)}" target="_blank">${escapeHtml(item.url)}</a></div>`;
-	const text = item.text_content || item.content || item.description || '';
+	const text = item.text_content || item.attachment_text_content || item.content || item.description || '';
 	if (text) html += `<div class="text-muted" style="white-space:pre-wrap">${escapeHtml(text.slice(0, 3000))}</div>`;
 	loadingEl.innerHTML = html || '<p class="text-muted">No content available</p>';
 
 	const modal = new BsModal(modalEl);
 	modal.show();
+}
+
+function formatList(values) {
+	if (!Array.isArray(values) || !values.length) return '—';
+	return values.join(', ');
+}
+
+function rmShowEmailDetails() {
+	document.getElementById('rm-email-tab-details')?.classList.add('active');
+	document.getElementById('rm-email-tab-body')?.classList.remove('active');
+	document.getElementById('rm-email-pane-details')?.classList.remove('d-none');
+	document.getElementById('rm-email-pane-body')?.classList.add('d-none');
+}
+
+function rmShowEmailBody() {
+	document.getElementById('rm-email-tab-details')?.classList.remove('active');
+	document.getElementById('rm-email-tab-body')?.classList.add('active');
+	document.getElementById('rm-email-pane-details')?.classList.add('d-none');
+	document.getElementById('rm-email-pane-body')?.classList.remove('d-none');
+	const bodyEl = document.getElementById('rm-email-content');
+	if (!bodyEl || rmEmailBodyLoaded) return;
+	bodyEl.textContent = rmEmailBodyText || 'No content available.';
+	rmEmailBodyLoaded = true;
+}
+
+function rmSetEmailThreadVisibility(visible) {
+	const mainCol = document.getElementById('rm-email-main-col');
+	const threadCol = document.getElementById('rm-email-thread-col');
+	if (!mainCol || !threadCol) return;
+	threadCol.classList.toggle('d-none', !visible);
+	mainCol.classList.toggle('col-md-8', !!visible);
+	mainCol.classList.toggle('col-md-12', !visible);
+}
+
+function rmResetEmailView() {
+	rmEmailBodyText = '';
+	rmEmailBodyLoaded = false;
+	const bodyEl = document.getElementById('rm-email-content');
+	if (bodyEl) bodyEl.textContent = 'Open the Body tab to load content.';
+	if (document.getElementById('rm-email-thread')) {
+		document.getElementById('rm-email-thread').innerHTML = '';
+	}
+	rmSetEmailThreadVisibility(false);
+	rmShowEmailDetails();
+}
+
+function renderEmailThread(thread = [], currentId) {
+	const threadEl = document.getElementById('rm-email-thread');
+	if (!threadEl) return;
+	const showThread = Array.isArray(thread) && thread.length > 1;
+	rmSetEmailThreadVisibility(showThread);
+	if (!showThread) {
+		threadEl.innerHTML = '';
+		return;
+	}
+	threadEl.innerHTML = thread.map((msg) => {
+		const msgId = msg._id || msg.id || '';
+		const subject = escapeHtml(msg.subject || '(No subject)');
+		const date = msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : '';
+		const active = msgId === currentId ? ' is-active' : '';
+		return `<button type="button" class="rm-email-thread-item${active}" data-email-id="${msgId}">
+			<div class="rm-email-thread-subject fw-semibold text-truncate">${subject}</div>
+			<small class="rm-email-thread-date">${escapeHtml(date)}</small>
+		</button>`;
+	}).join('');
+	threadEl.querySelectorAll('[data-email-id]').forEach((btn) => {
+		btn.addEventListener('click', () => {
+			const emailId = btn.dataset.emailId;
+			if (!emailId) return;
+			openEmailModal({ _type: 'emails', id: emailId });
+		});
+	});
+}
+
+function renderEmailDetails(email, thread = []) {
+	document.getElementById('rm-email-subject').value = email.subject || '(No subject)';
+	document.getElementById('rm-email-from').value = formatList(email.from);
+	document.getElementById('rm-email-to').value = formatList(email.to);
+	document.getElementById('rm-email-cc').value = formatList(email.cc);
+	document.getElementById('rm-email-bcc').value = formatList(email.bcc);
+	document.getElementById('rm-email-message-id').value = email.message_id || '—';
+	document.getElementById('rm-email-references').value = formatList(email.references);
+	rmEmailBodyText = [email.text_content, email.attachment_text_content]
+		.filter(Boolean)
+		.join('\n\n');
+	rmEmailBodyLoaded = false;
+	document.getElementById('rm-email-content').textContent = 'Open the Body tab to load content.';
+	renderEmailThread(thread, email._id);
+}
+
+async function openEmailModal(item) {
+	const modalEl = document.getElementById('chat-result-modal');
+	if (!modalEl) return;
+	const loadingEl = document.getElementById('result-modal-loading');
+	const saveBtn = document.getElementById('rm-save-btn');
+	const deleteBtn = document.getElementById('rm-delete-btn');
+	const titleEl = document.getElementById('result-modal-title');
+	const badgeEl = document.getElementById('result-modal-badge');
+
+	rmCleanup();
+	rmCurrentType = 'emails';
+	rmCurrentId = item.id || null;
+	document.getElementById('result-modal-note').classList.add('d-none');
+	document.getElementById('result-modal-memory').classList.add('d-none');
+	document.getElementById('result-modal-url').classList.add('d-none');
+	document.getElementById('result-modal-email').classList.remove('d-none');
+	saveBtn.classList.add('d-none');
+	deleteBtn.classList.add('d-none');
+	loadingEl.classList.remove('d-none');
+	document.getElementById('rm-email-subject').value = '(Loading...)';
+	document.getElementById('rm-email-from').value = '—';
+	document.getElementById('rm-email-to').value = '—';
+	document.getElementById('rm-email-cc').value = '—';
+	document.getElementById('rm-email-bcc').value = '—';
+	document.getElementById('rm-email-message-id').value = '—';
+	document.getElementById('rm-email-references').value = '—';
+	rmResetEmailView();
+
+	titleEl.textContent = item.title || '(No subject)';
+	badgeEl.className = `badge bg-${typeBadgeColor('emails')} me-2`;
+	badgeEl.textContent = 'Email';
+
+	const modal = new BsModal(modalEl);
+	modal.show();
+
+	try {
+		const [emailRes, threadRes] = await Promise.all([
+			api('GET', `/emails/${item.id}`),
+			api('GET', `/emails/${item.id}/thread`).catch(() => ({ thread: [] })),
+		]);
+		const email = emailRes.email || emailRes;
+		const thread = threadRes.thread || [];
+		rmCurrentId = email._id || item.id || null;
+		titleEl.textContent = email.subject || '(No subject)';
+		renderEmailDetails(email, thread);
+		loadingEl.classList.add('d-none');
+	} catch (err) {
+		loadingEl.innerHTML = `<p class="text-danger">Failed to load email: ${escapeHtml(err.message || 'Unknown error')}</p>`;
+	}
+}
+
+function rmSetUrlPagesState({ visible, metaText, pages = [], append = false, showLoadMore = false, loadingMore = false }) {
+	const wrap = document.getElementById('rm-url-crawl-wrap');
+	const meta = document.getElementById('rm-url-crawl-meta');
+	const list = document.getElementById('rm-url-crawl-list');
+	const loadMoreBtn = document.getElementById('rm-url-crawl-load-more-btn');
+	if (!wrap || !meta || !list || !loadMoreBtn) return;
+
+	wrap.classList.toggle('d-none', !visible);
+	meta.textContent = metaText || '';
+	if (!append) list.innerHTML = '';
+
+	for (const page of pages) {
+		const item = document.createElement('a');
+		item.className = 'list-group-item list-group-item-action py-2 rm-crawl-item';
+		item.href = page.url || '#';
+		item.target = '_blank';
+		item.rel = 'noopener noreferrer';
+
+		const title = document.createElement('div');
+		title.className = 'small fw-semibold text-truncate rm-crawl-title';
+		title.textContent = page.title || page.url || 'Untitled page';
+
+		const url = document.createElement('div');
+		url.className = 'small text-truncate rm-crawl-url';
+		url.textContent = page.url || '';
+
+		item.appendChild(title);
+		item.appendChild(url);
+		list.appendChild(item);
+	}
+
+	loadMoreBtn.classList.toggle('d-none', !visible || !showLoadMore);
+	loadMoreBtn.disabled = !!loadingMore;
+	loadMoreBtn.textContent = loadingMore ? 'Loading...' : 'Load more';
+	rmSetUrlPagesTabCount(rmUrlPagesTotal || 0);
+	rmSetUrlCrawlActionState();
+}
+
+function rmSetUrlPagesTabCount(count) {
+	const countEl = document.getElementById('rm-url-tab-pages-count');
+	if (!countEl) return;
+	countEl.textContent = String(Math.max(0, count || 0));
+}
+
+function rmGetUrlPagesMetaText() {
+	if (!rmUrlPagesTotal) {
+		if (!rmUrlCrawlEnabled) {
+			return 'No unique crawled pages indexed yet. Enable full-site crawling and save this URL to index linked pages.';
+		}
+		return 'No unique crawled pages indexed yet. Crawling runs in the background after save, so new pages may appear shortly.';
+	}
+	if (rmUrlPagesLoaded < rmUrlPagesTotal) {
+		return `Indexed unique pages: ${rmUrlPagesTotal}`;
+	}
+	return `Indexed unique pages: ${rmUrlPagesTotal}`;
+}
+
+async function rmLoadUrlPages(urlId, { append = false } = {}) {
+	const requestSeq = ++rmUrlPagesRequestSeq;
+	const nextPage = append ? (rmUrlPagesPage + 1) : 1;
+
+	if (!append) {
+		rmUrlPagesPage = 1;
+		rmUrlPagesTotal = 0;
+		rmUrlPagesLoaded = 0;
+		rmSetUrlPagesState({ visible: true, metaText: 'Loading crawled pages...' });
+	} else {
+		rmSetUrlPagesState({
+			visible: true,
+			metaText: rmGetUrlPagesMetaText(),
+			append: true,
+			showLoadMore: rmUrlPagesLoaded < rmUrlPagesTotal,
+			loadingMore: true,
+		});
+	}
+
+	try {
+		const res = await api('GET', `/urls/${urlId}/pages?limit=${rmUrlPagesPerPage}&page=${nextPage}`);
+		if (requestSeq !== rmUrlPagesRequestSeq || rmCurrentType !== 'urls' || rmCurrentId !== urlId) return;
+
+		const pages = res.pages || [];
+		const count = typeof res.count === 'number' ? res.count : pages.length;
+		if (!append) {
+			rmUrlPagesTotal = count;
+			rmUrlPagesLoaded = 0;
+			rmUrlPagesPage = 0;
+		}
+
+		if (!pages.length && !append) {
+			rmSetUrlPagesState({
+				visible: true,
+				metaText: count > 0 ? `Indexed unique pages: ${count}` : rmGetUrlPagesMetaText(),
+				pages: [],
+				showLoadMore: false,
+			});
+			return;
+		}
+		if (!pages.length && append) {
+			rmSetUrlPagesState({
+				visible: true,
+				metaText: rmGetUrlPagesMetaText(),
+				append: true,
+				showLoadMore: false,
+			});
+			return;
+		}
+
+		rmUrlPagesPage = nextPage;
+		rmUrlPagesLoaded += pages.length;
+
+		rmSetUrlPagesState({
+			visible: true,
+			metaText: rmGetUrlPagesMetaText(),
+			pages,
+			append,
+			showLoadMore: rmUrlPagesLoaded < rmUrlPagesTotal,
+		});
+	} catch {
+		if (requestSeq !== rmUrlPagesRequestSeq || rmCurrentType !== 'urls' || rmCurrentId !== urlId) return;
+		rmSetUrlPagesState({
+			visible: true,
+			metaText: append ? 'Could not load more crawled pages.' : 'Could not load crawled pages.',
+			append: true,
+			showLoadMore: append && rmUrlPagesLoaded < rmUrlPagesTotal,
+		});
+	}
 }
 
 function rmPopulate(type, record) {
@@ -488,12 +768,15 @@ function rmPopulate(type, record) {
 	} else if (type === 'urls') {
 		const panel = document.getElementById('result-modal-url');
 		panel.classList.remove('d-none');
+		rmShowUrlDetails();
 		const urlInput = document.getElementById('rm-url-input');
 		urlInput.value = record.url || '';
 		urlInput.readOnly = !!rmCurrentId && !!record.url;
 		document.getElementById('rm-url-title').value = record.title || '';
 		document.getElementById('rm-url-description').value = record.description || '';
 		document.getElementById('rm-url-crawl').checked = !!record.crawl_enabled;
+		rmUrlCrawlEnabled = !!record.crawl_enabled;
+		rmSetUrlCrawlActionState();
 
 		const ogWrap = document.getElementById('rm-url-og-wrap');
 		const ogImg = document.getElementById('rm-url-og-image');
@@ -502,6 +785,12 @@ function rmPopulate(type, record) {
 		if (previewSrc) {
 			ogImg.src = previewSrc;
 			ogWrap.classList.remove('d-none');
+		}
+
+		if (record._id) {
+			rmLoadUrlPages(record._id);
+		} else {
+			rmSetUrlPagesState({ visible: false, metaText: '', pages: [] });
 		}
 	}
 }
@@ -546,6 +835,28 @@ function rmShowMemoryEdit() {
 	if (!rmEditor) rmInitEditor('rm-memory-editor', rmContent);
 }
 
+function rmShowUrlDetails() {
+	document.getElementById('rm-url-tab-details')?.classList.add('active');
+	document.getElementById('rm-url-tab-pages')?.classList.remove('active');
+	document.getElementById('rm-url-pane-details')?.classList.remove('d-none');
+	document.getElementById('rm-url-pane-pages')?.classList.add('d-none');
+}
+
+function rmShowUrlPages() {
+	document.getElementById('rm-url-tab-details')?.classList.remove('active');
+	document.getElementById('rm-url-tab-pages')?.classList.add('active');
+	document.getElementById('rm-url-pane-details')?.classList.add('d-none');
+	document.getElementById('rm-url-pane-pages')?.classList.remove('d-none');
+}
+
+function rmSetUrlCrawlActionState() {
+	const resyncBtn = document.getElementById('rm-url-resync-btn');
+	const deleteBtn = document.getElementById('rm-url-delete-pages-btn');
+	const canManage = rmCurrentType === 'urls' && !!rmCurrentId;
+	if (resyncBtn) resyncBtn.disabled = !canManage || !rmUrlCrawlEnabled;
+	if (deleteBtn) deleteBtn.disabled = !canManage || rmUrlPagesTotal <= 0;
+}
+
 function rmInitEditor(containerId, content) {
 	const container = document.getElementById(containerId);
 	container.innerHTML = '';
@@ -565,8 +876,8 @@ function rmGetEditorContent() {
 
 // ── Link search (all item types) ─────────────────────────────────
 
-const rmTypeIcons = { notes: 'bi-file-text', memory: 'bi-lightbulb', urls: 'bi-link-45deg' };
-const rmTypeLabels = { notes: 'Note', memory: 'Memory', urls: 'URL' };
+const rmTypeIcons = { notes: 'ph-light ph-file-text', memory: 'ph-light ph-lightbulb', urls: 'ph-light ph-link', emails: 'ph-light ph-envelope' };
+const rmTypeLabels = { notes: 'Note', memory: 'Memory', urls: 'URL', emails: 'Email' };
 
 function rmGetActiveLinkContainer() {
 	const panels = ['result-modal-note', 'result-modal-memory', 'result-modal-url'];
@@ -607,18 +918,18 @@ function rmRenderLinkTags() {
 	for (const container of containers) {
 		let html = rmSelectedLinks.map((r, i) => `
 			<span class="badge text-bg-secondary tag-badge rounded-pill d-inline-flex align-items-center gap-1 me-1 mb-1">
-				<i class="${rmTypeIcons[r._type] || 'bi-link'}"></i>
+				<i class="${rmTypeIcons[r._type] || 'ph-light ph-link'}"></i>
 				${escapeHtml(r.title || r.url || r.id)}
 				<button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.5rem" data-index="${i}"></button>
 			</span>
 		`).join('');
 		if (rmTagConnections.length) {
-			html += '<div class="w-100 mt-2 mb-1"><small class="text-muted"><i class="bi bi-tag me-1"></i>Connected via shared tags</small></div>';
+			html += '<div class="w-100 mt-2 mb-1"><small class="text-muted"><i class="ph-light ph-tag me-1"></i>Connected via shared tags</small></div>';
 			html += rmTagConnections.map(c => `
 				<span class="badge text-bg-light border tag-badge rounded-pill d-inline-flex align-items-center gap-1 me-1 mb-1 rm-tag-connection" role="button" data-type="${c.type}" data-id="${c.id}" title="Shared tags: ${escapeHtml(c.shared_tags?.join(', ') || '')}">
-					<i class="${rmTypeIcons[c.type] || 'bi-link'} text-muted"></i>
+					<i class="${rmTypeIcons[c.type] || 'ph-light ph-link'} text-muted"></i>
 					<span class="text-muted">${escapeHtml(c.title || c.id)}</span>
-					<i class="bi bi-tag-fill text-success" style="font-size:0.55rem"></i>
+					<i class="ph-light ph-tag text-success" style="font-size:0.55rem"></i>
 				</span>
 			`).join('');
 		}
@@ -648,7 +959,7 @@ async function rmSearchLinks(query) {
 	dd.innerHTML = filtered.map(r => `
 		<button type="button" class="list-group-item list-group-item-action py-1 px-2 small" data-id="${r.id}" data-type="${r._type}" data-title="${escapeHtml(r.title || r.url || '')}">
 			<div class="d-flex align-items-center gap-1">
-				<i class="${rmTypeIcons[r._type] || 'bi-link'}"></i>
+				<i class="${rmTypeIcons[r._type] || 'ph-light ph-link'}"></i>
 				<span class="badge bg-light text-dark" style="font-size:0.65rem">${rmTypeLabels[r._type] || r._type}</span>
 				<span class="fw-semibold text-truncate">${escapeHtml(r.title || r.url || r.id)}</span>
 			</div>
@@ -681,7 +992,7 @@ function rmHighlightDropdownItem(idx) {
 }
 
 async function rmSyncLinks(itemId, itemType) {
-	const typeMap = { notes: 'notes', memory: 'memory', urls: 'urls' };
+	const typeMap = { notes: 'notes', memory: 'memory', urls: 'urls', emails: 'emails' };
 	const currentType = typeMap[itemType] || itemType;
 
 	// Find removed links (were in original but not in current)
@@ -714,6 +1025,14 @@ async function rmSyncLinks(itemId, itemType) {
 // ── Cleanup ──────────────────────────────────────────────────────
 
 function rmCleanup() {
+	rmUrlPagesRequestSeq++;
+	rmUrlPagesPage = 1;
+	rmUrlPagesTotal = 0;
+	rmUrlPagesLoaded = 0;
+	rmUrlCrawlEnabled = false;
+	rmSetUrlPagesState({ visible: false, metaText: '', pages: [] });
+	rmSetUrlCrawlActionState();
+	rmResetEmailView();
 	if (rmEditor) { rmEditor.destroy(); rmEditor = null; }
 	rmCurrentId = null;
 	rmCurrentType = null;
@@ -733,6 +1052,8 @@ function rmCleanup() {
 	document.getElementById('result-modal-note')?.classList.add('d-none');
 	document.getElementById('result-modal-memory')?.classList.add('d-none');
 	document.getElementById('result-modal-url')?.classList.add('d-none');
+	document.getElementById('result-modal-email')?.classList.add('d-none');
+	rmShowUrlDetails();
 }
 
 // ── Save & Delete handlers ───────────────────────────────────────
@@ -746,7 +1067,35 @@ function initResultModalHandlers() {
 	document.getElementById('rm-note-tab-edit')?.addEventListener('click', rmShowNoteEdit);
 	document.getElementById('rm-memory-tab-preview')?.addEventListener('click', rmShowMemoryPreview);
 	document.getElementById('rm-memory-tab-edit')?.addEventListener('click', rmShowMemoryEdit);
-
+	document.getElementById('rm-url-tab-details')?.addEventListener('click', rmShowUrlDetails);
+	document.getElementById('rm-url-tab-pages')?.addEventListener('click', rmShowUrlPages);
+	document.getElementById('rm-email-tab-details')?.addEventListener('click', rmShowEmailDetails);
+	document.getElementById('rm-email-tab-body')?.addEventListener('click', rmShowEmailBody);
+	document.getElementById('rm-url-crawl-load-more-btn')?.addEventListener('click', () => {
+		if (rmCurrentType !== 'urls' || !rmCurrentId) return;
+		rmLoadUrlPages(rmCurrentId, { append: true });
+	});
+	document.getElementById('rm-url-resync-btn')?.addEventListener('click', async () => {
+		if (rmCurrentType !== 'urls' || !rmCurrentId || !rmUrlCrawlEnabled) return;
+		try {
+			await api('POST', `/urls/${rmCurrentId}/resync`);
+			showSuccess('URL resync started');
+		} catch (err) {
+			showError('Resync failed: ' + (err.message || 'Unknown error'));
+		}
+	});
+	document.getElementById('rm-url-delete-pages-btn')?.addEventListener('click', async () => {
+		if (rmCurrentType !== 'urls' || !rmCurrentId) return;
+		const confirmed = await confirmAction('Delete Crawled Pages', 'This will remove indexed crawled pages for this URL.');
+		if (!confirmed) return;
+		try {
+			const res = await api('DELETE', `/urls/${rmCurrentId}/pages`);
+			showSuccess(res?.message || 'Crawled pages deleted');
+			rmLoadUrlPages(rmCurrentId);
+		} catch (err) {
+			showError('Delete failed: ' + (err.message || 'Unknown error'));
+		}
+	});
 	// Link search (all item types)
 	document.querySelectorAll('.rm-link-search').forEach(input => {
 		input.addEventListener('input', () => {
@@ -858,6 +1207,7 @@ function initResultModalHandlers() {
 
 // Expose globally so page scripts can use it
 window.openItemModal = openItemModal;
+window.openResultModal = openResultModal;
 window.initResultModalHandlers = initResultModalHandlers;
 
 function escapeHtml(str) {
@@ -871,6 +1221,7 @@ function typeBadgeColor(type) {
 		case 'notes': return 'primary';
 		case 'memory': return 'success';
 		case 'urls': return 'warning';
+		case 'emails': return 'secondary';
 		case 'pages': return 'info';
 		default: return 'secondary';
 	}

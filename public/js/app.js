@@ -56,6 +56,38 @@ async function showError(message) {
 // Current project
 window.currentProjectId = null;
 
+function setActiveProject(projectId) {
+	currentProjectId = projectId;
+	document.querySelectorAll('.project-item').forEach((el) => {
+		el.classList.toggle('active', el.dataset.id === projectId);
+	});
+}
+
+async function importFilesToProject(files, projectId) {
+	if (!files || !files.length || !projectId) return;
+	var ok = 0;
+	var fail = 0;
+	for (var i = 0; i < files.length; i++) {
+		var f = files[i];
+		if (f.size === 0) continue;
+		var fd = new FormData();
+		fd.append('file', f);
+		fd.append('project', projectId);
+		try {
+			var res = await fetch('/api/v1/notes/import', { method: 'POST', body: fd });
+			if (res.ok) ok++;
+			else fail++;
+		} catch (e) {
+			fail++;
+		}
+	}
+	if (ok > 0) {
+		showSuccess(ok + ' file' + (ok > 1 ? 's' : '') + ' imported as notes');
+		refreshCounts();
+	}
+	if (fail > 0) showError(fail + ' file' + (fail > 1 ? 's' : '') + ' could not be imported');
+}
+
 // Load projects sidebar with counts
 async function loadProjects() {
 	try {
@@ -71,29 +103,47 @@ async function loadProjects() {
 			// Clicking project name -> SPA navigate to dashboard
 			el.addEventListener('click', (e) => {
 				if (e.target.closest('a')) return;
-				currentProjectId = el.dataset.id;
-				document.querySelectorAll('.project-item').forEach((p) => p.classList.remove('active'));
-				el.classList.add('active');
+				setActiveProject(el.dataset.id);
 				navigateTo('/dashboard');
 			});
 
-			// Intercept section links (Notes, Memories, URLs) — SPA navigate with project context
+			// Intercept section links (Notes, Memories, URLs, Emails) — SPA navigate with project context
 			el.querySelectorAll('.project-item-section a').forEach((link) => {
 				link.addEventListener('click', (e) => {
 					e.preventDefault();
-					currentProjectId = el.dataset.id;
-					document.querySelectorAll('.project-item').forEach((p) => p.classList.remove('active'));
-					el.classList.add('active');
+					setActiveProject(el.dataset.id);
 					navigateTo(link.getAttribute('href'));
 				});
+			});
+
+			// Drag-and-drop upload on project card
+			var dragCount = 0;
+			var overlay = el.querySelector('.project-drop-overlay');
+			el.addEventListener('dragenter', (e) => {
+				e.preventDefault();
+				dragCount++;
+				if (dragCount === 1 && overlay) overlay.classList.remove('d-none');
+			});
+			el.addEventListener('dragover', (e) => { e.preventDefault(); });
+			el.addEventListener('dragleave', (e) => {
+				e.preventDefault();
+				dragCount--;
+				if (dragCount <= 0) { dragCount = 0; if (overlay) overlay.classList.add('d-none'); }
+			});
+			el.addEventListener('drop', (e) => {
+				e.preventDefault();
+				dragCount = 0;
+				if (overlay) overlay.classList.add('d-none');
+				if (e.dataTransfer?.files?.length) {
+					importFilesToProject(Array.from(e.dataTransfer.files), el.dataset.id);
+				}
 			});
 		});
 
 		if (!currentProjectId) {
 			const first = list.querySelector('.project-item');
 			if (first) {
-				currentProjectId = first.dataset.id;
-				first.classList.add('active');
+				setActiveProject(first.dataset.id);
 			}
 		}
 	} catch (err) {
@@ -233,9 +283,11 @@ var ROUTES = {
 	'/notes': { section: 'notes', title: 'Notes', partial: '/ajax/section/notes', batch: true },
 	'/memories': { section: 'memories', title: 'Memories', partial: '/ajax/section/memories', batch: true },
 	'/urls': { section: 'urls', title: 'URLs', partial: '/ajax/section/urls', batch: true },
+	'/emails': { section: 'emails', title: 'Emails', partial: '/ajax/section/emails', batch: true },
 	'/trash': { section: 'trash', title: 'Trash', partial: '/ajax/section/trash' },
 	'/settings/profile': { title: 'Profile', partial: '/ajax/section/settings/profile' },
 	'/settings/security': { title: 'Security', partial: '/ajax/section/settings/security' },
+	'/settings/team': { title: 'My Team', partial: '/ajax/section/settings/team' },
 	'/settings/tokens': { title: 'API Tokens', partial: '/ajax/section/settings/tokens' },
 	'/settings/typesense': { title: 'Search', partial: '/ajax/section/settings/typesense' },
 	'/settings/usage': { title: 'Usage', partial: '/ajax/section/settings/usage' },
@@ -243,14 +295,50 @@ var ROUTES = {
 	'/settings/subscription': { title: 'Subscription', partial: '/ajax/section/settings/subscription' },
 };
 
+function shouldHideChatSidebar(path) {
+	return path === '/settings' || path.indexOf('/settings/') === 0;
+}
+
+function syncLayoutForPath(path) {
+	document.body.classList.toggle('kk-no-chat-sidebar', shouldHideChatSidebar(path));
+}
+
 // Dashboard section — managed here since it depends on app.js functions
 window.__sections = window.__sections || {};
 window.__sections.dashboard = {
 	mount: function () {
 		if (currentProjectId) loadProjectOverview(currentProjectId);
+		setupOverviewDropZone();
 	},
 	unmount: function () {},
 };
+
+function setupOverviewDropZone() {
+	var zone = document.getElementById('project-overview');
+	if (!zone || zone.__dropBound) return;
+	zone.__dropBound = true;
+	var overlay = zone.querySelector('.project-drop-overlay');
+	var dragCount = 0;
+	zone.addEventListener('dragenter', function (e) {
+		e.preventDefault();
+		dragCount++;
+		if (dragCount === 1 && overlay) overlay.classList.remove('d-none');
+	});
+	zone.addEventListener('dragover', function (e) { e.preventDefault(); });
+	zone.addEventListener('dragleave', function (e) {
+		e.preventDefault();
+		dragCount--;
+		if (dragCount <= 0) { dragCount = 0; if (overlay) overlay.classList.add('d-none'); }
+	});
+	zone.addEventListener('drop', function (e) {
+		e.preventDefault();
+		dragCount = 0;
+		if (overlay) overlay.classList.add('d-none');
+		if (e.dataTransfer?.files?.length && currentProjectId) {
+			importFilesToProject(Array.from(e.dataTransfer.files), currentProjectId);
+		}
+	});
+}
 
 function executeScripts(container) {
 	var scripts = container.querySelectorAll('script');
@@ -289,6 +377,7 @@ async function navigateTo(path, opts) {
 	}
 	if (__isNavigating) return;
 	__isNavigating = true;
+	syncLayoutForPath(path);
 
 	try {
 		unmountCurrent();
@@ -348,6 +437,21 @@ window.addEventListener('popstate', function (e) {
 
 // Global link interception for SPA routes
 document.addEventListener('click', function (e) {
+	var accountSwitchLink = e.target.closest('.account-switch-link');
+	if (accountSwitchLink) {
+		e.preventDefault();
+		var tenantId = accountSwitchLink.dataset.tenantId;
+		if (!tenantId) return;
+		api('POST', '/account/switch', { tenant_id: tenantId })
+			.then(function () {
+				window.location.href = '/dashboard';
+			})
+			.catch(function (err) {
+				showError(err.message);
+			});
+		return;
+	}
+
 	if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey) return;
 	var link = e.target.closest('a[href]');
 	if (!link || link.target === '_blank') return;
@@ -389,6 +493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	// Mount initial section for SPA
 	var path = window.location.pathname;
+	syncLayoutForPath(path);
 	if (ROUTES[path]) {
 		history.replaceState({ spaPath: path }, '');
 		mountCurrent(path);
@@ -414,6 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 			'note:created', 'note:updated', 'note:deleted',
 			'memory:created', 'memory:updated', 'memory:deleted',
 			'url:created', 'url:updated', 'url:deleted',
+			'email:created', 'email:updated', 'email:deleted',
 			'counts:refresh',
 		];
 		for (const evt of crudEvents) {
@@ -450,20 +556,22 @@ async function refreshCounts() {
 			const counts = await api('GET', '/counts');
 			document.querySelectorAll('.project-item').forEach(el => {
 				const pid = el.dataset.id;
-				const pc = counts[pid] || { notes: 0, memory: 0, urls: 0 };
+				const pc = counts[pid] || { notes: 0, memory: 0, urls: 0, emails: 0 };
 				const sectionCounts = el.querySelectorAll('.section-count');
 				if (sectionCounts[0]) sectionCounts[0].textContent = pc.notes;
 				if (sectionCounts[1]) sectionCounts[1].textContent = pc.memory;
 				if (sectionCounts[2]) sectionCounts[2].textContent = pc.urls;
+				if (sectionCounts[3]) sectionCounts[3].textContent = pc.emails;
 			});
 			// Also update overview cards if visible
 			const overview = document.getElementById('project-overview');
 			if (overview && currentProjectId) {
-				const pc = counts[currentProjectId] || { notes: 0, memory: 0, urls: 0 };
+				const pc = counts[currentProjectId] || { notes: 0, memory: 0, urls: 0, emails: 0 };
 				const cards = overview.querySelectorAll('.fw-bold');
 				if (cards[0]) cards[0].textContent = pc.notes;
 				if (cards[1]) cards[1].textContent = pc.memory;
 				if (cards[2]) cards[2].textContent = pc.urls;
+				if (cards[3]) cards[3].textContent = pc.emails;
 			}
 		} catch (err) {
 			console.error('Failed to refresh counts:', err);

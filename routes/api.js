@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { requireTenant, Tenant } from '../modules/tenancy.js';
+import { initializeSessionTenant, requireTenant, Tenant } from '../modules/tenancy.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,26 +12,32 @@ import { extractText } from '../services/import_service.js';
 import { detectFileType } from '../modules/file_detect.js';
 import * as memoryService from '../services/memory_service.js';
 import * as urlService from '../services/url_service.js';
+import * as emailIngestService from '../services/email_ingest_service.js';
 import { searchKnowledge, aiChatSearch, processChat, processChatStream } from '../services/ai_chat_service.js';
 import { listConversations, deleteConversation } from '../modules/typesense.js';
 import * as trashService from '../services/trash_service.js';
 import { crawlSite } from '../modules/crawler.js';
 import { getProjectCounts } from '../services/project_service.js';
-import { reindexHost, searchCollection, getFilteredCount } from '../modules/typesense.js';
+import { reindexHost, searchCollection, getFilteredCount, removeDocumentsByFilter } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
+import { Email } from '../model/email.js';
 import { User } from '../model/user.js';
 import { UserPasskey } from '../model/user_passkey.js';
 import * as graphService from '../services/graph_service.js';
 import * as exportService from '../services/export_service.js';
 import * as auditService from '../services/audit_service.js';
 import * as gitSyncService from '../services/git_sync_service.js';
+import * as oauthService from '../services/oauth_service.js';
+import * as teamService from '../services/team_service.js';
 import { createChatLimiter } from '../middleware/rate_limit.js';
+import config from '../config.js';
 import crypto from 'node:crypto';
 
 const router = Router();
+const is_hosted = new URL(config.appUrl).hostname.endsWith('kumbukum.com');
 
 router.use(requireAuth, requireTenant);
 
@@ -44,6 +50,18 @@ function auditCtx(req) {
 		ip: req.ip,
 		user_agent: req.headers['user-agent'],
 	};
+}
+
+function requireTeamManager(req, res, next) {
+	if (!teamService.canManageTeam(req.memberRole)) {
+		return res.status(403).json({ error: 'Team admin access is required' });
+	}
+	next();
+}
+
+function requireRestrictedSettingsAccess(req, res, next) {
+	if (teamService.canManageTeam(req.memberRole)) return next();
+	return res.status(403).json({ error: 'Account admin access is required' });
 }
 
 // ---- Projects ----
@@ -62,6 +80,13 @@ router.get('/projects/:id', async (req, res) => {
 	const project = await projectService.getProject(req.host_id, req.params.id);
 	if (!project) return res.status(404).json({ error: 'Project not found' });
 	res.json({ project });
+});
+
+router.get('/features', async (req, res) => {
+	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
+	const plan = tenant?.plan || 'free';
+	const proOnlyFeatureEnabled = !is_hosted || plan === 'pro';
+	res.json({ features: { email_ingest: proOnlyFeatureEnabled, git_sync: proOnlyFeatureEnabled } });
 });
 
 router.put('/projects/:id', async (req, res) => {
@@ -85,8 +110,23 @@ router.delete('/projects/:id', async (req, res) => {
 async function requireGitSyncAccess(req, res, next) {
 	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
 	const plan = tenant?.plan || 'free';
-	if (plan !== 'pro' && plan !== 'free') {
+	const enabled = !is_hosted || plan === 'pro';
+	if (!enabled) {
 		return res.status(403).json({ error: 'Git Sync is available on the Pro plan' });
+	}
+	next();
+}
+
+async function getEmailFeatureAccess(host_id) {
+	if (!is_hosted) return true;
+	const tenant = await Tenant.findOne({ host_id }).select('plan').lean();
+	return tenant?.plan === 'pro';
+}
+
+async function requireEmailFeatureAccess(req, res, next) {
+	const enabled = await getEmailFeatureAccess(req.host_id);
+	if (!enabled) {
+		return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
 	}
 	next();
 }
@@ -226,6 +266,53 @@ router.get('/memories/tags/suggest', async (req, res) => {
 	res.json({ tags });
 });
 
+// ---- Emails ----
+
+router.get('/emails', requireEmailFeatureAccess, async (req, res) => {
+	const emails = await emailIngestService.listEmails(req.host_id, req.query.project, {
+		page: parseInt(req.query.page, 10) || 1,
+		limit: parseInt(req.query.limit, 10) || 50,
+	});
+	res.json({ emails });
+});
+
+router.post('/emails', requireEmailFeatureAccess, async (req, res) => {
+	try {
+		const email = await emailIngestService.ingestEmail(req.userId, req.host_id, req.body, auditCtx(req));
+		res.status(201).json({ email });
+	} catch (err) {
+		res.status(400).json({ error: err.message });
+	}
+});
+
+router.get('/emails/:id', requireEmailFeatureAccess, async (req, res) => {
+	const email = await emailIngestService.getEmail(req.host_id, req.params.id);
+	if (!email) return res.status(404).json({ error: 'Email not found' });
+	res.json({ email });
+});
+
+router.get('/emails/:id/thread', requireEmailFeatureAccess, async (req, res) => {
+	const thread = await emailIngestService.getEmailThread(req.host_id, req.params.id);
+	res.json({ thread });
+});
+
+router.put('/emails/:id', requireEmailFeatureAccess, async (req, res) => {
+	const email = await emailIngestService.updateEmail(req.host_id, req.params.id, req.body, auditCtx(req));
+	if (!email) return res.status(404).json({ error: 'Email not found' });
+	res.json({ email });
+});
+
+router.delete('/emails/:id', requireEmailFeatureAccess, async (req, res) => {
+	const email = await emailIngestService.deleteEmail(req.host_id, req.params.id, auditCtx(req));
+	if (!email) return res.status(404).json({ error: 'Email not found' });
+	res.json({ message: 'Email deleted' });
+});
+
+router.post('/emails/search', requireEmailFeatureAccess, async (req, res) => {
+	const results = await emailIngestService.searchEmails(req.host_id, req.body.query, req.body.options);
+	res.json({ results });
+});
+
 // ---- URLs ----
 
 router.get('/urls', async (req, res) => {
@@ -252,9 +339,78 @@ router.get('/urls/:id', async (req, res) => {
 	res.json({ url });
 });
 
+router.get('/urls/:id/pages', async (req, res) => {
+	const url = await urlService.getUrl(req.host_id, req.params.id);
+	if (!url) return res.status(404).json({ error: 'URL not found' });
+
+	const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+	const perPage = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 500);
+
+	try {
+		const results = await searchCollection(req.host_id, 'pages', '*', {
+			queryBy: 'title',
+			page,
+			perPage,
+			include_fields: 'id,url,title,crawled_at,parent_url_id',
+			filter_by: `parent_url_id:=${req.params.id}`,
+			extra: { sort_by: 'crawled_at:desc' },
+		});
+
+		const pages = (results.hits || []).map((hit) => ({
+			id: hit.document.id,
+			url: hit.document.url,
+			title: hit.document.title,
+			crawled_at: hit.document.crawled_at,
+		}));
+
+		res.json({
+			pages,
+			count: results.found || 0,
+			page,
+			per_page: perPage,
+		});
+	} catch (err) {
+		if (err?.httpStatus === 404) {
+			return res.json({ pages: [], count: 0, page, per_page: perPage });
+		}
+		console.error('URL pages fetch error:', err);
+		res.status(500).json({ error: 'Failed to load crawled pages' });
+	}
+});
+
+router.post('/urls/:id/resync', async (req, res) => {
+	const url = await urlService.getUrl(req.host_id, req.params.id);
+	if (!url) return res.status(404).json({ error: 'URL not found' });
+	if (!url.crawl_enabled) return res.status(400).json({ error: 'Crawling is not enabled for this URL' });
+
+	crawlSite(url).catch((err) => console.error('Manual URL resync error:', err.message));
+	res.json({ message: 'URL crawl resync started' });
+});
+
+router.delete('/urls/:id/pages', async (req, res) => {
+	const url = await urlService.getUrl(req.host_id, req.params.id);
+	if (!url) return res.status(404).json({ error: 'URL not found' });
+
+	try {
+		const result = await removeDocumentsByFilter(req.host_id, 'pages', `parent_url_id:=${req.params.id}`);
+		const deleted = typeof result?.num_deleted === 'number' ? result.num_deleted : 0;
+		res.json({ message: `${deleted} crawled page${deleted === 1 ? '' : 's'} deleted`, deleted });
+	} catch (err) {
+		console.error('Delete URL pages error:', err);
+		res.status(500).json({ error: 'Failed to delete crawled pages' });
+	}
+});
+
 router.put('/urls/:id', async (req, res) => {
+	const before = await urlService.getUrl(req.host_id, req.params.id);
 	const url = await urlService.updateUrl(req.host_id, req.params.id, req.body, auditCtx(req));
 	if (!url) return res.status(404).json({ error: 'URL not found' });
+
+	const shouldStartFirstCrawl = !!url.crawl_enabled && !before?.crawl_enabled;
+	if (shouldStartFirstCrawl) {
+		crawlSite(url).catch((err) => console.error('Background crawl error:', err.message));
+	}
+
 	res.json({ url });
 });
 
@@ -271,12 +427,12 @@ router.post('/urls/search', async (req, res) => {
 
 // ---- Batch Operations ----
 
-const BATCH_TYPES = ['notes', 'memories', 'urls'];
-const TS_TYPE_MAP = { notes: 'notes', memories: 'memory', urls: 'urls' };
+const BATCH_TYPES = ['notes', 'memories', 'urls', 'emails'];
+const TS_TYPE_MAP = { notes: 'notes', memories: 'memory', urls: 'urls', emails: 'emails' };
 
 async function resolveBatchIds(host_id, type, body) {
 	if (body.all) {
-		const Model = { notes: Note, memories: Memory, urls: Url }[type];
+		const Model = { notes: Note, memories: Memory, urls: Url, emails: Email }[type];
 		const query = { host_id, in_trash: { $ne: true } };
 		if (body.filterProject) query.project = body.filterProject;
 		return (await Model.find(query).select('_id').lean()).map((d) => d._id.toString());
@@ -288,6 +444,9 @@ router.get('/batch/count', async (req, res) => {
 	try {
 		const { type, project } = req.query;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'valid type required' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 		const count = await getFilteredCount(req.host_id, TS_TYPE_MAP[type], project || null);
 		res.json({ count });
 	} catch (err) {
@@ -300,11 +459,14 @@ router.post('/batch/delete', async (req, res) => {
 	try {
 		const { type } = req.body;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 
 		const ids = await resolveBatchIds(req.host_id, type, req.body);
 		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
-		const deleteFn = { notes: noteService.deleteNote, memories: memoryService.deleteMemory, urls: urlService.deleteUrl }[type];
+		const deleteFn = { notes: noteService.deleteNote, memories: memoryService.deleteMemory, urls: urlService.deleteUrl, emails: emailIngestService.deleteEmail }[type];
 		const ctx = auditCtx(req);
 		const results = await Promise.all(ids.map((id) => deleteFn(req.host_id, id, ctx).catch(() => null)));
 		const deleted = results.filter(Boolean).length;
@@ -319,12 +481,15 @@ router.post('/batch/move', async (req, res) => {
 	try {
 		const { type, project } = req.body;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 		if (!project) return res.status(400).json({ error: 'project required' });
 
 		const ids = await resolveBatchIds(req.host_id, type, req.body);
 		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
-		const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl }[type];
+		const updateFn = { notes: noteService.updateNote, memories: memoryService.updateMemory, urls: urlService.updateUrl, emails: emailIngestService.updateEmail }[type];
 		const ctx = auditCtx(req);
 		const results = await Promise.all(ids.map((id) => updateFn(req.host_id, id, { project }, ctx).catch(() => null)));
 		const moved = results.filter(Boolean).length;
@@ -340,15 +505,27 @@ router.post('/batch/copy', async (req, res) => {
 	try {
 		const { type, project } = req.body;
 		if (!type || !BATCH_TYPES.includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (type === 'emails' && !(await getEmailFeatureAccess(req.host_id))) {
+			return res.status(403).json({ error: 'Email ingestion is available on the Pro plan' });
+		}
 		if (!project) return res.status(400).json({ error: 'project required' });
 
 		const ids = await resolveBatchIds(req.host_id, type, req.body);
 		if (!ids.length) return res.status(400).json({ error: 'No items to process' });
 
-		const Model = { notes: Note, memories: Memory, urls: Url }[type];
+		const Model = { notes: Note, memories: Memory, urls: Url, emails: Email }[type];
 		const docs = await Model.find({ _id: { $in: ids }, host_id: req.host_id }).lean();
 		const copies = docs.map((doc) => {
 			const { _id, __v, createdAt, updatedAt, ...rest } = doc;
+			if (type === 'emails') {
+				return {
+					...rest,
+					project,
+					message_id: '',
+					references: [],
+					in_reply_to: '',
+				};
+			}
 			return { ...rest, project };
 		});
 		const inserted = await Model.insertMany(copies);
@@ -366,12 +543,14 @@ router.post('/search/all', async (req, res) => {
 	try {
 		const query = req.body.query;
 		if (!query) return res.status(400).json({ error: 'query required' });
+		const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
 		const types = [
 			{ type: 'notes', queryBy: 'embedding' },
 			{ type: 'memory', queryBy: 'embedding' },
 			{ type: 'urls', queryBy: 'embedding' },
 		];
+		if (emailEnabled) types.push({ type: 'emails', queryBy: 'embedding' });
 
 		const results = [];
 		for (const { type, queryBy } of types) {
@@ -397,17 +576,20 @@ router.post('/search/all', async (req, res) => {
 router.post('/resolve', async (req, res) => {
 	const ids = req.body.ids;
 	if (!ids?.length) return res.json({ items: [] });
+	const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
-	const [notes, memories, urls] = await Promise.all([
+	const [notes, memories, urls, emails] = await Promise.all([
 		Note.find({ _id: { $in: ids }, host_id: req.host_id }, 'title').lean(),
 		Memory.find({ _id: { $in: ids }, host_id: req.host_id }, 'title').lean(),
 		Url.find({ _id: { $in: ids }, host_id: req.host_id }, 'title url').lean(),
+		emailEnabled ? Email.find({ _id: { $in: ids }, host_id: req.host_id }, 'subject').lean() : Promise.resolve([]),
 	]);
 
 	const items = [];
 	for (const n of notes) items.push({ id: n._id.toString(), title: n.title, _type: 'notes' });
 	for (const m of memories) items.push({ id: m._id.toString(), title: m.title, _type: 'memory' });
 	for (const u of urls) items.push({ id: u._id.toString(), title: u.title || u.url, _type: 'urls' });
+	for (const e of emails) items.push({ id: e._id.toString(), title: e.subject || '(No subject)', _type: 'emails' });
 
 	res.json({ items });
 });
@@ -474,9 +656,9 @@ router.get('/counts', async (req, res) => {
 
 // ---- Typesense Reindex ----
 
-router.post('/reindex', async (req, res) => {
+router.post('/reindex', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
-		const results = await reindexHost(req.host_id, { Note, Memory, Url });
+		const results = await reindexHost(req.host_id, { Note, Memory, Url, Email });
 		const totalQueued = Object.values(results).reduce((sum, entry) => sum + (entry.queued || 0), 0);
 		const message = totalQueued > 0
 			? `Reindexing is queued for ${totalQueued} item${totalQueued === 1 ? '' : 's'}.`
@@ -500,9 +682,11 @@ router.post('/reindex', async (req, res) => {
 // ---- Search / Knowledge ----
 
 router.post('/search/knowledge', async (req, res) => {
+	const emailEnabled = await getEmailFeatureAccess(req.host_id);
 	const results = await searchKnowledge(req.host_id, req.body.query, {
 		projectId: req.body.project_id,
 		perPage: req.body.per_page,
+		includeEmails: emailEnabled,
 		...req.body.options,
 	});
 	res.json({ results });
@@ -514,6 +698,7 @@ router.post('/chat', createChatLimiter(), async (req, res) => {
 	try {
 		const { query, conversation_id, project_id } = req.body;
 		if (!query) return res.status(400).json({ error: 'query required' });
+		const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
 		const result = await processChat({
 			hostId: req.host_id,
@@ -521,6 +706,7 @@ router.post('/chat', createChatLimiter(), async (req, res) => {
 			query,
 			conversationId: conversation_id,
 			projectId: project_id,
+			includeEmails: emailEnabled,
 			ctx: auditCtx(req),
 		});
 
@@ -564,6 +750,7 @@ router.post('/chat/stream', createChatLimiter(), async (req, res) => {
 			sendSSE('error', { error: 'query required' });
 			return res.end();
 		}
+		const emailEnabled = await getEmailFeatureAccess(req.host_id);
 
 		const { stream, answer, metadata } = await processChatStream({
 			hostId: req.host_id,
@@ -571,6 +758,7 @@ router.post('/chat/stream', createChatLimiter(), async (req, res) => {
 			query,
 			conversationId: conversation_id,
 			projectId: project_id,
+			includeEmails: emailEnabled,
 			ctx: auditCtx(req),
 		});
 
@@ -704,7 +892,7 @@ router.post('/trash/restore', async (req, res) => {
 router.delete('/trash/:type/:id', async (req, res) => {
 	try {
 		const { type, id } = req.params;
-		if (!['notes', 'memories', 'urls'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+		if (!['notes', 'memories', 'urls', 'emails'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
 		const doc = await trashService.permanentDelete(req.host_id, type, id);
 		if (!doc) return res.status(404).json({ error: 'Item not found in trash' });
@@ -756,6 +944,112 @@ router.delete('/trash', async (req, res) => {
 
 // ---- Profile ----
 
+router.get('/account/tenants', async (req, res) => {
+	res.json({
+		tenants: req.accessibleTenants || [],
+		active_tenant_id: req.tenantId,
+	});
+});
+
+router.post('/account/switch', async (req, res) => {
+	try {
+		const tenantId = typeof req.body.tenant_id === 'string' ? req.body.tenant_id : '';
+		if (!tenantId) return res.status(400).json({ error: 'tenant_id is required' });
+
+		const context = await initializeSessionTenant(req.session, req.userId, tenantId, null);
+		if (!context?.activeTenant) return res.status(403).json({ error: 'You do not have access to that account' });
+
+		res.json({
+			active_tenant: context.activeTenant,
+			tenants: context.accessibleTenants,
+		});
+	} catch (err) {
+		console.error('Account switch error:', err);
+		res.status(500).json({ error: 'Failed to switch account' });
+	}
+});
+
+router.get('/team/members', requireTeamManager, async (req, res) => {
+	try {
+		const members = await teamService.listTeamMembers(req.host_id);
+		res.json({ members });
+	} catch (err) {
+		console.error('List team members error:', err);
+		res.status(500).json({ error: 'Failed to list team members' });
+	}
+});
+
+router.get('/team/invites', requireTeamManager, async (req, res) => {
+	try {
+		const invites = await teamService.listTeamInvites(req.host_id);
+		res.json({ invites });
+	} catch (err) {
+		console.error('List team invites error:', err);
+		res.status(500).json({ error: 'Failed to list team invites' });
+	}
+});
+
+router.post('/team/invites', requireTeamManager, async (req, res) => {
+	try {
+		const invite = await teamService.createTeamInvite(req.userId, req.host_id, req.body, auditCtx(req));
+		res.status(201).json({
+			invite: {
+				_id: invite._id,
+				email: invite.email,
+				name: invite.name,
+				role: invite.role,
+				expires_at: invite.expires_at,
+			},
+		});
+	} catch (err) {
+		console.error('Create team invite error:', err);
+		res.status(400).json({ error: err.message || 'Failed to create invite' });
+	}
+});
+
+router.patch('/team/members/:id', requireTeamManager, async (req, res) => {
+	try {
+		const role = typeof req.body.role === 'string' ? req.body.role : '';
+		const member = await teamService.updateTeamMemberRole(
+			req.host_id,
+			req.params.id,
+			{ userId: req.userId, role: req.memberRole },
+			role,
+			auditCtx(req),
+		);
+		res.json({
+			member: {
+				_id: member._id,
+				role: member.role,
+				user: member.user ? { _id: member.user._id, name: member.user.name, email: member.user.email } : null,
+			},
+		});
+	} catch (err) {
+		console.error('Update team member error:', err);
+		res.status(400).json({ error: err.message || 'Failed to update member' });
+	}
+});
+
+router.delete('/team/members/:id', requireTeamManager, async (req, res) => {
+	try {
+		await teamService.removeTeamMember(req.host_id, req.params.id, { userId: req.userId, role: req.memberRole }, auditCtx(req));
+		res.json({ message: 'Team member removed' });
+	} catch (err) {
+		console.error('Remove team member error:', err);
+		res.status(400).json({ error: err.message || 'Failed to remove member' });
+	}
+});
+
+router.delete('/team/invites/:id', requireTeamManager, async (req, res) => {
+	try {
+		await teamService.cancelTeamInvite(req.host_id, req.params.id, { userId: req.userId, role: req.memberRole }, auditCtx(req));
+		res.json({ message: 'Invite cancelled' });
+	} catch (err) {
+		console.error('Cancel team invite error:', err);
+		res.status(400).json({ error: err.message || 'Failed to cancel invite' });
+	}
+});
+
 router.put('/profile', async (req, res) => {
 	try {
 		const user = await User.findById(req.userId);
@@ -771,6 +1065,85 @@ router.put('/profile', async (req, res) => {
 	} catch (err) {
 		console.error('Profile update error:', err);
 		res.status(500).json({ error: 'Profile update failed' });
+	}
+});
+
+// ---- OAuth ----
+
+router.get('/oauth/config', async (_req, res) => {
+	res.json({ oauth: oauthService.buildOauthUiConfig() });
+});
+
+router.get('/oauth/consents', async (req, res) => {
+	try {
+		const consents = await oauthService.listConsents(req.userId, req.host_id);
+		res.json({ consents });
+	} catch (err) {
+		console.error('List OAuth consents error:', err);
+		res.status(500).json({ error: 'Failed to list authorized apps' });
+	}
+});
+
+router.delete('/oauth/consents/:id', async (req, res) => {
+	try {
+		await oauthService.revokeConsent(req.params.id, req.userId, req.host_id, auditCtx(req));
+		res.json({ message: 'Authorized app revoked' });
+	} catch (err) {
+		console.error('Revoke OAuth consent error:', err);
+		res.status(400).json({ error: err.message || 'Failed to revoke authorized app' });
+	}
+});
+
+router.get('/oauth/clients', async (req, res) => {
+	try {
+		const clients = await oauthService.listClients(req.host_id);
+		res.json({ clients });
+	} catch (err) {
+		console.error('List OAuth clients error:', err);
+		res.status(500).json({ error: 'Failed to list OAuth clients' });
+	}
+});
+
+router.post('/oauth/clients', async (req, res) => {
+	try {
+		const { client, client_secret } = await oauthService.registerClient({
+			tenantId: req.tenantId,
+			host_id: req.host_id,
+			createdByUserId: req.userId,
+			payload: req.body,
+			source: 'manual',
+		});
+
+		auditService.log({
+			action: 'create',
+			resource: 'oauth_client',
+			resource_id: client.client_id,
+			user_id: req.userId,
+			host_id: req.host_id,
+			channel: auditCtx(req).channel,
+			ip: req.ip,
+			user_agent: req.headers['user-agent'],
+			details: {
+				client_name: client.client_name,
+				redirect_uris: client.redirect_uris,
+				token_endpoint_auth_method: client.token_endpoint_auth_method,
+			},
+		});
+
+		res.status(201).json({ client, client_secret });
+	} catch (err) {
+		console.error('Create OAuth client error:', err);
+		res.status(400).json({ error: err.message || 'Failed to create OAuth client' });
+	}
+});
+
+router.delete('/oauth/clients/:id', async (req, res) => {
+	try {
+		await oauthService.deleteClient(req.host_id, req.params.id, auditCtx(req));
+		res.json({ message: 'OAuth client deleted' });
+	} catch (err) {
+		console.error('Delete OAuth client error:', err);
+		res.status(400).json({ error: err.message || 'Failed to delete OAuth client' });
 	}
 });
 
@@ -902,6 +1275,8 @@ router.post('/notes/import', async (req, res) => {
 			uploadDir: IMPORT_DIR,
 			keepExtensions: true,
 			maxFileSize: MAX_FILE_SIZE,
+			allowEmptyFiles: true,
+			minFileSize: 0,
 			multiples: true,
 			filename: (name, ext) => `${crypto.randomUUID()}${ext}`,
 		});
@@ -911,12 +1286,16 @@ router.post('/notes/import', async (req, res) => {
 
 		// formidable v3 wraps files in arrays
 		const fileList = files.file ? (Array.isArray(files.file) ? files.file : [files.file]) : [];
-		if (!fileList.length) {
+		const nonEmptyFiles = fileList.filter((file) => {
+			const size = typeof file?.size === 'number' ? file.size : 0;
+			return Boolean(file?.filepath) && size > 0;
+		});
+		if (!nonEmptyFiles.length) {
 			return res.status(400).type('text').send('No files uploaded');
 		}
 
 		// FilePond sends one file per request — handle accordingly
-		const f = fileList[0];
+		const f = nonEmptyFiles[0];
 		const originalName = f.originalFilename || 'Untitled';
 		const ext = path.extname(originalName).toLowerCase();
 		const title = path.basename(originalName, ext) || 'Untitled';
@@ -947,13 +1326,16 @@ router.post('/notes/import', async (req, res) => {
 		}
 	} catch (err) {
 		console.error('Notes import error:', err);
+		if (err?.code === 1010) {
+			return res.status(400).type('text').send('No files uploaded');
+		}
 		res.status(500).type('text').send('Import failed: ' + err.message);
 	}
 });
 
 // ---- Audit Logs ----
 
-router.get('/audit-logs', async (req, res) => {
+router.get('/audit-logs', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const result = await auditService.query({
 			host_id: req.host_id,
@@ -977,7 +1359,7 @@ router.get('/audit-logs', async (req, res) => {
 
 // ---- Export ----
 
-router.post('/export', async (req, res) => {
+router.post('/export', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const user = await User.findById(req.userId);
 		const doc = await exportService.startExport(req.userId, req.host_id, user.email, user.name);
@@ -991,7 +1373,7 @@ router.post('/export', async (req, res) => {
 	}
 });
 
-router.get('/export/status', async (req, res) => {
+router.get('/export/status', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const doc = await exportService.getExportStatus(req.host_id);
 		if (!doc) return res.json({ status: null });
@@ -1002,7 +1384,7 @@ router.get('/export/status', async (req, res) => {
 	}
 });
 
-router.get('/export/download/:token', async (req, res) => {
+router.get('/export/download/:token', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const filePath = await exportService.getExportFile(req.params.token, req.host_id);
 		if (!filePath) return res.status(404).json({ error: 'Export not found or expired' });

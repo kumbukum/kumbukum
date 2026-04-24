@@ -83,6 +83,22 @@ export async function sendMagicLinkEmail(email, token) {
 	});
 }
 
+export async function sendTeamInviteEmail(email, token, tenantName, inviterName, name) {
+	const url = `${config.appUrl}/team-invite?token=${encodeURIComponent(token)}`;
+	const { subject, html } = await resolveTemplate('team_invite');
+	const templateData = {
+		url,
+		tenantName,
+		inviterName,
+		name: name || 'there',
+	};
+	return sendMail({
+		to: email,
+		subject: renderTemplate(subject, templateData),
+		html: renderTemplate(html, templateData),
+	});
+}
+
 export async function sendWelcomeEmail(email, name) {
 	const loginUrl = `${config.appUrl}/login`;
 	const { subject, html } = await resolveTemplate('welcome');

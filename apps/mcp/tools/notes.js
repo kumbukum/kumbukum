@@ -77,12 +77,18 @@ export function noteTools(api, defaultProjectId) {
     },
 
     search_notes: {
-      description: 'Search notes using semantic/text search',
+      description: 'Search notes using semantic/text search. Use only for specs, docs, ADRs, structured write-ups, or when search_knowledge results point to notes. Use per_page: 3 for first focused retrieval.',
       inputSchema: {
         query: z.string().describe('Search query'),
+        per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
       },
       handler: async (args) => {
-        const { results } = await api.post('/notes/search', { query: args.query });
+        const { results } = await api.post('/notes/search', {
+          query: args.query,
+          options: {
+            perPage: args.per_page,
+          },
+        });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },

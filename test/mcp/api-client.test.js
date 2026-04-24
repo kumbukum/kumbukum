@@ -53,6 +53,13 @@ describe('ApiClient', () => {
         assert.equal(req.headers.authorization, 'Token my-secret-token');
     });
 
+    it('supports Bearer auth objects', async () => {
+        const api = new ApiClient(backendUrl, { scheme: 'Bearer', token: 'bridge-token' });
+        await api.get('/test');
+        const req = requests.at(-1);
+        assert.equal(req.headers.authorization, 'Bearer bridge-token');
+    });
+
     it('strips trailing slash from baseUrl', () => {
         const api = new ApiClient('http://localhost:3000/', 'tok');
         assert.equal(api.baseUrl, 'http://localhost:3000');

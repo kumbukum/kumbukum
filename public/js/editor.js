@@ -23253,15 +23253,15 @@ var index_default7 = Image;
 
 // src/editor/note_editor.js
 var SLASH_COMMANDS = [
-  { label: "Heading 1", icon: "bi-type-h1", command: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
-  { label: "Heading 2", icon: "bi-type-h2", command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-  { label: "Heading 3", icon: "bi-type-h3", command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
-  { label: "Bullet List", icon: "bi-list-ul", command: (editor) => editor.chain().focus().toggleBulletList().run() },
-  { label: "Ordered List", icon: "bi-list-ol", command: (editor) => editor.chain().focus().toggleOrderedList().run() },
-  { label: "Task List", icon: "bi-check2-square", command: (editor) => editor.chain().focus().toggleTaskList().run() },
-  { label: "Code Block", icon: "bi-code-square", command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
-  { label: "Blockquote", icon: "bi-chat-quote", command: (editor) => editor.chain().focus().toggleBlockquote().run() },
-  { label: "Horizontal Rule", icon: "bi-dash-lg", command: (editor) => editor.chain().focus().setHorizontalRule().run() }
+  { label: "Heading 1", icon: "ph-text-h-one", command: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
+  { label: "Heading 2", icon: "ph-text-h-two", command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+  { label: "Heading 3", icon: "ph-text-h-three", command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+  { label: "Bullet List", icon: "ph-list-bullets", command: (editor) => editor.chain().focus().toggleBulletList().run() },
+  { label: "Ordered List", icon: "ph-list-numbers", command: (editor) => editor.chain().focus().toggleOrderedList().run() },
+  { label: "Task List", icon: "ph-check-square", command: (editor) => editor.chain().focus().toggleTaskList().run() },
+  { label: "Code Block", icon: "ph-code-block", command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
+  { label: "Blockquote", icon: "ph-quotes", command: (editor) => editor.chain().focus().toggleBlockquote().run() },
+  { label: "Horizontal Rule", icon: "ph-minus", command: (editor) => editor.chain().focus().setHorizontalRule().run() }
 ];
 function createSlashMenu() {
   const menu = document.createElement("div");
@@ -23276,7 +23276,7 @@ function renderSlashMenu(menu, commands, selectedIndex, onSelect) {
     const item = document.createElement("div");
     item.className = "slash-menu-item" + (i === selectedIndex ? " active" : "");
     item.style.cssText = "padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:4px;font-size:14px;" + (i === selectedIndex ? "background:#e9ecef;" : "");
-    item.innerHTML = `<i class="${cmd.icon}" style="width:18px;text-align:center;"></i><span>${cmd.label}</span>`;
+    item.innerHTML = `<i class="ph-light ${cmd.icon}" style="width:18px;text-align:center;"></i><span>${cmd.label}</span>`;
     item.addEventListener("mousedown", (e) => {
       e.preventDefault();
       onSelect(i);

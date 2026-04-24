@@ -44,6 +44,311 @@
           }
         }
       },
+      "AccountTenant": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "host_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ]
+          },
+          "membershipId": {
+            "type": "string"
+          },
+          "is_primary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TeamMember": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member"
+            ]
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "last_login": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "TeamInvite": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "member"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "invited_by": {
+            "type": "object",
+            "properties": {
+              "_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "OAuthClient": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "client_uri": {
+            "type": "string",
+            "nullable": true
+          },
+          "logo_uri": {
+            "type": "string",
+            "nullable": true
+          },
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grant_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "token_endpoint_auth_method": {
+            "type": "string",
+            "enum": [
+              "none",
+              "client_secret_post"
+            ]
+          },
+          "registration_source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "dynamic",
+              "metadata"
+            ]
+          },
+          "last_used_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OAuthConsent": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "client_uri": {
+            "type": "string",
+            "nullable": true
+          },
+          "logo_uri": {
+            "type": "string",
+            "nullable": true
+          },
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "registration_source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "dynamic",
+              "metadata"
+            ]
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resource": {
+            "type": "string"
+          },
+          "granted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_used_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "OAuthConfig": {
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "type": "string"
+          },
+          "authorization_endpoint": {
+            "type": "string"
+          },
+          "token_endpoint": {
+            "type": "string"
+          },
+          "registration_endpoint": {
+            "type": "string"
+          },
+          "authorization_server_metadata_url": {
+            "type": "string"
+          },
+          "openid_configuration_url": {
+            "type": "string"
+          },
+          "resource_metadata_url": {
+            "type": "string"
+          },
+          "mcp_base_url": {
+            "type": "string"
+          },
+          "mcp_endpoint": {
+            "type": "string"
+          },
+          "allowed_resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scope_details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "scope": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "client_registration": {
+            "type": "object",
+            "properties": {
+              "client_id_metadata_document_supported": {
+                "type": "boolean"
+              },
+              "dynamic_registration_supported": {
+                "type": "boolean"
+              },
+              "pre_registration_supported": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
       "Note": {
         "type": "object",
         "properties": {
@@ -113,11 +418,83 @@
             "type": "string",
             "format": "uri"
           },
+          "screenshot": {
+            "type": "string",
+            "description": "Screenshot filename (hash)"
+          },
+          "screenshot_url": {
+            "type": "string",
+            "description": "Signed URL to screenshot image (time-limited)"
+          },
           "project": {
             "type": "string"
           },
           "crawl_enabled": {
             "type": "boolean"
+          },
+          "host_id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Email": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bcc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subject": {
+            "type": "string"
+          },
+          "text_content": {
+            "type": "string"
+          },
+          "attachment_text_content": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
           },
           "host_id": {
             "type": "string"
@@ -140,6 +517,73 @@
           }
         }
       },
+      "GitRepo": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "repo_url": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "auth_token": {
+            "type": "string",
+            "description": "Masked — never returned in full"
+          },
+          "sync_interval": {
+            "type": "integer"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "notes_path": {
+            "type": "string"
+          },
+          "memories_path": {
+            "type": "string"
+          },
+          "sync_path": {
+            "type": "string"
+          },
+          "trash_on_delete": {
+            "type": "boolean"
+          },
+          "last_sync_status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "failed",
+              "in_progress"
+            ],
+            "nullable": true
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_sync_error": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "GraphLink": {
         "type": "object",
         "properties": {
@@ -154,7 +598,8 @@
             "enum": [
               "notes",
               "memory",
-              "urls"
+              "urls",
+              "emails"
             ]
           },
           "target_id": {
@@ -165,7 +610,8 @@
             "enum": [
               "notes",
               "memory",
-              "urls"
+              "urls",
+              "emails"
             ]
           },
           "label": {
@@ -176,6 +622,84 @@
           },
           "host_id": {
             "type": "string"
+          }
+        }
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "delete",
+              "search",
+              "login",
+              "export",
+              "import",
+              "restore",
+              "reindex"
+            ]
+          },
+          "resource": {
+            "type": "string",
+            "enum": [
+              "note",
+              "memory",
+              "url",
+              "email",
+              "project",
+              "link",
+              "user",
+              "passkey",
+              "conversation",
+              "trash",
+              "git_repo",
+              "team_member",
+              "team_invite",
+              "oauth_client",
+              "oauth_consent"
+            ]
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "host_id": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "api",
+              "mcp"
+            ]
+          },
+          "token_label": {
+            "type": "string"
+          },
+          "mcp_client": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }
@@ -424,12 +948,563 @@
               }
             }
           },
+          "400": {
+            "description": "Cannot delete — project still has notes, memories, URLs, or git repos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/tenants": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "List accessible accounts / tenants",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tenants": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AccountTenant"
+                      }
+                    },
+                    "active_tenant_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/switch": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Switch active account / tenant",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenant_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenant_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active_tenant": {
+                      "$ref": "#/components/schemas/AccountTenant"
+                    },
+                    "tenants": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AccountTenant"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/team/members": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "List team members",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TeamMember"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/team/members/{id}": {
+      "patch": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "Update a team member role",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "member"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "member": {
+                      "$ref": "#/components/schemas/TeamMember"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "Remove a team member",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/team/invites": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "List pending team invites",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invites": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TeamInvite"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "Create a team invite",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invite": {
+                      "$ref": "#/components/schemas/TeamInvite"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/team/invites/{id}": {
+      "delete": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "Cancel a pending team invite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/config": {
+      "get": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Get OAuth + MCP discovery configuration for the active account",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "oauth": {
+                      "$ref": "#/components/schemas/OAuthConfig"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/consents": {
+      "get": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "List authorized OAuth apps for the active user + account",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "consents": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OAuthConsent"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/consents/{id}": {
+      "delete": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Revoke an authorized OAuth app",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/clients": {
+      "get": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "List pre-registered OAuth clients for the active account",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "clients": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OAuthClient"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Create a pre-registered OAuth client for the active account",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_name": {
+                    "type": "string"
+                  },
+                  "client_uri": {
+                    "type": "string"
+                  },
+                  "redirect_uris": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "token_endpoint_auth_method": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "client_secret_post"
+                    ]
+                  },
+                  "grant_types": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "response_types": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "client_name",
+                  "redirect_uris"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "client": {
+                      "$ref": "#/components/schemas/OAuthClient"
+                    },
+                    "client_secret": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Returned only once when token_endpoint_auth_method is client_secret_post"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/clients/{id}": {
+      "delete": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Delete a pre-registered OAuth client",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
@@ -1039,6 +2114,364 @@
         }
       }
     },
+    "/emails": {
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "List emails",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/project"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "emails": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Email"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Ingest an email (raw or parsed)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "project": {
+                    "type": "string"
+                  },
+                  "raw_email": {
+                    "type": "string",
+                    "description": "Raw RFC822 email content"
+                  },
+                  "parsed_email": {
+                    "type": "object",
+                    "description": "Mailparser-like JSON payload"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "$ref": "#/components/schemas/Email"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/emails/{id}": {
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Get an email",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "$ref": "#/components/schemas/Email"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Update an email",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string"
+                  },
+                  "text_content": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "to": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cc": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "bcc": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "project": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "$ref": "#/components/schemas/Email"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Delete an email",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/emails/{id}/thread": {
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Get thread by message references",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "thread": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Email"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/emails/search": {
+      "post": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Search emails",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "options": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Email"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/urls": {
       "get": {
         "tags": [
@@ -1334,6 +2767,128 @@
         }
       }
     },
+    "/screenshots/{filename}": {
+      "get": {
+        "tags": [
+          "Screenshots"
+        ],
+        "summary": "Get a screenshot image (signed URL)",
+        "description": "Serves a screenshot image. Requires valid HMAC signature and unexpired timestamp. No authentication needed.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Screenshot filename (SHA-256 hash + .png)"
+          },
+          {
+            "name": "expires",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Expiration timestamp (Unix epoch seconds)"
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "HMAC-SHA256 signature"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PNG image",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid or expired signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Screenshot not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/batch/count": {
+      "get": {
+        "tags": [
+          "Batch"
+        ],
+        "summary": "Get total item count for select-all",
+        "description": "Returns the total number of items of a given type, optionally filtered by project. Uses Typesense for performance.",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "notes",
+                "memories",
+                "urls",
+                "emails"
+              ]
+            }
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by project ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/batch/delete": {
       "post": {
         "tags": [
@@ -1352,7 +2907,8 @@
                     "enum": [
                       "notes",
                       "memories",
-                      "urls"
+                      "urls",
+                      "emails"
                     ]
                   },
                   "ids": {
@@ -1360,11 +2916,18 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "all": {
+                    "type": "boolean",
+                    "description": "When true, delete all items of the given type (ids is ignored)"
+                  },
+                  "filterProject": {
+                    "type": "string",
+                    "description": "Filter by project ID when all=true"
                   }
                 },
                 "required": [
-                  "type",
-                  "ids"
+                  "type"
                 ]
               }
             }
@@ -1410,7 +2973,8 @@
                     "enum": [
                       "notes",
                       "memories",
-                      "urls"
+                      "urls",
+                      "emails"
                     ]
                   },
                   "ids": {
@@ -1419,13 +2983,20 @@
                       "type": "string"
                     }
                   },
+                  "all": {
+                    "type": "boolean",
+                    "description": "When true, move all items of the given type (ids is ignored)"
+                  },
+                  "filterProject": {
+                    "type": "string",
+                    "description": "Filter by source project ID when all=true"
+                  },
                   "project": {
                     "type": "string"
                   }
                 },
                 "required": [
                   "type",
-                  "ids",
                   "project"
                 ]
               }
@@ -1472,7 +3043,8 @@
                     "enum": [
                       "notes",
                       "memories",
-                      "urls"
+                      "urls",
+                      "emails"
                     ]
                   },
                   "ids": {
@@ -1481,13 +3053,20 @@
                       "type": "string"
                     }
                   },
+                  "all": {
+                    "type": "boolean",
+                    "description": "When true, copy all items of the given type (ids is ignored)"
+                  },
+                  "filterProject": {
+                    "type": "string",
+                    "description": "Filter by source project ID when all=true"
+                  },
                   "project": {
                     "type": "string"
                   }
                 },
                 "required": [
                   "type",
-                  "ids",
                   "project"
                 ]
               }
@@ -1567,7 +3146,7 @@
         "tags": [
           "Search"
         ],
-        "summary": "Search knowledge (notes + memories + URLs + pages)",
+        "summary": "Search knowledge (notes + memories + URLs + emails + pages)",
         "requestBody": {
           "required": true,
           "content": {
@@ -1712,8 +3291,58 @@
                   "properties": {
                     "message": {
                       "type": "string"
+                    },
+                    "total_queued": {
+                      "type": "integer"
+                    },
+                    "results": {
+                      "type": "object",
+                      "properties": {
+                        "notes": {
+                          "type": "object",
+                          "properties": {
+                            "queued": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "memory": {
+                          "type": "object",
+                          "properties": {
+                            "queued": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "urls": {
+                          "type": "object",
+                          "properties": {
+                            "queued": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "emails": {
+                          "type": "object",
+                          "properties": {
+                            "queued": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
                     }
                   }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -1783,6 +3412,14 @@
                       "type": "string",
                       "description": "Conversation ID for follow-up messages"
                     },
+                    "conversation_reset": {
+                      "type": "boolean",
+                      "description": "True when the requested conversation was invalid/expired and a new thread was started automatically"
+                    },
+                    "previous_conversation_id": {
+                      "type": "string",
+                      "description": "The stale conversation ID that was replaced, when conversation_reset is true"
+                    },
                     "display_in": {
                       "type": "string",
                       "enum": [
@@ -1792,6 +3429,54 @@
                       "description": "Where results should be displayed"
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat/stream": {
+      "post": {
+        "tags": [
+          "AI Chat"
+        ],
+        "summary": "AI-powered chat with streaming SSE response",
+        "description": "Same intent classification as POST /chat, but streams the answer as Server-Sent Events. For stats and analysis intents, LLM tokens are streamed incrementally. For search/conversation/action intents, the answer is sent as a single token event. A final \"done\" event contains metadata (conversation_id, results, action, display_in).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "User message or query"
+                  },
+                  "conversation_id": {
+                    "type": "string",
+                    "description": "Continue an existing conversation (optional)"
+                  },
+                  "project_id": {
+                    "type": "string",
+                    "description": "Scope search/actions to a project (optional)"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream with events: token ({\"text\":\"...\"}), done ({\"conversation_id\":\"...\", \"results\":[], \"action\":null, \"display_in\":\"panel|chat\"}), error ({\"error\":\"...\"})",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -1947,7 +3632,8 @@
               "enum": [
                 "notes",
                 "memories",
-                "urls"
+                "urls",
+                "emails"
               ]
             }
           },
@@ -2054,7 +3740,8 @@
                     "enum": [
                       "notes",
                       "memories",
-                      "urls"
+                      "urls",
+                      "emails"
                     ]
                   },
                   "id": {
@@ -2117,7 +3804,8 @@
               "enum": [
                 "notes",
                 "memories",
-                "urls"
+                "urls",
+                "emails"
               ]
             }
           },
@@ -2294,7 +3982,8 @@
                     "enum": [
                       "notes",
                       "memory",
-                      "urls"
+                      "urls",
+                      "emails"
                     ]
                   },
                   "target_id": {
@@ -2305,7 +3994,8 @@
                     "enum": [
                       "notes",
                       "memory",
-                      "urls"
+                      "urls",
+                      "emails"
                     ]
                   },
                   "label": {
@@ -2472,6 +4162,938 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Liveness probe",
+        "description": "Returns 200 if the process is up. No auth required. Mounted at /health (not under /api/v1).",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/mongodb": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "MongoDB health",
+        "description": "Returns 200 if MongoDB connection is ready, 503 otherwise. No auth required.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "MongoDB healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MongoDB unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/redis": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Redis health",
+        "description": "Returns 200 if Redis is reachable, 503 otherwise. No auth required.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Redis healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Redis unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/typesense": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Typesense health",
+        "description": "Returns 200 if Typesense is healthy, 503 otherwise. No auth required.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Typesense healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typesense unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/websocket": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "WebSocket health",
+        "description": "Returns 200 if Socket.IO is initialized, 503 otherwise. No auth required.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "WebSocket healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "WebSocket unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "not_initialized"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit-logs": {
+      "get": {
+        "tags": [
+          "Audit Logs"
+        ],
+        "summary": "List audit logs",
+        "description": "Returns paginated audit logs for the current tenant. Supports filtering by resource, action, channel, date range, and free-text search.",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "note",
+                "memory",
+                "url",
+                "project",
+                "link",
+                "user",
+                "passkey",
+                "conversation",
+                "trash"
+              ]
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "create",
+                "update",
+                "delete",
+                "search",
+                "login",
+                "export",
+                "import",
+                "restore",
+                "reindex"
+              ]
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "web",
+                "api",
+                "mcp"
+              ]
+            }
+          },
+          {
+            "name": "mcp_client",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by MCP client name"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Free-text search across resource_id, token_label, mcp_client"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date (inclusive)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date (inclusive)"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditLog"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "pages": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/export": {
+      "post": {
+        "tags": [
+          "Export"
+        ],
+        "summary": "Start a full data export",
+        "description": "Starts an account export for the current tenant. Available to account owners and admins only.",
+        "responses": {
+          "200": {
+            "description": "Export started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "export_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Export already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/export/status": {
+      "get": {
+        "tags": [
+          "Export"
+        ],
+        "summary": "Get export status",
+        "description": "Returns the current export job status for the active account. Available to account owners and admins only.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/export/download/{token}": {
+      "get": {
+        "tags": [
+          "Export"
+        ],
+        "summary": "Download completed export archive",
+        "description": "Downloads the generated ZIP export for the active account. Available to account owners and admins only.",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ZIP archive",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Export not found or expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}/git-repos": {
+      "get": {
+        "tags": [
+          "Git Sync"
+        ],
+        "summary": "List git repos for a project",
+        "description": "Returns all configured git repos for the given project. Requires Pro plan or self-hosted (free) edition.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Project ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repos": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GitRepo"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Plan not eligible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Git Sync"
+        ],
+        "summary": "Add a git repo to a project",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Project ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Friendly label"
+                  },
+                  "repo_url": {
+                    "type": "string",
+                    "description": "HTTPS git repo URL"
+                  },
+                  "branch": {
+                    "type": "string",
+                    "default": "main"
+                  },
+                  "auth_token": {
+                    "type": "string",
+                    "description": "Personal access token (stored encrypted)"
+                  },
+                  "sync_interval": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Sync interval in minutes (min 5)"
+                  },
+                  "notes_path": {
+                    "type": "string",
+                    "default": "notes",
+                    "description": "Directory mapped to notes"
+                  },
+                  "memories_path": {
+                    "type": "string",
+                    "default": "memories",
+                    "description": "Directory mapped to memories"
+                  },
+                  "sync_path": {
+                    "type": "string",
+                    "default": "/",
+                    "description": "Subfolder within repo to sync"
+                  },
+                  "trash_on_delete": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "required": [
+                  "repo_url"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repo": {
+                      "$ref": "#/components/schemas/GitRepo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Plan not eligible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git-repos/{id}": {
+      "get": {
+        "tags": [
+          "Git Sync"
+        ],
+        "summary": "Get a git repo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repo": {
+                      "$ref": "#/components/schemas/GitRepo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Git Sync"
+        ],
+        "summary": "Update a git repo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "repo_url": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "type": "string"
+                  },
+                  "auth_token": {
+                    "type": "string"
+                  },
+                  "sync_interval": {
+                    "type": "integer"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "notes_path": {
+                    "type": "string"
+                  },
+                  "memories_path": {
+                    "type": "string"
+                  },
+                  "sync_path": {
+                    "type": "string"
+                  },
+                  "trash_on_delete": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repo": {
+                      "$ref": "#/components/schemas/GitRepo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Git Sync"
+        ],
+        "summary": "Delete a git repo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git-repos/{id}/sync": {
+      "post": {
+        "tags": [
+          "Git Sync"
+        ],
+        "summary": "Trigger manual sync",
+        "description": "Immediately syncs the git repo (pull + push). Returns when complete.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sync complete",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Sync failed or in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/git-repos/{id}/status": {
+      "get": {
+        "tags": [
+          "Git Sync"
+        ],
+        "summary": "Get sync status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success",
+                        "failed",
+                        "in_progress"
+                      ],
+                      "nullable": true
+                    },
+                    "last_synced_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
