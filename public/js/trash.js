@@ -3,7 +3,7 @@
 	var listEl, emptyBtn, selectAllCb, batchActions, batchCount, batchRestoreBtn, batchDeleteBtn, filterBtns;
 	var currentFilter = '';
 
-	var ICONS = { notes: 'bi-file-text', memories: 'bi-lightbulb', urls: 'bi-link-45deg' };
+	var ICONS = { notes: 'ph-file-text', memories: 'ph-lightbulb', urls: 'ph-link' };
 	var LABELS = { notes: 'Note', memories: 'Memory', urls: 'URL' };
 
 	function getSelected() {
@@ -46,14 +46,14 @@
 						+ '<div class="batch-cb-wrap me-2 pt-1"><input type="checkbox" class="form-check-input batch-cb" value="' + item._id + '" data-type="' + item._type + '"></div>'
 						+ '<div class="flex-grow-1">'
 						+ '<div class="d-flex align-items-center gap-2 mb-1">'
-						+ '<span class="badge text-bg-secondary tag-badge rounded-pill"><i class="bi ' + (ICONS[item._type] || 'bi-file') + '"></i> ' + (LABELS[item._type] || item._type) + '</span>'
+						+ '<span class="badge text-bg-secondary tag-badge rounded-pill"><i class="ph-light ' + (ICONS[item._type] || 'ph-file') + '"></i> ' + (LABELS[item._type] || item._type) + '</span>'
 						+ '<strong>' + (item.title || item.url || 'Untitled') + '</strong>'
 						+ '</div>'
 						+ '<small class="text-muted">Trashed ' + new Date(item.trashed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</small>'
 						+ '</div>'
 						+ '<div class="btn-group btn-group-sm ms-2">'
-						+ '<button class="btn btn-link restore-btn" title="Restore"><i class="bi bi-arrow-counterclockwise"></i></button>'
-						+ '<button class="btn btn-link permanent-delete-btn" title="Delete forever"><i class="bi bi-trash"></i></button>'
+						+ '<button class="btn btn-link restore-btn" title="Restore"><i class="ph-light ph-arrow-counter-clockwise"></i></button>'
+						+ '<button class="btn btn-link permanent-delete-btn" title="Delete forever"><i class="ph-light ph-trash"></i></button>'
 						+ '</div></div>';
 				})
 				.join('')

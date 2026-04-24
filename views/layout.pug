@@ -12,12 +12,12 @@ html(lang="en")
 		link(href=`/static/v-${v}/css/kumbukum-template1-strict.css` rel="stylesheet")
 		include includes/sentry
 		block head
-	body.kk-template1
+	body.kk-template1(class=(hide_chat_sidebar ? 'kk-no-chat-sidebar' : ''))
 		block body
 			include includes/avatar
 			if impersonating
 				.alert.alert-warning.text-center.mb-0.rounded-0.py-1(style="position:sticky;top:0;z-index:1060")
-					i.bi.bi-shield-exclamation.me-2
+					i.ph-light.ph-shield-warning.me-2
 					strong Sysadmin
 					|  — viewing as #{impersonatingName}
 					button.btn.btn-sm.btn-outline-dark.ms-3#exit-impersonation Exit
@@ -34,7 +34,7 @@ html(lang="en")
 							if accessible_tenants && accessible_tenants.length > 1
 								.dropdown.me-2
 									button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
-										i.bi.bi-buildings
+										i.ph-light.ph-buildings
 										span= active_tenant ? active_tenant.name : 'Select account'
 									ul.dropdown-menu.dropdown-menu-end
 										each tenant in accessible_tenants
@@ -68,11 +68,11 @@ html(lang="en")
 							.d-flex.justify-content-between.align-items-center.mb-3
 								h6.mb-0 My Projects
 								button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
-									i.bi.bi-plus
+									i.ph-light.ph-plus
 							#project-list
 							
 							a.d-flex.align-items-center.text-decoration-none.text-muted.small(href="/trash")
-								i.bi.bi-trash.ms-2
+								i.ph-light.ph-trash.ms-2
 								span.ms-2 Global Trash
 								span.ms-auto.d-none#trash-count-badge
 
@@ -80,10 +80,10 @@ html(lang="en")
 						#chat-results-panel.d-none.mb-4
 							.d-flex.justify-content-between.align-items-center.mb-3
 								h6.mb-0
-									i.bi.bi-search.me-1
+									i.ph-light.ph-magnifying-glass.me-1
 									| Chat Results
 								button.btn.btn-sm.btn-outline-secondary#close-chat-results(title="Close results")
-									i.bi.bi-x-lg
+									i.ph-light.ph-x
 							#chat-results-list
 						#page-content
 							block content
@@ -119,7 +119,7 @@ html(lang="en")
 							.mb-3.position-relative
 								.form-text Links
 								.source-search-wrap
-									i.bi.bi-search.source-search-icon
+									i.ph-light.ph-magnifying-glass.source-search-icon
 									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 
@@ -144,7 +144,7 @@ html(lang="en")
 							.mb-3.position-relative
 								.form-text Links
 								.source-search-wrap
-									i.bi.bi-search.source-search-icon
+									i.ph-light.ph-magnifying-glass.source-search-icon
 									input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 								.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 
@@ -180,7 +180,7 @@ html(lang="en")
 								.mb-3.px-3.position-relative
 									.form-text Links (optional)
 									.source-search-wrap
-										i.bi.bi-search.source-search-icon
+										i.ph-light.ph-magnifying-glass.source-search-icon
 										input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 									.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
 							#rm-url-pane-pages.d-none.px-3.pb-2
@@ -188,10 +188,10 @@ html(lang="en")
 									.small.text-muted Crawled page URLs (opens in new tab)
 									.d-flex.gap-2
 										button.btn.btn-sm.btn-outline-secondary(type="button")#rm-url-resync-btn
-											i.bi.bi-arrow-repeat.me-1
+											i.ph-light.ph-arrows-clockwise.me-1
 											| Resync now
 										button.btn.btn-sm.btn-outline-danger(type="button")#rm-url-delete-pages-btn
-											i.bi.bi-trash.me-1
+											i.ph-light.ph-trash.me-1
 											| Delete pages
 								.list-group#rm-url-crawl-list
 								button.btn.btn-sm.btn-outline-secondary.mt-2.d-none(type="button")#rm-url-crawl-load-more-btn Load more
@@ -241,11 +241,11 @@ html(lang="en")
 
 					.modal-footer
 						button.btn.btn-outline-danger.btn-sm.me-auto.d-none#rm-delete-btn
-							i.bi.bi-trash.me-1
+							i.ph-light.ph-trash.me-1
 							| Delete
 						button.btn.btn-secondary.btn-sm(type="button" data-bs-dismiss="modal") Close
 						button.btn.btn-primary.btn-sm#rm-save-btn
-							i.bi.bi-check-lg.me-1
+							i.ph-light.ph-check.me-1
 							| Save
 
 		script(src="/socket.io/socket.io.js")

@@ -494,6 +494,14 @@ body.kk-template1 .row.h-100 > #chat-sidebar {
   display: flex;
   flex-direction: column;
 }
+body.kk-template1.kk-no-chat-sidebar .row.h-100 > #main-content {
+  flex: 1 1 auto;
+  width: calc(83.333% - 4px);
+  max-width: calc(83.333% - 4px);
+}
+body.kk-template1.kk-no-chat-sidebar .row.h-100 > #chat-sidebar {
+  display: none !important;
+}
 
 /* ── Chat sidebar scrolling fix ── */
 body.kk-template1 #chat-sidebar .chat-sidebar {
@@ -862,9 +870,9 @@ body.kk-template1 .input-group-text {
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 .batch-floating-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 12px;
   padding: 10px 16px;
   border-radius: 12px;
@@ -872,6 +880,15 @@ body.kk-template1 .input-group-text {
   color: #fff;
   font-size: .85rem;
   box-shadow: 0 4px 20px rgba(123, 108, 255, .35);
+}
+.batch-floating-inner > .d-flex.align-items-center.gap-3 {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center !important;
+  justify-content: center;
+  column-gap: 16px;
+  row-gap: 10px;
+  min-width: 0;
 }
 .batch-floating-count {
   font-weight: 700;
@@ -900,7 +917,10 @@ body.kk-template1 .input-group-text {
   color: #fff !important;
 }
 .batch-floating-banner {
+  flex: 0 0 100%;
   color: rgba(255, 255, 255, .85) !important;
+  text-align: center;
+  white-space: normal;
 }
 .batch-floating-banner a {
   color: #fff !important;

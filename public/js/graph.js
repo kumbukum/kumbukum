@@ -126,7 +126,7 @@
                 <h6 class="mt-2 mb-1">${escapeHtml(data.label)}</h6>
                 <p class="text-muted small mb-2">${connections} connection${connections !== 1 ? 's' : ''}</p>
                 <button type="button" class="btn btn-sm btn-outline-primary" id="graph-open-item" data-type="${data.type}" data-id="${data.id}">
-                    <i class="bi bi-box-arrow-up-right me-1"></i>Open ${typeLabel[data.type] || 'item'}
+                    <i class="ph-light ph-arrow-square-out me-1"></i>Open ${typeLabel[data.type] || 'item'}
                 </button>
                 <hr>
                 <h6 class="small text-muted">Connections</h6>
@@ -145,7 +145,7 @@
         cy.elements().removeClass('highlighted dimmed');
         document.getElementById('graph-info-panel').innerHTML = `
             <div class="text-muted small text-center py-5">
-                <i class="bi bi-cursor d-block fs-3 mb-2"></i>
+                <i class="ph-light ph-cursor d-block fs-3 mb-2"></i>
                 Click a node to see details
             </div>
         `;

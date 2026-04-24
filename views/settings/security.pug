@@ -6,7 +6,7 @@ block settings
 	.card.mb-4
 		.card-body
 			h5.card-title
-				i.bi.bi-lock
+				i.ph-light.ph-lock
 				span.ms-2 Reset Password
 			p.text-muted A new random password will be generated. Copy it before closing.
 			.text-end
@@ -17,18 +17,18 @@ block settings
 					.input-group
 						input.form-control#new-password-value(type="text" readonly)
 						button.btn.btn-outline-secondary#copy-password-btn
-							i.bi.bi-clipboard
+							i.ph-light.ph-clipboard
 							|  Copy
 					button.btn.btn-primary.mt-2#password-copied-btn I copied the password
 
 	.card.mb-4
 		.card-body
 			h5.card-title
-				i.bi.bi-shield-lock.me-2
+				i.ph-light.ph-shield-check.me-2
 				| Two-Factor Authentication
 			if user.totp_enabled
 				p.text-success
-					i.bi.bi-check-circle.me-1
+					i.ph-light.ph-check-circle.me-1
 					| 2FA is enabled
 				button.btn.btn-outline-danger#disable-2fa Disable 2FA
 			else
@@ -52,7 +52,7 @@ block settings
 	.card
 		.card-body
 			h5.card-title
-				i.bi.bi-fingerprint.me-2
+				i.ph-light.ph-fingerprint.me-2
 				| Passkeys
 			#passkey-list.mb-3
 			.text-end

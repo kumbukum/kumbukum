@@ -295,6 +295,14 @@ var ROUTES = {
 	'/settings/subscription': { title: 'Subscription', partial: '/ajax/section/settings/subscription' },
 };
 
+function shouldHideChatSidebar(path) {
+	return path === '/settings' || path.indexOf('/settings/') === 0;
+}
+
+function syncLayoutForPath(path) {
+	document.body.classList.toggle('kk-no-chat-sidebar', shouldHideChatSidebar(path));
+}
+
 // Dashboard section — managed here since it depends on app.js functions
 window.__sections = window.__sections || {};
 window.__sections.dashboard = {
@@ -369,6 +377,7 @@ async function navigateTo(path, opts) {
 	}
 	if (__isNavigating) return;
 	__isNavigating = true;
+	syncLayoutForPath(path);
 
 	try {
 		unmountCurrent();
@@ -484,6 +493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 	// Mount initial section for SPA
 	var path = window.location.pathname;
+	syncLayoutForPath(path);
 	if (ROUTES[path]) {
 		history.replaceState({ spaPath: path }, '');
 		mountCurrent(path);

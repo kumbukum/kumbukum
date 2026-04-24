@@ -138,10 +138,10 @@
 				<div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
 					<div class="flex-grow-1">
 						<div class="d-flex align-items-center">
-							<i class="bi bi-fingerprint me-2"></i>
+							<i class="ph-light ph-fingerprint me-2"></i>
 							<strong class="passkey-name">${escapeHtml(pk.name || 'Passkey')}</strong>
 							<button class="btn btn-sm btn-link p-0 ms-2 rename-passkey" data-id="${pk._id}" data-name="${escapeHtml(pk.name || 'Passkey')}" title="Rename">
-								<i class="bi bi-pencil"></i>
+								<i class="ph-light ph-pencil"></i>
 							</button>
 						</div>
 						<div class="ms-4 ps-1">
@@ -151,7 +151,7 @@
 						${detailStr}
 					</div>
 					<button class="btn btn-sm btn-outline-danger delete-passkey ms-2" data-id="${pk._id}">
-						<i class="bi bi-trash"></i>
+						<i class="ph-light ph-trash"></i>
 					</button>
 				</div>
 			`}).join('');
@@ -313,7 +313,7 @@
 							+ '<div class="small text-muted mt-1">Granted ' + formatDate(consent.granted_at) + (consent.last_used_at ? ' · Last used ' + formatDate(consent.last_used_at) : '') + '</div>'
 							+ '<div class="d-flex flex-wrap gap-1 mt-2">' + (consent.scopes || []).map(function (scope) { return '<span class="badge text-bg-secondary">' + escapeHtml(scope) + '</span>'; }).join('') + '</div>'
 						+ '</div>'
-						+ '<button class="btn btn-sm btn-outline-danger oauth-revoke-consent" data-id="' + consent._id + '"><i class="bi bi-x-circle"></i></button>'
+						+ '<button class="btn btn-sm btn-outline-danger oauth-revoke-consent" data-id="' + consent._id + '"><i class="ph-light ph-x-circle"></i></button>'
 					+ '</div>'
 				+ '</div>';
 			}).join('') + '</div>';
@@ -357,7 +357,7 @@
 							+ '<div class="small text-muted">Redirect URIs</div>'
 							+ '<ul class="small mb-0">' + (client.redirect_uris || []).map(function (uri) { return '<li><code>' + escapeHtml(uri) + '</code></li>'; }).join('') + '</ul>'
 						+ '</div>'
-						+ '<button class="btn btn-sm btn-outline-danger oauth-delete-client" data-id="' + client._id + '"><i class="bi bi-trash"></i></button>'
+						+ '<button class="btn btn-sm btn-outline-danger oauth-delete-client" data-id="' + client._id + '"><i class="ph-light ph-trash"></i></button>'
 					+ '</div>'
 				+ '</div>';
 			}).join('') + '</div>';

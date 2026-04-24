@@ -5,35 +5,35 @@ block content
 		.col-md-3
 			.list-group.mb-3
 				a.list-group-item.list-group-item-action(href="/settings/profile" class=(title === 'Profile' ? 'active' : ''))
-					i.bi.bi-person.me-2
+					i.ph-light.ph-user.me-2
 					| Profile
 				a.list-group-item.list-group-item-action(href="/settings/security" class=(title === 'Security' ? 'active' : ''))
-					i.bi.bi-shield-lock.me-2
+					i.ph-light.ph-shield-check.me-2
 					| Security
 				if can_manage_team
 					a.list-group-item.list-group-item-action(href="/settings/team" class=(title === 'My Team' ? 'active' : ''))
-						i.bi.bi-people.me-2
+						i.ph-light.ph-users.me-2
 						| My Team
 				a.list-group-item.list-group-item-action(href="/settings/tokens" class=(title === 'Access Tokens' ? 'active' : ''))
-					i.bi.bi-key.me-2
+					i.ph-light.ph-key.me-2
 					| Access Tokens
 				if can_manage_restricted_settings
 					a.list-group-item.list-group-item-action(href="/settings/typesense" class=(title === 'Typesense' ? 'active' : ''))
-						i.bi.bi-search.me-2
+						i.ph-light.ph-magnifying-glass.me-2
 						| Search index
 				a.list-group-item.list-group-item-action(href="/settings/usage" class=(title === 'Usage' ? 'active' : ''))
-					i.bi.bi-bar-chart.me-2
+					i.ph-light.ph-chart-bar.me-2
 					| Usage
 				if can_manage_restricted_settings
 					a.list-group-item.list-group-item-action(href="/settings/export" class=(title === 'Export' ? 'active' : ''))
-						i.bi.bi-box-arrow-up.me-2
+						i.ph-light.ph-box-arrow-up.me-2
 						| Export
 					a.list-group-item.list-group-item-action(href="#modal" data-bs-toggle="modal" data-bs-target="#logsModal")
-						i.bi.bi-journal-text.me-2
+						i.ph-light.ph-notebook.me-2
 						| Activity Logs
 				if is_hosted
 					a.list-group-item.list-group-item-action(href="/settings/subscription" class=(title === 'Subscription' ? 'active' : ''))
-						i.bi.bi-credit-card.me-2
+						i.ph-light.ph-credit-card.me-2
 						| Subscription
 		.col-md-9
 			block settings

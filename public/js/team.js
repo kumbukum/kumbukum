@@ -46,7 +46,7 @@
 					? '<span class="badge text-bg-dark text-uppercase">owner</span>'
 					: '';
 				var removeButton = (!isOwner && !isCurrentUser)
-					? '<button class="btn btn-sm btn-outline-danger team-remove-member" data-id="' + member._id + '"><i class="bi bi-trash"></i></button>'
+					? '<button class="btn btn-sm btn-outline-danger team-remove-member" data-id="' + member._id + '"><i class="ph-light ph-trash"></i></button>'
 					: '';
 				var lastLogin = user.last_login ? '<small class="text-muted">Last login ' + escapeHtml(new Date(user.last_login).toLocaleDateString()) + '</small>' : '<small class="text-muted">No recent login recorded</small>';
 
@@ -98,7 +98,7 @@
 						+ '<div class="text-muted small">' + subtitle + '</div>'
 						+ '<small class="text-muted">Expires ' + escapeHtml(new Date(invite.expires_at).toLocaleDateString()) + '</small>'
 					+ '</div>'
-					+ '<button class="btn btn-sm btn-outline-danger team-cancel-invite" data-id="' + invite._id + '"><i class="bi bi-x-lg"></i></button>'
+					+ '<button class="btn btn-sm btn-outline-danger team-cancel-invite" data-id="' + invite._id + '"><i class="ph-light ph-x"></i></button>'
 				+ '</div>';
 			}).join('') + '</div>';
 

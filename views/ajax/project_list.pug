@@ -3,14 +3,14 @@ each p in projects
 	.card.project-item.mb-3.position-relative(data-id=p._id class=(p._id.toString() === activeProjectId ? 'active' : ''))
 		.project-drop-overlay.d-none
 			.project-drop-overlay-inner
-				i.bi.bi-cloud-arrow-up
+				i.ph-light.ph-cloud-arrow-up
 				span Upload as notes
 		.card-body.p-0.pb-3
 			.d-flex.align-items-center.py-2.ps-2.p-3.bg-hover-light
 				span.project-color(style=`background:${p.color}`)
 				span.project-item-name #{p.name}
 				//- if p.is_default
-				//- 	i.bi.bi-star-fill.text-warning.ms-auto(style="font-size:0.7rem")
+				//- 	i.ph-light.ph-star.text-warning.ms-auto(style="font-size:0.7rem")
 			.d-flex.align-items-center.mt-1.py-1.pe-3.bg-hover-light.project-item-section.position-relative
 				a.stretched-link(href="/notes")
 				.pe-2.section-link
@@ -40,7 +40,7 @@ each p in projects
 				.d-flex.align-items-center.py-1.pe-3.bg-light-subtle.project-item-section
 					.pe-2.section-link.text-muted
 						span
-							i.bi.bi-lock-fill.me-1
+							i.ph-light.ph-lock.me-1
 							| Emails (Pro)
 					if is_hosted
 						a.ms-auto.section-link.small(href="/settings/subscription") Upgrade

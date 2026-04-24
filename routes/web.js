@@ -45,6 +45,7 @@ router.use(async (req, res, next) => {
 	res.locals.impersonating = req.session.impersonating || false;
 	res.locals.impersonatingName = req.session.impersonatingName || '';
 	res.locals.is_hosted = is_hosted;
+	res.locals.hide_chat_sidebar = req.path === '/settings' || req.path.startsWith('/settings/');
 	next();
 });
 

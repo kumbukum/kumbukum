@@ -14,6 +14,79 @@ body {
 	height: 100vh;
 }
 
+.ph-light {
+	display: inline-block;
+	font-size: 1.12em;
+	line-height: 1;
+	vertical-align: -0.155em;
+}
+
+.btn .ph-light,
+.nav-link .ph-light,
+.dropdown-item .ph-light,
+.list-group-item .ph-light,
+.batch-floating-bar .ph-light {
+	font-size: 1.18em;
+}
+
+.batch-floating-bar .btn .ph-light {
+	font-size: 1.24em;
+	vertical-align: -0.18em;
+}
+
+body.kk-no-chat-sidebar #chat-sidebar,
+body.kk-no-chat-sidebar #chat-results-panel {
+	display: none !important;
+}
+
+@media (min-width: 768px) {
+	body.kk-no-chat-sidebar #page-content > .row > .col-md-3:first-child {
+		flex: 0 0 200px;
+		width: 200px;
+		max-width: 200px;
+	}
+
+	body.kk-no-chat-sidebar #page-content > .row > .col-md-9:last-child {
+		flex: 1 1 0;
+		width: auto;
+		max-width: none;
+	}
+}
+
+.swal2-icon.swal2-phosphor-icon {
+	border: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4.25rem;
+	height: 4.25rem;
+	margin: 1.5rem auto 0.75rem;
+	font-size: 1rem;
+}
+
+.swal2-icon.swal2-phosphor-icon .ph-light {
+	font-size: 4.25rem;
+	line-height: 1;
+	vertical-align: 0;
+}
+
+.swal2-icon.swal2-success.swal2-phosphor-icon {
+	color: #a5dc86;
+}
+
+.swal2-icon.swal2-error.swal2-phosphor-icon {
+	color: #f27474;
+}
+
+.swal2-icon.swal2-warning.swal2-phosphor-icon {
+	color: #f8bb86;
+}
+
+.swal2-icon.swal2-info.swal2-phosphor-icon,
+.swal2-icon.swal2-question.swal2-phosphor-icon {
+	color: #3fc3ee;
+}
+
 body:has(.sidebar) {
 	overflow: hidden;
 	display: flex;
@@ -511,6 +584,10 @@ small,
 /* Batch action toolbar */
 #batch-toolbar {
 	padding: 0.25rem 0;
+}
+
+#batch-toolbar .btn {
+	font-weight: 800 !important;
 }
 
 .batch-actions {
