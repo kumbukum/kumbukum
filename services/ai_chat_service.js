@@ -542,6 +542,13 @@ async function handleConversation({ hostId, userId, query, conversationId, proje
 // Shared Search (used by both chat and MCP)
 // ────────────────────────────────────────────────────────────────────
 
+function resolveSearchExcludeFields(excludeFields, type) {
+	if (excludeFields && typeof excludeFields === 'object' && !Array.isArray(excludeFields)) {
+		return excludeFields[type] || excludeFields.default || 'embedding';
+	}
+	return excludeFields || 'embedding';
+}
+
 /**
  * Search across all knowledge types. Shared between web chat and MCP.
  *
@@ -550,10 +557,11 @@ async function handleConversation({ hostId, userId, query, conversationId, proje
  * @param {object} options
  * @param {string} options.projectId - Filter by project (optional)
  * @param {number} options.perPage - Results per collection (default 5)
+ * @param {string|object} options.exclude_fields - Typesense fields to exclude from result documents (optional)
  * @returns {object} Raw Typesense results keyed by type
  */
 export async function searchKnowledge(hostId, query, options = {}) {
-	const { projectId, perPage = 5, includeEmails = true } = options;
+	const { projectId, perPage = 5, includeEmails = true, exclude_fields } = options;
 	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
 
 	if (projectId) {
@@ -566,6 +574,7 @@ export async function searchKnowledge(hostId, query, options = {}) {
 			prefix: false,
 			per_page: perPage,
 			filter_by: `project_id:=${projectId}`,
+			exclude_fields: resolveSearchExcludeFields(exclude_fields, type),
 		}));
 		const results = await ts.multiSearch.perform({ searches });
 		const merged = {};
@@ -575,7 +584,7 @@ export async function searchKnowledge(hostId, query, options = {}) {
 		return merged;
 	}
 
-	return searchAll(hostId, query, { perPage, includeEmails });
+	return searchAll(hostId, query, { perPage, includeEmails, exclude_fields });
 }
 
 // ────────────────────────────────────────────────────────────────────

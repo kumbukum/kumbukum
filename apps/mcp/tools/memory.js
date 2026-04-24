@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+const MCP_KNOWLEDGE_SEARCH_EXCLUDE_FIELDS = {
+  notes: 'embedding,text_content',
+  memory: 'embedding,content',
+  urls: 'embedding,text_content',
+  emails: 'embedding,text_content,attachment_text_content',
+  pages: 'embedding,text_content',
+};
+const MCP_MEMORY_SEARCH_EXCLUDE_FIELDS = 'embedding,content';
+
 /**
  * MCP tool definitions: Memory
  */
@@ -32,6 +41,7 @@ export function memoryTools(api, defaultProjectId) {
           query: args.query,
           options: {
             perPage: args.per_page,
+            exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
@@ -49,6 +59,7 @@ export function memoryTools(api, defaultProjectId) {
           query: args.query,
           options: {
             perPage: args.per_page,
+            exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
@@ -113,6 +124,9 @@ export function memoryTools(api, defaultProjectId) {
           query: args.query,
           project_id: args.project_id,
           per_page: args.per_page,
+          options: {
+            exclude_fields: MCP_KNOWLEDGE_SEARCH_EXCLUDE_FIELDS,
+          },
         });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },

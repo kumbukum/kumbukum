@@ -8,6 +8,13 @@ let client;
 
 const _ts_exlude_default = 'embedding';
 
+function resolveExcludeFields(excludeFields, type) {
+	if (excludeFields && typeof excludeFields === 'object' && !Array.isArray(excludeFields)) {
+		return excludeFields[type] || excludeFields.default || _ts_exlude_default;
+	}
+	return excludeFields || _ts_exlude_default;
+}
+
 const _token_separators = ['+', '-', '@', '.', '_', ' ', '=', '\\', ';', ',', ':', "'", '|', '&', '(', ')', '[', ']', '{', '}', '<', '>', '/', '?', '!', '#', '$', '%', '^', '*', '~', '`', '"', '\n', '\t', '\r', '\f', '\v'];
 
 // Track conversation models whose api_key has been synced this process lifetime
@@ -412,7 +419,7 @@ export async function searchCollection(host_id, type, query, options = {}) {
 		prefix: false,
 		per_page: options.perPage || 10,
 		page: options.page || 1,
-		exclude_fields: options.exclude_fields || _ts_exlude_default,
+		exclude_fields: resolveExcludeFields(options.exclude_fields, type),
 		...options.extra,
 	};
 	if (options.include_fields) params.include_fields = options.include_fields;
@@ -483,7 +490,7 @@ export async function searchAll(host_id, query, options = {}) {
 		query_by: 'embedding',
 		prefix: false,
 		per_page: options.perPage || 5,
-		exclude_fields: options.exclude_fields || _ts_exlude_default,
+		exclude_fields: resolveExcludeFields(options.exclude_fields, type),
 	}));
 
 	const results = await withTypesenseResilience(

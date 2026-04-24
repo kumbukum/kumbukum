@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const MCP_NOTES_SEARCH_EXCLUDE_FIELDS = 'embedding,text_content';
+
 /**
  * MCP tool definitions: Notes
  */
@@ -87,6 +89,7 @@ export function noteTools(api, defaultProjectId) {
           query: args.query,
           options: {
             perPage: args.per_page,
+            exclude_fields: MCP_NOTES_SEARCH_EXCLUDE_FIELDS,
           },
         });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
