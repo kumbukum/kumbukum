@@ -15,10 +15,34 @@ import { emailTools } from './tools/emails.js';
 import { projectTools } from './tools/projects.js';
 import { graphTools } from './tools/graph.js';
 import { gitSyncTools } from './tools/git_sync.js';
+import { MCP_SERVER_INSTRUCTIONS } from './instructions.js';
 import { buildProtectedResourceMetadata } from '../../modules/oauth.js';
 
 const PORT = mcpConfig.port;
 const API_BASE_URL = mcpConfig.apiBaseUrl;
+const MCP_TOOL_TELEMETRY = process.env.MCP_TOOL_TELEMETRY === 'true';
+
+function estimateTokens(value) {
+  return Math.ceil(String(value || '').length / 4);
+}
+
+function summarizeToolResult(result) {
+  const content = Array.isArray(result?.content) ? result.content : [];
+  const text = content
+    .filter((item) => item?.type === 'text')
+    .map((item) => item.text || '')
+    .join('\n');
+  return {
+    content_items: content.length,
+    text_chars: text.length,
+    estimated_tokens: estimateTokens(text),
+  };
+}
+
+function logToolTelemetry(event) {
+  if (!MCP_TOOL_TELEMETRY) return;
+  console.log(JSON.stringify({ event: 'mcp_tool_call', ...event }));
+}
 
 function extractToken(req) {
   return extractRequestAuth(req.headers)?.token || null;
@@ -67,25 +91,7 @@ async function createServer(apiAuth, { projectId } = {}) {
   const server = new McpServer({
     name: 'kumbukum',
     version: '0.1.0',
-    instructions: `You are connected to Kumbukum, a shared memory layer platform.
-
-## Primary Search
-Use \`search_knowledge\` as your primary tool for ANY search query — it returns results from notes, memories, URLs, and crawled pages in a single call.
-
-## Memory
-- You have persistent memory via the \`store_memory\` and \`recall_memory\` tools.
-- **Before starting any task**, call \`recall_memory\` with a query describing the task to check for relevant prior context, decisions, or notes.
-- **After completing significant work**, call \`store_memory\` to save key decisions, outcomes, or context for future sessions.
-- **Before creating tags**, call \`suggest_memory_tags\` to reuse existing tags and avoid duplicates.
-- You can also use \`search_memory\` (alias of \`recall_memory\`) if your client prefers search-style naming.
-- Memories are personal — scoped to the authenticated user — and searchable by meaning, not just keywords.
-
-## Data Types
-- **Notes**: Rich text documents organized by project
-- **Memory**: Facts, decisions, context — your personal knowledge base
-- **URLs**: Saved web pages with extracted content, optionally with full-site crawling
-- **Emails**: Ingested emails with subject, recipients, body text, and thread references
-- **Projects**: Organize all data into projects — create, update, delete, and list projects`,
+    instructions: MCP_SERVER_INSTRUCTIONS,
   });
 
   // Register all tools, wrapping handlers to inject MCP client identity
@@ -102,11 +108,38 @@ Use \`search_knowledge\` as your primary tool for ANY search query — it return
   for (const [name, tool] of Object.entries(allTools)) {
     const originalHandler = tool.handler;
     const wrappedHandler = async (params, extra) => {
+      const started = Date.now();
       const cv = server.server.getClientVersion();
+      const client = cv ? `${cv.name || 'unknown'}/${cv.version || '?'}` : 'unknown';
       if (cv) {
-        api.setMcpClient(`${cv.name || 'unknown'}/${cv.version || '?'}`);
+        api.setMcpClient(client);
       }
-      return originalHandler(params, extra);
+      try {
+        const result = await originalHandler(params, extra);
+        logToolTelemetry({
+          tool: name,
+          client,
+          duration_ms: Date.now() - started,
+          args_chars: JSON.stringify(params || {}).length,
+          args_estimated_tokens: estimateTokens(JSON.stringify(params || {})),
+          requested_per_page: params?.per_page || params?.limit || null,
+          success: true,
+          result: summarizeToolResult(result),
+        });
+        return result;
+      } catch (err) {
+        logToolTelemetry({
+          tool: name,
+          client,
+          duration_ms: Date.now() - started,
+          args_chars: JSON.stringify(params || {}).length,
+          args_estimated_tokens: estimateTokens(JSON.stringify(params || {})),
+          requested_per_page: params?.per_page || params?.limit || null,
+          success: false,
+          error: err?.message || 'unknown',
+        });
+        throw err;
+      }
     };
     server.tool(name, tool.description, tool.inputSchema, wrappedHandler);
   }

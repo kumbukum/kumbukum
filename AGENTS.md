@@ -10,9 +10,13 @@ This project uses Kumbukum as its knowledge store via MCP.
 For **Cursor** (global User Rules, `.cursor/rules`, MCP server naming such as `user-kumbukum`), see [docs/mcp/cursor-ide.md](docs/mcp/cursor-ide.md) in this repo — VitePress: **MCP → Cursor (IDE)**.
 
 ### Before Starting Any Task
-1. Call `recall_memory` or `search_knowledge` with a query describing the task to check for relevant prior context, decisions, or notes
-2. Review any related notes with `search_notes`
-3. Use the returned context to inform your approach
+1. Make one specific retrieval call before work:
+   - Default: `search_knowledge` with a task-focused query and `per_page: 3`
+   - Memory-only tasks: `recall_memory` with `per_page: 3` for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings
+   - Notes/spec tasks: `search_notes` with `per_page: 3` only for specs, docs, ADRs, structured write-ups, or when the first search points to notes
+2. Do not call `search_notes` after every `search_knowledge` call
+3. Read only the top 1-2 exact items, then broaden the query or raise `per_page` only if results are weak
+4. Use the returned context to inform your approach
 
 ### After Completing Significant Work
 1. Call `store_memory` to save key decisions, outcomes, and context for future sessions; use `create_note` when the outcome is structured documentation (specs, ADRs)
@@ -43,9 +47,9 @@ Use `save_url` to bookmark and extract content from web pages.
 After saving a URL, use `create_link` to connect it to related notes or memories.
 
 ### Searching
-- `search_knowledge` — Search across ALL types (notes, memories, URLs). **Use this first.**
-- `search_notes` — Search only notes
-- `recall_memory` — Search only memories
+- `search_knowledge` — Search across ALL types (notes, memories, URLs). **Default first call; use `per_page: 3`.**
+- `recall_memory` — Search only memories for prior decisions, debugging history, preferences, and task outcomes
+- `search_notes` — Search only notes; use only for specs/docs/ADRs or when earlier results point to notes
 - `search_urls` — Search only saved URLs
 
 ### Tagging
@@ -81,4 +85,3 @@ After saving a URL, use `create_link` to connect it to related notes or memories
 - Indent code
 - Never compress or “minify” code
 - Log lines or variables are always writen in a single line
-

@@ -22,23 +22,35 @@ export function memoryTools(api, defaultProjectId) {
     },
 
     recall_memory: {
-      description: 'Search memories semantically — find memories by meaning, not just keywords',
+      description: 'Search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. Use per_page: 3 for the first focused retrieval.',
       inputSchema: {
         query: z.string().describe('What to search for'),
+        per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
       },
       handler: async (args) => {
-        const { results } = await api.post('/memories/search', { query: args.query });
+        const { results } = await api.post('/memories/search', {
+          query: args.query,
+          options: {
+            perPage: args.per_page,
+          },
+        });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
     search_memory: {
-      description: 'Alias for recall_memory — search memories semantically',
+      description: 'Alias for recall_memory — search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. Use per_page: 3 for the first focused retrieval.',
       inputSchema: {
         query: z.string().describe('What to search for'),
+        per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
       },
       handler: async (args) => {
-        const { results } = await api.post('/memories/search', { query: args.query });
+        const { results } = await api.post('/memories/search', {
+          query: args.query,
+          options: {
+            perPage: args.per_page,
+          },
+        });
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
@@ -90,7 +102,7 @@ export function memoryTools(api, defaultProjectId) {
     },
 
     search_knowledge: {
-      description: 'Search across ALL data types (notes, memories, URLs, crawled pages) — use this as your primary search tool for any query. Optionally scope to a project.',
+      description: 'Search across ALL data types (notes, memories, URLs, crawled pages) — default first retrieval tool. Use a specific query with per_page: 3, then broaden or raise per_page only if results are weak.',
       inputSchema: {
         query: z.string().describe('Search query'),
         project_id: z.string().optional().describe('Filter results to a specific project (optional)'),

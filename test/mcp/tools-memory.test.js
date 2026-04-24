@@ -65,11 +65,21 @@ describe('MCP Tools — Memory', () => {
         assert.ok(Array.isArray(parsed));
     });
 
+    it('recall_memory — passes optional per_page as options.perPage', async () => {
+        await tools.recall_memory.handler({ query: 'important', per_page: 3 });
+        assert.equal(api.lastCall.body.options.perPage, 3);
+    });
+
     it('search_memory — same behaviour as recall_memory', async () => {
         const result = await tools.search_memory.handler({ query: 'facts' });
         assert.equal(api.lastCall.path, '/memories/search');
         const parsed = JSON.parse(result.content[0].text);
         assert.ok(Array.isArray(parsed));
+    });
+
+    it('search_memory — passes optional per_page as options.perPage', async () => {
+        await tools.search_memory.handler({ query: 'facts', per_page: 3 });
+        assert.equal(api.lastCall.body.options.perPage, 3);
     });
 
     it('read_memory — calls GET /memories/:id', async () => {

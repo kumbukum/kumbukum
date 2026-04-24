@@ -119,4 +119,9 @@ describe('MCP Tools — Notes', () => {
         const parsed = JSON.parse(result.content[0].text);
         assert.ok(Array.isArray(parsed));
     });
+
+    it('search_notes — passes optional per_page as options.perPage', async () => {
+        await tools.search_notes.handler({ query: 'hello', per_page: 3 });
+        assert.equal(api.lastCall.body.options.perPage, 3);
+    });
 });
