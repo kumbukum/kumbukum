@@ -42,7 +42,11 @@ jobs:
             exit 0
           fi
 
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "^$TAG$" | head -n 1)
+          echo "Previous tag: $PREV_TAG"
+
           gh release create "$TAG" \
             --title "$TAG" \
             --generate-notes \
+            --notes-start-tag "$PREV_TAG" \
             --notes "Docker image: $IMAGE"
