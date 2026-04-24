@@ -6,6 +6,7 @@ const emailSchema = new mongoose.Schema(
 		references: [{ type: String, trim: true }],
 		in_reply_to: { type: String, trim: true, default: '' },
 
+		from: [{ type: String, trim: true }],
 		to: [{ type: String, trim: true }],
 		cc: [{ type: String, trim: true }],
 		bcc: [{ type: String, trim: true }],

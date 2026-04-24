@@ -505,6 +505,7 @@ function renderEmailThread(thread = [], currentId) {
 
 function renderEmailDetails(email, thread = []) {
 	document.getElementById('rm-email-subject').value = email.subject || '(No subject)';
+	document.getElementById('rm-email-from').value = formatList(email.from);
 	document.getElementById('rm-email-to').value = formatList(email.to);
 	document.getElementById('rm-email-cc').value = formatList(email.cc);
 	document.getElementById('rm-email-bcc').value = formatList(email.bcc);
@@ -538,6 +539,7 @@ async function openEmailModal(item) {
 	deleteBtn.classList.add('d-none');
 	loadingEl.classList.remove('d-none');
 	document.getElementById('rm-email-subject').value = '(Loading...)';
+	document.getElementById('rm-email-from').value = '—';
 	document.getElementById('rm-email-to').value = '—';
 	document.getElementById('rm-email-cc').value = '—';
 	document.getElementById('rm-email-bcc').value = '—';

@@ -18,6 +18,9 @@
 		listEl.innerHTML = emails.length
 			? emails.map(function (e) {
 				var subject = e.subject || '(No subject)';
+				var senders = (e.from || []).slice(0, 3).join(', ');
+				var senderSummary = senders || '';
+				var hasMoreSenders = (e.from || []).length > 3 ? ' +' + ((e.from || []).length - 3) : '';
 				var recipients = (e.to || []).slice(0, 3).join(', ');
 				var recipientSummary = recipients || '(no recipients)';
 				var hasMoreRecipients = (e.to || []).length > 3 ? ' +' + ((e.to || []).length - 3) : '';
@@ -31,6 +34,7 @@
 					+ '<strong class="text-truncate">' + escapeHtml(subject) + '</strong>'
 					+ '<small class="text-muted text-nowrap flex-shrink-0">' + date + '</small>'
 					+ '</div>'
+					+ (senderSummary ? '<p class="mb-1 text-muted small text-truncate"><i class="bi bi-person me-1"></i>' + escapeHtml(senderSummary + hasMoreSenders) + '</p>' : '')
 					+ '<p class="mb-1 text-muted small text-truncate"><i class="bi bi-envelope me-1"></i>' + escapeHtml(recipientSummary + hasMoreRecipients) + '</p>'
 					+ (excerpt ? '<p class="mb-0 text-muted small text-truncate">' + escapeHtml(excerpt) + '</p>' : '')
 					+ '</div></div></div>';
@@ -47,6 +51,7 @@
 							_type: 'emails',
 							id: email._id,
 							title: email.subject || '(No subject)',
+							from: email.from || [],
 							text_content: [email.text_content, email.attachment_text_content].filter(Boolean).join('\n\n'),
 						});
 					})

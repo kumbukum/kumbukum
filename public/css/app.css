@@ -151,6 +151,15 @@ small,
 	background: #f0f0f0;
 }
 
+.email-item {
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.email-item:hover {
+	background: #f0f0f0;
+}
+
 /* Project list */
 .project-item {
 	padding: 0;

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { parseEmailInput, getEmailThread } from '../services/email_ingest_service.js';
 import { Email } from '../model/email.js';
+import { toTypesenseDoc } from '../modules/typesense.js';
 
 describe('Email ingest service', () => {
 	it('normalizes parsed payload fields', async () => {
@@ -10,6 +11,7 @@ describe('Email ingest service', () => {
 			parsed_email: {
 				message_id: '<Msg-123@Example.COM>',
 				references: '<Root@Example.com> <Prev@Example.com>',
+				from: [{ address: 'Sender@Example.com' }],
 				to: 'a@example.com, b@example.com',
 				cc: [{ address: 'CC@Example.com' }],
 				bcc: [{ value: [{ address: 'hidden@example.com' }] }],
@@ -21,6 +23,7 @@ describe('Email ingest service', () => {
 
 		assert.equal(normalized.message_id, 'msg-123@example.com');
 		assert.deepEqual(normalized.references, ['root@example.com', 'prev@example.com']);
+		assert.deepEqual(normalized.from, ['sender@example.com']);
 		assert.deepEqual(normalized.to, ['a@example.com', 'b@example.com']);
 		assert.deepEqual(normalized.cc, ['cc@example.com']);
 		assert.deepEqual(normalized.bcc, ['hidden@example.com']);
@@ -73,5 +76,27 @@ describe('Email ingest service', () => {
 			Email.findOne = originalFindOne;
 			Email.find = originalFind;
 		}
+	});
+
+	it('includes sender in email Typesense documents', () => {
+		const doc = toTypesenseDoc('emails', {
+			_id: '507f1f77bcf86cd799439055',
+			project: '507f1f77bcf86cd799439011',
+			subject: 'Hello from sender test',
+			from: ['sender@example.com'],
+			to: ['to@example.com'],
+			cc: [],
+			bcc: [],
+			text_content: 'hello world',
+			attachment_text_content: '',
+			message_id: 'msg-1@example.com',
+			references: [],
+			createdAt: '2026-01-01T10:00:00.000Z',
+			updatedAt: '2026-01-01T10:00:00.000Z',
+		});
+
+		assert.deepEqual(doc.from, ['sender@example.com']);
+		assert.deepEqual(doc.to, ['to@example.com']);
+		assert.equal(doc.subject, 'Hello from sender test');
 	});
 });

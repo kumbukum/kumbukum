@@ -78,6 +78,7 @@ const swaggerSpec = {
                     _id: { type: 'string' },
                     message_id: { type: 'string' },
                     references: { type: 'array', items: { type: 'string' } },
+                    from: { type: 'array', items: { type: 'string' } },
                     to: { type: 'array', items: { type: 'string' } },
                     cc: { type: 'array', items: { type: 'string' } },
                     bcc: { type: 'array', items: { type: 'string' } },
@@ -423,7 +424,7 @@ const swaggerSpec = {
                 parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { subject: { type: 'string' }, text_content: { type: 'string' }, to: { type: 'array', items: { type: 'string' } }, cc: { type: 'array', items: { type: 'string' } }, bcc: { type: 'array', items: { type: 'string' } }, project: { type: 'string' } } } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { subject: { type: 'string' }, text_content: { type: 'string' }, from: { type: 'array', items: { type: 'string' } }, to: { type: 'array', items: { type: 'string' } }, cc: { type: 'array', items: { type: 'string' } }, bcc: { type: 'array', items: { type: 'string' } }, project: { type: 'string' } } } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { email: { $ref: '#/components/schemas/Email' } } } } } },

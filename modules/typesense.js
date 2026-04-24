@@ -153,6 +153,7 @@ export function toTypesenseDoc(type, doc) {
 				subject: doc.subject || '',
 				text_content: doc.text_content || '',
 				attachment_text_content: doc.attachment_text_content || '',
+				from: doc.from || [],
 				to: doc.to || [],
 				cc: doc.cc || [],
 				bcc: doc.bcc || [],
@@ -251,6 +252,7 @@ const schemas = {
 			{ name: 'subject', type: 'string', optional: true },
 			{ name: 'text_content', type: 'string', optional: true },
 			{ name: 'attachment_text_content', type: 'string', optional: true },
+			{ name: 'from', type: 'string[]', optional: true },
 			{ name: 'to', type: 'string[]', optional: true },
 			{ name: 'cc', type: 'string[]', optional: true },
 			{ name: 'bcc', type: 'string[]', optional: true },
@@ -264,7 +266,7 @@ const schemas = {
 				type: 'float[]',
 				num_dim: 384,
 				embed: {
-					from: ['subject', 'text_content', 'attachment_text_content', 'to', 'cc', 'bcc'],
+					from: ['subject', 'text_content', 'attachment_text_content', 'from', 'to', 'cc', 'bcc'],
 					model_config: {
 						model_name: 'ts/multilingual-e5-small',
 					},
@@ -821,7 +823,7 @@ The user's knowledge base contains:
 - **Notes**: Rich text documents with title, text_content, project_id, tags
 - **Memories**: Facts, decisions, context with title, content, project_id, tags, source
 - **URLs**: Saved web pages with url, title, description, text_content, project_id
-- **Emails**: Ingested email messages with subject, recipients, text_content, attachments text, message_id, references, project_id
+- **Emails**: Ingested email messages with subject, sender, recipients, text_content, attachments text, message_id, references, project_id
 - **Pages**: Crawled sub-pages with url, title, text_content, parent_url_id, project_id
 
 ## RESPONSE FORMAT

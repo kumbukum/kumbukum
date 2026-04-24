@@ -8,6 +8,7 @@ const EMAIL_FIXTURE = {
 	_id: '507f1f77bcf86cd799439055',
 	subject: 'Hello from tests',
 	message_id: 'msg-1@example.com',
+	from: ['sender@example.com'],
 	to: ['to@example.com'],
 	cc: [],
 	bcc: [],

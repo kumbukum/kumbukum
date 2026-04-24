@@ -121,6 +121,7 @@ export async function parseEmailInput(data) {
 			message_id: canonicalMessageId(parsed.messageId || parsed.headers?.get?.('message-id')),
 			references: parseReferences(parsed.references || parsed.headers?.get?.('references')),
 			in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.headers?.get?.('in-reply-to')),
+			from: normalizeRecipientList(parsed.from),
 			to: normalizeRecipientList(parsed.to),
 			cc: normalizeRecipientList(parsed.cc),
 			bcc: normalizeRecipientList(parsed.bcc),
@@ -140,6 +141,7 @@ export async function parseEmailInput(data) {
 		message_id: canonicalMessageId(parsed.messageId || parsed.message_id),
 		references: parseReferences(parsed.references),
 		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to),
+		from: normalizeRecipientList(parsed.from),
 		to: normalizeRecipientList(parsed.to),
 		cc: normalizeRecipientList(parsed.cc),
 		bcc: normalizeRecipientList(parsed.bcc),
@@ -203,6 +205,7 @@ export async function updateEmail(host_id, emailId, data, ctx = {}) {
 	const update = {};
 	if (data.subject !== undefined) update.subject = data.subject;
 	if (data.text_content !== undefined) update.text_content = data.text_content;
+	if (data.from !== undefined) update.from = normalizeRecipientList(data.from);
 	if (data.to !== undefined) update.to = normalizeRecipientList(data.to);
 	if (data.cc !== undefined) update.cc = normalizeRecipientList(data.cc);
 	if (data.bcc !== undefined) update.bcc = normalizeRecipientList(data.bcc);
@@ -246,7 +249,7 @@ export async function deleteEmail(host_id, emailId, ctx = {}) {
 
 export async function searchEmails(host_id, query, options = {}) {
 	return searchCollection(host_id, 'emails', query, {
-		queryBy: 'subject,text_content,attachment_text_content,to,cc,bcc,embedding',
+		queryBy: 'subject,text_content,attachment_text_content,from,to,cc,bcc,embedding',
 		...options,
 	});
 }
