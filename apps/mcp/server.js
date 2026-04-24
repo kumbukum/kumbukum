@@ -5,7 +5,9 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 
+import mcpConfig from './config.js';
 import { ApiClient } from './lib/api-client.js';
+import { authenticateHttpRequest, checkRequestScopes, extractRequestAuth } from './lib/http-auth.js';
 import { noteTools } from './tools/notes.js';
 import { memoryTools } from './tools/memory.js';
 import { urlTools } from './tools/urls.js';
@@ -13,19 +15,30 @@ import { emailTools } from './tools/emails.js';
 import { projectTools } from './tools/projects.js';
 import { graphTools } from './tools/graph.js';
 import { gitSyncTools } from './tools/git_sync.js';
+import { buildProtectedResourceMetadata } from '../../modules/oauth.js';
 
-const PORT = parseInt(process.env.PORT, 10) || 3002;
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
+const PORT = mcpConfig.port;
+const API_BASE_URL = mcpConfig.apiBaseUrl;
 
-/**
- * Extract the raw access token from the request.
- * Accepts: Authorization: Bearer <token>, Authorization: Token <token>, or access-token: <token>
- */
 function extractToken(req) {
-    const auth = req.headers.authorization;
-    if (auth?.startsWith('Bearer ')) return auth.slice(7);
-    if (auth?.startsWith('Token ')) return auth.slice(6);
-    return req.headers['access-token'] || null;
+  return extractRequestAuth(req.headers)?.token || null;
+}
+
+function authKeyForContext(authContext) {
+  if (!authContext) return 'anon';
+  if (authContext.mode === 'oauth') {
+    return `${authContext.tokenClaims.sub}:${authContext.tokenClaims.client_id}`;
+  }
+  return `legacy:${authContext.apiAuth}`;
+}
+
+function sendAuthResponse(res, response) {
+  if (response?.headers) {
+    for (const [key, value] of Object.entries(response.headers)) {
+      res.setHeader(key, value);
+    }
+  }
+  return res.status(response?.status || 401).json(response?.body || { error: 'Authentication required' });
 }
 
 async function resolveDefaultProjectId(api, projectIdOverride) {
@@ -36,8 +49,8 @@ async function resolveDefaultProjectId(api, projectIdOverride) {
   return def._id;
 }
 
-async function createServer(token, { projectId } = {}) {
-  const api = new ApiClient(API_BASE_URL, token);
+async function createServer(apiAuth, { projectId } = {}) {
+  const api = new ApiClient(API_BASE_URL, apiAuth);
   const defaultProjectId = await resolveDefaultProjectId(api, projectId);
   let emailFeatureEnabled = true;
   let gitSyncFeatureEnabled = true;
@@ -126,6 +139,18 @@ if (transportArg === '--stdio' || !transportArg) {
     res.json({ status: 'ok', transport: 'http' });
   });
 
+  app.get('/.well-known/oauth-protected-resource', (_req, res) => {
+	res.json(buildProtectedResourceMetadata(mcpConfig.mcpBaseUrl));
+  });
+
+  app.get('/.well-known/oauth-protected-resource/mcp', (_req, res) => {
+	res.json(buildProtectedResourceMetadata(`${mcpConfig.mcpBaseUrl}/mcp`));
+  });
+
+  app.get('/.well-known/oauth-protected-resource/sse', (_req, res) => {
+	res.json(buildProtectedResourceMetadata(`${mcpConfig.mcpBaseUrl}/sse`));
+  });
+
   // MCP rate limiter — 120 req/min per token (in-memory store)
   const mcpLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -141,13 +166,18 @@ if (transportArg === '--stdio' || !transportArg) {
   const sseTransports = new Map();
 
   app.get('/sse', async (req, res) => {
-    const token = extractToken(req);
-    if (!token) return res.status(401).json({ error: 'Provide Authorization: Bearer <token>, Authorization: Token <token>, or access-token header' });
+    const authContext = authenticateHttpRequest(req);
+    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
 
     const projectId = req.headers['x-project-id'] || null;
-    const server = await createServer(token, { projectId });
+    const server = await createServer(authContext.apiAuth, { projectId });
     const transport = new SSEServerTransport('/messages', res);
-    sseTransports.set(transport.sessionId, { server, transport });
+    sseTransports.set(transport.sessionId, {
+		server,
+		transport,
+		authKey: authKeyForContext(authContext),
+		mode: authContext.mode,
+	});
 
     res.on('close', () => {
       sseTransports.delete(transport.sessionId);
@@ -157,20 +187,29 @@ if (transportArg === '--stdio' || !transportArg) {
   });
 
   app.post('/messages', (req, res) => {
+    const authContext = authenticateHttpRequest(req);
+    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
     const sessionId = req.query.sessionId;
     const session = sseTransports.get(sessionId);
     if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (session.authKey !== authKeyForContext(authContext)) {
+		return sendAuthResponse(res, authContext.response || { status: 401, body: { error: 'Session authentication mismatch' } });
+	}
+	const scopeResponse = checkRequestScopes(authContext, req.body);
+	if (scopeResponse) return sendAuthResponse(res, scopeResponse);
     session.transport.handlePostMessage(req, res);
   });
 
   // Streamable HTTP endpoint — stateless (no sessions)
   // Shared handler for all methods on /mcp
   const handleMcp = async (req, res) => {
-    const token = extractToken(req);
-    if (!token) return res.status(401).json({ error: 'Provide Authorization: Bearer <token>, Authorization: Token <token>, or access-token header' });
+    const authContext = authenticateHttpRequest(req);
+    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
+	const scopeResponse = checkRequestScopes(authContext, req.body);
+	if (scopeResponse) return sendAuthResponse(res, scopeResponse);
 
     const projectId = req.headers['x-project-id'] || null;
-    const server = await createServer(token, { projectId });
+    const server = await createServer(authContext.apiAuth, { projectId });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);

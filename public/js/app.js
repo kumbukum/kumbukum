@@ -287,6 +287,7 @@ var ROUTES = {
 	'/trash': { section: 'trash', title: 'Trash', partial: '/ajax/section/trash' },
 	'/settings/profile': { title: 'Profile', partial: '/ajax/section/settings/profile' },
 	'/settings/security': { title: 'Security', partial: '/ajax/section/settings/security' },
+	'/settings/team': { title: 'My Team', partial: '/ajax/section/settings/team' },
 	'/settings/tokens': { title: 'API Tokens', partial: '/ajax/section/settings/tokens' },
 	'/settings/typesense': { title: 'Search', partial: '/ajax/section/settings/typesense' },
 	'/settings/usage': { title: 'Usage', partial: '/ajax/section/settings/usage' },
@@ -427,6 +428,21 @@ window.addEventListener('popstate', function (e) {
 
 // Global link interception for SPA routes
 document.addEventListener('click', function (e) {
+	var accountSwitchLink = e.target.closest('.account-switch-link');
+	if (accountSwitchLink) {
+		e.preventDefault();
+		var tenantId = accountSwitchLink.dataset.tenantId;
+		if (!tenantId) return;
+		api('POST', '/account/switch', { tenant_id: tenantId })
+			.then(function () {
+				window.location.href = '/dashboard';
+			})
+			.catch(function (err) {
+				showError(err.message);
+			});
+		return;
+	}
+
 	if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey) return;
 	var link = e.target.closest('a[href]');
 	if (!link || link.target === '_blank') return;

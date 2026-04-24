@@ -31,6 +31,19 @@ html(lang="en")
 						a.kk-navbtn(href="/graph" class={active: page === 'graph'}) Graph
 					.ms-auto.d-flex.align-items-center
 						if user
+							if accessible_tenants && accessible_tenants.length > 1
+								.dropdown.me-2
+									button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
+										i.bi.bi-buildings
+										span= active_tenant ? active_tenant.name : 'Select account'
+									ul.dropdown-menu.dropdown-menu-end
+										each tenant in accessible_tenants
+											li
+												- var isCurrentTenant = active_tenant && tenant.tenantId === active_tenant.tenantId
+												a.dropdown-item.account-switch-link(href="#" data-tenant-id=tenant.tenantId class=(isCurrentTenant ? 'is-current' : '') aria-current=(isCurrentTenant ? 'true' : undefined) tabindex=(isCurrentTenant ? '-1' : undefined))
+													.d-flex.justify-content-between.align-items-center.gap-3
+														span= tenant.name
+														span.kk-account-role-badge= tenant.role
 							.dropdown
 								button.btn.btn-outline-light.btn-sm.dropdown-toggle.d-flex.align-items-center.gap-1(type="button" data-bs-toggle="dropdown")
 									+avatar(user.name, 'xs')
@@ -192,7 +205,7 @@ html(lang="en")
 									button.nav-link#rm-email-tab-body(type="button") Body
 							#rm-email-pane-details.px-3
 								.row.g-3
-									.col-md-8
+										.col-md-8#rm-email-main-col
 										.mb-2
 											.form-text Subject
 											input.form-control#rm-email-subject(type="text" readonly)
@@ -214,9 +227,9 @@ html(lang="en")
 										.mb-2
 											.form-text References
 											textarea.form-control#rm-email-references(rows="3" readonly)
-									.col-md-4
+										.col-md-4.d-none#rm-email-thread-col
 										.form-text Thread
-										#rm-email-thread.list-group.small
+											#rm-email-thread.small
 							#rm-email-pane-body.d-none.px-3.pb-2
 								.form-text Body / Attachment Text
 								#rm-email-content.preview-container.border.rounded.p-3(style="min-height:220px; white-space:pre-wrap")

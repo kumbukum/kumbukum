@@ -33,6 +33,122 @@ const swaggerSpec = {
                     host_id: { type: 'string' },
                 },
             },
+            AccountTenant: {
+                type: 'object',
+                properties: {
+                    tenantId: { type: 'string' },
+                    host_id: { type: 'string' },
+                    name: { type: 'string' },
+                    role: { type: 'string', enum: ['owner', 'admin', 'member'] },
+                    membershipId: { type: 'string' },
+                    is_primary: { type: 'boolean' },
+                },
+            },
+            TeamMember: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    role: { type: 'string', enum: ['owner', 'admin', 'member'] },
+                    joined_at: { type: 'string', format: 'date-time' },
+                    user: {
+                        type: 'object',
+                        properties: {
+                            _id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' },
+                            last_login: { type: 'string', format: 'date-time', nullable: true },
+                            createdAt: { type: 'string', format: 'date-time' },
+                        },
+                    },
+                },
+            },
+            TeamInvite: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    email: { type: 'string' },
+                    name: { type: 'string' },
+                    role: { type: 'string', enum: ['admin', 'member'] },
+                    expires_at: { type: 'string', format: 'date-time' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    invited_by: {
+                        type: 'object',
+                        properties: {
+                            _id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' },
+                        },
+                    },
+                },
+            },
+            OAuthClient: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    client_id: { type: 'string' },
+                    client_name: { type: 'string' },
+                    client_uri: { type: 'string', nullable: true },
+                    logo_uri: { type: 'string', nullable: true },
+                    redirect_uris: { type: 'array', items: { type: 'string' } },
+                    grant_types: { type: 'array', items: { type: 'string' } },
+                    response_types: { type: 'array', items: { type: 'string' } },
+                    token_endpoint_auth_method: { type: 'string', enum: ['none', 'client_secret_post'] },
+                    registration_source: { type: 'string', enum: ['manual', 'dynamic', 'metadata'] },
+                    last_used_at: { type: 'string', format: 'date-time', nullable: true },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' },
+                },
+            },
+            OAuthConsent: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    client_id: { type: 'string' },
+                    client_name: { type: 'string' },
+                    client_uri: { type: 'string', nullable: true },
+                    logo_uri: { type: 'string', nullable: true },
+                    redirect_uris: { type: 'array', items: { type: 'string' } },
+                    registration_source: { type: 'string', enum: ['manual', 'dynamic', 'metadata'] },
+                    scopes: { type: 'array', items: { type: 'string' } },
+                    resource: { type: 'string' },
+                    granted_at: { type: 'string', format: 'date-time' },
+                    last_used_at: { type: 'string', format: 'date-time', nullable: true },
+                },
+            },
+            OAuthConfig: {
+                type: 'object',
+                properties: {
+                    issuer: { type: 'string' },
+                    authorization_endpoint: { type: 'string' },
+                    token_endpoint: { type: 'string' },
+                    registration_endpoint: { type: 'string' },
+                    authorization_server_metadata_url: { type: 'string' },
+                    openid_configuration_url: { type: 'string' },
+                    resource_metadata_url: { type: 'string' },
+                    mcp_base_url: { type: 'string' },
+                    mcp_endpoint: { type: 'string' },
+                    allowed_resources: { type: 'array', items: { type: 'string' } },
+                    scope_details: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                scope: { type: 'string' },
+                                label: { type: 'string' },
+                                description: { type: 'string' },
+                            },
+                        },
+                    },
+                    client_registration: {
+                        type: 'object',
+                        properties: {
+                            client_id_metadata_document_supported: { type: 'boolean' },
+                            dynamic_registration_supported: { type: 'boolean' },
+                            pre_registration_supported: { type: 'boolean' },
+                        },
+                    },
+                },
+            },
             Note: {
                 type: 'object',
                 properties: {
@@ -137,7 +253,7 @@ const swaggerSpec = {
                 properties: {
                     _id: { type: 'string' },
                     action: { type: 'string', enum: ['create', 'update', 'delete', 'search', 'login', 'export', 'import', 'restore', 'reindex'] },
-                    resource: { type: 'string', enum: ['note', 'memory', 'url', 'email', 'project', 'link', 'user', 'passkey', 'conversation', 'trash'] },
+                    resource: { type: 'string', enum: ['note', 'memory', 'url', 'email', 'project', 'link', 'user', 'passkey', 'conversation', 'trash', 'git_repo', 'team_member', 'team_invite', 'oauth_client', 'oauth_consent'] },
                     resource_id: { type: 'string' },
                     user_id: { type: 'string' },
                     host_id: { type: 'string' },
@@ -211,6 +327,296 @@ const swaggerSpec = {
                     200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
                     400: { description: 'Cannot delete — project still has notes, memories, URLs, or git repos', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                     404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+
+        // ---- Account / Team ----
+        '/account/tenants': {
+            get: {
+                tags: ['Account'],
+                summary: 'List accessible accounts / tenants',
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        tenants: { type: 'array', items: { $ref: '#/components/schemas/AccountTenant' } },
+                                        active_tenant_id: { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/account/switch': {
+            post: {
+                tags: ['Account'],
+                summary: 'Switch active account / tenant',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    tenant_id: { type: 'string' },
+                                },
+                                required: ['tenant_id'],
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        active_tenant: { $ref: '#/components/schemas/AccountTenant' },
+                                        tenants: { type: 'array', items: { $ref: '#/components/schemas/AccountTenant' } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    403: { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/team/members': {
+            get: {
+                tags: ['Team'],
+                summary: 'List team members',
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        members: { type: 'array', items: { $ref: '#/components/schemas/TeamMember' } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/team/members/{id}': {
+            patch: {
+                tags: ['Team'],
+                summary: 'Update a team member role',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    role: { type: 'string', enum: ['admin', 'member'] },
+                                },
+                                required: ['role'],
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { member: { $ref: '#/components/schemas/TeamMember' } } } } } },
+                },
+            },
+            delete: {
+                tags: ['Team'],
+                summary: 'Remove a team member',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                },
+            },
+        },
+        '/team/invites': {
+            get: {
+                tags: ['Team'],
+                summary: 'List pending team invites',
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        invites: { type: 'array', items: { $ref: '#/components/schemas/TeamInvite' } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            post: {
+                tags: ['Team'],
+                summary: 'Create a team invite',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    email: { type: 'string' },
+                                    name: { type: 'string' },
+                                },
+                                required: ['email'],
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    201: { description: 'Created', content: { 'application/json': { schema: { type: 'object', properties: { invite: { $ref: '#/components/schemas/TeamInvite' } } } } } },
+                },
+            },
+        },
+        '/team/invites/{id}': {
+            delete: {
+                tags: ['Team'],
+                summary: 'Cancel a pending team invite',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                },
+            },
+        },
+
+        '/oauth/config': {
+            get: {
+                tags: ['OAuth'],
+                summary: 'Get OAuth + MCP discovery configuration for the active account',
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        oauth: { $ref: '#/components/schemas/OAuthConfig' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/oauth/consents': {
+            get: {
+                tags: ['OAuth'],
+                summary: 'List authorized OAuth apps for the active user + account',
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        consents: { type: 'array', items: { $ref: '#/components/schemas/OAuthConsent' } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/oauth/consents/{id}': {
+            delete: {
+                tags: ['OAuth'],
+                summary: 'Revoke an authorized OAuth app',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
+                },
+            },
+        },
+        '/oauth/clients': {
+            get: {
+                tags: ['OAuth'],
+                summary: 'List pre-registered OAuth clients for the active account',
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        clients: { type: 'array', items: { $ref: '#/components/schemas/OAuthClient' } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            post: {
+                tags: ['OAuth'],
+                summary: 'Create a pre-registered OAuth client for the active account',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    client_name: { type: 'string' },
+                                    client_uri: { type: 'string' },
+                                    redirect_uris: { type: 'array', items: { type: 'string' } },
+                                    token_endpoint_auth_method: { type: 'string', enum: ['none', 'client_secret_post'] },
+                                    grant_types: { type: 'array', items: { type: 'string' } },
+                                    response_types: { type: 'array', items: { type: 'string' } },
+                                },
+                                required: ['client_name', 'redirect_uris'],
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    201: {
+                        description: 'Created',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        client: { $ref: '#/components/schemas/OAuthClient' },
+                                        client_secret: { type: 'string', nullable: true, description: 'Returned only once when token_endpoint_auth_method is client_secret_post' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/oauth/clients/{id}': {
+            delete: {
+                tags: ['OAuth'],
+                summary: 'Delete a pre-registered OAuth client',
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                responses: {
+                    200: { description: 'Deleted', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
                 },
             },
         },
@@ -696,6 +1102,7 @@ const swaggerSpec = {
                             },
                         },
                     },
+                    403: { description: 'Account admin access required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
         },
@@ -1016,6 +1423,74 @@ const swaggerSpec = {
                             },
                         },
                     },
+                    403: { description: 'Account admin access required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        // ---- Export ----
+        '/export': {
+            post: {
+                tags: ['Export'],
+                summary: 'Start a full data export',
+                description: 'Starts an account export for the current tenant. Available to account owners and admins only.',
+                responses: {
+                    200: {
+                        description: 'Export started',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        message: { type: 'string' },
+                                        export_id: { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    403: { description: 'Account admin access required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    409: { description: 'Export already in progress', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/export/status': {
+            get: {
+                tags: ['Export'],
+                summary: 'Get export status',
+                description: 'Returns the current export job status for the active account. Available to account owners and admins only.',
+                responses: {
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        status: { type: 'string', nullable: true },
+                                        error: { type: 'string' },
+                                        expires_at: { type: 'string', format: 'date-time' },
+                                        token: { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    403: { description: 'Account admin access required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/export/download/{token}': {
+            get: {
+                tags: ['Export'],
+                summary: 'Download completed export archive',
+                description: 'Downloads the generated ZIP export for the active account. Available to account owners and admins only.',
+                parameters: [
+                    { name: 'token', in: 'path', required: true, schema: { type: 'string' } },
+                ],
+                responses: {
+                    200: { description: 'ZIP archive', content: { 'application/zip': { schema: { type: 'string', format: 'binary' } } } },
+                    403: { description: 'Account admin access required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    404: { description: 'Export not found or expired', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
         },

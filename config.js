@@ -72,6 +72,7 @@ const config = {
 	sessionSecret: process.env.SESSION_SECRET || 'change-me',
 	jwtSecret: process.env.JWT_SECRET || 'change-me',
 	appUrl: process.env.APP_URL || 'http://localhost:3000',
+	mcpBaseUrl: (process.env.MCP_BASE_URL || 'http://localhost:3002').replace(/\/$/, ''),
 	wsUrl: process.env.WS_URL || '',
 
 	typesense: parseTypesenseConfig(),

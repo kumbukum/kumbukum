@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { requireTenant, Tenant } from '../modules/tenancy.js';
+import { initializeSessionTenant, requireTenant, Tenant } from '../modules/tenancy.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +30,8 @@ import * as graphService from '../services/graph_service.js';
 import * as exportService from '../services/export_service.js';
 import * as auditService from '../services/audit_service.js';
 import * as gitSyncService from '../services/git_sync_service.js';
+import * as oauthService from '../services/oauth_service.js';
+import * as teamService from '../services/team_service.js';
 import { createChatLimiter } from '../middleware/rate_limit.js';
 import config from '../config.js';
 import crypto from 'node:crypto';
@@ -48,6 +50,18 @@ function auditCtx(req) {
 		ip: req.ip,
 		user_agent: req.headers['user-agent'],
 	};
+}
+
+function requireTeamManager(req, res, next) {
+	if (!teamService.canManageTeam(req.memberRole)) {
+		return res.status(403).json({ error: 'Team admin access is required' });
+	}
+	next();
+}
+
+function requireRestrictedSettingsAccess(req, res, next) {
+	if (teamService.canManageTeam(req.memberRole)) return next();
+	return res.status(403).json({ error: 'Account admin access is required' });
 }
 
 // ---- Projects ----
@@ -642,7 +656,7 @@ router.get('/counts', async (req, res) => {
 
 // ---- Typesense Reindex ----
 
-router.post('/reindex', async (req, res) => {
+router.post('/reindex', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const results = await reindexHost(req.host_id, { Note, Memory, Url, Email });
 		const totalQueued = Object.values(results).reduce((sum, entry) => sum + (entry.queued || 0), 0);
@@ -930,6 +944,112 @@ router.delete('/trash', async (req, res) => {
 
 // ---- Profile ----
 
+router.get('/account/tenants', async (req, res) => {
+	res.json({
+		tenants: req.accessibleTenants || [],
+		active_tenant_id: req.tenantId,
+	});
+});
+
+router.post('/account/switch', async (req, res) => {
+	try {
+		const tenantId = typeof req.body.tenant_id === 'string' ? req.body.tenant_id : '';
+		if (!tenantId) return res.status(400).json({ error: 'tenant_id is required' });
+
+		const context = await initializeSessionTenant(req.session, req.userId, tenantId, null);
+		if (!context?.activeTenant) return res.status(403).json({ error: 'You do not have access to that account' });
+
+		res.json({
+			active_tenant: context.activeTenant,
+			tenants: context.accessibleTenants,
+		});
+	} catch (err) {
+		console.error('Account switch error:', err);
+		res.status(500).json({ error: 'Failed to switch account' });
+	}
+});
+
+router.get('/team/members', requireTeamManager, async (req, res) => {
+	try {
+		const members = await teamService.listTeamMembers(req.host_id);
+		res.json({ members });
+	} catch (err) {
+		console.error('List team members error:', err);
+		res.status(500).json({ error: 'Failed to list team members' });
+	}
+});
+
+router.get('/team/invites', requireTeamManager, async (req, res) => {
+	try {
+		const invites = await teamService.listTeamInvites(req.host_id);
+		res.json({ invites });
+	} catch (err) {
+		console.error('List team invites error:', err);
+		res.status(500).json({ error: 'Failed to list team invites' });
+	}
+});
+
+router.post('/team/invites', requireTeamManager, async (req, res) => {
+	try {
+		const invite = await teamService.createTeamInvite(req.userId, req.host_id, req.body, auditCtx(req));
+		res.status(201).json({
+			invite: {
+				_id: invite._id,
+				email: invite.email,
+				name: invite.name,
+				role: invite.role,
+				expires_at: invite.expires_at,
+			},
+		});
+	} catch (err) {
+		console.error('Create team invite error:', err);
+		res.status(400).json({ error: err.message || 'Failed to create invite' });
+	}
+});
+
+router.patch('/team/members/:id', requireTeamManager, async (req, res) => {
+	try {
+		const role = typeof req.body.role === 'string' ? req.body.role : '';
+		const member = await teamService.updateTeamMemberRole(
+			req.host_id,
+			req.params.id,
+			{ userId: req.userId, role: req.memberRole },
+			role,
+			auditCtx(req),
+		);
+		res.json({
+			member: {
+				_id: member._id,
+				role: member.role,
+				user: member.user ? { _id: member.user._id, name: member.user.name, email: member.user.email } : null,
+			},
+		});
+	} catch (err) {
+		console.error('Update team member error:', err);
+		res.status(400).json({ error: err.message || 'Failed to update member' });
+	}
+});
+
+router.delete('/team/members/:id', requireTeamManager, async (req, res) => {
+	try {
+		await teamService.removeTeamMember(req.host_id, req.params.id, { userId: req.userId, role: req.memberRole }, auditCtx(req));
+		res.json({ message: 'Team member removed' });
+	} catch (err) {
+		console.error('Remove team member error:', err);
+		res.status(400).json({ error: err.message || 'Failed to remove member' });
+	}
+});
+
+router.delete('/team/invites/:id', requireTeamManager, async (req, res) => {
+	try {
+		await teamService.cancelTeamInvite(req.host_id, req.params.id, { userId: req.userId, role: req.memberRole }, auditCtx(req));
+		res.json({ message: 'Invite cancelled' });
+	} catch (err) {
+		console.error('Cancel team invite error:', err);
+		res.status(400).json({ error: err.message || 'Failed to cancel invite' });
+	}
+});
+
 router.put('/profile', async (req, res) => {
 	try {
 		const user = await User.findById(req.userId);
@@ -945,6 +1065,85 @@ router.put('/profile', async (req, res) => {
 	} catch (err) {
 		console.error('Profile update error:', err);
 		res.status(500).json({ error: 'Profile update failed' });
+	}
+});
+
+// ---- OAuth ----
+
+router.get('/oauth/config', async (_req, res) => {
+	res.json({ oauth: oauthService.buildOauthUiConfig() });
+});
+
+router.get('/oauth/consents', async (req, res) => {
+	try {
+		const consents = await oauthService.listConsents(req.userId, req.host_id);
+		res.json({ consents });
+	} catch (err) {
+		console.error('List OAuth consents error:', err);
+		res.status(500).json({ error: 'Failed to list authorized apps' });
+	}
+});
+
+router.delete('/oauth/consents/:id', async (req, res) => {
+	try {
+		await oauthService.revokeConsent(req.params.id, req.userId, req.host_id, auditCtx(req));
+		res.json({ message: 'Authorized app revoked' });
+	} catch (err) {
+		console.error('Revoke OAuth consent error:', err);
+		res.status(400).json({ error: err.message || 'Failed to revoke authorized app' });
+	}
+});
+
+router.get('/oauth/clients', async (req, res) => {
+	try {
+		const clients = await oauthService.listClients(req.host_id);
+		res.json({ clients });
+	} catch (err) {
+		console.error('List OAuth clients error:', err);
+		res.status(500).json({ error: 'Failed to list OAuth clients' });
+	}
+});
+
+router.post('/oauth/clients', async (req, res) => {
+	try {
+		const { client, client_secret } = await oauthService.registerClient({
+			tenantId: req.tenantId,
+			host_id: req.host_id,
+			createdByUserId: req.userId,
+			payload: req.body,
+			source: 'manual',
+		});
+
+		auditService.log({
+			action: 'create',
+			resource: 'oauth_client',
+			resource_id: client.client_id,
+			user_id: req.userId,
+			host_id: req.host_id,
+			channel: auditCtx(req).channel,
+			ip: req.ip,
+			user_agent: req.headers['user-agent'],
+			details: {
+				client_name: client.client_name,
+				redirect_uris: client.redirect_uris,
+				token_endpoint_auth_method: client.token_endpoint_auth_method,
+			},
+		});
+
+		res.status(201).json({ client, client_secret });
+	} catch (err) {
+		console.error('Create OAuth client error:', err);
+		res.status(400).json({ error: err.message || 'Failed to create OAuth client' });
+	}
+});
+
+router.delete('/oauth/clients/:id', async (req, res) => {
+	try {
+		await oauthService.deleteClient(req.host_id, req.params.id, auditCtx(req));
+		res.json({ message: 'OAuth client deleted' });
+	} catch (err) {
+		console.error('Delete OAuth client error:', err);
+		res.status(400).json({ error: err.message || 'Failed to delete OAuth client' });
 	}
 });
 
@@ -1136,7 +1335,7 @@ router.post('/notes/import', async (req, res) => {
 
 // ---- Audit Logs ----
 
-router.get('/audit-logs', async (req, res) => {
+router.get('/audit-logs', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const result = await auditService.query({
 			host_id: req.host_id,
@@ -1160,7 +1359,7 @@ router.get('/audit-logs', async (req, res) => {
 
 // ---- Export ----
 
-router.post('/export', async (req, res) => {
+router.post('/export', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const user = await User.findById(req.userId);
 		const doc = await exportService.startExport(req.userId, req.host_id, user.email, user.name);
@@ -1174,7 +1373,7 @@ router.post('/export', async (req, res) => {
 	}
 });
 
-router.get('/export/status', async (req, res) => {
+router.get('/export/status', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const doc = await exportService.getExportStatus(req.host_id);
 		if (!doc) return res.json({ status: null });
@@ -1185,7 +1384,7 @@ router.get('/export/status', async (req, res) => {
 	}
 });
 
-router.get('/export/download/:token', async (req, res) => {
+router.get('/export/download/:token', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
 		const filePath = await exportService.getExportFile(req.params.token, req.host_id);
 		if (!filePath) return res.status(404).json({ error: 'Export not found or expired' });

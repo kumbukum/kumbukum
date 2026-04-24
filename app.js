@@ -20,6 +20,7 @@ import { verifyScreenshotSignature, resolveScreenshotPath } from './modules/scre
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger.js';
 import authRoutes from './routes/auth.js';
+import oauthRoutes from './routes/oauth.js';
 import apiRoutes from './routes/api.js';
 import webRoutes from './routes/web.js';
 import adminRoutes from './routes/admin.js';
@@ -151,6 +152,8 @@ app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 		persistAuthorization: true,
 	},
 }));
+
+app.use('/', oauthRoutes);
 
 // Screenshot serving — signed URLs, no auth middleware required
 app.get('/api/v1/screenshots/:filename', (req, res) => {

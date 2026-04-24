@@ -2,12 +2,13 @@ import { Router } from 'express';
 import crypto from 'node:crypto';
 import { generateSecret, verifySync, generateURI } from 'otplib';
 import { User } from '../model/user.js';
-import { createTenant } from '../modules/tenancy.js';
+import { createTenant, initializeSessionTenant } from '../modules/tenancy.js';
 import { ensureCollections } from '../modules/typesense.js';
 import { generateToken } from '../middleware/auth.js';
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../services/email_service.js';
 import { sendMagicLink, isMagicLinkValid, verifyMagicLink } from '../services/magic_link_service.js';
 import * as passkeyService from '../services/passkey_service.js';
+import * as teamService from '../services/team_service.js';
 import config from '../config.js';
 
 const is_hosted = new URL(config.appUrl).hostname.endsWith('kumbukum.com');
@@ -16,6 +17,38 @@ import { PendingSignup } from '../model/pending_signup.js';
 import { isSysadminCredentials, requireSysadmin } from '../middleware/sysadmin.js';
 
 const router = Router();
+
+async function hydrateSessionForUser(req, user, preferredTenantId = null, preferredHostId = null) {
+	req.session.userId = user._id.toString();
+	return initializeSessionTenant(
+		req.session,
+		user._id.toString(),
+		preferredTenantId || user.tenant?.toString() || null,
+		preferredHostId || user.host_id || null,
+	);
+}
+
+async function recordSuccessfulLogin(req, userOrId) {
+	const userId = typeof userOrId === 'object' ? userOrId._id : userOrId;
+	const timestamp = new Date();
+	if (req.session) {
+		req.session.lastLoginRecordedAt = timestamp.toISOString();
+	}
+	await User.findByIdAndUpdate(userId, { $set: { last_login: timestamp } });
+	return timestamp;
+}
+
+function peekPostAuthRedirect(req, fallback = '/dashboard') {
+	return req.session?.oauthLoginReturnTo || fallback;
+}
+
+function consumePostAuthRedirect(req, fallback = '/dashboard') {
+	const redirectTo = peekPostAuthRedirect(req, fallback);
+	if (req.session?.oauthLoginReturnTo) {
+		delete req.session.oauthLoginReturnTo;
+	}
+	return redirectTo;
+}
 
 // ---- Registration (email confirmation required before account creation) ----
 
@@ -130,9 +163,8 @@ router.post('/verify', async (req, res) => {
 		);
 
 		// Sign the user in directly
-		req.session.userId = user._id.toString();
-		req.session.tenantId = tenant._id.toString();
-		req.session.host_id = tenant.host_id;
+		await hydrateSessionForUser(req, user, tenant._id.toString(), tenant.host_id);
+		await recordSuccessfulLogin(req, user);
 
 		// Hosted edition: redirect to Stripe Checkout for trial subscription
 		if (is_hosted) {
@@ -164,7 +196,7 @@ router.post('/login', async (req, res) => {
 
 		const user = await User.findOne({ email, is_active: true }).select('+password +totp_secret');
 		if (!user || !(await user.comparePassword(password))) {
-			if (req.is('application/x-www-form-urlencoded')) return res.render('auth/login', { error: 'Invalid credentials' });
+			if (req.is('application/x-www-form-urlencoded')) return res.render('auth/login', { error: 'Invalid credentials', oauth_continue: !!req.session?.oauthLoginReturnTo, redirect_to: peekPostAuthRedirect(req) });
 			return res.status(401).json({ error: 'Invalid credentials' });
 		}
 
@@ -177,19 +209,21 @@ router.post('/login', async (req, res) => {
 		}
 
 		// Set session
-		req.session.userId = user._id.toString();
-		req.session.tenantId = user.tenant?.toString();
-		req.session.host_id = user.host_id;
+		const tenantContext = await hydrateSessionForUser(req, user);
+		if (!tenantContext?.activeTenant) {
+			if (req.is('application/x-www-form-urlencoded')) return res.render('auth/login', { error: 'Your account does not have access to any active teams yet.', oauth_continue: !!req.session?.oauthLoginReturnTo, redirect_to: peekPostAuthRedirect(req) });
+			return res.status(403).json({ error: 'No active account access found' });
+		}
 
 		// Track last login
-		user.last_login = new Date();
-		user.save();
+		await recordSuccessfulLogin(req, user);
 
-		if (req.is('application/x-www-form-urlencoded')) return res.redirect('/dashboard');
+		if (req.is('application/x-www-form-urlencoded')) return res.redirect(consumePostAuthRedirect(req));
 
 		res.json({
 			user: user.toSafe(),
-			token: generateToken(user._id.toString(), user.host_id),
+			token: generateToken(user._id.toString(), tenantContext.activeTenant.host_id, tenantContext.activeTenant.tenantId),
+			redirect_to: consumePostAuthRedirect(req),
 		});
 	} catch (err) {
 		console.error('Login error:', err);
@@ -319,13 +353,16 @@ router.post('/2fa/verify', async (req, res) => {
 		if (!result.valid) return res.status(401).json({ error: 'Invalid 2FA code' });
 
 		delete req.session.pending2FA;
-		req.session.userId = user._id.toString();
-		req.session.tenantId = user.tenant?.toString();
-		req.session.host_id = user.host_id;
+		const tenantContext = await hydrateSessionForUser(req, user);
+		if (!tenantContext?.activeTenant) {
+			return res.status(403).json({ error: 'No active account access found' });
+		}
+		await recordSuccessfulLogin(req, user);
 
 		res.json({
 			user: user.toSafe(),
-			token: generateToken(user._id.toString(), user.host_id),
+			token: generateToken(user._id.toString(), tenantContext.activeTenant.host_id, tenantContext.activeTenant.tenantId),
+			redirect_to: consumePostAuthRedirect(req),
 		});
 	} catch (err) {
 		console.error('2FA error:', err);
@@ -421,11 +458,13 @@ router.post('/magic', async (req, res) => {
 		const user = await verifyMagicLink(token);
 		if (!user) return res.render('auth/magic', { error: 'Invalid or expired magic link' });
 
-		req.session.userId = user._id.toString();
-		req.session.tenantId = user.tenant?.toString();
-		req.session.host_id = user.host_id;
+		const tenantContext = await hydrateSessionForUser(req, user);
+		if (!tenantContext?.activeTenant) {
+			return res.render('auth/magic', { error: 'Your account does not have access to any active teams yet.' });
+		}
+		await recordSuccessfulLogin(req, user);
 
-		return res.redirect('/dashboard');
+		return res.redirect(consumePostAuthRedirect(req));
 	} catch (err) {
 		console.error('Magic link verify error:', err);
 		return res.render('auth/magic', { error: 'Magic link verification failed' });
@@ -504,13 +543,16 @@ router.post('/passkey/login/verify', async (req, res) => {
 		const user = await User.findById(passkey.user);
 		if (!user) return res.status(404).json({ error: 'User not found' });
 
-		req.session.userId = user._id.toString();
-		req.session.tenantId = user.tenant?.toString();
-		req.session.host_id = user.host_id;
+		const tenantContext = await hydrateSessionForUser(req, user);
+		if (!tenantContext?.activeTenant) {
+			return res.status(403).json({ error: 'No active account access found' });
+		}
+		await recordSuccessfulLogin(req, user);
 
 		res.json({
 			user: user.toSafe(),
-			token: generateToken(user._id.toString(), user.host_id),
+			token: generateToken(user._id.toString(), tenantContext.activeTenant.host_id, tenantContext.activeTenant.tenantId),
+			redirect_to: consumePostAuthRedirect(req),
 		});
 	} catch (err) {
 		console.error('Passkey login verify error:', err);
@@ -518,9 +560,122 @@ router.post('/passkey/login/verify', async (req, res) => {
 	}
 });
 
+// ---- Team Invite ----
+
+router.get('/team-invite', async (req, res) => {
+	try {
+		const token = typeof req.query.token === 'string' ? req.query.token : '';
+		if (!token) return res.render('auth/team_invite', { error: 'Invite token required', invite: null });
+
+		const invite = await teamService.getInviteByToken(token);
+		if (!invite) {
+			return res.render('auth/team_invite', { error: 'This invitation has expired or has already been used.', invite: null });
+		}
+
+		const existingUser = await User.findOne({ email: invite.email }).select('name email').lean();
+		const currentUser = req.session?.userId
+			? await User.findById(req.session.userId).select('name email').lean()
+			: null;
+
+		res.render('auth/team_invite', {
+			invite,
+			token,
+			existingUser,
+			currentUser,
+			wrongUser: currentUser && currentUser.email.toLowerCase() !== invite.email.toLowerCase(),
+			suggestedName: existingUser?.name || invite.name || invite.email.split('@')[0],
+		});
+	} catch (err) {
+		console.error('Team invite page error:', err);
+		res.render('auth/team_invite', { error: 'Something went wrong. Please try again.', invite: null });
+	}
+});
+
+router.post('/team-invite', async (req, res) => {
+	try {
+		const token = typeof req.body.token === 'string' ? req.body.token : '';
+		const invite = await teamService.getInviteByToken(token);
+		if (!invite) {
+			return res.render('auth/team_invite', { error: 'This invitation has expired or has already been used.', invite: null });
+		}
+
+		let user = null;
+		if (req.session?.userId) {
+			user = await User.findById(req.session.userId).select('name email');
+			if (!user) {
+				return res.render('auth/team_invite', { error: 'Signed-in user not found.', invite, token });
+			}
+			if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
+				return res.render('auth/team_invite', {
+					error: `This invite is for ${invite.email}. Please sign in with that email address first.`,
+					invite,
+					token,
+					currentUser: user,
+					wrongUser: true,
+					existingUser: { name: user.name, email: user.email },
+					suggestedName: invite.name || invite.email.split('@')[0],
+				});
+			}
+		} else {
+			const existingUser = await User.findOne({ email: invite.email }).select('name email');
+			if (existingUser) {
+				return res.render('auth/team_invite', {
+					error: 'This email already has a Kumbukum account. Please sign in first, then open the invite link again.',
+					invite,
+					token,
+					existingUser,
+					suggestedName: existingUser.name || invite.name || invite.email.split('@')[0],
+				});
+			}
+
+			const password = typeof req.body.password === 'string' ? req.body.password.trim() : '';
+			if (password.length < 8) {
+				return res.render('auth/team_invite', {
+					error: 'Please choose a password with at least 8 characters.',
+					invite,
+					token,
+					suggestedName: req.body.name?.trim() || invite.name || invite.email.split('@')[0],
+				});
+			}
+
+			const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+			user = await User.create({
+				email: invite.email,
+				password,
+				name: name || invite.name || invite.email.split('@')[0],
+				is_verified: true,
+				is_active: true,
+			});
+		}
+
+		await teamService.acceptTeamInvite(invite, user, {
+			channel: 'web',
+			ip: req.ip,
+			user_agent: req.headers['user-agent'],
+		});
+
+		await hydrateSessionForUser(req, user, invite.tenant._id.toString(), invite.host_id);
+		await recordSuccessfulLogin(req, user);
+		return res.redirect('/dashboard');
+	} catch (err) {
+		console.error('Team invite accept error:', err);
+		const token = typeof req.body.token === 'string' ? req.body.token : '';
+		const invite = token ? await teamService.getInviteByToken(token) : null;
+		return res.render('auth/team_invite', {
+			error: err.message || 'Failed to accept invitation.',
+			invite,
+			token,
+			suggestedName: req.body.name?.trim() || invite?.name || invite?.email?.split('@')[0],
+		});
+	}
+});
+
 // ---- Logout ----
 
 router.post('/logout', (req, res) => {
+	if (req.session?.oauthLoginReturnTo) {
+		delete req.session.oauthLoginReturnTo;
+	}
 	req.session.destroy(() => {
 		res.clearCookie('connect.sid');
 		if (req.accepts('html')) return res.redirect('/login');
@@ -530,7 +685,7 @@ router.post('/logout', (req, res) => {
 
 // ---- Render auth pages ----
 
-router.get('/login', (req, res) => res.render('auth/login'));
+router.get('/login', (req, res) => res.render('auth/login', { oauth_continue: !!req.session?.oauthLoginReturnTo, redirect_to: peekPostAuthRedirect(req) }));
 router.get('/signup', (req, res) => res.render('auth/register'));
 router.get('/forgot-password', (req, res) => res.render('auth/forgot_password'));
 
@@ -572,9 +727,7 @@ router.post('/api/v1/admin/impersonate', requireSysadmin, async (req, res) => {
 		const user = await User.findById(userId);
 		if (!user) return res.status(404).json({ error: 'User not found' });
 
-		req.session.userId = user._id.toString();
-		req.session.tenantId = user.tenant?.toString();
-		req.session.host_id = user.host_id;
+		await hydrateSessionForUser(req, user, user.tenant?.toString(), user.host_id);
 		req.session.impersonating = true;
 		req.session.impersonatingName = user.name;
 
@@ -591,6 +744,7 @@ router.post('/api/v1/admin/exit-impersonation', requireSysadmin, (req, res) => {
 	delete req.session.userId;
 	delete req.session.tenantId;
 	delete req.session.host_id;
+	delete req.session.memberRole;
 	delete req.session.impersonating;
 	delete req.session.impersonatingName;
 

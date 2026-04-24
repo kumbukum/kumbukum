@@ -2,15 +2,85 @@ extends layout
 
 block settings
 	h4.mb-4 Access Tokens
+	ul.nav.nav-pills.kk-settings-tabs(role='tablist')
+		li.nav-item(role='presentation')
+			button.nav-link.active(type='button' data-bs-toggle='tab' data-bs-target='#access-tokens-pane' role='tab' aria-controls='access-tokens-pane' aria-selected='true') Access Tokens
+		li.nav-item(role='presentation')
+			button.nav-link(type='button' data-bs-toggle='tab' data-bs-target='#oauth-pane' role='tab' aria-controls='oauth-pane' aria-selected='false') OAuth
 
-	.card.mb-4
-		.card-body
-			h5.card-title Create New Token
-			.input-group
-				input.form-control#token-name(type="text" placeholder="Token name (e.g. MCP Server)")
-				button.btn.btn-primary#create-token Create
+	.tab-content.pt-4
+		.tab-pane.fade.show.active#access-tokens-pane(role='tabpanel')
+			.card.mb-4
+				.card-body
+					h5.card-title Create New Token
+					.input-group
+						input.form-control#token-name(type="text" placeholder="Token name (e.g. MCP Server)")
+						button.btn.btn-outline-secondary#create-token Create
 
-	#tokens-list
+			#tokens-list
+
+		.tab-pane.fade#oauth-pane(role='tabpanel')
+			.card.mb-4
+				.card-body
+					h5.card-title
+						i.bi.bi-shield-check.me-2
+						| OAuth & Connected Apps
+					p.text-muted.mb-4 Standard OAuth 2.1 authorization for the HTTP MCP transport. StdIO continues to use environment-provided access tokens.
+
+					.row.g-3.mb-4
+						.col-md-6
+							.small.text-muted.mb-1 Issuer
+							code.small#oauth-issuer Loading…
+						.col-md-6
+							.small.text-muted.mb-1 MCP Endpoint
+							code.small#oauth-mcp-endpoint Loading…
+					.row.g-3.mb-4
+						.col-md-6
+							.small.text-muted.mb-1 Resource Metadata
+							code.small#oauth-resource-metadata Loading…
+						.col-md-6
+							.small.text-muted.mb-1 Authorization Server Metadata
+							code.small#oauth-auth-metadata Loading…
+
+					h6.mb-2 Supported client registration methods
+					#oauth-registration-badges.small.text-muted.mb-3 Loading…
+					.alert.alert-secondary.small.mb-4
+						strong These are supported client capabilities, not buttons.
+						|  Use the method your MCP client asks for.
+						a.ms-1(href='/docs/mcp/setup#chatgpt-openai-connector' target='_blank' rel='noopener') Open the setup guide
+
+					details.mb-4
+						summary.fw-semibold ChatGPT / OpenAI connector field guide
+						.pt-3#oauth-chatgpt-fields
+							.small.text-muted Loading field mapping…
+
+					h6.mb-3 Authorized Apps
+					#oauth-consents-list
+
+					hr.my-4
+					h6.mb-3 Pre-Registered OAuth Clients
+					.card.bg-light.border-0.mb-3
+						.card-body
+							.row.g-3
+								.col-md-6
+									label.form-label(for='oauth-client-name') Client Name
+									input.form-control#oauth-client-name(type='text' placeholder='Example MCP Client')
+								.col-md-6
+									label.form-label(for='oauth-client-auth-method') Token Endpoint Auth
+									select.form-select#oauth-client-auth-method
+										option(value='none') Public client (PKCE only)
+										option(value='client_secret_post') Confidential client (client secret)
+								.col-12
+									label.form-label(for='oauth-client-uri') Client Website (optional)
+									input.form-control#oauth-client-uri(type='url' placeholder='https://app.example.com')
+								.col-12
+									label.form-label(for='oauth-client-redirect-uris') Redirect URIs
+									textarea.form-control#oauth-client-redirect-uris(rows='4' placeholder='https://app.example.com/oauth/callback&#10;http://127.0.0.1:3000/callback')
+							button.btn.btn-primary.mt-3#create-oauth-client Create OAuth Client
+							#oauth-client-secret-result.d-none.alert.alert-success.mt-3
+
+					#oauth-clients-list
 
 block scripts
 	script(src=`/static/v-${v}/js/tokens.js`)
+	script(src=`/static/v-${v}/js/security.js`)

@@ -49,7 +49,6 @@
 			const tableEl = document.getElementById('tokens-table');
 
 			if (!data.tokens?.length) {
-				tableEl.innerHTML = '<p class="text-muted mt-3">No access tokens</p>';
 				return;
 			}
 

@@ -51,6 +51,20 @@ const emailTemplates = {
 			{ key: 'url', description: 'Magic link sign-in URL' },
 		],
 	},
+	team_invite: {
+		subject: '{{inviterName}} invited you to join {{tenantName}} on Kumbukum',
+		html: `<p>Hi {{name}},</p>
+<p>{{inviterName}} invited you to join <strong>{{tenantName}}</strong> on Kumbukum.</p>
+<p><a href="{{url}}">Accept invitation</a></p>
+<p>This invitation expires in 7 days.</p>
+<p></p>`,
+		variables: [
+			{ key: 'name', description: 'Invitee name' },
+			{ key: 'inviterName', description: 'Inviter display name' },
+			{ key: 'tenantName', description: 'Account / tenant name' },
+			{ key: 'url', description: 'Invite acceptance URL' },
+		],
+	},
 	trial_ending: {
 		subject: 'Your Kumbukum trial ends in {{daysLeft}} days',
 		html: `<p>Hi {{name}},</p>

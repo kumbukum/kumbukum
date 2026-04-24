@@ -1,0 +1,64 @@
+extends ../auth_layout
+
+block head
+	title Authorize App — Kumbukum
+
+block body
+	.container.py-5
+		.row.justify-content-center
+			.col-lg-7.col-xl-6
+				.card.shadow
+					.card-body.p-4
+						.text-center.mb-4
+							include ../includes/logo_white
+						if error
+							.alert.alert-danger.mt-4= error
+						else if client && oauth_request
+							h3.h4.mb-2 Authorize #{client.client_name}
+							p.text-muted.mb-4
+								| Allow this app to access
+								strong= ` ${active_tenant?.name || 'this account'}`
+								|  through Kumbukum MCP?
+
+							.d-flex.align-items-center.justify-content-between.border.rounded.p-3.mb-3
+								div
+									div.fw-semibold= client.client_name
+									if client.client_uri
+										small.text-muted.d-block= client.client_uri
+								div.text-end
+									small.text-muted.d-block Client ID
+									code.small= client.client_id
+
+							.ul.list-group.mb-3
+								li.list-group-item
+									div.small.text-muted.mb-1 Redirect URI
+									code.small= oauth_request.redirect_uri
+								li.list-group-item
+									div.small.text-muted.mb-1 MCP Resource
+									code.small= oauth_request.resource
+
+							if scope_details && scope_details.length
+								h5.h6.mb-2 Requested access
+								ul.list-group.mb-4
+									each item in scope_details
+										li.list-group-item
+											div.fw-semibold= item.label
+											small.text-muted= item.description
+
+							if oauth_request.redirect_uri.startsWith('http://localhost') || oauth_request.redirect_uri.startsWith('http://127.0.0.1')
+								.alert.alert-warning.small
+									strong Local redirect URI.
+									|  Make sure you trust this app before continuing.
+
+							form(method='POST' action='/oauth/authorize')
+								input(type='hidden' name='client_id' value=oauth_request.client_id)
+								input(type='hidden' name='redirect_uri' value=oauth_request.redirect_uri)
+								input(type='hidden' name='response_type' value=oauth_request.response_type)
+								input(type='hidden' name='scope' value=oauth_request.scopes.join(' '))
+								input(type='hidden' name='state' value=oauth_request.state)
+								input(type='hidden' name='code_challenge' value=oauth_request.code_challenge)
+								input(type='hidden' name='code_challenge_method' value=oauth_request.code_challenge_method)
+								input(type='hidden' name='resource' value=oauth_request.resource)
+								.d-flex.gap-2.justify-content-end
+									button.btn.btn-outline-secondary(type='submit' name='decision' value='deny') Cancel
+									button.btn.btn-primary(type='submit' name='decision' value='approve') Allow access

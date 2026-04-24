@@ -1,0 +1,48 @@
+include ../../../includes/avatar
+
+.row
+	.col-md-3
+		include _sidebar
+	.col-md-9
+		#team-page(data-can-manage-team=can_manage_team ? 'true' : 'false' data-user-id=user._id.toString())
+			h4.mb-4 My Team
+			if !can_manage_team
+				.alert.alert-warning
+					i.bi.bi-shield-exclamation.me-2
+					| Team admin access is required to manage members for this account.
+			else
+				.row.g-4
+					.col-lg-5
+						.card.mb-4
+							.card-body
+								h5.card-title.mb-3
+									i.bi.bi-person-plus.me-2
+									| Invite teammate
+								form#team-invite-form
+									.mb-3
+										label.form-label(for="team-invite-email") Email
+										input.form-control.form-control-sm#team-invite-email(type="email" required placeholder="teammate@example.com")
+									.mb-3
+										label.form-label(for="team-invite-name") Name (optional)
+										input.form-control.form-control-sm#team-invite-name(type="text" placeholder="Teammate name")
+									.text-end
+										button.btn.btn-outline-secondary.btn-sm(type="submit") Send invite
+									//- .small.text-muted.mt-2 Invites join as members by default.
+						.card
+							.card-body
+								h5.card-title.mb-3
+									i.bi.bi-envelope.me-2
+									| Pending invites
+								#team-invites-list.text-muted Loading invites…
+					.col-lg-7
+						.card
+							.card-body
+								h5.card-title.mb-3
+									i.bi.bi-people.me-2
+									| Members
+								#team-members-list.text-muted Loading team members…
+
+include _logs_modal
+
+if can_manage_team
+	script(src=`/static/v-${v}/js/team.js`)

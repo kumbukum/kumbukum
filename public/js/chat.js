@@ -466,6 +466,15 @@ function rmShowEmailBody() {
 	rmEmailBodyLoaded = true;
 }
 
+function rmSetEmailThreadVisibility(visible) {
+	const mainCol = document.getElementById('rm-email-main-col');
+	const threadCol = document.getElementById('rm-email-thread-col');
+	if (!mainCol || !threadCol) return;
+	threadCol.classList.toggle('d-none', !visible);
+	mainCol.classList.toggle('col-md-8', !!visible);
+	mainCol.classList.toggle('col-md-12', !visible);
+}
+
 function rmResetEmailView() {
 	rmEmailBodyText = '';
 	rmEmailBodyLoaded = false;
@@ -474,24 +483,27 @@ function rmResetEmailView() {
 	if (document.getElementById('rm-email-thread')) {
 		document.getElementById('rm-email-thread').innerHTML = '';
 	}
+	rmSetEmailThreadVisibility(false);
 	rmShowEmailDetails();
 }
 
 function renderEmailThread(thread = [], currentId) {
 	const threadEl = document.getElementById('rm-email-thread');
 	if (!threadEl) return;
-	if (!thread.length) {
-		threadEl.innerHTML = '<div class="list-group-item text-muted">No linked thread items.</div>';
+	const showThread = Array.isArray(thread) && thread.length > 1;
+	rmSetEmailThreadVisibility(showThread);
+	if (!showThread) {
+		threadEl.innerHTML = '';
 		return;
 	}
 	threadEl.innerHTML = thread.map((msg) => {
 		const msgId = msg._id || msg.id || '';
 		const subject = escapeHtml(msg.subject || '(No subject)');
 		const date = msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : '';
-		const active = msgId === currentId ? ' active' : '';
-		return `<button type="button" class="list-group-item list-group-item-action${active}" data-email-id="${msgId}">
-			<div class="fw-semibold text-truncate">${subject}</div>
-			<small class="text-muted">${escapeHtml(date)}</small>
+		const active = msgId === currentId ? ' is-active' : '';
+		return `<button type="button" class="rm-email-thread-item${active}" data-email-id="${msgId}">
+			<div class="rm-email-thread-subject fw-semibold text-truncate">${subject}</div>
+			<small class="rm-email-thread-date">${escapeHtml(date)}</small>
 		</button>`;
 	}).join('');
 	threadEl.querySelectorAll('[data-email-id]').forEach((btn) => {

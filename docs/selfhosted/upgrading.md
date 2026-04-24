@@ -28,7 +28,7 @@ docker compose cp mongodb:/dump ./backup-$(date +%Y%m%d)
 
 ### Full Data Export
 
-Export all data through the app at **Settings > Export**, or via the API:
+Export all data through the app at **Settings > Export** (owners/admins), or via the API:
 
 ```bash
 # Export notes
