@@ -22,6 +22,18 @@ export function extractRequestAuth(headers = {}) {
 	return null;
 }
 
+function buildLegacyAuthContext(token) {
+	return {
+		ok: true,
+		mode: 'legacy',
+		apiAuth: token,
+	};
+}
+
+function isLikelyJwt(token) {
+	return typeof token === 'string' && token.split('.').length === 3;
+}
+
 export function getToolNameFromRequestBody(body) {
 	if (!body || typeof body !== 'object') return null;
 	if (body.method !== 'tools/call') return null;
@@ -87,11 +99,7 @@ export function authenticateHttpRequest(req) {
 	}
 
 	if (auth.scheme === 'Token') {
-		return {
-			ok: true,
-			mode: 'legacy',
-			apiAuth: auth.token,
-		};
+		return buildLegacyAuthContext(auth.token);
 	}
 
 	try {
@@ -112,6 +120,9 @@ export function authenticateHttpRequest(req) {
 			},
 		};
 	} catch {
+		if (!isLikelyJwt(auth.token)) {
+			return buildLegacyAuthContext(auth.token);
+		}
 		return { ok: false, response: buildInvalidTokenResponse() };
 	}
 }

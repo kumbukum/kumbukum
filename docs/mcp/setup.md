@@ -81,7 +81,7 @@ Supported client registration approaches:
 - Client ID Metadata Documents
 - Dynamic Client Registration (`/oauth/register`)
 
-Legacy `Authorization: Token ...` and `access-token` headers are still accepted for backward compatibility.
+Personal access tokens are still accepted for backward compatibility via `Authorization: Bearer ...`, `Authorization: Token ...`, and `access-token` headers.
 :::
 
 <a id="chatgpt-openai-connector"></a>
@@ -180,7 +180,8 @@ env 'ACCESS-TOKEN'=your-access-token 'PROJECT-ID'=your-project-id API_BASE_URL=h
 When using the HTTP or SSE transport, pass your credentials as headers instead of environment variables:
 
 - `Authorization: Bearer <oauth-access-token>` — recommended for MCP OAuth
-- `Authorization: Token <access-token>` — legacy compatibility mode
+- `Authorization: Bearer <access-token>` — personal access token compatibility mode
+- `Authorization: Token <access-token>` — personal access token compatibility mode
 - `access-token: <access-token>` — alternative (mirrors Razuna MCP)
 - `X-Project-Id: <project-id>` — optional, overrides the default project
 :::
