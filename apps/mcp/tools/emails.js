@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { slimSearchResults } from './search-results.js';
+
+const MCP_EMAIL_SEARCH_EXCLUDE_FIELDS = 'embedding,text_content,attachment_text_content';
 
 /**
  * MCP tool definitions: Emails
@@ -55,10 +58,17 @@ export function emailTools(api, defaultProjectId) {
 			description: 'Search emails using semantic/text search',
 			inputSchema: {
 				query: z.string().describe('Search query'),
+				per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
 			},
 			handler: async (args) => {
-				const { results } = await api.post('/emails/search', { query: args.query });
-				return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
+				const { results } = await api.post('/emails/search', {
+					query: args.query,
+					options: {
+						perPage: args.per_page,
+						exclude_fields: MCP_EMAIL_SEARCH_EXCLUDE_FIELDS,
+					},
+				});
+				return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
 			},
 		},
 

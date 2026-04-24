@@ -78,6 +78,12 @@ describe('MCP Tools — URLs', () => {
         assert.ok(Array.isArray(parsed));
     });
 
+    it('search_urls — passes optional per_page and excludes bulky search fields', async () => {
+        await tools.search_urls.handler({ query: 'example', per_page: 3 });
+        assert.equal(api.lastCall.body.options.perPage, 3);
+        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding,text_content');
+    });
+
     it('read_url — calls GET /urls/:id', async () => {
         const result = await tools.read_url.handler({ id: FIXTURES.url._id });
         assert.equal(api.lastCall.method, 'GET');

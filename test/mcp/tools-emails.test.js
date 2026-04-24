@@ -63,6 +63,12 @@ describe('MCP Tools — Emails', () => {
 		assert.equal(parsed[0]._id, EMAIL_FIXTURE._id);
 	});
 
+	it('search_emails passes optional per_page and excludes bulky search fields', async () => {
+		await tools.search_emails.handler({ query: 'hello', per_page: 3 });
+		assert.equal(api.lastCall.body.options.perPage, 3);
+		assert.equal(api.lastCall.body.options.exclude_fields, 'embedding,text_content,attachment_text_content');
+	});
+
 	it('get_email_thread calls /emails/:id/thread', async () => {
 		const result = await tools.get_email_thread.handler({ id: EMAIL_FIXTURE._id });
 		assert.equal(api.lastCall.method, 'GET');
