@@ -26,7 +26,7 @@ FROM builder AS deps
 COPY --link .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --link apps/mcp/package.json ./apps/mcp/
 COPY --link docs/package.json ./docs/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --prod
 
 # ──────────────────────────────────────────────
 # Stage 3: Build frontend assets + VitePress docs
