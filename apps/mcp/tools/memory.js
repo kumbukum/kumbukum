@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { slimSearchResults } from './search-results.js';
 
 const MCP_KNOWLEDGE_SEARCH_EXCLUDE_FIELDS = {
   notes: 'embedding,text_content',
@@ -44,7 +45,7 @@ export function memoryTools(api, defaultProjectId) {
             exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
+        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -62,7 +63,7 @@ export function memoryTools(api, defaultProjectId) {
             exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
+        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -128,7 +129,7 @@ export function memoryTools(api, defaultProjectId) {
             exclude_fields: MCP_KNOWLEDGE_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
+        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 

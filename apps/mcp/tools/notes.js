@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { slimSearchResults } from './search-results.js';
 
 const MCP_NOTES_SEARCH_EXCLUDE_FIELDS = 'embedding,text_content';
 
@@ -92,7 +93,7 @@ export function noteTools(api, defaultProjectId) {
             exclude_fields: MCP_NOTES_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2), cache_control: { type: 'ephemeral' } }] };
+        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
   };
