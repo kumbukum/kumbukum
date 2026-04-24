@@ -52,50 +52,71 @@ function getPreviousTag() {
 	return tags.find((tag) => tag !== TAG) || '';
 }
 
-function collectReferences(generatedBody) {
-	const references = new Map();
-	let section = "What's Changed";
+function getTagDate(tag) {
+	const date = execFileSync('git', ['for-each-ref', `refs/tags/${tag}`, '--format=%(creatordate:iso-strict)'], {
+		encoding: 'utf8'
+	}).trim();
 
-	for (const line of generatedBody.split('\n')) {
-		const heading = line.match(/^#{2,6}\s+(.+?)\s*$/);
-
-		if (heading) {
-			section = heading[1].trim();
-		}
-
-		const matches = [
-			...line.matchAll(/(?:issues|pull)\/(\d+)/g),
-			...line.matchAll(/(^|[^A-Za-z0-9_])#(\d+)\b/g)
-		];
-
-		for (const match of matches) {
-			const number = Number(match.at(-1));
-
-			if (number && !references.has(number)) {
-				references.set(number, section);
-			}
-		}
+	if (date) {
+		return date;
 	}
 
-	return references;
+	return execFileSync('git', ['log', '-1', '--format=%cI', tag], {
+		encoding: 'utf8'
+	}).trim();
+}
+
+async function searchClosedIssues(previousTag, releaseDate) {
+	const parts = [
+		`repo:${GITHUB_REPOSITORY}`,
+		'is:issue',
+		'is:closed'
+	];
+
+	if (previousTag) {
+		parts.push(`closed:>${getTagDate(previousTag)}`);
+	}
+
+	parts.push(`closed:<=${releaseDate}`);
+
+	const query = parts.join(' ');
+	const issues = [];
+	let page = 1;
+
+	while (true) {
+		const params = new URLSearchParams({
+			q: query,
+			sort: 'created',
+			order: 'asc',
+			per_page: '100',
+			page: String(page)
+		});
+		const result = await githubApi(`/search/issues?${params.toString()}`);
+
+		issues.push(...result.items);
+
+		if (result.items.length < 100) {
+			break;
+		}
+
+		page += 1;
+	}
+
+	return issues;
 }
 
 function markdownEscape(text) {
 	return text.replaceAll('[', '\\[').replaceAll(']', '\\]');
 }
 
-function primaryLabel(issue, fallbackSection) {
-	if (fallbackSection && fallbackSection !== "What's Changed") {
-		return fallbackSection;
-	}
-
+function primaryLabel(issue) {
 	const label = issue.labels.find((item) => typeof item === 'string' || item.name);
 
 	if (typeof label === 'string') {
 		return label;
 	}
 
-	return label?.name || fallbackSection || "What's Changed";
+	return label?.name || 'Unlabeled';
 }
 
 function normalizeBody(body) {
@@ -118,35 +139,22 @@ function fullChangelogUrl(previousTag) {
 
 async function main() {
 	const previousTag = getPreviousTag();
-	const generatedNotesRequest = {
-		tag_name: TAG
-	};
-
-	if (previousTag) {
-		generatedNotesRequest.previous_tag_name = previousTag;
-	}
-
-	const generatedNotes = await githubApi(`/repos/${GITHUB_REPOSITORY}/releases/generate-notes`, {
-		method: 'POST',
-		body: generatedNotesRequest
-	});
-
-	const references = collectReferences(generatedNotes.body || '');
+	const releaseDate = new Date().toISOString();
+	const closedIssues = await searchClosedIssues(previousTag, releaseDate);
 	const issues = [];
 
-	for (const [number, section] of references) {
-		const issue = await githubApi(`/repos/${GITHUB_REPOSITORY}/issues/${number}`);
+	for (const closedIssue of closedIssues) {
+		const issue = await githubApi(`/repos/${GITHUB_REPOSITORY}/issues/${closedIssue.number}`);
 
-		issues.push({
-			...issue,
-			section
-		});
+		issues.push(issue);
 	}
+
+	issues.sort((left, right) => new Date(right.closed_at) - new Date(left.closed_at));
 
 	const groups = new Map();
 
 	for (const issue of issues) {
-		const group = primaryLabel(issue, issue.section);
+		const group = primaryLabel(issue);
 
 		if (!groups.has(group)) {
 			groups.set(group, []);
@@ -163,7 +171,7 @@ async function main() {
 	];
 
 	if (groups.size === 0) {
-		lines.push((generatedNotes.body || '_No generated release notes._').trim());
+		lines.push('_No closed issues found since the previous tag._');
 		lines.push('');
 	} else {
 		for (const [group, groupIssues] of groups) {
