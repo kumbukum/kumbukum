@@ -1,0 +1,21 @@
+name: Post to Bluesky on labeled issue
+
+on:
+    issues:
+        types: [labeled]
+
+jobs:
+    post-to-bsky:
+        if: github.event.label.name == 'bsky'
+        runs-on: ubuntu-latest
+        permissions:
+            issues: read
+
+        steps:
+            - name: Post to Bluesky
+              uses: zentered/bluesky-post-action@v0.1.0
+              with:
+                  post: "🆕 ${{ github.event.issue.title }} — ${{ github.event.issue.html_url }}"
+              env:
+                  BSKY_IDENTIFIER: ${{ secrets.BSKY_IDENTIFIER }}
+                  BSKY_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
