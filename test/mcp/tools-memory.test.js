@@ -70,6 +70,11 @@ describe('MCP Tools — Memory', () => {
         assert.equal(api.lastCall.body.options.perPage, 3);
     });
 
+    it('recall_memory — excludes bulky search fields', async () => {
+        await tools.recall_memory.handler({ query: 'important' });
+        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding,content');
+    });
+
     it('search_memory — same behaviour as recall_memory', async () => {
         const result = await tools.search_memory.handler({ query: 'facts' });
         assert.equal(api.lastCall.path, '/memories/search');
@@ -80,6 +85,11 @@ describe('MCP Tools — Memory', () => {
     it('search_memory — passes optional per_page as options.perPage', async () => {
         await tools.search_memory.handler({ query: 'facts', per_page: 3 });
         assert.equal(api.lastCall.body.options.perPage, 3);
+    });
+
+    it('search_memory — excludes bulky search fields', async () => {
+        await tools.search_memory.handler({ query: 'facts' });
+        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding,content');
     });
 
     it('read_memory — calls GET /memories/:id', async () => {
@@ -137,6 +147,17 @@ describe('MCP Tools — Memory', () => {
         });
         assert.equal(api.lastCall.body.project_id, FIXTURES.project._id);
         assert.equal(api.lastCall.body.per_page, 3);
+    });
+
+    it('search_knowledge — excludes bulky search fields', async () => {
+        await tools.search_knowledge.handler({ query: 'test' });
+        assert.deepEqual(api.lastCall.body.options.exclude_fields, {
+            notes: 'embedding,text_content',
+            memory: 'embedding,content',
+            urls: 'embedding,text_content',
+            emails: 'embedding,text_content,attachment_text_content',
+            pages: 'embedding,text_content',
+        });
     });
 
     it('chat — calls POST /chat', async () => {
