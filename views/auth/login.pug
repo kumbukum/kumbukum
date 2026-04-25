@@ -17,7 +17,7 @@ block body
 							if error
 								.alert.alert-danger= error
 							if oauth_continue
-								.alert.alert-secondary.small Sign in to continue authorizing an MCP app for this account.
+								.alert.alert-secondary.small.login-header Sign in to continue authorizing an MCP app for this account.
 							form(action="/login" method="POST")
 								.mb-3
 									label.form-label(for="email") Email

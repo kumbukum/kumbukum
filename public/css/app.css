@@ -124,6 +124,14 @@ small,
 	cursor: pointer;
 }
 
+.login-header {
+	font-size: 1.2rem;
+	font-weight: 900;
+	padding-left: 0;
+	background-color: initial;
+	border: initial;
+}
+
 .sidebar {
 	overflow-y: auto;
 	height: 100%;
