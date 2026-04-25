@@ -34,8 +34,8 @@
 					+ '<strong class="text-truncate">' + escapeHtml(subject) + '</strong>'
 					+ '<small class="text-muted text-nowrap flex-shrink-0">' + date + '</small>'
 					+ '</div>'
-					+ (senderSummary ? '<p class="mb-1 text-muted small text-truncate"><i class="ph-light ph-user me-1"></i>' + escapeHtml(senderSummary + hasMoreSenders) + '</p>' : '')
-					+ '<p class="mb-1 text-muted small text-truncate"><i class="ph-light ph-envelope me-1"></i>' + escapeHtml(recipientSummary + hasMoreRecipients) + '</p>'
+					+ (senderSummary ? '<p class="mb-1 text-muted small text-truncate">' + kkIcon('user', 'me-1') + escapeHtml(senderSummary + hasMoreSenders) + '</p>' : '')
+					+ '<p class="mb-1 text-muted small text-truncate">' + kkIcon('email', 'me-1') + escapeHtml(recipientSummary + hasMoreRecipients) + '</p>'
 					+ (excerpt ? '<p class="mb-0 text-muted small text-truncate">' + escapeHtml(excerpt) + '</p>' : '')
 					+ '</div></div></div>';
 			}).join('')

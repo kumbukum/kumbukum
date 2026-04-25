@@ -45,7 +45,7 @@ p.text-muted.small.mb-4.fs-7 Project ID: #{project._id} &middot; Created #{creat
 			.card.h-100.border-warning-subtle
 				.card-body.text-center
 					.fs-3.fw-bold.text-muted
-						i.ph-light.ph-lock
+						!= icon('lock')
 					.text-muted.mb-2 Emails (Pro)
 					if is_hosted
 						a.btn.btn-sm.btn-outline-warning(href="/settings/subscription") Upgrade
@@ -55,7 +55,7 @@ if gitSyncEnabled
 	.my-4
 	.d-flex.justify-content-between.align-items-center.mb-3
 		h5.mb-0
-			i.ph-light.ph-git-branch
+			!= icon('gitBranch')
 			span.ms-2 Git Sync
 		button.btn.btn-sm.btn-outline-primary(onclick=`addGitRepo('${project._id}')`) Add Repo
 
@@ -82,11 +82,11 @@ if gitSyncEnabled
 									span.text-muted.small= 'Synced ' + new Date(repo.last_synced_at).toLocaleString()
 						.d-flex.gap-1
 							button.btn.btn-sm.btn-outline-primary(onclick=`triggerGitSync('${repo._id}')` title="Sync now")
-								i.ph-light.ph-arrows-clockwise
+								!= icon('sync')
 							button.btn.btn-sm.btn-outline-secondary(onclick=`editGitRepo('${repo._id}')` title="Settings")
-								i.ph-light.ph-gear
+								!= icon('gear')
 							button.btn.btn-sm.btn-outline-secondary(onclick=`deleteGitRepo('${repo._id}')` title="Remove")
-								i.ph-light.ph-trash
+								!= icon('delete')
 	else
 		p.text-muted.small No git repos configured. Add one to sync markdown files.
 else
@@ -94,7 +94,7 @@ else
 		.card.border-warning-subtle
 			.card-body
 				h5.mb-2
-					i.ph-light.ph-lock.me-2
+					!= icon('lock', 'me-2')
 					| Git Sync (Pro)
 				p.text-muted.mb-2 Sync markdown files from your repository into project notes and memories.
 				if is_hosted

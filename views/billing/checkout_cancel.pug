@@ -10,13 +10,13 @@ block body
 				.card.shadow
 					.card-body.p-4.text-center
 						.mb-4
-							i.ph-light.ph-credit-card(style="font-size: 3rem; color: var(--bs-primary)")
+							!= icon('creditCard', '', { style: 'font-size: 3rem; color: var(--bs-primary)' })
 						h3.mb-3= title || 'Checkout'
 						p.text-muted.mb-4= message || 'Something went wrong.'
 						.d-flex.justify-content-center.gap-3
 							a.btn.btn-primary(href="/billing/checkout")
-								i.ph-light.ph-arrows-clockwise.me-2
+								!= icon('sync', 'me-2')
 								| Try Again
 							a.btn.btn-outline-secondary(href="/login")
-								i.ph-light.ph-sign-in.me-2
+								!= icon('signIn', 'me-2')
 								| Log In

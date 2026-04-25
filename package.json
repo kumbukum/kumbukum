@@ -42,6 +42,9 @@
     "exec": "node build.js && node --require ./tracing.cjs app.js"
   },
   "dependencies": {
+    "@fontsource-variable/material-symbols-outlined": "^5.2.42",
+    "@fontsource-variable/noto-sans": "^5.2.10",
+    "@fontsource-variable/noto-sans-mono": "^5.2.10",
     "@keyv/valkey": "^1.0.11",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.73.0",
@@ -54,7 +57,6 @@
     "@opentelemetry/sdk-metrics": "^2.7.0",
     "@opentelemetry/sdk-node": "^0.215.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
-    "@phosphor-icons/web": "^2.1.2",
     "@sentry/node": "^10.50.0",
     "@sentry/opentelemetry": "10.50.0",
     "@sentry/profiling-node": "^10.50.0",

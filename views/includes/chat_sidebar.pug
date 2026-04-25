@@ -3,9 +3,9 @@
     h6.mb-0 Chat with your data
     .d-flex.gap-1
       button.btn.btn-sm.btn-outline-secondary#chat-history-btn(title="Conversation history")
-        i.ph-light.ph-clock-counter-clockwise
+        != icon('history')
       button.btn.btn-sm.btn-outline-secondary#clear-chat(title="New conversation")
-        i.ph-light.ph-plus
+        != icon('add')
 
   .mb-2
     select.form-select.form-select-sm#chat-project-filter
@@ -28,4 +28,4 @@
     .input-group
       input.form-control#chat-input(type="text" placeholder="Ask, search, or give a command...")
       button.btn.btn-primary#chat-send
-        i.ph-light.ph-paper-plane-tilt
+        != icon('send')

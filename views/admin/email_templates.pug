@@ -12,13 +12,13 @@ block content
 				h4.mb-0#template-title Email Templates
 				div
 					button.btn.btn-outline-secondary.btn-sm.me-2#btn-test-email
-						i.ph-light.ph-paper-plane-tilt.me-1
+						!= icon('send', 'me-1')
 						| Send Test
 					button.btn.btn-outline-warning.btn-sm.me-2#btn-reset
-						i.ph-light.ph-arrow-counter-clockwise.me-1
+						!= icon('restore', 'me-1')
 						| Reset to Default
 					button.btn.btn-primary.btn-sm#btn-save
-						i.ph-light.ph-check.me-1
+						!= icon('check', 'me-1')
 						| Save
 
 			form#template-form

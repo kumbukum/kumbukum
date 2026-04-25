@@ -876,7 +876,7 @@ function rmGetEditorContent() {
 
 // ── Link search (all item types) ─────────────────────────────────
 
-const rmTypeIcons = { notes: 'ph-light ph-file-text', memory: 'ph-light ph-lightbulb', urls: 'ph-light ph-link', emails: 'ph-light ph-envelope' };
+const rmTypeIcons = { notes: 'description', memory: 'lightbulb', urls: 'link', emails: 'email' };
 const rmTypeLabels = { notes: 'Note', memory: 'Memory', urls: 'URL', emails: 'Email' };
 
 function rmGetActiveLinkContainer() {
@@ -918,18 +918,18 @@ function rmRenderLinkTags() {
 	for (const container of containers) {
 		let html = rmSelectedLinks.map((r, i) => `
 			<span class="badge text-bg-secondary tag-badge rounded-pill d-inline-flex align-items-center gap-1 me-1 mb-1">
-				<i class="${rmTypeIcons[r._type] || 'ph-light ph-link'}"></i>
+				${kkIcon(rmTypeIcons[r._type] || 'link')}
 				${escapeHtml(r.title || r.url || r.id)}
 				<button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.5rem" data-index="${i}"></button>
 			</span>
 		`).join('');
 		if (rmTagConnections.length) {
-			html += '<div class="w-100 mt-2 mb-1"><small class="text-muted"><i class="ph-light ph-tag me-1"></i>Connected via shared tags</small></div>';
+			html += '<div class="w-100 mt-2 mb-1"><small class="text-muted">' + kkIcon('tag', 'me-1') + 'Connected via shared tags</small></div>';
 			html += rmTagConnections.map(c => `
 				<span class="badge text-bg-light border tag-badge rounded-pill d-inline-flex align-items-center gap-1 me-1 mb-1 rm-tag-connection" role="button" data-type="${c.type}" data-id="${c.id}" title="Shared tags: ${escapeHtml(c.shared_tags?.join(', ') || '')}">
-					<i class="${rmTypeIcons[c.type] || 'ph-light ph-link'} text-muted"></i>
+					${kkIcon(rmTypeIcons[c.type] || 'link', 'text-muted')}
 					<span class="text-muted">${escapeHtml(c.title || c.id)}</span>
-					<i class="ph-light ph-tag text-success" style="font-size:0.55rem"></i>
+					${kkIcon('tag', 'text-success rm-shared-tag-icon')}
 				</span>
 			`).join('');
 		}
@@ -959,7 +959,7 @@ async function rmSearchLinks(query) {
 	dd.innerHTML = filtered.map(r => `
 		<button type="button" class="list-group-item list-group-item-action py-1 px-2 small" data-id="${r.id}" data-type="${r._type}" data-title="${escapeHtml(r.title || r.url || '')}">
 			<div class="d-flex align-items-center gap-1">
-				<i class="${rmTypeIcons[r._type] || 'ph-light ph-link'}"></i>
+				${kkIcon(rmTypeIcons[r._type] || 'link')}
 				<span class="badge bg-light text-dark" style="font-size:0.65rem">${rmTypeLabels[r._type] || r._type}</span>
 				<span class="fw-semibold text-truncate">${escapeHtml(r.title || r.url || r.id)}</span>
 			</div>

@@ -2,9 +2,9 @@
 	.project-drop-overlay.d-none
 		.drop-overlay-card
 			.drop-overlay-icon
-				i.ph-light.ph-cloud-arrow-up
+				!= icon('uploadCloud')
 			h5 Files upload
 			p.text-muted Drop files here to import as notes
 	.text-muted.text-center.mt-5
-		i.ph-light.ph-folder-open.d-block(style="font-size:2rem")
+		!= icon('folderOpen', 'd-block', { style: 'font-size:2rem' })
 		| Select a project from the sidebar

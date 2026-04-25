@@ -8,7 +8,7 @@ include ../../../includes/avatar
 			h4.mb-4 My Team
 			if !can_manage_team
 				.alert.alert-warning
-					i.ph-light.ph-shield-warning.me-2
+					!= icon('shieldWarning', 'me-2')
 					| Team admin access is required to manage members for this account.
 			else
 				.row.g-4
@@ -16,7 +16,7 @@ include ../../../includes/avatar
 						.card.mb-4
 							.card-body
 								h5.card-title.mb-3
-									i.ph-light.ph-user-plus.me-2
+									!= icon('userAdd', 'me-2')
 									| Invite teammate
 								form#team-invite-form
 									.mb-3
@@ -31,14 +31,14 @@ include ../../../includes/avatar
 						.card
 							.card-body
 								h5.card-title.mb-3
-									i.ph-light.ph-envelope.me-2
+									!= icon('email', 'me-2')
 									| Pending invites
 								#team-invites-list.text-muted Loading invites…
 					.col-lg-7
 						.card
 							.card-body
 								h5.card-title.mb-3
-									i.ph-light.ph-users.me-2
+									!= icon('users', 'me-2')
 									| Members
 								#team-members-list.text-muted Loading team members…
 

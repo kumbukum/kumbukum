@@ -15,6 +15,15 @@ importers:
 
   .:
     dependencies:
+      '@fontsource-variable/material-symbols-outlined':
+        specifier: ^5.2.42
+        version: 5.2.42
+      '@fontsource-variable/noto-sans':
+        specifier: ^5.2.10
+        version: 5.2.10
+      '@fontsource-variable/noto-sans-mono':
+        specifier: ^5.2.10
+        version: 5.2.10
       '@keyv/valkey':
         specifier: ^1.0.11
         version: 1.0.11
@@ -51,9 +60,6 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.40.0
         version: 1.40.0
-      '@phosphor-icons/web':
-        specifier: ^2.1.2
-        version: 2.1.2
       '@sentry/node':
         specifier: ^10.50.0
         version: 10.50.0(@opentelemetry/exporter-trace-otlp-http@0.215.0(@opentelemetry/api@1.9.1))
@@ -70,7 +76,7 @@ importers:
         specifier: ^0.3.1
         version: 0.3.1(socket.io-adapter@2.5.6)
       '@tiptap/core':
-        specifier: ^3.22.4
+        specifier: ^3.22.3
         version: 3.22.4(@tiptap/pm@3.22.4)
       '@tiptap/extension-blockquote':
         specifier: ^3.22.4
@@ -79,7 +85,7 @@ importers:
         specifier: ^3.22.4
         version: 3.22.4(@tiptap/extension-list@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4))
       '@tiptap/extension-code-block':
-        specifier: ^3.22.4
+        specifier: ^3.22.3
         version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
       '@tiptap/extension-heading':
         specifier: ^3.22.4
@@ -103,7 +109,7 @@ importers:
         specifier: ^3.22.4
         version: 3.22.4(@tiptap/extension-list@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4))
       '@tiptap/pm':
-        specifier: ^3.22.4
+        specifier: ^3.22.3
         version: 3.22.4
       '@tiptap/starter-kit':
         specifier: ^3.22.4
@@ -882,6 +888,15 @@ packages:
 
   '@floating-ui/vue@1.1.11':
     resolution: {integrity: sha512-HzHKCNVxnGS35r9fCHBc3+uCnjw9IWIlCPL683cGgM9Kgj2BiAl8x1mS7vtvP6F9S/e/q4O6MApwSHj8hNLGfw==}
+
+  '@fontsource-variable/material-symbols-outlined@5.2.42':
+    resolution: {integrity: sha512-4oV9uMvgctKWhZrWW4HOIz4dOwcuTcP2b+jyC8C91dEWW446LFqsk6tQByim1fHjG6VAPHNFlg2pvngxkuecng==}
+
+  '@fontsource-variable/noto-sans-mono@5.2.10':
+    resolution: {integrity: sha512-N8w7TRt24aD17P4eV9GDNiV4M5FSbeZ91dfWPtlTi5EvH15KAyjGiC7rvXnG3VTo/nb6gQuIXNlTDgH3cz652g==}
+
+  '@fontsource-variable/noto-sans@5.2.10':
+    resolution: {integrity: sha512-wyFgKkFu7jki5kEL8qv7avjQ8rxHX0J/nhLWvbR9T0hOH1HRKZEvb9EW9lMjZfWHHfEzKkYf5J+NadwgCS7TXA==}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -1807,9 +1822,6 @@ packages:
   '@peculiar/x509@1.14.3':
     resolution: {integrity: sha512-C2Xj8FZ0uHWeCXXqX5B4/gVFQmtSkiuOolzAgutjTfseNOHT3pUjljDZsTSxXFGgio54bCzVFqmEOUrIVk8RDA==}
     engines: {node: '>=20.0.0'}
-
-  '@phosphor-icons/web@2.1.2':
-    resolution: {integrity: sha512-rPAR9o/bEcp4Cw4DEeZHXf+nlGCMNGkNDRizYHM47NLxz9vvEHp/Tt6FMK1NcWadzw/pFDPnRBGi/ofRya958A==}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -5861,6 +5873,12 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
+  '@fontsource-variable/material-symbols-outlined@5.2.42': {}
+
+  '@fontsource-variable/noto-sans-mono@5.2.10': {}
+
+  '@fontsource-variable/noto-sans@5.2.10': {}
+
   '@grpc/grpc-js@1.14.3':
     dependencies:
       '@grpc/proto-loader': 0.8.0
@@ -7085,8 +7103,6 @@ snapshots:
       reflect-metadata: 0.2.2
       tslib: 2.8.1
       tsyringe: 4.10.0
-
-  '@phosphor-icons/web@2.1.2': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true

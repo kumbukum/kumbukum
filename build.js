@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,23 +37,6 @@ await build({
 	},
 });
 console.log('Vendor CSS built → public/css/vendor.css');
-
-const vendorCssPath = join(__dirname, 'public/css/vendor.css');
-let vendorCss = readFileSync(vendorCssPath, 'utf8');
-const phosphorWoff2 = vendorCss.match(/url\("\.\/(Phosphor-Light-[^"]+\.woff2)"\) format\("woff2"\)/)?.[1];
-if (phosphorWoff2) {
-	vendorCss = vendorCss.replace(
-		/src:\s*\n\s*url\("\.\/Phosphor-Light-[^"]+\.woff2"\) format\("woff2"\),\n\s*url\("\.\/Phosphor-Light-[^"]+\.woff"\) format\("woff"\),\n\s*url\("\.\/Phosphor-Light-[^"]+\.ttf"\) format\("truetype"\),\n\s*url\("\.\/Phosphor-Light-[^"]+\.svg#Phosphor-Light"\) format\("svg"\);/,
-		`src: url("./${phosphorWoff2}") format("woff2");`
-	);
-	writeFileSync(vendorCssPath, vendorCss);
-	for (const entry of readdirSync(join(__dirname, 'public/css'))) {
-		if (entry.startsWith('Phosphor-Light-') && entry !== phosphorWoff2) {
-			unlinkSync(join(__dirname, 'public/css', entry));
-		}
-	}
-	console.log('Phosphor font optimized → WOFF2 only');
-}
 
 // TipTap Editor
 await build({

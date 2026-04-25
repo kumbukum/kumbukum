@@ -14,6 +14,7 @@ import { setupSocketIO } from './modules/socket.js';
 import { initTypesense } from './modules/typesense.js';
 import { initRedis } from './modules/redis.js';
 import { resolveTenant } from './modules/tenancy.js';
+import { installIconLocals } from './modules/icons.js';
 
 import { createApiLimiter } from './middleware/rate_limit.js';
 import { verifyScreenshotSignature, resolveScreenshotPath } from './modules/screenshot.js';
@@ -65,6 +66,7 @@ app.set('views', path.join(__dirname, 'views'));
 // Make OpenPanel config available to all templates
 app.locals.openpanel = config.openpanel;
 app.locals.sentry = config.sentry;
+installIconLocals(app);
 
 // Cache-busting build ID — embedded in static asset paths: /static/v-{hash}/...
 try {

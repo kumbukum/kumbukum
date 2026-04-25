@@ -24,10 +24,10 @@ script.
 			}
 			var el = document.getElementById('usage-stats');
 			el.innerHTML = '<table class="table"><tbody>'
-				+ '<tr><td><i class="ph-light ph-file-text me-2"></i>Notes</td><td>' + totals.notes + '</td></tr>'
-				+ '<tr><td><i class="ph-light ph-lightbulb me-2"></i>Memories</td><td>' + totals.memories + '</td></tr>'
-				+ '<tr><td><i class="ph-light ph-link me-2"></i>URLs</td><td>' + totals.urls + '</td></tr>'
-				+ '<tr><td><i class="ph-light ph-folder me-2"></i>Projects</td><td>' + totals.projects + '</td></tr>'
+				+ '<tr><td><span class="kk-icon material-symbols-outlined me-2" aria-hidden="true">description</span>Notes</td><td>' + totals.notes + '</td></tr>'
+				+ '<tr><td><span class="kk-icon material-symbols-outlined me-2" aria-hidden="true">lightbulb</span>Memories</td><td>' + totals.memories + '</td></tr>'
+				+ '<tr><td><span class="kk-icon material-symbols-outlined me-2" aria-hidden="true">link</span>URLs</td><td>' + totals.urls + '</td></tr>'
+				+ '<tr><td><span class="kk-icon material-symbols-outlined me-2" aria-hidden="true">folder</span>Projects</td><td>' + totals.projects + '</td></tr>'
 				+ '</tbody></table>';
 		}).catch(function() {
 			document.getElementById('usage-stats').innerHTML = '<p class="text-danger">Failed to load usage data</p>';
