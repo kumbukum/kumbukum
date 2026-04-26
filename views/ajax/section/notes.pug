@@ -2,14 +2,14 @@
 	#drop-overlay.drop-overlay.d-none
 		.drop-overlay-card
 			.drop-overlay-icon
-				i.ph-light.ph-cloud-arrow-up
+				!= icon('uploadCloud')
 			h5 Files upload
 			p.text-muted Drop files here to upload
 	input#import-filepond(type="file" multiple hidden)
 	.d-flex.justify-content-between.align-items-center.mb-3
 		h4 Notes
 		button.btn.btn-sm.btn-primary#new-note-btn
-			i.ph-light.ph-plus
+			!= icon('add')
 			span.ms-1 New Note
 	#batch-toolbar(data-type="notes")
 		.form-check.mb-2
@@ -21,15 +21,15 @@
 					span.batch-floating-count#batch-count 0 selected
 					.d-flex.align-items-center.gap-2
 						button.btn.btn-sm#batch-delete-btn
-							i.ph-light.ph-trash.me-1
+							!= icon('delete', 'me-1')
 							| Delete
 						button.btn.btn-sm#batch-move-btn
-							i.ph-light.ph-arrow-circle-right.me-1
+							!= icon('drive_file_move', 'me-1')
 							| Move
 						button.btn.btn-sm#batch-copy-btn
-							i.ph-light.ph-copy.me-1
+							!= icon('copy', 'me-1')
 							| Copy
 					span.batch-floating-banner.small.d-none#select-all-records-banner
 				button.btn.btn-sm.batch-floating-close#batch-dismiss-btn(type="button")
-					i.ph-light.ph-x
+					!= icon('close')
 	#notes-list.list-group

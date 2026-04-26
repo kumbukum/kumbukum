@@ -29,7 +29,7 @@
 						+ '</div>'
 						+ '<div class="text-truncate"><a href="' + u.url + '" target="_blank" class="text-muted small url-link">' + u.url + '</a></div>'
 						+ '<p class="mb-0 text-muted small text-truncate">' + (u.description?.slice(0, 200) || '') + '</p>'
-						+ (u.crawl_enabled ? '<span class="badge bg-success mt-1"><i class="ph-light ph-arrows-clockwise"></i> Crawling</span>' : '')
+						+ (u.crawl_enabled ? '<span class="badge bg-success mt-1">' + kkIcon('sync') + ' Crawling</span>' : '')
 						+ '</div></div>';
 				})
 				.join('')

@@ -1,26 +1,26 @@
 .d-flex.justify-content-between.align-items-center.mb-3
 	h4
-		i.ph-light.ph-trash.me-2
+		!= icon('delete', 'me-2')
 		| Trash
 	button.btn.btn-outline-danger.btn-sm#empty-trash-btn
-		i.ph-light.ph-trash.me-1
+		!= icon('delete', 'me-1')
 		| Empty Trash
 
 .alert.alert-info.py-2.mb-3
-	i.ph-light.ph-info.me-1
+	!= icon('info', 'me-1')
 	| Items in trash are automatically deleted after 30 days.
 
 .d-flex.align-items-center.mb-2.gap-2
 	.btn-group.btn-group-sm(role="group")
 		button.btn.btn-outline-secondary.active.trash-filter-btn(data-type="") All
 		button.btn.btn-outline-secondary.trash-filter-btn(data-type="notes")
-			i.ph-light.ph-file-text.me-1
+			!= icon('description', 'me-1')
 			| Notes
 		button.btn.btn-outline-secondary.trash-filter-btn(data-type="memories")
-			i.ph-light.ph-lightbulb.me-1
+			!= icon('lightbulb', 'me-1')
 			| Memories
 		button.btn.btn-outline-secondary.trash-filter-btn(data-type="urls")
-			i.ph-light.ph-link.me-1
+			!= icon('link', 'me-1')
 			| URLs
 
 .d-flex.align-items-center.mb-2.gap-2#trash-batch-toolbar
@@ -30,10 +30,10 @@
 	.batch-actions.d-none.d-flex.align-items-center.gap-2#trash-batch-actions
 		span.badge.bg-secondary#trash-batch-count 0 selected
 		button.btn.btn-link.btn-sm#trash-batch-restore-btn
-			i.ph-light.ph-arrow-counter-clockwise.me-1
+			!= icon('restore', 'me-1')
 			| Restore
 		button.btn.btn-link.btn-sm#trash-batch-delete-btn
-			i.ph-light.ph-trash.me-1
+			!= icon('delete', 'me-1')
 			| Delete Forever
 
 #trash-list.list-group

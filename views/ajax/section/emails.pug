@@ -5,7 +5,7 @@ if !email_feature_enabled
 	.card.border-warning-subtle
 		.card-body
 			h5.mb-2
-				i.ph-light.ph-lock.me-2
+				!= icon('lock', 'me-2')
 				| Email Ingestion (Pro)
 			p.text-muted.mb-2 In hosted edition, email ingestion and email project views are available on the Pro plan.
 			if is_hosted
@@ -21,16 +21,16 @@ else
 					span.batch-floating-count#batch-count 0 selected
 					.d-flex.align-items-center.gap-2
 						button.btn.btn-sm#batch-delete-btn
-							i.ph-light.ph-trash.me-1
+							!= icon('delete', 'me-1')
 							| Delete
 						button.btn.btn-sm#batch-move-btn
-							i.ph-light.ph-arrow-circle-right.me-1
+							!= icon('drive_file_move', 'me-1')
 							| Move
 						button.btn.btn-sm#batch-copy-btn
-							i.ph-light.ph-copy.me-1
+							!= icon('copy', 'me-1')
 							| Copy
 					span.batch-floating-banner.small.d-none#select-all-records-banner
 				button.btn.btn-sm.batch-floating-close#batch-dismiss-btn(type="button")
-					i.ph-light.ph-x
+					!= icon('close')
 
 	#emails-list.list-group

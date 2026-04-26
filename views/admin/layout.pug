@@ -29,7 +29,7 @@ html(lang="en")
 								a.nav-link(href="/admin/audit-logs" class=(activeNav === 'audit-logs' ? 'active' : '')) Audit Logs
 					form(action="/admin/logout" method="POST")
 						button.btn.btn-outline-light.btn-sm(type="submit")
-							i.ph-light.ph-sign-out.me-1
+							!= icon('signOut', 'me-1')
 							| Logout
 
 		.container-fluid.admin-main.py-4
@@ -43,5 +43,6 @@ html(lang="en")
 				span.ps-1 and
 				a.ps-1(href="https://razuna.com?utm_source=kumbukum_admin&utm_medium=referral" target="_blank") Razuna - Digital Asset Management
 
+		script(src=`/static/v-${v}/js/icons.js`)
 		script(src=`/static/v-${v}/js/vendor.js` type="module")
 		block scripts

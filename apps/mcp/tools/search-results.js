@@ -11,7 +11,7 @@ export function slimSearchResults(results) {
 		return results;
 	}
 
-	if (Array.isArray(results.hits)) {
+	if (Array.isArray(results.hits) || Array.isArray(results.grouped_hits)) {
 		return slimSearchCollection(results);
 	}
 
@@ -21,17 +21,21 @@ export function slimSearchResults(results) {
 }
 
 function slimSearchCollection(collection) {
+	const hits = Array.isArray(collection.hits)
+		? collection.hits
+		: (collection.grouped_hits || []).map((group) => group.hits?.[0]).filter(Boolean);
+
 	return {
 		found: collection.found || 0,
 		out_of: collection.out_of || 0,
 		page: collection.page || 1,
-		hits: collection.hits.map(slimSearchHit),
+		hits: hits.map(slimSearchHit),
 	};
 }
 
 function slimSearchHit(hit) {
 	if (hit && typeof hit === 'object' && hit.document) {
-		return hit.document;
+		return hit.document.source_id ? { ...hit.document, id: hit.document.source_id } : hit.document;
 	}
 	return hit;
 }

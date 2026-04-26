@@ -19744,22 +19744,30 @@ var Jt = b2.parse;
 var Vt = x.lex;
 
 // src/vendor.js
-var phosphorAlertIcons = {
-  success: "ph-check-circle",
-  error: "ph-x-circle",
-  warning: "ph-warning",
-  info: "ph-info",
-  question: "ph-question"
+var alertIcons = {
+  success: "checkCircle",
+  error: "cancel",
+  warning: "warning",
+  info: "info",
+  question: "question"
+};
+var alertGlyphs = {
+  checkCircle: "check_circle",
+  cancel: "cancel",
+  warning: "warning",
+  info: "info",
+  question: "help"
 };
 var decorateSwalOptions = (options) => {
   if (!options || typeof options !== "object") return options;
-  if (!options.icon || !phosphorAlertIcons[options.icon] || options.iconHtml) return options;
+  if (!options.icon || !alertIcons[options.icon] || options.iconHtml) return options;
+  const glyph = alertGlyphs[alertIcons[options.icon]];
   return {
     ...options,
-    iconHtml: `<i class="ph-light ${phosphorAlertIcons[options.icon]}"></i>`,
+    iconHtml: `<span class="kk-icon material-symbols-outlined" aria-hidden="true">${glyph}</span>`,
     customClass: {
       ...options.customClass,
-      icon: ["swal2-phosphor-icon", options.customClass?.icon].filter(Boolean).join(" ")
+      icon: ["swal2-kk-icon", options.customClass?.icon].filter(Boolean).join(" ")
     }
   };
 };

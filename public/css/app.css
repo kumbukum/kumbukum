@@ -1,7 +1,10 @@
 /* Kumbukum — App Styles */
 
 :root {
-	--bs-body-font-size: .93rem;
+	--kk-font-body: "Noto Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+	--kk-font-mono: "Noto Sans Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	--bs-body-font-family: var(--kk-font-body);
+	--bs-body-font-size: 0.93rem;
 	--bs-badge-font-weight: 400;
 	--sidebar-bg: #f8f9fa;
 	--chat-bg: #f8f9fa;
@@ -12,26 +15,71 @@
 
 body {
 	height: 100vh;
+	font-family: var(--kk-font-body);
 }
 
-.ph-light {
+.kk-icon.material-symbols-outlined {
 	display: inline-block;
-	font-size: 1.12em;
-	line-height: 1;
-	vertical-align: -0.155em;
-}
-
-.btn .ph-light,
-.nav-link .ph-light,
-.dropdown-item .ph-light,
-.list-group-item .ph-light,
-.batch-floating-bar .ph-light {
+	width: 1em;
+	overflow: hidden;
+	font-family: "Material Symbols Outlined Variable", "Material Symbols Outlined";
 	font-size: 1.18em;
+	font-weight: normal;
+	font-style: normal;
+	line-height: 1;
+	text-transform: none;
+	letter-spacing: normal;
+	white-space: nowrap;
+	word-wrap: normal;
+	direction: ltr;
+	vertical-align: -0.155em;
+	font-feature-settings: "liga";
+	font-variation-settings:
+		"FILL" 0,
+		"wght" 400,
+		"GRAD" 0,
+		"opsz" 24;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
-.batch-floating-bar .btn .ph-light {
+.kk-icon,
+.btn .kk-icon,
+.nav-link .kk-icon,
+.dropdown-item .kk-icon,
+.list-group-item .kk-icon,
+.batch-floating-bar .kk-icon {
+	font-size: 1.22em;
+}
+
+.kk-icon-xl,
+.kk-icon.kk-icon-xl,
+.kk-icon-xl .kk-icon {
+	font-size: 2em !important;
+	vertical-align: -0.255em;
+}
+
+.batch-floating-bar .btn .kk-icon {
 	font-size: 1.24em;
-	vertical-align: -0.18em;
+	vertical-align: -0.25em;
+}
+
+.slash-menu-icon {
+	width: 18px;
+	text-align: center;
+}
+
+.rm-shared-tag-icon {
+	font-size: 0.55rem;
+}
+
+code,
+kbd,
+pre,
+samp,
+.font-monospace {
+	font-family: var(--kk-font-mono);
 }
 
 body.kk-no-chat-sidebar #chat-sidebar,
@@ -53,7 +101,7 @@ body.kk-no-chat-sidebar #chat-results-panel {
 	}
 }
 
-.swal2-icon.swal2-phosphor-icon {
+.swal2-icon.swal2-kk-icon {
 	border: 0;
 	display: flex;
 	align-items: center;
@@ -64,26 +112,27 @@ body.kk-no-chat-sidebar #chat-results-panel {
 	font-size: 1rem;
 }
 
-.swal2-icon.swal2-phosphor-icon .ph-light {
+.swal2-icon.swal2-kk-icon .kk-icon {
+	width: auto;
 	font-size: 4.25rem;
 	line-height: 1;
 	vertical-align: 0;
 }
 
-.swal2-icon.swal2-success.swal2-phosphor-icon {
+.swal2-icon.swal2-success.swal2-kk-icon {
 	color: #a5dc86;
 }
 
-.swal2-icon.swal2-error.swal2-phosphor-icon {
+.swal2-icon.swal2-error.swal2-kk-icon {
 	color: #f27474;
 }
 
-.swal2-icon.swal2-warning.swal2-phosphor-icon {
+.swal2-icon.swal2-warning.swal2-kk-icon {
 	color: #f8bb86;
 }
 
-.swal2-icon.swal2-info.swal2-phosphor-icon,
-.swal2-icon.swal2-question.swal2-phosphor-icon {
+.swal2-icon.swal2-info.swal2-kk-icon,
+.swal2-icon.swal2-question.swal2-kk-icon {
 	color: #3fc3ee;
 }
 
@@ -93,7 +142,7 @@ body:has(.sidebar) {
 	flex-direction: column;
 }
 
-b, 
+b,
 strong {
 	font-weight: 500;
 }
@@ -122,6 +171,14 @@ small,
 .bg-hover-light:hover {
 	background-color: var(--bs-light) !important;
 	cursor: pointer;
+}
+
+.login-header {
+	font-size: 1.2rem;
+	font-weight: 900;
+	padding-left: 0;
+	background-color: initial;
+	border: initial;
 }
 
 .sidebar {
@@ -171,12 +228,24 @@ small,
 	font-size: 1.25rem;
 	line-height: 1;
 }
-.chat-thinking span:nth-child(2) { animation-delay: 0.2s; }
-.chat-thinking span:nth-child(3) { animation-delay: 0.4s; }
+.chat-thinking span:nth-child(2) {
+	animation-delay: 0.2s;
+}
+.chat-thinking span:nth-child(3) {
+	animation-delay: 0.4s;
+}
 @keyframes chatBlink {
-	0%, 20% { opacity: 0.2; }
-	50% { opacity: 1; }
-	80%, 100% { opacity: 0.2; }
+	0%,
+	20% {
+		opacity: 0.2;
+	}
+	50% {
+		opacity: 1;
+	}
+	80%,
+	100% {
+		opacity: 0.2;
+	}
 }
 
 /* Chat history items */
@@ -422,7 +491,7 @@ small,
 
 .navbar-brand img {
 	max-height: 20px;
-	margin-left: .3rem;
+	margin-left: 0.3rem;
 }
 
 /* Ghost-style source search field */
@@ -445,7 +514,9 @@ small,
 	border: 1px solid #e1e5e9;
 	border-radius: 6px;
 	background: #f9fafb;
-	transition: border-color 0.15s, box-shadow 0.15s;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 
 .source-search-wrap input:focus {
@@ -457,12 +528,12 @@ small,
 .source-dropdown {
 	border: 1px solid #e1e5e9;
 	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	background: #fff;
 }
 
 .source-dropdown .list-group-item.active {
-	background-color: var(--bs-list-group-action-hover-bg, rgba(0,0,0,.075));
+	background-color: var(--bs-list-group-action-hover-bg, rgba(0, 0, 0, 0.075));
 	color: inherit;
 	border-color: var(--bs-list-group-border-color);
 }
@@ -559,7 +630,10 @@ small,
 	background: #f7f9fc;
 	color: inherit;
 	text-align: left;
-	transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
 }
 
 .rm-email-thread-item:hover {
@@ -650,7 +724,10 @@ small,
 	height: 0;
 	overflow: hidden;
 	opacity: 0;
-	transition: opacity 0.3s ease, height 0.3s ease, margin 0.3s ease;
+	transition:
+		opacity 0.3s ease,
+		height 0.3s ease,
+		margin 0.3s ease;
 	margin-bottom: 0;
 }
 
@@ -780,30 +857,30 @@ body:not(.swal2-shown) > .swal2-container {
 /* SweetAlert2 — form styling */
 .swal2-input {
 	height: auto !important;
-	padding: .375rem .75rem !important;
-	font-size: .875rem !important;
-	margin: .15em 1em !important;
+	padding: 0.375rem 0.75rem !important;
+	font-size: 0.875rem !important;
+	margin: 0.15em 1em !important;
 	width: calc(100% - 2em) !important;
 }
 .swal2-html-container label.swal-label {
 	display: block;
 	text-align: left;
-	font-size: .8rem;
+	font-size: 0.8rem;
 	font-weight: 600;
 	color: #495057;
-	margin: .6rem 1em .1rem;
+	margin: 0.6rem 1em 0.1rem;
 }
 .swal2-html-container .swal-hint {
 	display: block;
 	text-align: left;
-	font-size: .75rem;
+	font-size: 0.75rem;
 	color: #868e96;
-	margin: .05rem 1em 0;
+	margin: 0.05rem 1em 0;
 }
 .swal2-html-container .input-group {
-	margin: .15em 1em;
+	margin: 0.15em 1em;
 	width: calc(100% - 2em);
 }
 .swal2-html-container .input-group .form-control {
-	font-size: .875rem;
+	font-size: 0.875rem;
 }

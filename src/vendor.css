@@ -1,5 +1,7 @@
 /* Vendor CSS bundle */
 @import "bootstrap/dist/css/bootstrap.css";
-@import "@phosphor-icons/web/light";
+@import "@fontsource-variable/noto-sans";
+@import "@fontsource-variable/noto-sans-mono";
+@import "@fontsource-variable/material-symbols-outlined";
 @import "huebee/huebee.css";
 @import "filepond/dist/filepond.css";
