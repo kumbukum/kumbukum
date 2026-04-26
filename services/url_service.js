@@ -76,6 +76,7 @@ export async function updateUrl(host_id, urlId, data, ctx = {}) {
 	if (data.description !== undefined) update.description = data.description;
 	if (data.crawl_enabled !== undefined) update.crawl_enabled = data.crawl_enabled;
 	if (data.project !== undefined) update.project = data.project;
+	update.is_indexed = false;
 
 	const before = ctx.user_id ? await Url.findOne({ _id: urlId, host_id }).lean() : null;
 
@@ -86,6 +87,7 @@ export async function updateUrl(host_id, urlId, data, ctx = {}) {
 	);
 
 	if (urlDoc) {
+		removeDocument(host_id, 'urls', urlId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'url:updated', urlDoc);
 		invalidateGraphCache(host_id).catch(() => {});
 		if (ctx.user_id) {

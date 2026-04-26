@@ -70,4 +70,30 @@ describe('MCP Search Results', () => {
 		const result = slimSearchResults([{ id: 'raw-1', title: 'Raw 1' }]);
 		assert.deepEqual(result, [{ id: 'raw-1', title: 'Raw 1' }]);
 	});
+
+	it('slims grouped Typesense responses to source documents', () => {
+		const result = slimSearchResults({
+			found: 1,
+			grouped_hits: [
+				{
+					group_key: ['note-1'],
+					hits: [
+						{
+							document: { id: 'note-1_chunk_1', source_id: 'note-1', title: 'Note 1' },
+							vector_distance: 0.12,
+						},
+					],
+				},
+			],
+			out_of: 2,
+			page: 1,
+		});
+
+		assert.deepEqual(result, {
+			found: 1,
+			out_of: 2,
+			page: 1,
+			hits: [{ id: 'note-1', source_id: 'note-1', title: 'Note 1' }],
+		});
+	});
 });

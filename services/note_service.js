@@ -43,6 +43,7 @@ export async function updateNote(host_id, noteId, data, ctx = {}) {
 	if (data.text_content !== undefined) update.text_content = data.text_content;
 	if (data.tags !== undefined) update.tags = data.tags;
 	if (data.project !== undefined) update.project = data.project;
+	update.is_indexed = false;
 
 	const before = ctx.user_id ? await Note.findOne({ _id: noteId, host_id }).lean() : null;
 
@@ -53,6 +54,7 @@ export async function updateNote(host_id, noteId, data, ctx = {}) {
 	);
 
 	if (note) {
+		removeDocument(host_id, 'notes', noteId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'note:updated', note);
 		invalidateGraphCache(host_id).catch(() => {});
 		if (ctx.user_id) {

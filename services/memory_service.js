@@ -42,6 +42,7 @@ export async function updateMemory(host_id, memoryId, data, ctx = {}) {
 	if (data.tags !== undefined) update.tags = data.tags;
 	if (data.source !== undefined) update.source = data.source;
 	if (data.project !== undefined) update.project = data.project;
+	update.is_indexed = false;
 
 	const before = ctx.user_id ? await Memory.findOne({ _id: memoryId, host_id }).lean() : null;
 
@@ -52,6 +53,7 @@ export async function updateMemory(host_id, memoryId, data, ctx = {}) {
 	);
 
 	if (mem) {
+		removeDocument(host_id, 'memory', memoryId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'memory:updated', mem);
 		invalidateGraphCache(host_id).catch(() => {});
 		if (ctx.user_id) {

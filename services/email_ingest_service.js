@@ -184,6 +184,7 @@ export async function ingestEmail(userId, host_id, data, ctx = {}) {
 	emitToTenant(host_id, 'email:created', email);
 	invalidateGraphCache(host_id).catch(() => {});
 	audit.log({ action: 'create', resource: 'email', resource_id: email._id.toString(), user_id: userId, host_id, ...ctx });
+	removeDocument(host_id, 'emails', email._id.toString()).catch((err) => console.error('Typesense remove error:', err.message));
 	return email;
 }
 
@@ -220,6 +221,7 @@ export async function updateEmail(host_id, emailId, data, ctx = {}) {
 	);
 
 	if (email) {
+		removeDocument(host_id, 'emails', emailId).catch((err) => console.error('Typesense remove error:', err.message));
 		emitToTenant(host_id, 'email:updated', email);
 		invalidateGraphCache(host_id).catch(() => {});
 		if (ctx.user_id) {

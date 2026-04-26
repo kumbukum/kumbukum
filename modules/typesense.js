@@ -7,6 +7,24 @@ import { getRedisClient } from './redis.js';
 let client;
 
 const _ts_exlude_default = 'embedding';
+const _chunk_size = 3000;
+const _chunk_overlap = 200;
+
+const _chunk_fields = {
+	notes: ['text_content'],
+	memory: ['content'],
+	urls: ['text_content'],
+	emails: ['text_content', 'attachment_text_content'],
+	pages: ['text_content'],
+};
+
+function chunkMetadataFields() {
+	return [
+		{ name: 'source_id', type: 'string', facet: true },
+		{ name: 'chunk_index', type: 'int32', optional: true },
+		{ name: 'chunk_count', type: 'int32', optional: true },
+	];
+}
 
 function resolveExcludeFields(excludeFields, type) {
 	if (excludeFields && typeof excludeFields === 'object' && !Array.isArray(excludeFields)) {
@@ -132,6 +150,98 @@ export function getTypesenseClient() {
 	return client;
 }
 
+function chunkString(value) {
+	const text = String(value || '');
+	if (!text) return [''];
+	if (text.length <= _chunk_size) return [text];
+
+	const chunks = [];
+	const step = _chunk_size - _chunk_overlap;
+	for (let i = 0; i < text.length; i += step) {
+		chunks.push(text.substring(i, i + _chunk_size));
+	}
+	return chunks;
+}
+
+function chunkTypesenseDoc(type, doc) {
+	const fields = _chunk_fields[type];
+	if (!fields?.length) return [doc];
+
+	const sourceId = doc.source_id || doc.id;
+	const chunkSpecs = [];
+	for (const field of fields) {
+		const value = String(doc[field] || '');
+		if (!value) continue;
+		const chunks = chunkString(value);
+		for (const chunk of chunks) {
+			chunkSpecs.push({ field, chunk });
+		}
+	}
+
+	if (!chunkSpecs.length) chunkSpecs.push({ field: fields[0], chunk: '' });
+
+	return chunkSpecs.map((spec, index) => {
+		const chunkDoc = {
+			...doc,
+			id: index === 0 ? sourceId : `${sourceId}_chunk_${index}`,
+			source_id: sourceId,
+			chunk_index: index,
+			chunk_count: chunkSpecs.length,
+		};
+
+		for (const field of fields) {
+			chunkDoc[field] = field === spec.field ? spec.chunk : '';
+		}
+
+		return chunkDoc;
+	});
+}
+
+function applySourceIdToHit(hit) {
+	if (!hit?.document?.source_id) return hit;
+	return {
+		...hit,
+		document: {
+			...hit.document,
+			id: hit.document.source_id,
+		},
+	};
+}
+
+export function normalizeGroupedSearchResult(result) {
+	if (!result?.grouped_hits) return result;
+
+	return {
+		...result,
+		hits: result.grouped_hits
+			.map((group) => group.hits?.[0])
+			.filter(Boolean)
+			.map(applySourceIdToHit),
+	};
+}
+
+function isMissingSourceIdError(err) {
+	return err?.httpStatus === 400 && (err.message || '').includes('source_id');
+}
+
+function withoutGrouping(params) {
+	const retry = { ...params };
+	delete retry.group_by;
+	delete retry.group_limit;
+	return retry;
+}
+
+function includeSourceIdField(includeFields) {
+	if (!includeFields) return includeFields;
+	const fields = includeFields.split(',').map((field) => field.trim()).filter(Boolean);
+	if (!fields.includes('source_id')) fields.push('source_id');
+	return fields.join(',');
+}
+
+function exactFilterValue(value) {
+	return '`' + String(value).replace(/`/g, '\\`') + '`';
+}
+
 /**
  * Collection schemas by type. Host ID is appended at runtime.
  */
@@ -171,6 +281,10 @@ export function toTypesenseDoc(type, doc) {
 			return base;
 	}
 }
+
+export function toTypesenseDocs(type, doc) {
+	return chunkTypesenseDoc(type, toTypesenseDoc(type, doc));
+}
 const schemas = {
 	notes: (host_id) => ({
 		name: `notes_${host_id}`,
@@ -182,6 +296,7 @@ const schemas = {
 			{ name: 'tags', type: 'string[]', facet: true, optional: true },
 			{ name: 'created_at', type: 'int64' },
 			{ name: 'updated_at', type: 'int64' },
+			...chunkMetadataFields(),
 			{
 				name: 'embedding',
 				type: 'float[]',
@@ -209,6 +324,7 @@ const schemas = {
 			{ name: 'source', type: 'string', optional: true },
 			{ name: 'created_at', type: 'int64' },
 			{ name: 'updated_at', type: 'int64' },
+			...chunkMetadataFields(),
 			{
 				name: 'embedding',
 				type: 'float[]',
@@ -236,6 +352,7 @@ const schemas = {
 			{ name: 'project_id', type: 'string', facet: true },
 			{ name: 'created_at', type: 'int64' },
 			{ name: 'updated_at', type: 'int64' },
+			...chunkMetadataFields(),
 			{
 				name: 'embedding',
 				type: 'float[]',
@@ -268,6 +385,7 @@ const schemas = {
 			{ name: 'project_id', type: 'string', facet: true },
 			{ name: 'created_at', type: 'int64' },
 			{ name: 'updated_at', type: 'int64' },
+			...chunkMetadataFields(),
 			{
 				name: 'embedding',
 				type: 'float[]',
@@ -294,6 +412,7 @@ const schemas = {
 			{ name: 'text_content', type: 'string' },
 			{ name: 'project_id', type: 'string', facet: true },
 			{ name: 'crawled_at', type: 'int64' },
+			...chunkMetadataFields(),
 			{
 				name: 'embedding',
 				type: 'float[]',
@@ -319,7 +438,13 @@ export async function ensureCollections(host_id) {
 	for (const [type, schemaFn] of Object.entries(schemas)) {
 		const schema = schemaFn(host_id);
 		try {
-			await ts.collections(schema.name).retrieve();
+			const existing = await ts.collections(schema.name).retrieve();
+			const existingFields = new Set((existing.fields || []).map((field) => field.name));
+			const missingChunkFields = chunkMetadataFields().filter((field) => !existingFields.has(field.name));
+			if (missingChunkFields.length) {
+				await ts.collections(schema.name).update({ fields: missingChunkFields });
+				console.log(`Updated Typesense collection fields: ${schema.name}`);
+			}
 		} catch (err) {
 			if (err.httpStatus === 404) {
 				try {
@@ -347,10 +472,14 @@ export async function ensureCollections(host_id) {
 export async function indexDocument(host_id, type, doc) {
 	const ts = getTypesenseClient();
 	const collectionName = `${type}_${host_id}`;
-	const tsDoc = doc.id ? doc : toTypesenseDoc(type, doc);
+	const tsDocs = doc.id ? chunkTypesenseDoc(type, doc) : toTypesenseDocs(type, doc);
+	const sourceId = tsDocs[0]?.source_id || tsDocs[0]?.id;
+	if (sourceId) {
+		await removeDocument(host_id, type, sourceId);
+	}
 	return withTypesenseResilience(
 		`upsert ${collectionName}`,
-		() => ts.collections(collectionName).documents().upsert(tsDoc),
+		() => ts.collections(collectionName).documents().import(tsDocs, { action: 'upsert', dirty_values: 'coerce_or_drop' }),
 		{ fallback: null },
 	);
 }
@@ -384,7 +513,18 @@ export async function removeDocument(host_id, type, docId) {
 	try {
 		return await withTypesenseResilience(
 			`delete ${collectionName}/${docId}`,
-			() => ts.collections(collectionName).documents(docId).delete(),
+			async () => {
+				try {
+					return await ts.collections(collectionName).documents().delete({
+						filter_by: `source_id:=${exactFilterValue(docId)} || id:=${exactFilterValue(docId)}`,
+					});
+				} catch (err) {
+					if (err?.httpStatus === 400 && (err.message || '').includes('source_id')) {
+						return ts.collections(collectionName).documents(docId).delete();
+					}
+					throw err;
+				}
+			},
 			{ fallback: null },
 		);
 	} catch (err) {
@@ -424,9 +564,23 @@ export async function searchCollection(host_id, type, query, options = {}) {
 	};
 	if (options.include_fields) params.include_fields = options.include_fields;
 	if (options.filter_by) params.filter_by = options.filter_by;
+	if (_chunk_fields[type] && options.group !== false && !params.group_by) {
+		params.group_by = 'source_id';
+		params.group_limit = params.group_limit || 1;
+		params.include_fields = includeSourceIdField(params.include_fields);
+	}
 	return withTypesenseResilience(
 		`search ${collectionName}`,
-		() => ts.collections(collectionName).documents().search(params),
+		async () => {
+			try {
+				return normalizeGroupedSearchResult(await ts.collections(collectionName).documents().search(params));
+			} catch (err) {
+				if (params.group_by && isMissingSourceIdError(err)) {
+					return normalizeGroupedSearchResult(await ts.collections(collectionName).documents().search(withoutGrouping(params)));
+				}
+				throw err;
+			}
+		},
 		{ fallback: { hits: [], found: 0, out_of: 0, page: params.page || 1 } },
 	);
 }
@@ -448,11 +602,26 @@ export async function listDocuments(host_id, type, options = {}) {
 	};
 	if (options.filter_by) baseParams.filter_by = options.filter_by;
 	if (options.sort_by) baseParams.sort_by = options.sort_by;
+	if (_chunk_fields[type] && options.group !== false) {
+		baseParams.group_by = 'source_id';
+		baseParams.group_limit = 1;
+		baseParams.include_fields = includeSourceIdField(baseParams.include_fields);
+	}
 
 	if (limit <= 250) {
 		return withTypesenseResilience(
 			`list ${collectionName}`,
-			() => ts.collections(collectionName).documents().search({ ...baseParams, per_page: limit, page: options.page || 1 }),
+			async () => {
+				const params = { ...baseParams, per_page: limit, page: options.page || 1 };
+				try {
+					return normalizeGroupedSearchResult(await ts.collections(collectionName).documents().search(params));
+				} catch (err) {
+					if (params.group_by && isMissingSourceIdError(err)) {
+						return normalizeGroupedSearchResult(await ts.collections(collectionName).documents().search(withoutGrouping(params)));
+					}
+					throw err;
+				}
+			},
 			{ fallback: { hits: [], found: 0 } },
 		);
 	}
@@ -464,7 +633,17 @@ export async function listDocuments(host_id, type, options = {}) {
 	while (allHits.length < limit) {
 		const res = await withTypesenseResilience(
 			`list page ${collectionName}`,
-			() => ts.collections(collectionName).documents().search({ ...baseParams, per_page: 250, page }),
+			async () => {
+				const params = { ...baseParams, per_page: 250, page };
+				try {
+					return normalizeGroupedSearchResult(await ts.collections(collectionName).documents().search(params));
+				} catch (err) {
+					if (params.group_by && isMissingSourceIdError(err)) {
+						return normalizeGroupedSearchResult(await ts.collections(collectionName).documents().search(withoutGrouping(params)));
+					}
+					throw err;
+				}
+			},
 			{ fallback: { hits: [], found: 0 } },
 		);
 		found = res.found || 0;
@@ -484,18 +663,36 @@ export async function searchAll(host_id, query, options = {}) {
 	const ts = getTypesenseClient();
 	const includeEmails = options.includeEmails !== false;
 	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
-	const searches = types.map((type) => ({
-		collection: `${type}_${host_id}`,
-		q: query,
-		query_by: 'embedding',
-		prefix: false,
-		per_page: options.perPage || 5,
-		exclude_fields: resolveExcludeFields(options.exclude_fields, type),
-	}));
+	const searches = types.map((type) => {
+		const search = {
+			collection: `${type}_${host_id}`,
+			q: query,
+			query_by: 'embedding',
+			prefix: false,
+			per_page: options.perPage || 5,
+			exclude_fields: resolveExcludeFields(options.exclude_fields, type),
+		};
+		if (options.projectId) search.filter_by = `project_id:=${options.projectId}`;
+		if (_chunk_fields[type] && options.group !== false) {
+			search.group_by = 'source_id';
+			search.group_limit = 1;
+		}
+		return search;
+	});
 
 	const results = await withTypesenseResilience(
 		`multiSearch host ${host_id}`,
-		() => ts.multiSearch.perform({ searches }),
+		async () => {
+			try {
+				return await ts.multiSearch.perform({ searches });
+			} catch (err) {
+				if (isMissingSourceIdError(err)) {
+					const ungrouped = searches.map(withoutGrouping);
+					return ts.multiSearch.perform({ searches: ungrouped });
+				}
+				throw err;
+			}
+		},
 		{
 			fallback: {
 				results: searches.map(() => ({ hits: [], found: 0, out_of: 0, page: 1 })),
@@ -504,7 +701,7 @@ export async function searchAll(host_id, query, options = {}) {
 	);
 	const merged = {};
 	types.forEach((type, i) => {
-		merged[type] = results.results[i];
+		merged[type] = normalizeGroupedSearchResult(results.results[i]);
 	});
 	return merged;
 }
@@ -548,9 +745,22 @@ export async function getFilteredCount(host_id, type, projectId) {
 			exclude_fields: _ts_exlude_default,
 		};
 		if (projectId) search.filter_by = `project_id:=${projectId}`;
+		if (_chunk_fields[type]) {
+			search.group_by = 'source_id';
+			search.group_limit = 1;
+		}
 		const result = await withTypesenseResilience(
 			`count search ${collectionName}`,
-			() => ts.collections(collectionName).documents().search(search),
+			async () => {
+				try {
+					return await ts.collections(collectionName).documents().search(search);
+				} catch (err) {
+					if (search.group_by && isMissingSourceIdError(err)) {
+						return ts.collections(collectionName).documents().search(withoutGrouping(search));
+					}
+					throw err;
+				}
+			},
 			{ fallback: { found: 0 } },
 		);
 		return result.found || 0;
@@ -744,19 +954,40 @@ export async function indexMissing(models) {
 				hostProgress.set(host_id, progress);
 			}
 
-			const tsDocs = docs.map((doc) => toTypesenseDoc(type, doc));
-			const results = await importDocuments(host_id, type, tsDocs);
+			await Promise.all(docs.map((doc) => removeDocument(host_id, type, doc._id.toString())));
 
-			// Separate successes and failures
-			const successIds = [];
-			const failedIds = [];
-			for (let i = 0; i < results.length; i++) {
-				if (results[i].success) {
-					successIds.push(docs[i]._id);
-				} else {
-					failedIds.push({ id: docs[i]._id.toString(), error: results[i].error });
+			const tsDocEntries = [];
+			const chunkCounts = new Map();
+			for (const doc of docs) {
+				const sourceId = doc._id.toString();
+				const chunks = toTypesenseDocs(type, doc);
+				chunkCounts.set(sourceId, chunks.length);
+				for (const chunk of chunks) {
+					tsDocEntries.push({ sourceId, doc: chunk });
 				}
 			}
+			const results = await importDocuments(host_id, type, tsDocEntries.map((entry) => entry.doc));
+
+			// Separate successes and failures
+			const successCounts = new Map();
+			const failedIds = new Map();
+			for (let i = 0; i < tsDocEntries.length; i++) {
+				const entry = tsDocEntries[i];
+				if (results[i]?.success) {
+					successCounts.set(entry.sourceId, (successCounts.get(entry.sourceId) || 0) + 1);
+				} else {
+					failedIds.set(entry.sourceId, results[i]?.error || 'missing import result');
+				}
+			}
+
+			const successIds = [];
+			for (const doc of docs) {
+				const sourceId = doc._id.toString();
+				if ((successCounts.get(sourceId) || 0) === chunkCounts.get(sourceId) && !failedIds.has(sourceId)) {
+					successIds.push(doc._id);
+				}
+			}
+			const failed = Array.from(failedIds.entries()).map(([id, error]) => ({ id, error }));
 
 			// Mark successful docs as indexed in one updateMany
 			if (successIds.length) {
@@ -766,8 +997,8 @@ export async function indexMissing(models) {
 				progress.by_type[type] += successIds.length;
 			}
 
-			if (failedIds.length) {
-				console.error(`indexMissing: ${failedIds.length} ${type} failed for host ${host_id}:`, failedIds);
+			if (failed.length) {
+				console.error(`indexMissing: ${failed.length} ${type} failed for host ${host_id}:`, failed);
 			}
 
 			if (docs.length > 0) {
@@ -1054,6 +1285,10 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 		if (projectId) {
 			search.filter_by = `project_id:=${projectId}`;
 		}
+		if (_chunk_fields[type]) {
+			search.group_by = 'source_id';
+			search.group_limit = 1;
+		}
 		return search;
 	});
 
@@ -1076,7 +1311,15 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 	}
 
 	async function performConversationMultiSearch() {
-		return ts.multiSearch.perform({ searches }, searchParams);
+		try {
+			return await ts.multiSearch.perform({ searches }, searchParams);
+		} catch (err) {
+			if (isMissingSourceIdError(err)) {
+				const ungrouped = searches.map(withoutGrouping);
+				return ts.multiSearch.perform({ searches: ungrouped }, searchParams);
+			}
+			throw err;
+		}
 	}
 
 	async function retryWithoutConversationId(reason) {
@@ -1124,7 +1367,7 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 	// Merge results by type
 	const merged = {};
 	types.forEach((type, i) => {
-		merged[type] = data.results?.[i] || { found: 0, hits: [] };
+		merged[type] = normalizeGroupedSearchResult(data.results?.[i]) || { found: 0, hits: [] };
 	});
 
 	// Parse conversation answer

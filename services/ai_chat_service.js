@@ -542,13 +542,6 @@ async function handleConversation({ hostId, userId, query, conversationId, proje
 // Shared Search (used by both chat and MCP)
 // ────────────────────────────────────────────────────────────────────
 
-function resolveSearchExcludeFields(excludeFields, type) {
-	if (excludeFields && typeof excludeFields === 'object' && !Array.isArray(excludeFields)) {
-		return excludeFields[type] || excludeFields.default || 'embedding';
-	}
-	return excludeFields || 'embedding';
-}
-
 /**
  * Search across all knowledge types. Shared between web chat and MCP.
  *
@@ -562,29 +555,7 @@ function resolveSearchExcludeFields(excludeFields, type) {
  */
 export async function searchKnowledge(hostId, query, options = {}) {
 	const { projectId, perPage = 5, includeEmails = true, exclude_fields } = options;
-	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
-
-	if (projectId) {
-		// Search with project filter
-		const ts = (await import('../modules/typesense.js')).getTypesenseClient();
-		const searches = types.map((type) => ({
-			collection: `${type}_${hostId}`,
-			q: query,
-			query_by: 'embedding',
-			prefix: false,
-			per_page: perPage,
-			filter_by: `project_id:=${projectId}`,
-			exclude_fields: resolveSearchExcludeFields(exclude_fields, type),
-		}));
-		const results = await ts.multiSearch.perform({ searches });
-		const merged = {};
-		types.forEach((type, i) => {
-			merged[type] = results.results[i];
-		});
-		return merged;
-	}
-
-	return searchAll(hostId, query, { perPage, includeEmails, exclude_fields });
+	return searchAll(hostId, query, { projectId, perPage, includeEmails, exclude_fields });
 }
 
 // ────────────────────────────────────────────────────────────────────
