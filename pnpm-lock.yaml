@@ -76,7 +76,7 @@ importers:
         specifier: ^0.3.1
         version: 0.3.1(socket.io-adapter@2.5.6)
       '@tiptap/core':
-        specifier: ^3.22.4
+        specifier: ^3.22.3
         version: 3.22.4(@tiptap/pm@3.22.4)
       '@tiptap/extension-blockquote':
         specifier: ^3.22.4
@@ -85,7 +85,7 @@ importers:
         specifier: ^3.22.4
         version: 3.22.4(@tiptap/extension-list@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4))
       '@tiptap/extension-code-block':
-        specifier: ^3.22.4
+        specifier: ^3.22.3
         version: 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
       '@tiptap/extension-heading':
         specifier: ^3.22.4
@@ -109,7 +109,7 @@ importers:
         specifier: ^3.22.4
         version: 3.22.4(@tiptap/extension-list@3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4))
       '@tiptap/pm':
-        specifier: ^3.22.4
+        specifier: ^3.22.3
         version: 3.22.4
       '@tiptap/starter-kit':
         specifier: ^3.22.4

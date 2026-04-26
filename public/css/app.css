@@ -44,12 +44,20 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
+.kk-icon,
 .btn .kk-icon,
 .nav-link .kk-icon,
 .dropdown-item .kk-icon,
 .list-group-item .kk-icon,
 .batch-floating-bar .kk-icon {
 	font-size: 1.22em;
+}
+
+.kk-icon-xl,
+.kk-icon.kk-icon-xl,
+.kk-icon-xl .kk-icon {
+	font-size: 2em !important;
+	vertical-align: -0.255em;
 }
 
 .batch-floating-bar .btn .kk-icon {
