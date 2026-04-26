@@ -339,6 +339,20 @@ let rmUrlCrawlEnabled = false;
 let rmEmailBodyText = '';
 let rmEmailBodyLoaded = false;
 
+function rmShowModal(modalEl) {
+	const modal = BsModal.getOrCreateInstance(modalEl);
+	if (!modalEl.classList.contains('show')) modal.show();
+	return modal;
+}
+
+function rmCleanupModalBackdrops() {
+	if (document.querySelector('.modal.show')) return;
+	document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+	document.body.classList.remove('modal-open');
+	document.body.style.removeProperty('overflow');
+	document.body.style.removeProperty('padding-right');
+}
+
 /**
  * Open the universal item modal.
  * @param {string} type - 'notes' | 'memory' | 'urls'
@@ -380,8 +394,7 @@ async function openItemModal(type, id, defaults = {}) {
 		deleteBtn.classList.remove('d-none');
 	}
 
-	const modal = new BsModal(modalEl);
-	modal.show();
+	rmShowModal(modalEl);
 
 	if (isCreate) {
 		rmPopulate(type, defaults);
@@ -439,8 +452,7 @@ async function openResultModal(item) {
 	if (text) html += `<div class="text-muted" style="white-space:pre-wrap">${escapeHtml(text.slice(0, 3000))}</div>`;
 	loadingEl.innerHTML = html || '<p class="text-muted">No content available</p>';
 
-	const modal = new BsModal(modalEl);
-	modal.show();
+	rmShowModal(modalEl);
 }
 
 function formatList(values) {
@@ -563,8 +575,7 @@ async function openEmailModal(item) {
 	badgeEl.className = `badge bg-${typeBadgeColor('emails')} me-2`;
 	badgeEl.textContent = 'Email';
 
-	const modal = new BsModal(modalEl);
-	modal.show();
+	rmShowModal(modalEl);
 
 	try {
 		const [emailRes, threadRes] = await Promise.all([
@@ -1202,7 +1213,10 @@ function initResultModalHandlers() {
 	});
 
 	// Cleanup on modal close
-	modalEl.addEventListener('hidden.bs.modal', rmCleanup);
+	modalEl.addEventListener('hidden.bs.modal', () => {
+		rmCleanup();
+		rmCleanupModalBackdrops();
+	});
 }
 
 // Expose globally so page scripts can use it
