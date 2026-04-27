@@ -9,10 +9,11 @@
     "node": ">=24"
   },
   "scripts": {
-    "start": "node --optimize_for_size --max-old-space-size=4096 server.js --http"
+    "start": "node --import ./sentry.js --optimize_for_size --max-old-space-size=4096 server.js --http"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@sentry/node": "^10.50.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.4.1",
     "vitepress-plugin-tabs": "^0.9.0",
