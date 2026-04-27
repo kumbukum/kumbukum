@@ -3,6 +3,10 @@
 > Open source memory infrastructure for teams.  
 > Turn scattered company knowledge into AI-ready context.
 
+## Intro video
+
+[![Watch the video](http://img.youtube.com/vi/DnNchFuE1Do/0.jpg)](http://www.youtube.com/watch?v=DnNchFuE1Do)
+
 Stop reset loops. Give every AI tool trusted memory your team can inspect, control, and reuse.
 
 Kumbukum is an open-source memory layer for AI-native teams and MCP-compatible tools. Store notes, memories, URLs, and relationships in one place, then let assistants retrieve the right context across sessions, projects, and clients.
