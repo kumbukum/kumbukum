@@ -2544,6 +2544,24 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "URL already saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "$ref": "#/components/schemas/Url"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "201": {
             "description": "Created",
             "content": {

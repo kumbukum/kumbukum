@@ -325,12 +325,13 @@ router.get('/urls', async (req, res) => {
 
 router.post('/urls', async (req, res) => {
 	const url = await urlService.saveUrl(req.userId, req.host_id, req.body, auditCtx(req));
+	const wasDuplicate = !!url.$locals?.wasDuplicate;
 
-	if (url.crawl_enabled) {
+	if (!wasDuplicate && url.crawl_enabled) {
 		crawlSite(url).catch((err) => console.error('Background crawl error:', err.message));
 	}
 
-	res.status(201).json({ url });
+	res.status(wasDuplicate ? 200 : 201).json({ url, duplicate: wasDuplicate });
 });
 
 router.get('/urls/:id', async (req, res) => {

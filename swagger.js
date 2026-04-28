@@ -894,6 +894,7 @@ const swaggerSpec = {
                 },
                 responses: {
                     201: { description: 'Created', content: { 'application/json': { schema: { type: 'object', properties: { url: { $ref: '#/components/schemas/Url' } } } } } },
+                    200: { description: 'URL already saved', content: { 'application/json': { schema: { type: 'object', properties: { url: { $ref: '#/components/schemas/Url' }, duplicate: { type: 'boolean' } } } } } },
                 },
             },
         },

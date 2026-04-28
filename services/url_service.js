@@ -5,6 +5,7 @@ import { emitToTenant } from '../modules/socket.js';
 import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
 import * as audit from './audit_service.js';
 import { saveScreenshot, signScreenshotUrl } from '../modules/screenshot.js';
+import { normalizeUrl } from '../modules/screenshot.js';
 
 function attachScreenshotUrl(doc) {
 	if (!doc) return doc;
@@ -20,16 +21,40 @@ function attachScreenshotUrls(docs) {
 }
 
 export async function saveUrl(userId, host_id, data, ctx = {}) {
+	const rawUrl = String(data.url || '').trim();
+	const normalizedUrl = normalizeUrl(rawUrl);
+	const duplicateQuery = {
+		host_id,
+		in_trash: { $ne: true },
+		$or: [
+			{ normalized_url: normalizedUrl },
+			{ url: rawUrl },
+			{ url: normalizedUrl },
+		],
+	};
+	const existingUrl = await Url.findOne(duplicateQuery);
+
+	if (existingUrl) {
+		if (!existingUrl.normalized_url) {
+			existingUrl.normalized_url = normalizedUrl;
+			existingUrl.save().catch((err) => console.error('URL duplicate normalization update error:', err.message));
+		}
+		existingUrl.$locals = existingUrl.$locals || {};
+		existingUrl.$locals.wasDuplicate = true;
+		return existingUrl;
+	}
+
 	let extracted = {};
 	try {
-		extracted = await extractUrlContent(data.url);
+		extracted = await extractUrlContent(rawUrl);
 	} catch (err) {
 		console.error('URL extraction error:', err.message);
 	}
 
 	const urlDoc = await Url.create({
-		url: data.url,
-		title: data.title || extracted.title || data.url,
+		url: rawUrl,
+		normalized_url: normalizedUrl,
+		title: data.title || extracted.title || rawUrl,
 		description: data.description || extracted.description || '',
 		og_image: extracted.og_image || '',
 		text_content: extracted.text_content || '',
@@ -44,7 +69,7 @@ export async function saveUrl(userId, host_id, data, ctx = {}) {
 	audit.log({ action: 'create', resource: 'url', resource_id: urlDoc._id.toString(), user_id: userId, host_id, ...ctx });
 
 	// Fire-and-forget: capture screenshot in background
-	saveScreenshot(data.url).then((filename) => {
+	saveScreenshot(rawUrl).then((filename) => {
 		if (filename) {
 			Url.updateOne({ _id: urlDoc._id }, { $set: { screenshot: filename } }).catch(() => {});
 		}

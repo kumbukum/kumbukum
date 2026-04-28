@@ -447,7 +447,7 @@ async function handleAction({ hostId, userId, query, conversationId, projectId, 
 					project: finalProjectId,
 				}, ctx);
 				return {
-					answer: `URL "${url.title || url.url}" saved.`,
+					answer: url.$locals?.wasDuplicate ? `URL "${url.title || url.url}" was already saved.` : `URL "${url.title || url.url}" saved.`,
 					results: [{ ...url.toObject?.() || url, _type: 'urls' }],
 					action: { type: 'save_url', completed: true },
 					conversationId,
