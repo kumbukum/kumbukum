@@ -174,6 +174,20 @@ async function loadProjectOverview(projectId) {
 				navigateTo(link.getAttribute('href'));
 			});
 		});
+
+		const copyForwardingEmailBtn = container.querySelector('#copy-forwarding-email-btn');
+		copyForwardingEmailBtn?.addEventListener('click', async () => {
+			const value = copyForwardingEmailBtn.dataset.copyValue || container.querySelector('#project-forwarding-email')?.value || '';
+			if (!value) return;
+			try {
+				await navigator.clipboard.writeText(value);
+			} catch {
+				const input = container.querySelector('#project-forwarding-email');
+				input?.select();
+				document.execCommand('copy');
+			}
+			showSuccess('Forwarding email copied');
+		});
 	} catch (err) {
 		container.innerHTML = '<div class="text-danger">Failed to load project</div>';
 		console.error('Failed to load project overview:', err);

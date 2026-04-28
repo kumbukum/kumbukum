@@ -24,6 +24,12 @@ function canonicalMessageId(value) {
 
 function getHeaderValue(headers, name) {
 	if (!headers) return '';
+	const stripHeaderName = (line) => String(line || '').replace(new RegExp(`^${name}\\s*:\\s*`, 'i'), '').trim();
+	if (typeof headers === 'string') {
+		const lines = headers.replace(/\r?\n[ \t]+/g, ' ').split(/\r?\n/g);
+		const found = lines.find((line) => line.toLowerCase().startsWith(`${name.toLowerCase()}:`));
+		return stripHeaderName(found);
+	}
 	if (typeof headers.get === 'function') return headers.get(name) || headers.get(name.toLowerCase()) || '';
 	const lowerName = name.toLowerCase();
 	if (Array.isArray(headers)) {
@@ -31,7 +37,7 @@ function getHeaderValue(headers, name) {
 			const key = entry?.key || entry?.name || entry?.[0];
 			return String(key || '').toLowerCase() === lowerName;
 		});
-		return found?.value || found?.[1] || '';
+		return found?.value || found?.[1] || stripHeaderName(found?.line) || '';
 	}
 	if (typeof headers === 'object') {
 		for (const [key, value] of Object.entries(headers)) {
@@ -39,6 +45,10 @@ function getHeaderValue(headers, name) {
 		}
 	}
 	return '';
+}
+
+function getParsedHeaderValue(parsed, name) {
+	return getHeaderValue(parsed?.headers, name) || getHeaderValue(parsed?.headerLines, name);
 }
 
 function parseReferences(value) {
@@ -101,7 +111,11 @@ function normalizeBodyText(parsed) {
 }
 
 function normalizeForwardedBodyText(parsed) {
-	return String(parsed?.text || parsed?.text_content || parsed?.body_text || '').trim();
+	const text = String(parsed?.text || parsed?.text_content || parsed?.body_text || '').trim();
+	if (text) return text;
+	const html = String(parsed?.html || parsed?.html_content || parsed?.body_html || '').trim();
+	if (!html) return '';
+	return striptags(html, [], ' ').replace(/\s+/g, ' ').trim();
 }
 
 function toBuffer(content, transferEncoding) {
@@ -172,13 +186,13 @@ export async function parseEmailInput(data) {
 	}
 
 	return {
-		message_id: canonicalMessageId(parsed.messageId || parsed.message_id || getHeaderValue(parsed.headers, 'message-id')),
-		references: parseReferences(parsed.references || getHeaderValue(parsed.headers, 'references')),
-		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to || getHeaderValue(parsed.headers, 'in-reply-to')),
-		from: normalizeRecipientList(parsed.from || getHeaderValue(parsed.headers, 'from')),
-		to: normalizeRecipientList(parsed.to || getHeaderValue(parsed.headers, 'to')),
-		cc: normalizeRecipientList(parsed.cc || getHeaderValue(parsed.headers, 'cc')),
-		bcc: normalizeRecipientList(parsed.bcc || getHeaderValue(parsed.headers, 'bcc')),
+		message_id: canonicalMessageId(parsed.messageId || parsed.message_id || getParsedHeaderValue(parsed, 'message-id')),
+		references: parseReferences(parsed.references || getParsedHeaderValue(parsed, 'references')),
+		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to || getParsedHeaderValue(parsed, 'in-reply-to')),
+		from: normalizeRecipientList(parsed.from || getParsedHeaderValue(parsed, 'from') || parsed.sender || parsed.session?.sender || parsed.envelope?.from || parsed.envelope?.sender),
+		to: normalizeRecipientList(parsed.to || getParsedHeaderValue(parsed, 'to') || parsed.recipients || parsed.recipient || parsed.rcpt_to || parsed.rcptTo || parsed.session?.recipient || parsed.envelope?.to || parsed.envelope?.recipient),
+		cc: normalizeRecipientList(parsed.cc || getParsedHeaderValue(parsed, 'cc')),
+		bcc: normalizeRecipientList(parsed.bcc || getParsedHeaderValue(parsed, 'bcc')),
 		subject: String(parsed.subject || '').trim(),
 		text_content: normalizeBodyText(parsed),
 		attachment_text_content: await extractAttachmentTextContent(parsed.attachments || []),
@@ -193,14 +207,14 @@ export function parseForwardedEmailInput(data) {
 	}
 
 	return {
-		message_id: canonicalMessageId(parsed.messageId || parsed.message_id || getHeaderValue(parsed.headers, 'message-id')),
-		references: parseReferences(parsed.references || getHeaderValue(parsed.headers, 'references')),
-		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to || getHeaderValue(parsed.headers, 'in-reply-to')),
-		from: normalizeRecipientList(parsed.from || getHeaderValue(parsed.headers, 'from')),
-		to: normalizeRecipientList(parsed.to || getHeaderValue(parsed.headers, 'to')),
-		cc: normalizeRecipientList(parsed.cc || getHeaderValue(parsed.headers, 'cc')),
-		bcc: normalizeRecipientList(parsed.bcc || getHeaderValue(parsed.headers, 'bcc')),
-		subject: String(parsed.subject || getHeaderValue(parsed.headers, 'subject') || '').trim(),
+		message_id: canonicalMessageId(parsed.messageId || parsed.message_id || getParsedHeaderValue(parsed, 'message-id')),
+		references: parseReferences(parsed.references || getParsedHeaderValue(parsed, 'references')),
+		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to || getParsedHeaderValue(parsed, 'in-reply-to')),
+		from: normalizeRecipientList(parsed.from || getParsedHeaderValue(parsed, 'from') || parsed.sender || parsed.session?.sender || parsed.envelope?.from || parsed.envelope?.sender),
+		to: normalizeRecipientList(parsed.to || getParsedHeaderValue(parsed, 'to') || parsed.recipients || parsed.recipient || parsed.rcpt_to || parsed.rcptTo || parsed.session?.recipient || parsed.envelope?.to || parsed.envelope?.recipient),
+		cc: normalizeRecipientList(parsed.cc || getParsedHeaderValue(parsed, 'cc')),
+		bcc: normalizeRecipientList(parsed.bcc || getParsedHeaderValue(parsed, 'bcc')),
+		subject: String(parsed.subject || getParsedHeaderValue(parsed, 'subject') || '').trim(),
 		text_content: normalizeForwardedBodyText(parsed),
 		attachment_text_content: '',
 		raw_hash: parsed.raw_hash || '',

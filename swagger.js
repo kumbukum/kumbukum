@@ -282,7 +282,7 @@ const swaggerSpec = {
             post: {
                 tags: ['Import'],
                 summary: 'Import a forwarded email',
-                description: 'Root-level public forwarding endpoint, not under /api/v1. The recipient must be PROJECT_ID@EMAIL_FORWARD_DOMAIN. Only text content is imported; HTML and attachments are ignored.',
+                description: 'Root-level public forwarding endpoint, not under /api/v1. The recipient must be PROJECT_ID@EMAIL_FORWARD_DOMAIN. Plain text is imported when present; HTML-only email is stripped to text. Attachments are ignored.',
                 security: [],
                 servers: [{ url: '/', description: 'Root application endpoint' }],
                 requestBody: {

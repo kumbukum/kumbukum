@@ -91,6 +91,72 @@ describe('Email forwarding import route', () => {
 		}
 	});
 
+	it('ingests stripped HTML when no plain text is present', async () => {
+		let createdPayload = null;
+		Email.create = async (payload) => {
+			createdPayload = payload;
+			return { _id: { toString: () => 'email-2' }, ...payload };
+		};
+
+		const server = createServer();
+		try {
+			const response = await request(server, JSON.stringify({
+				message_id: '<route-html@example.com>',
+				from: 'Sender <sender@example.com>',
+				to: `${projectId}@email.kumbukum.com`,
+				subject: 'HTML only',
+				html: '<p>Hello <strong>HTML</strong></p><p>Only</p>',
+			}));
+			const json = await response.json();
+
+			assert.equal(response.status, 200);
+			assert.deepEqual(json, { accepted: true, email_id: 'email-2' });
+			assert.equal(createdPayload.text_content, 'Hello HTML Only');
+			assert.equal(createdPayload.attachment_text_content, '');
+		} finally {
+			await new Promise((resolve) => server.close(resolve));
+		}
+	});
+
+	it('routes Forward Email webhook payloads by session recipient instead of visible To header', async () => {
+		let createdPayload = null;
+		Email.create = async (payload) => {
+			createdPayload = payload;
+			return { _id: { toString: () => 'email-3' }, ...payload };
+		};
+
+		const server = createServer();
+		try {
+			const response = await request(server, JSON.stringify({
+				messageId: '<forward-email-session@example.com>',
+				from: {
+					value: [{ address: 'nitai@helpmonks.com', name: 'Nitai' }],
+					text: 'Nitai <nitai@helpmonks.com>',
+				},
+				to: {
+					value: [{ address: 'nitai@fastmail.com', name: 'Nitai' }],
+					text: 'Nitai <nitai@fastmail.com>',
+				},
+				recipients: [`${projectId}@email.kumbukum.com`],
+				session: {
+					recipient: `${projectId}@email.kumbukum.com`,
+					sender: 'nitai@helpmonks.com',
+				},
+				subject: 'Forward Email production shape',
+				text: 'Forwarded text',
+			}));
+			const json = await response.json();
+
+			assert.equal(response.status, 200);
+			assert.deepEqual(json, { accepted: true, email_id: 'email-3' });
+			assert.equal(createdPayload.project, projectId);
+			assert.deepEqual(createdPayload.to, ['nitai@fastmail.com']);
+			assert.deepEqual(createdPayload.from, ['nitai@helpmonks.com']);
+		} finally {
+			await new Promise((resolve) => server.close(resolve));
+		}
+	});
+
 	it('rejects forwarded email for the wrong domain', async () => {
 		const server = createServer();
 		try {

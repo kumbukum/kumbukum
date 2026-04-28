@@ -1,5 +1,6 @@
 - const createdAt = new Date(project.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 - const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0, emails: 0 }
+- const forwardingEmail = emailForwardDomain ? `${project._id}@${emailForwardDomain}` : ''
 
 .d-flex.justify-content-between.align-items-center.mb-2
 	.d-flex.align-items-center.gap-2
@@ -55,51 +56,78 @@
 
 
 if gitSyncEnabled
-	.my-4
-	.d-flex.justify-content-between.align-items-center.mb-3
-		h5.mb-0
-			!= icon('gitBranch')
-			span.ms-2 Git Sync
-		button.btn.btn-sm.btn-outline-primary(onclick=`addGitRepo('${project._id}')`) Add Repo
+	.mt-4
+		.d-flex.justify-content-between.align-items-center.mb-3
+			h5.mb-0
+				!= icon('gitBranch')
+				span.ms-2 Git Sync
+			button.btn.btn-sm.btn-outline-primary(onclick=`addGitRepo('${project._id}')`) Add Repo
 
-	if gitRepos && gitRepos.length
-		.list-group
-			each repo in gitRepos
-				.list-group-item
-					.d-flex.justify-content-between.align-items-start
-						div
-							.fw-bold= repo.name || repo.repo_url
-							.text-muted.small= repo.repo_url
-							.d-flex.gap-2.mt-1
-								if repo.enabled
-									span.badge.bg-success Enabled
-								else
-									span.badge.bg-secondary Disabled
-								if repo.last_sync_status === 'success'
-									span.badge.bg-info Last sync: success
-								else if repo.last_sync_status === 'failed'
-									span.badge.bg-danger.cursor-pointer(title=repo.last_sync_error) Last sync: failed
-								else if repo.last_sync_status === 'in_progress'
-									span.badge.bg-warning Syncing…
-								if repo.last_synced_at
-									span.text-muted.small= 'Synced ' + new Date(repo.last_synced_at).toLocaleString()
-						.d-flex.gap-1
-							button.btn.btn-sm.btn-outline-primary(onclick=`triggerGitSync('${repo._id}')` title="Sync now")
-								!= icon('sync')
-							button.btn.btn-sm.btn-outline-secondary(onclick=`editGitRepo('${repo._id}')` title="Settings")
-								!= icon('gear')
-							button.btn.btn-sm.btn-outline-secondary(onclick=`deleteGitRepo('${repo._id}')` title="Remove")
-								!= icon('delete')
-	else
-		p.text-muted.small No git repos configured. Add one to sync markdown files.
+		if gitRepos && gitRepos.length
+			.list-group
+				each repo in gitRepos
+					.list-group-item
+						.d-flex.justify-content-between.align-items-start
+							div
+								.fw-bold= repo.name || repo.repo_url
+								.text-muted.small= repo.repo_url
+								.d-flex.gap-2.mt-1
+									if repo.enabled
+										span.badge.bg-success Enabled
+									else
+										span.badge.bg-secondary Disabled
+									if repo.last_sync_status === 'success'
+										span.badge.bg-info Last sync: success
+									else if repo.last_sync_status === 'failed'
+										span.badge.bg-danger.cursor-pointer(title=repo.last_sync_error) Last sync: failed
+									else if repo.last_sync_status === 'in_progress'
+										span.badge.bg-warning Syncing…
+									if repo.last_synced_at
+										span.text-muted.small= 'Synced ' + new Date(repo.last_synced_at).toLocaleString()
+							.d-flex.gap-1
+								button.btn.btn-sm.btn-outline-primary(onclick=`triggerGitSync('${repo._id}')` title="Sync now")
+									!= icon('sync')
+								button.btn.btn-sm.btn-outline-secondary(onclick=`editGitRepo('${repo._id}')` title="Settings")
+									!= icon('gear')
+								button.btn.btn-sm.btn-outline-secondary(onclick=`deleteGitRepo('${repo._id}')` title="Remove")
+									!= icon('delete')
+		else
+			p.text-muted.small No git repos configured. Add one to sync markdown files.
 else
-	.my-4
+	.my-5
 		.card.border-warning-subtle
 			.card-body
 				h5.mb-2
 					!= icon('lock', 'me-2')
 					| Git Sync (Pro)
 				p.text-muted.mb-2 Sync markdown files from your repository into project notes and memories.
+				if is_hosted
+					a.btn.btn-sm.btn-outline-warning(href="/settings/subscription") Upgrade to Pro
+
+if emailFeatureEnabled
+	.my-5
+		.d-flex.justify-content-between.align-items-center.mb-3
+			h5.mb-0
+				!= icon('email')
+				span.ms-2 Email Forwarding
+
+		if forwardingEmail
+			p.text-muted.small Forward emails to this address to import your emails into this project.
+			.nowrap
+				.input-group.input-group-sm.d-inline-flex.w-auto
+					input.form-control#project-forwarding-email(type="text" readonly value=forwardingEmail aria-label="Forwarding email address" style=`width:${forwardingEmail.length + 5}ch; flex:0 0 auto; max-width:calc(100vw - 180px)`)
+					button.btn.btn-outline-secondary#copy-forwarding-email-btn(type="button" data-copy-value=forwardingEmail title="Copy forwarding email")
+						!= icon('copy')
+		else
+			.alert.alert-warning.mb-0 EMAIL_FORWARD_DOMAIN is not configured.
+else
+	.my-5
+		.card.border-warning-subtle
+			.card-body
+				h5.mb-2
+					!= icon('lock', 'me-2')
+					| Email Forwarding (Pro)
+				p.text-muted.mb-2 Forward emails directly into a project.
 				if is_hosted
 					a.btn.btn-sm.btn-outline-warning(href="/settings/subscription") Upgrade to Pro
 

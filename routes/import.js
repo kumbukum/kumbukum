@@ -25,6 +25,54 @@ function firstValue(value) {
 	return String(value);
 }
 
+function collectValues(value) {
+	if (!value) return [];
+	if (Array.isArray(value)) return value.flatMap((entry) => collectValues(entry));
+	if (typeof value === 'object') {
+		const values = [];
+		for (const key of ['address', 'text', 'email', 'recipient', 'sender', 'line', 'value']) {
+			values.push(...collectValues(value[key]));
+		}
+		return values;
+	}
+	return [String(value)];
+}
+
+function extractEmailAddresses(value) {
+	return collectValues(value).flatMap((entry) => {
+		const matches = entry.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
+		return matches || [];
+	});
+}
+
+function getHeaderValues(headers, name) {
+	if (!headers) return [];
+	const lowerName = name.toLowerCase();
+	const stripHeaderName = (line) => String(line || '').replace(new RegExp(`^${name}\\s*:\\s*`, 'i'), '').trim();
+
+	if (typeof headers === 'string') {
+		return headers
+			.replace(/\r?\n[ \t]+/g, ' ')
+			.split(/\r?\n/g)
+			.filter((line) => line.toLowerCase().startsWith(`${lowerName}:`))
+			.map(stripHeaderName);
+	}
+
+	if (Array.isArray(headers)) {
+		return headers
+			.filter((entry) => String(entry?.key || entry?.name || entry?.[0] || '').toLowerCase() === lowerName)
+			.flatMap((entry) => collectValues(entry?.value || entry?.[1] || stripHeaderName(entry?.line)));
+	}
+
+	if (typeof headers === 'object') {
+		for (const [key, value] of Object.entries(headers)) {
+			if (key.toLowerCase() === lowerName) return collectValues(value);
+		}
+	}
+
+	return [];
+}
+
 function normalizeForwardedPayload(payload) {
 	return {
 		...payload,
@@ -33,11 +81,28 @@ function normalizeForwardedPayload(payload) {
 	};
 }
 
-function findForwardRecipient(email) {
+function findForwardRecipient(payload, email) {
 	const forwardDomain = String(config.emailForwardDomain || '').trim().replace(/^@+/, '').toLowerCase();
 	if (!forwardDomain) return { error: 'EMAIL_FORWARD_DOMAIN is not configured' };
 
-	for (const address of email.to || []) {
+	const parsed = payload?.parsed_email || payload?.mailparser || payload || {};
+	const candidates = [
+		parsed.recipients,
+		parsed.recipient,
+		parsed.rcpt_to,
+		parsed.rcptTo,
+		parsed.session?.recipient,
+		parsed.session?.recipients,
+		parsed.envelope?.to,
+		parsed.envelope?.recipient,
+		parsed.envelope?.rcpt_to,
+		parsed.envelope?.rcptTo,
+		getHeaderValues(parsed.headers, 'x-original-to'),
+		getHeaderValues(parsed.headerLines, 'x-original-to'),
+		email.to,
+	];
+
+	for (const address of candidates.flatMap((candidate) => extractEmailAddresses(candidate))) {
 		const value = firstValue(address).trim().toLowerCase();
 		const atIndex = value.lastIndexOf('@');
 		if (atIndex === -1) continue;
@@ -71,14 +136,11 @@ router.post('/email', raw({ type: () => true, limit: '25mb' }), async (req, res)
 		return res.status(400).json({ error: err.message });
 	}
 
-	if (!normalized.to.length) {
-		return res.status(400).json({ error: 'Forwarded email recipient is required' });
-	}
 	if (!normalized.from.length) {
 		return res.status(400).json({ error: 'Forwarded email sender is required' });
 	}
 
-	const recipient = findForwardRecipient(normalized);
+	const recipient = findForwardRecipient(payload, normalized);
 	if (recipient.error) {
 		const status = recipient.error.includes('configured') ? 503 : 403;
 		return res.status(status).json({ error: recipient.error });

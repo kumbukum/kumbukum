@@ -142,10 +142,11 @@ router.get('/ajax/project-overview/:id', async (req, res) => {
 		const proOnlyFeatureEnabled = !is_hosted || plan === 'pro';
 		const gitSyncEnabled = proOnlyFeatureEnabled;
 		const emailFeatureEnabled = proOnlyFeatureEnabled;
+		const emailForwardDomain = String(config.emailForwardDomain || '').trim().replace(/^@+/, '');
 		const gitRepos = await listGitRepos(req.host_id, req.params.id).catch(() => []);
 		const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0, emails: 0 };
 		const canDelete = !project.is_default && pc.notes === 0 && pc.memory === 0 && pc.urls === 0 && pc.emails === 0 && gitRepos.length === 0;
-		res.render('ajax/project_overview', { project, counts, gitSyncEnabled, emailFeatureEnabled, gitRepos, canDelete, is_hosted });
+		res.render('ajax/project_overview', { project, counts, gitSyncEnabled, emailFeatureEnabled, emailForwardDomain, gitRepos, canDelete, is_hosted });
 	} catch (err) {
 		res.status(500).send('<div class="text-danger">Failed to load project</div>');
 	}

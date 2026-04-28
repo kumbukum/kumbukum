@@ -34,7 +34,7 @@ describe('Email ingest service', () => {
 		assert.equal(normalized.text_content, 'Hello Team');
 	});
 
-	it('normalizes forwarded payload fields without attachments or html fallback', () => {
+	it('normalizes forwarded payload fields without attachment text', () => {
 		const normalized = parseForwardedEmailInput({
 			message_id: '<Forwarded-123@Example.COM>',
 			references: '<Root@Example.com>',
@@ -57,6 +57,56 @@ describe('Email ingest service', () => {
 		assert.equal(normalized.subject, 'Forwarded hello');
 		assert.equal(normalized.text_content, 'Forwarded body');
 		assert.equal(normalized.attachment_text_content, '');
+	});
+
+	it('falls back to stripped HTML text for forwarded payloads without plain text', () => {
+		const normalized = parseForwardedEmailInput({
+			message_id: '<HtmlOnly@Example.COM>',
+			from: 'sender@example.com',
+			to: '507f1f77bcf86cd799439011@email.kumbukum.com',
+			subject: 'HTML only',
+			html: '<div>Hello <strong>HTML</strong><br>Only</div>',
+			attachments: [{ filename: 'ignored.txt', content: 'ignored' }],
+		});
+
+		assert.equal(normalized.message_id, 'htmlonly@example.com');
+		assert.equal(normalized.text_content, 'Hello HTML Only');
+		assert.equal(normalized.attachment_text_content, '');
+	});
+
+	it('reads forwarded payload fields from raw header strings and header lines', () => {
+		const normalized = parseForwardedEmailInput({
+			headers: 'Message-ID: <HeaderString@Example.COM>\r\nFrom: Sender <sender@example.com>\r\nSubject: Header subject',
+			headerLines: [
+				{ key: 'to', line: 'To: Project <507f1f77bcf86cd799439011@email.kumbukum.com>' },
+				{ key: 'references', line: 'References: <Root@Example.com>' },
+			],
+			text: 'Header body',
+		});
+
+		assert.equal(normalized.message_id, 'headerstring@example.com');
+		assert.deepEqual(normalized.references, ['root@example.com']);
+		assert.deepEqual(normalized.from, ['sender@example.com']);
+		assert.deepEqual(normalized.to, ['507f1f77bcf86cd799439011@email.kumbukum.com']);
+		assert.equal(normalized.subject, 'Header subject');
+		assert.equal(normalized.text_content, 'Header body');
+	});
+
+	it('uses Forward Email session fields when parsed address fields are absent', () => {
+		const normalized = parseForwardedEmailInput({
+			messageId: '<SessionOnly@Example.COM>',
+			session: {
+				sender: 'sender@example.com',
+				recipient: '507f1f77bcf86cd799439011@email.kumbukum.com',
+			},
+			subject: 'Session only',
+			text: 'Session body',
+		});
+
+		assert.equal(normalized.message_id, 'sessiononly@example.com');
+		assert.deepEqual(normalized.from, ['sender@example.com']);
+		assert.deepEqual(normalized.to, ['507f1f77bcf86cd799439011@email.kumbukum.com']);
+		assert.equal(normalized.text_content, 'Session body');
 	});
 
 	it('updates duplicates by message_id only within the same host', async () => {

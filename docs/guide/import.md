@@ -70,4 +70,4 @@ The route accepts parsed email JSON with normal email fields:
 }
 ```
 
-Only text content is imported. HTML and attachments are ignored. Kumbukum rejects forwarded email unless the recipient domain exactly matches `EMAIL_FORWARD_DOMAIN`.
+Only text content is stored. If a forwarded email has no plain text body, Kumbukum strips the HTML body and stores the resulting text. Attachments are ignored. Kumbukum rejects forwarded email unless the recipient domain exactly matches `EMAIL_FORWARD_DOMAIN`.
