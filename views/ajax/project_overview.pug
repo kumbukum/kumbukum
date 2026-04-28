@@ -13,7 +13,10 @@
 		else
 			button.btn.btn-sm.btn-outline-secondary(onclick=`editProject('${project._id}')`) Edit Project
 
-p.text-muted.small.mb-4.fs-7 Project ID: #{project._id} &middot; Created #{createdAt}
+.d-flex.w-100.align-items-center.mb-4
+	.text-muted.small.fs-7.user-select-all #{project._id}
+	.ms-auto
+		span.text-muted.small.fs-7 Created #{createdAt}
 
 .row.g-3.mb-5
 	.col-md-3
