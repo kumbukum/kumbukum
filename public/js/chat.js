@@ -598,10 +598,10 @@ function rmSetUrlPagesState({ visible, metaText, pages = [], append = false, sho
 	const meta = document.getElementById('rm-url-crawl-meta');
 	const list = document.getElementById('rm-url-crawl-list');
 	const loadMoreBtn = document.getElementById('rm-url-crawl-load-more-btn');
-	if (!wrap || !meta || !list || !loadMoreBtn) return;
+	if (!list || !loadMoreBtn) return;
 
-	wrap.classList.toggle('d-none', !visible);
-	meta.textContent = metaText || '';
+	if (wrap) wrap.classList.toggle('d-none', !visible);
+	if (meta) meta.textContent = metaText || '';
 	if (!append) list.innerHTML = '';
 
 	for (const page of pages) {
@@ -631,9 +631,22 @@ function rmSetUrlPagesState({ visible, metaText, pages = [], append = false, sho
 	rmSetUrlCrawlActionState();
 }
 
+function rmSetUrlPagesTabVisibility(crawlEnabled = rmUrlCrawlEnabled) {
+	const tabEl = document.getElementById('rm-url-tab-pages');
+	if (!tabEl) return;
+
+	tabEl.classList.toggle('d-none', !crawlEnabled);
+	if (!crawlEnabled && tabEl.classList.contains('active')) {
+		rmShowUrlDetails();
+	}
+}
+
 function rmSetUrlPagesTabCount(count) {
 	const countEl = document.getElementById('rm-url-tab-pages-count');
-	if (!countEl) return;
+	rmSetUrlPagesTabVisibility();
+	if (!countEl) {
+		return;
+	}
 	countEl.textContent = String(Math.max(0, count || 0));
 }
 
@@ -787,6 +800,7 @@ function rmPopulate(type, record) {
 		document.getElementById('rm-url-description').value = record.description || '';
 		document.getElementById('rm-url-crawl').checked = !!record.crawl_enabled;
 		rmUrlCrawlEnabled = !!record.crawl_enabled;
+		rmSetUrlPagesTabVisibility();
 		rmSetUrlCrawlActionState();
 
 		const ogWrap = document.getElementById('rm-url-og-wrap');
@@ -1041,6 +1055,7 @@ function rmCleanup() {
 	rmUrlPagesTotal = 0;
 	rmUrlPagesLoaded = 0;
 	rmUrlCrawlEnabled = false;
+	rmSetUrlPagesTabVisibility(false);
 	rmSetUrlPagesState({ visible: false, metaText: '', pages: [] });
 	rmSetUrlCrawlActionState();
 	rmResetEmailView();
@@ -1080,6 +1095,11 @@ function initResultModalHandlers() {
 	document.getElementById('rm-memory-tab-edit')?.addEventListener('click', rmShowMemoryEdit);
 	document.getElementById('rm-url-tab-details')?.addEventListener('click', rmShowUrlDetails);
 	document.getElementById('rm-url-tab-pages')?.addEventListener('click', rmShowUrlPages);
+	document.getElementById('rm-url-crawl')?.addEventListener('change', (event) => {
+		rmUrlCrawlEnabled = event.target.checked;
+		rmSetUrlPagesTabVisibility();
+		rmSetUrlCrawlActionState();
+	});
 	document.getElementById('rm-email-tab-details')?.addEventListener('click', rmShowEmailDetails);
 	document.getElementById('rm-email-tab-body')?.addEventListener('click', rmShowEmailBody);
 	document.getElementById('rm-url-crawl-load-more-btn')?.addEventListener('click', () => {
