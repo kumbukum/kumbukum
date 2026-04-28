@@ -50,6 +50,8 @@ PUT /api/v1/urls/:id
 }
 ```
 
+Set `crawl_enabled: false` to stop full-site crawling and remove crawled pages for this URL from the pages index.
+
 ## Delete URL
 
 ```

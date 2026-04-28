@@ -336,6 +336,7 @@ let rmUrlPagesPerPage = 100;
 let rmUrlPagesTotal = 0;
 let rmUrlPagesLoaded = 0;
 let rmUrlCrawlEnabled = false;
+let rmUrlCrawlDisableConfirmed = false;
 let rmEmailBodyText = '';
 let rmEmailBodyLoaded = false;
 
@@ -650,6 +651,32 @@ function rmSetUrlPagesTabCount(count) {
 	countEl.textContent = String(Math.max(0, count || 0));
 }
 
+async function rmHandleUrlCrawlChange(event) {
+	const input = event.target;
+	const crawlEnabled = input.checked;
+	const needsDisableConfirmation = !!rmCurrentId && rmUrlCrawlEnabled && !crawlEnabled && !rmUrlCrawlDisableConfirmed;
+
+	if (needsDisableConfirmation) {
+		const confirmed = await confirmAction('Stop Crawling?', 'This will stop crawling this URL and remove all indexed crawled pages when you save.');
+		if (!confirmed) {
+			input.checked = true;
+			rmUrlCrawlEnabled = true;
+			rmSetUrlPagesTabVisibility();
+			rmSetUrlCrawlActionState();
+			return;
+		}
+		rmUrlCrawlDisableConfirmed = true;
+	}
+
+	if (crawlEnabled) {
+		rmUrlCrawlDisableConfirmed = false;
+	}
+
+	rmUrlCrawlEnabled = crawlEnabled;
+	rmSetUrlPagesTabVisibility();
+	rmSetUrlCrawlActionState();
+}
+
 function rmGetUrlPagesMetaText() {
 	if (!rmUrlPagesTotal) {
 		if (!rmUrlCrawlEnabled) {
@@ -800,6 +827,7 @@ function rmPopulate(type, record) {
 		document.getElementById('rm-url-description').value = record.description || '';
 		document.getElementById('rm-url-crawl').checked = !!record.crawl_enabled;
 		rmUrlCrawlEnabled = !!record.crawl_enabled;
+		rmUrlCrawlDisableConfirmed = false;
 		rmSetUrlPagesTabVisibility();
 		rmSetUrlCrawlActionState();
 
@@ -1055,6 +1083,7 @@ function rmCleanup() {
 	rmUrlPagesTotal = 0;
 	rmUrlPagesLoaded = 0;
 	rmUrlCrawlEnabled = false;
+	rmUrlCrawlDisableConfirmed = false;
 	rmSetUrlPagesTabVisibility(false);
 	rmSetUrlPagesState({ visible: false, metaText: '', pages: [] });
 	rmSetUrlCrawlActionState();
@@ -1095,11 +1124,7 @@ function initResultModalHandlers() {
 	document.getElementById('rm-memory-tab-edit')?.addEventListener('click', rmShowMemoryEdit);
 	document.getElementById('rm-url-tab-details')?.addEventListener('click', rmShowUrlDetails);
 	document.getElementById('rm-url-tab-pages')?.addEventListener('click', rmShowUrlPages);
-	document.getElementById('rm-url-crawl')?.addEventListener('change', (event) => {
-		rmUrlCrawlEnabled = event.target.checked;
-		rmSetUrlPagesTabVisibility();
-		rmSetUrlCrawlActionState();
-	});
+	document.getElementById('rm-url-crawl')?.addEventListener('change', rmHandleUrlCrawlChange);
 	document.getElementById('rm-email-tab-details')?.addEventListener('click', rmShowEmailDetails);
 	document.getElementById('rm-email-tab-body')?.addEventListener('click', rmShowEmailBody);
 	document.getElementById('rm-url-crawl-load-more-btn')?.addEventListener('click', () => {

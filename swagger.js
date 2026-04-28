@@ -911,13 +911,14 @@ const swaggerSpec = {
             put: {
                 tags: ['URLs'],
                 summary: 'Update a URL',
+                description: 'Set crawl_enabled to false to stop full-site crawling and remove crawled page documents for this URL from the pages index.',
                 parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { type: 'object', properties: { url: { type: 'string', format: 'uri' }, title: { type: 'string' }, project: { type: 'string' }, crawl_enabled: { type: 'boolean' } } } } },
                 },
                 responses: {
-                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { url: { $ref: '#/components/schemas/Url' } } } } } },
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { url: { $ref: '#/components/schemas/Url' }, deleted_pages: { type: 'integer', description: 'Number of crawled page documents removed when crawling was disabled.' } } } } } },
                     404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
