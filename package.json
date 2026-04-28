@@ -105,7 +105,7 @@
     "mongodb": "^7.2.0",
     "mongoose": "^9.5.0",
     "n-readlines": "^3.4.1",
-    "nodemailer": "^8.0.6",
+    "nodemailer": "^8.0.7",
     "otplib": "^13.4.0",
     "pdfjs-parse": "^1.1.1",
     "playwright": "^1.59.1",

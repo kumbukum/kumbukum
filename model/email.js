@@ -15,7 +15,7 @@ const emailSchema = new mongoose.Schema(
 		text_content: { type: String, default: '' },
 		attachment_text_content: { type: String, default: '' },
 
-		source: { type: String, enum: ['api'], default: 'api' },
+		source: { type: String, enum: ['api', 'emailforwarding'], default: 'api' },
 		raw_hash: { type: String, default: '' },
 
 		project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
@@ -30,7 +30,7 @@ const emailSchema = new mongoose.Schema(
 
 emailSchema.index({ host_id: 1, in_trash: 1, project: 1 });
 emailSchema.index({ is_indexed: 1, in_trash: 1 });
-emailSchema.index({ host_id: 1, message_id: 1 }, { unique: true, partialFilterExpression: { message_id: { $type: 'string', $ne: '' } } });
+emailSchema.index({ message_id: 1 }, { unique: true, partialFilterExpression: { message_id: { $type: 'string', $ne: '' } } });
 emailSchema.index({ host_id: 1, references: 1 });
 emailSchema.index({ trashed_at: 1 }, { expireAfterSeconds: 2592000, partialFilterExpression: { trashed_at: { $type: 'date' }, in_trash: true } });
 

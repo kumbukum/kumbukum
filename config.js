@@ -84,6 +84,7 @@ const config = {
 		pass: process.env.SMTP_PASS || '',
 		from: process.env.SMTP_FROM || 'noreply@localhost',
 	},
+	emailForwardDomain: process.env.EMAIL_FORWARD_DOMAIN || '',
 
 	llm: {
 		// Main conversational model (richer, for analysis & actions)

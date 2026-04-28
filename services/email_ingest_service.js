@@ -6,6 +6,7 @@ import striptags from 'striptags';
 import { simpleParser } from 'mailparser';
 
 import { Email } from '../model/email.js';
+import { GraphLink } from '../model/graph_link.js';
 import { extractText } from './import_service.js';
 import { detectFileType } from '../modules/file_detect.js';
 import { searchCollection, removeDocument } from '../modules/typesense.js';
@@ -21,6 +22,25 @@ function canonicalMessageId(value) {
 	return raw.replace(/^<+|>+$/g, '').trim().toLowerCase();
 }
 
+function getHeaderValue(headers, name) {
+	if (!headers) return '';
+	if (typeof headers.get === 'function') return headers.get(name) || headers.get(name.toLowerCase()) || '';
+	const lowerName = name.toLowerCase();
+	if (Array.isArray(headers)) {
+		const found = headers.find((entry) => {
+			const key = entry?.key || entry?.name || entry?.[0];
+			return String(key || '').toLowerCase() === lowerName;
+		});
+		return found?.value || found?.[1] || '';
+	}
+	if (typeof headers === 'object') {
+		for (const [key, value] of Object.entries(headers)) {
+			if (key.toLowerCase() === lowerName) return value;
+		}
+	}
+	return '';
+}
+
 function parseReferences(value) {
 	if (!value) return [];
 	if (Array.isArray(value)) {
@@ -31,19 +51,28 @@ function parseReferences(value) {
 	return [...new Set(matches.map(canonicalMessageId).filter(Boolean))];
 }
 
+function extractEmailAddress(value) {
+	const text = String(value || '').trim();
+	if (!text) return '';
+	const bracketMatch = text.match(/<([^<>]+)>/);
+	const address = bracketMatch ? bracketMatch[1] : text;
+	const emailMatch = address.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+	return String(emailMatch ? emailMatch[0] : address).trim().toLowerCase();
+}
+
 function normalizeRecipientList(value) {
 	if (!value) return [];
 	if (Array.isArray(value)) {
 		return value
 			.flatMap((entry) => {
-				if (typeof entry === 'string') return entry.trim();
-				if (entry?.address) return String(entry.address).trim().toLowerCase();
+				if (typeof entry === 'string') return extractEmailAddress(entry);
+				if (entry?.address) return extractEmailAddress(entry.address);
 				if (Array.isArray(entry?.value)) {
 					return entry.value
-						.map((item) => String(item?.address || '').trim().toLowerCase())
+						.map((item) => extractEmailAddress(item?.address || item?.text || item))
 						.filter(Boolean);
 				}
-				if (entry?.value?.address) return String(entry.value.address).trim().toLowerCase();
+				if (entry?.value?.address) return extractEmailAddress(entry.value.address);
 				return '';
 			})
 			.filter(Boolean);
@@ -51,14 +80,15 @@ function normalizeRecipientList(value) {
 	if (typeof value === 'string') {
 		return value
 			.split(',')
-			.map((v) => v.trim())
+			.map((v) => extractEmailAddress(v))
 			.filter(Boolean);
 	}
 	if (value?.value && Array.isArray(value.value)) {
 		return value.value
-			.map((entry) => String(entry?.address || '').trim().toLowerCase())
+			.map((entry) => extractEmailAddress(entry?.address || entry?.text || entry))
 			.filter(Boolean);
 	}
+	if (value?.address) return [extractEmailAddress(value.address)].filter(Boolean);
 	return [];
 }
 
@@ -68,6 +98,10 @@ function normalizeBodyText(parsed) {
 	const html = String(parsed?.html || '').trim();
 	if (!html) return '';
 	return striptags(html, [], ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeForwardedBodyText(parsed) {
+	return String(parsed?.text || parsed?.text_content || parsed?.body_text || '').trim();
 }
 
 function toBuffer(content, transferEncoding) {
@@ -118,9 +152,9 @@ export async function parseEmailInput(data) {
 	if (data?.raw_email) {
 		const parsed = await simpleParser(data.raw_email);
 		return {
-			message_id: canonicalMessageId(parsed.messageId || parsed.headers?.get?.('message-id')),
-			references: parseReferences(parsed.references || parsed.headers?.get?.('references')),
-			in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.headers?.get?.('in-reply-to')),
+			message_id: canonicalMessageId(parsed.messageId || getHeaderValue(parsed.headers, 'message-id')),
+			references: parseReferences(parsed.references || getHeaderValue(parsed.headers, 'references')),
+			in_reply_to: canonicalMessageId(parsed.inReplyTo || getHeaderValue(parsed.headers, 'in-reply-to')),
 			from: normalizeRecipientList(parsed.from),
 			to: normalizeRecipientList(parsed.to),
 			cc: normalizeRecipientList(parsed.cc),
@@ -138,13 +172,13 @@ export async function parseEmailInput(data) {
 	}
 
 	return {
-		message_id: canonicalMessageId(parsed.messageId || parsed.message_id),
-		references: parseReferences(parsed.references),
-		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to),
-		from: normalizeRecipientList(parsed.from),
-		to: normalizeRecipientList(parsed.to),
-		cc: normalizeRecipientList(parsed.cc),
-		bcc: normalizeRecipientList(parsed.bcc),
+		message_id: canonicalMessageId(parsed.messageId || parsed.message_id || getHeaderValue(parsed.headers, 'message-id')),
+		references: parseReferences(parsed.references || getHeaderValue(parsed.headers, 'references')),
+		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to || getHeaderValue(parsed.headers, 'in-reply-to')),
+		from: normalizeRecipientList(parsed.from || getHeaderValue(parsed.headers, 'from')),
+		to: normalizeRecipientList(parsed.to || getHeaderValue(parsed.headers, 'to')),
+		cc: normalizeRecipientList(parsed.cc || getHeaderValue(parsed.headers, 'cc')),
+		bcc: normalizeRecipientList(parsed.bcc || getHeaderValue(parsed.headers, 'bcc')),
 		subject: String(parsed.subject || '').trim(),
 		text_content: normalizeBodyText(parsed),
 		attachment_text_content: await extractAttachmentTextContent(parsed.attachments || []),
@@ -152,16 +186,75 @@ export async function parseEmailInput(data) {
 	};
 }
 
-export async function ingestEmail(userId, host_id, data, ctx = {}) {
-	const normalized = await parseEmailInput(data);
+export function parseForwardedEmailInput(data) {
+	const parsed = data?.parsed_email || data?.mailparser || data;
+	if (!parsed || typeof parsed !== 'object') {
+		throw new Error('Provide forwarded email JSON');
+	}
 
+	return {
+		message_id: canonicalMessageId(parsed.messageId || parsed.message_id || getHeaderValue(parsed.headers, 'message-id')),
+		references: parseReferences(parsed.references || getHeaderValue(parsed.headers, 'references')),
+		in_reply_to: canonicalMessageId(parsed.inReplyTo || parsed.in_reply_to || getHeaderValue(parsed.headers, 'in-reply-to')),
+		from: normalizeRecipientList(parsed.from || getHeaderValue(parsed.headers, 'from')),
+		to: normalizeRecipientList(parsed.to || getHeaderValue(parsed.headers, 'to')),
+		cc: normalizeRecipientList(parsed.cc || getHeaderValue(parsed.headers, 'cc')),
+		bcc: normalizeRecipientList(parsed.bcc || getHeaderValue(parsed.headers, 'bcc')),
+		subject: String(parsed.subject || getHeaderValue(parsed.headers, 'subject') || '').trim(),
+		text_content: normalizeForwardedBodyText(parsed),
+		attachment_text_content: '',
+		raw_hash: parsed.raw_hash || '',
+	};
+}
+
+async function createEmailThreadLinks(email, userId, host_id) {
+	const referencedMessageIds = [...new Set([...(email.references || []), email.in_reply_to].map(canonicalMessageId).filter(Boolean))];
+	if (referencedMessageIds.length === 0) return;
+
+	const linkedEmails = await Email.find({
+		host_id,
+		in_trash: { $ne: true },
+		message_id: { $in: referencedMessageIds },
+		_id: { $ne: email._id },
+	}).select('_id').lean();
+
+	let created = false;
+	for (const linkedEmail of linkedEmails) {
+		const result = await GraphLink.updateOne(
+			{
+				host_id,
+				source_id: linkedEmail._id,
+				source_type: 'emails',
+				target_id: email._id,
+				target_type: 'emails',
+			},
+			{
+				$setOnInsert: {
+					source_id: linkedEmail._id,
+					source_type: 'emails',
+					target_id: email._id,
+					target_type: 'emails',
+					label: 'thread',
+					owner: userId,
+					host_id,
+				},
+			},
+			{ upsert: true },
+		);
+		if (result.upsertedCount > 0) created = true;
+	}
+
+	if (created) invalidateGraphCache(host_id).catch(() => {});
+}
+
+async function persistEmail(userId, host_id, normalized, data, ctx = {}) {
 	if (!normalized.subject && !normalized.text_content && !normalized.attachment_text_content) {
 		throw new Error('Email content is empty after normalization');
 	}
 
 	const payload = {
 		...normalized,
-		source: 'api',
+		source: data.source === 'emailforwarding' ? 'emailforwarding' : 'api',
 		project: data.project,
 		owner: userId,
 		host_id,
@@ -172,20 +265,39 @@ export async function ingestEmail(userId, host_id, data, ctx = {}) {
 
 	let email;
 	if (normalized.message_id) {
-		email = await Email.findOneAndUpdate(
-			{ host_id, message_id: normalized.message_id },
-			{ $set: payload },
-			{ upsert: true, returnDocument: 'after' },
-		);
+		const existing = await Email.findOne({ message_id: normalized.message_id });
+		if (existing && existing.host_id !== host_id) {
+			throw new Error('Email message already exists');
+		}
+		if (existing) {
+			email = await Email.findOneAndUpdate(
+				{ _id: existing._id, host_id },
+				{ $set: payload },
+				{ returnDocument: 'after' },
+			);
+		} else {
+			email = await Email.create(payload);
+		}
 	} else {
 		email = await Email.create(payload);
 	}
 
+	await createEmailThreadLinks(email, userId, host_id);
 	emitToTenant(host_id, 'email:created', email);
 	invalidateGraphCache(host_id).catch(() => {});
 	audit.log({ action: 'create', resource: 'email', resource_id: email._id.toString(), user_id: userId, host_id, ...ctx });
 	removeDocument(host_id, 'emails', email._id.toString()).catch((err) => console.error('Typesense remove error:', err.message));
 	return email;
+}
+
+export async function ingestEmail(userId, host_id, data, ctx = {}) {
+	const normalized = await parseEmailInput(data);
+	return persistEmail(userId, host_id, normalized, data, ctx);
+}
+
+export async function ingestForwardedEmail(userId, host_id, data, ctx = {}) {
+	const normalized = parseForwardedEmailInput(data);
+	return persistEmail(userId, host_id, normalized, { ...data, source: 'emailforwarding' }, ctx);
 }
 
 export async function listEmails(host_id, projectId, { page = 1, limit = 50 } = {}) {
@@ -277,6 +389,7 @@ export async function getEmailThread(host_id, emailId) {
 
 	enqueueMessageId(root.message_id);
 	for (const ref of root.references || []) enqueueMessageId(ref);
+	enqueueMessageId(root.in_reply_to);
 
 	const threadDocs = [];
 	if (!seenIds.has(root._id.toString())) {
@@ -292,6 +405,7 @@ export async function getEmailThread(host_id, emailId) {
 			$or: [
 				{ message_id: currentMessageId },
 				{ references: currentMessageId },
+				{ in_reply_to: currentMessageId },
 			],
 		}).lean();
 
@@ -303,6 +417,7 @@ export async function getEmailThread(host_id, emailId) {
 			}
 			enqueueMessageId(doc.message_id);
 			for (const ref of doc.references || []) enqueueMessageId(ref);
+			enqueueMessageId(doc.in_reply_to);
 		}
 	}
 

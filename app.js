@@ -28,6 +28,7 @@ import adminRoutes from './routes/admin.js';
 import billingRoutes from './routes/billing.js';
 import healthRoutes from './routes/health.js';
 import sentryTunnelRoutes from './routes/sentry_tunnel.js';
+import importRoutes from './routes/import.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,6 +75,9 @@ try {
 } catch {
     app.locals.v = Date.now().toString(36);
 }
+
+// Public import routes parse their own raw payloads before the global JSON middleware.
+app.use('/import', importRoutes);
 
 // Stripe webhook and Sentry tunnel need raw body — skip express.json() for these paths
 app.use((req, res, next) => {

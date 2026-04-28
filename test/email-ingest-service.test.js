@@ -1,11 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseEmailInput, getEmailThread } from '../services/email_ingest_service.js';
+import { parseEmailInput, parseForwardedEmailInput, ingestEmail, ingestForwardedEmail, getEmailThread } from '../services/email_ingest_service.js';
 import { Email } from '../model/email.js';
+import { GraphLink } from '../model/graph_link.js';
 import { toTypesenseDoc } from '../modules/typesense.js';
 
 describe('Email ingest service', () => {
+	const userId = '507f1f77bcf86cd799439012';
+
 	it('normalizes parsed payload fields', async () => {
 		const normalized = await parseEmailInput({
 			parsed_email: {
@@ -29,6 +32,135 @@ describe('Email ingest service', () => {
 		assert.deepEqual(normalized.bcc, ['hidden@example.com']);
 		assert.equal(normalized.subject, 'Hello world');
 		assert.equal(normalized.text_content, 'Hello Team');
+	});
+
+	it('normalizes forwarded payload fields without attachments or html fallback', () => {
+		const normalized = parseForwardedEmailInput({
+			message_id: '<Forwarded-123@Example.COM>',
+			references: '<Root@Example.com>',
+			in_reply_to: '<Prev@Example.com>',
+			from: 'Sender Name <Sender@Example.com>',
+			to: 'Project <507f1f77bcf86cd799439011@email.kumbukum.com>',
+			cc: [{ address: 'CC@Example.com' }],
+			subject: '  Forwarded hello  ',
+			text: 'Forwarded body',
+			html: '<p>Ignored HTML</p>',
+			attachments: [{ filename: 'ignored.txt', content: 'ignored' }],
+		});
+
+		assert.equal(normalized.message_id, 'forwarded-123@example.com');
+		assert.deepEqual(normalized.references, ['root@example.com']);
+		assert.equal(normalized.in_reply_to, 'prev@example.com');
+		assert.deepEqual(normalized.from, ['sender@example.com']);
+		assert.deepEqual(normalized.to, ['507f1f77bcf86cd799439011@email.kumbukum.com']);
+		assert.deepEqual(normalized.cc, ['cc@example.com']);
+		assert.equal(normalized.subject, 'Forwarded hello');
+		assert.equal(normalized.text_content, 'Forwarded body');
+		assert.equal(normalized.attachment_text_content, '');
+	});
+
+	it('updates duplicates by message_id only within the same host', async () => {
+		const existing = { _id: 'email-1', host_id: 'host-1' };
+		let createCalled = false;
+		let updateQuery = null;
+
+		const originalFindOne = Email.findOne;
+		const originalFindOneAndUpdate = Email.findOneAndUpdate;
+		const originalCreate = Email.create;
+		const originalFind = Email.find;
+
+		Email.findOne = async (query) => {
+			assert.deepEqual(query, { message_id: 'dup@example.com' });
+			return existing;
+		};
+		Email.findOneAndUpdate = async (query, update) => {
+			updateQuery = query;
+			return { _id: 'email-1', ...update.$set };
+		};
+		Email.create = async () => {
+			createCalled = true;
+			return null;
+		};
+		Email.find = () => ({
+			select: () => ({
+				lean: async () => [],
+			}),
+		});
+
+		try {
+			const email = await ingestEmail(userId, 'host-1', {
+				project: '507f1f77bcf86cd799439011',
+				parsed_email: {
+					message_id: '<dup@example.com>',
+					from: 'sender@example.com',
+					to: 'to@example.com',
+					subject: 'Duplicate',
+					text: 'Updated text',
+				},
+			}, { channel: 'api' });
+
+			assert.deepEqual(updateQuery, { _id: 'email-1', host_id: 'host-1' });
+			assert.equal(createCalled, false);
+			assert.equal(email.text_content, 'Updated text');
+		} finally {
+			Email.findOne = originalFindOne;
+			Email.findOneAndUpdate = originalFindOneAndUpdate;
+			Email.create = originalCreate;
+			Email.find = originalFind;
+		}
+	});
+
+	it('creates thread graph links for forwarded email references', async () => {
+		const linkedId = { toString: () => 'linked-email' };
+		const newId = { toString: () => 'new-email' };
+		let graphLinkQuery = null;
+		let graphLinkUpdate = null;
+
+		const originalFindOne = Email.findOne;
+		const originalCreate = Email.create;
+		const originalFind = Email.find;
+		const originalUpdateOne = GraphLink.updateOne;
+
+		Email.findOne = async () => null;
+		Email.create = async (payload) => ({ _id: newId, ...payload });
+		Email.find = (query) => {
+			assert.deepEqual(query.message_id.$in, ['root@example.com', 'prev@example.com']);
+			return {
+				select: () => ({
+					lean: async () => [{ _id: linkedId }],
+				}),
+			};
+		};
+		GraphLink.updateOne = async (query, update) => {
+			graphLinkQuery = query;
+			graphLinkUpdate = update;
+			return { upsertedCount: 1 };
+		};
+
+		try {
+			await ingestForwardedEmail(userId, 'host-1', {
+				project: '507f1f77bcf86cd799439011',
+				message_id: '<new@example.com>',
+				references: '<root@example.com>',
+				in_reply_to: '<prev@example.com>',
+				from: 'sender@example.com',
+				to: '507f1f77bcf86cd799439011@email.kumbukum.com',
+				subject: 'Reply',
+				text: 'Reply text',
+			}, { channel: 'emailforwarding' });
+
+			assert.equal(graphLinkQuery.host_id, 'host-1');
+			assert.equal(graphLinkQuery.source_id, linkedId);
+			assert.equal(graphLinkQuery.source_type, 'emails');
+			assert.equal(graphLinkQuery.target_id, newId);
+			assert.equal(graphLinkQuery.target_type, 'emails');
+			assert.equal(graphLinkUpdate.$setOnInsert.label, 'thread');
+		} finally {
+			Email.findOne = originalFindOne;
+			Email.create = originalCreate;
+			Email.find = originalFind;
+			GraphLink.updateOne = originalUpdateOne;
+		}
 	});
 
 	it('builds thread via message_id and references', async () => {

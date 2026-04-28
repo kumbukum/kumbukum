@@ -194,6 +194,7 @@ const swaggerSpec = {
                     _id: { type: 'string' },
                     message_id: { type: 'string' },
                     references: { type: 'array', items: { type: 'string' } },
+                    in_reply_to: { type: 'string' },
                     from: { type: 'array', items: { type: 'string' } },
                     to: { type: 'array', items: { type: 'string' } },
                     cc: { type: 'array', items: { type: 'string' } },
@@ -201,6 +202,7 @@ const swaggerSpec = {
                     subject: { type: 'string' },
                     text_content: { type: 'string' },
                     attachment_text_content: { type: 'string' },
+                    source: { type: 'string', enum: ['api', 'emailforwarding'] },
                     project: { type: 'string' },
                     host_id: { type: 'string' },
                     createdAt: { type: 'string', format: 'date-time' },
@@ -257,7 +259,7 @@ const swaggerSpec = {
                     resource_id: { type: 'string' },
                     user_id: { type: 'string' },
                     host_id: { type: 'string' },
-                    channel: { type: 'string', enum: ['web', 'api', 'mcp'] },
+                    channel: { type: 'string', enum: ['web', 'api', 'mcp', 'emailforwarding'] },
                     token_label: { type: 'string' },
                     mcp_client: { type: 'string' },
                     details: { type: 'object' },
@@ -275,6 +277,58 @@ const swaggerSpec = {
     },
     security: [{ BearerAuth: [] }, { AccessToken: [] }],
     paths: {
+        // ---- Public Import Endpoints ----
+        '/import/email': {
+            post: {
+                tags: ['Import'],
+                summary: 'Import a forwarded email',
+                description: 'Root-level public forwarding endpoint, not under /api/v1. The recipient must be PROJECT_ID@EMAIL_FORWARD_DOMAIN. Only text content is imported; HTML and attachments are ignored.',
+                security: [],
+                servers: [{ url: '/', description: 'Root application endpoint' }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    to: { type: 'string', description: 'Forwarding recipient, PROJECT_ID@EMAIL_FORWARD_DOMAIN' },
+                                    from: { type: 'string', description: 'Original sender address' },
+                                    subject: { type: 'string' },
+                                    text: { type: 'string', description: 'Plain text email body' },
+                                    message_id: { type: 'string' },
+                                    references: { type: 'string' },
+                                    in_reply_to: { type: 'string' },
+                                    headers: { type: 'object', description: 'Optional parsed email headers' },
+                                    attachments: { type: 'array', items: { type: 'object' }, description: 'Accepted but ignored' },
+                                },
+                                required: ['to', 'from'],
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    200: {
+                        description: 'Accepted or safely ignored',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        accepted: { type: 'boolean' },
+                                        email_id: { type: 'string' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    400: { description: 'Invalid payload', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    403: { description: 'Recipient domain is not allowed', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    503: { description: 'EMAIL_FORWARD_DOMAIN is not configured', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+
         // ---- Projects ----
         '/projects': {
             get: {
