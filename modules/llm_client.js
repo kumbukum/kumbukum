@@ -1,4 +1,5 @@
 import config from '../config.js';
+import { resolveLlmApiKey } from '../services/byo_ai_service.js';
 
 const PROVIDERS = {
 	openai: {
@@ -23,17 +24,16 @@ const PROVIDERS = {
  * Resolve provider name and API key.
  * Accepts an explicit provider string or falls back to config.llm.chatProvider.
  */
-function resolveProvider(providerName) {
+async function resolveProvider(providerName, options = {}) {
 	const name = providerName || config.llm.chatProvider || 'google';
 	const provider = PROVIDERS[name];
 	if (!provider) throw new Error(`Unknown LLM provider: ${name}`);
 
-	let apiKey;
-	if (name === 'google') {
-		apiKey = config.llm.googleApiKey;
-	} else if (name === 'openai') {
-		apiKey = config.llm.openaiApiKey;
-	}
+	const apiKey = await resolveLlmApiKey({
+		hostId: options.hostId,
+		provider: name,
+		scope: options.scope,
+	});
 	if (!apiKey) throw new Error(`API key not configured for provider: ${name}`);
 
 	return { name, provider, apiKey };
@@ -48,9 +48,11 @@ function resolveProvider(providerName) {
  *   provider  - Explicit provider name (overrides config)
  *   model     - Explicit model name (overrides config)
  *   maxTokens - Max tokens (default 4096)
+ *   hostId    - Tenant host ID for account-scoped API key resolution
+ *   scope     - LLM key scope: global or email
  */
-export async function chatCompletion({ messages, stream = false, provider: providerOverride, model: modelOverride, maxTokens = 4096 }) {
-	const { name, provider, apiKey } = resolveProvider(providerOverride);
+export async function chatCompletion({ messages, stream = false, provider: providerOverride, model: modelOverride, maxTokens = 4096, hostId = null, scope = 'global' }) {
+	const { name, provider, apiKey } = await resolveProvider(providerOverride, { hostId, scope });
 	const model = modelOverride || provider.defaultModel;
 
 	if (name === 'google') {
@@ -122,25 +124,29 @@ async function googleChat({ messages, model, stream, apiKey, maxTokens = 4096 })
 /**
  * Convenience: chat completion using the NL search model (lightweight, fast).
  */
-export async function nlSearchCompletion({ messages, maxTokens = 1024 }) {
+export async function nlSearchCompletion({ messages, maxTokens = 1024, hostId = null, scope = 'global' }) {
 	return chatCompletion({
 		messages,
 		provider: config.llm.nlSearchProvider,
 		model: config.llm.nlSearchModel,
 		maxTokens,
+		hostId,
+		scope,
 	});
 }
 
 /**
  * Convenience: chat completion using the main chat model (richer).
  */
-export async function chatModelCompletion({ messages, stream = false, maxTokens = 4096 }) {
+export async function chatModelCompletion({ messages, stream = false, maxTokens = 4096, hostId = null, scope = 'global' }) {
 	return chatCompletion({
 		messages,
 		stream,
 		provider: config.llm.chatProvider,
 		model: config.llm.chatModel,
 		maxTokens,
+		hostId,
+		scope,
 	});
 }
 

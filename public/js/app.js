@@ -303,6 +303,7 @@ var ROUTES = {
 	'/settings/security': { title: 'Security', partial: '/ajax/section/settings/security' },
 	'/settings/team': { title: 'My Team', partial: '/ajax/section/settings/team' },
 	'/settings/tokens': { title: 'API Tokens', partial: '/ajax/section/settings/tokens' },
+	'/settings/byo-ai': { title: 'BYO AI', partial: '/ajax/section/settings/byo-ai' },
 	'/settings/typesense': { title: 'Search', partial: '/ajax/section/settings/typesense' },
 	'/settings/usage': { title: 'Usage', partial: '/ajax/section/settings/usage' },
 	'/settings/export': { title: 'Export', partial: '/ajax/section/settings/export' },

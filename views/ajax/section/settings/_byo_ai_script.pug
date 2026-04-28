@@ -1,0 +1,85 @@
+script.
+	(function() {
+		var form = document.getElementById('byo-ai-form');
+		var resultEl = document.getElementById('byo-ai-result');
+		if (!form || form.__byoAiBound) return;
+		form.__byoAiBound = true;
+
+		function payloadFor(scope, field, value) {
+			var payload = {};
+			payload[scope] = {};
+			payload[scope][field] = value;
+			return payload;
+		}
+
+		function renderStatus(settings) {
+			document.querySelectorAll('[data-status]').forEach(function(el) {
+				var parts = el.dataset.status.split(':');
+				var scope = parts[0];
+				var field = parts[1];
+				var configured = !!settings?.[scope]?.[field]?.configured;
+				el.textContent = configured ? 'Custom key configured' : 'Using environment default';
+				el.classList.toggle('text-success', configured);
+				el.classList.toggle('text-muted', !configured);
+			});
+		}
+
+		async function loadSettings() {
+			try {
+				var data = await api('GET', '/settings/byo-ai');
+				renderStatus(data.settings || {});
+			} catch (err) {
+				if (resultEl) {
+					resultEl.innerHTML = '<div class="alert alert-danger">' + err.message + '</div>';
+					resultEl.classList.remove('d-none');
+				}
+			}
+		}
+
+		form.addEventListener('submit', async function(e) {
+			e.preventDefault();
+			var payload = {};
+			form.querySelectorAll('input[data-scope][data-field]').forEach(function(input) {
+				var value = input.value.trim();
+				if (!value) return;
+				payload[input.dataset.scope] = payload[input.dataset.scope] || {};
+				payload[input.dataset.scope][input.dataset.field] = value;
+			});
+
+			if (Object.keys(payload).length === 0) {
+				showSuccess('No BYO AI changes');
+				return;
+			}
+
+			try {
+				var data = await api('PUT', '/settings/byo-ai', payload);
+				form.querySelectorAll('input[data-scope][data-field]').forEach(function(input) {
+					input.value = '';
+				});
+				renderStatus(data.settings || {});
+				showSuccess('BYO AI settings saved');
+			} catch (err) {
+				showError(err.message);
+			}
+		});
+
+		document.querySelectorAll('[data-clear-byo]').forEach(function(button) {
+			button.addEventListener('click', async function() {
+				var parts = button.dataset.clearByo.split(':');
+				var scope = parts[0];
+				var field = parts[1];
+				var confirmed = await confirmAction('Clear API key', 'This will remove the custom key and use the fallback key.');
+				if (!confirmed) return;
+
+				try {
+					var data = await api('PUT', '/settings/byo-ai', payloadFor(scope, field, null));
+					renderStatus(data.settings || {});
+					showSuccess('API key cleared');
+				} catch (err) {
+					showError(err.message);
+				}
+			});
+		});
+
+		loadSettings();
+	})();

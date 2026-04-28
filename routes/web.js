@@ -20,6 +20,18 @@ function requireRestrictedSettingsAccess(req, res, next) {
 	return res.redirect('/settings/profile');
 }
 
+function isByoAiSettingsAccessEnabled(plan) {
+	return (is_hosted && plan === 'pro') || (!is_hosted && config.env !== 'production');
+}
+
+function requireByoAiWebAccess(req, res, next) {
+	if (isByoAiSettingsAccessEnabled(res.locals.plan)) return next();
+	if (req.path.startsWith('/ajax/')) {
+		return res.status(403).send('<div class="alert alert-warning mb-0">BYO AI is available on the Pro plan.</div>');
+	}
+	return res.redirect(is_hosted ? '/settings/subscription' : '/settings/profile');
+}
+
 // Inject user + sidebar data into all views
 router.use(async (req, res, next) => {
 	const [user, projects, tenant] = await Promise.all([
@@ -40,6 +52,7 @@ router.use(async (req, res, next) => {
 	res.locals.active_tenant = activeTenant;
 	res.locals.email_feature_enabled = proOnlyFeatureEnabled;
 	res.locals.git_sync_enabled = proOnlyFeatureEnabled;
+	res.locals.byo_ai_enabled = isByoAiSettingsAccessEnabled(plan);
 	res.locals.host_id = req.host_id;
 	res.locals.ws_url = config.wsUrl;
 	res.locals.impersonating = req.session.impersonating || false;
@@ -91,6 +104,7 @@ router.get('/settings/profile', (req, res) => res.render('settings/profile', { t
 router.get('/settings/security', (req, res) => res.render('settings/security', { title: 'Security' }));
 router.get('/settings/team', (req, res) => res.render('settings/team', { title: 'My Team' }));
 router.get('/settings/tokens', (req, res) => res.render('settings/tokens', { title: 'Access Tokens' }));
+router.get('/settings/byo-ai', requireRestrictedSettingsAccess, requireByoAiWebAccess, (req, res) => res.render('settings/byo_ai', { title: 'BYO AI' }));
 router.get('/settings/typesense', requireRestrictedSettingsAccess, (req, res) => res.render('settings/typesense', { title: 'Typesense' }));
 router.get('/settings/usage', (req, res) => res.render('settings/usage', { title: 'Usage' }));
 router.get('/settings/export', requireRestrictedSettingsAccess, (req, res) => res.render('settings/export', { title: 'Export' }));
@@ -110,6 +124,7 @@ router.get('/ajax/section/settings/profile', (req, res) => res.render('ajax/sect
 router.get('/ajax/section/settings/security', (req, res) => res.render('ajax/section/settings/security', { title: 'Security' }));
 router.get('/ajax/section/settings/team', (req, res) => res.render('ajax/section/settings/team', { title: 'My Team' }));
 router.get('/ajax/section/settings/tokens', (req, res) => res.render('ajax/section/settings/tokens', { title: 'Access Tokens' }));
+router.get('/ajax/section/settings/byo-ai', requireRestrictedSettingsAccess, requireByoAiWebAccess, (req, res) => res.render('ajax/section/settings/byo_ai', { title: 'BYO AI' }));
 router.get('/ajax/section/settings/typesense', requireRestrictedSettingsAccess, (req, res) => res.render('ajax/section/settings/typesense', { title: 'Typesense' }));
 router.get('/ajax/section/settings/usage', (req, res) => res.render('ajax/section/settings/usage', { title: 'Usage' }));
 router.get('/ajax/section/settings/export', requireRestrictedSettingsAccess, (req, res) => res.render('ajax/section/settings/export', { title: 'Export' }));

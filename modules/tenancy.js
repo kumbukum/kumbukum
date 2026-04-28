@@ -11,6 +11,16 @@ const tenantSchema = new mongoose.Schema(
 		plan: { type: String, enum: ['free', 'starter', 'pro'], default: 'free' },
 		settings: {
 			timezone: { type: String, default: 'UTC' },
+			byo_ai: {
+				global: {
+					openai_api_key: { type: String, default: '' },
+					gemini_api_key: { type: String, default: '' },
+				},
+				email: {
+					openai_api_key: { type: String, default: '' },
+					gemini_api_key: { type: String, default: '' },
+				},
+			},
 		},
 	},
 	{ timestamps: true },

@@ -3,6 +3,7 @@ import Typesense from 'typesense';
 import config from '../config.js';
 import { emitToTenant } from './socket.js';
 import { getRedisClient } from './redis.js';
+import { normalizeLlmScope, resolveLlmApiKey } from '../services/byo_ai_service.js';
 
 let client;
 
@@ -33,10 +34,14 @@ function resolveExcludeFields(excludeFields, type) {
 	return excludeFields || _ts_exlude_default;
 }
 
+export function getConversationModelId(userId, llmScope = 'global') {
+	return normalizeLlmScope(llmScope) === 'email' ? `convo-${userId}-email` : `convo-${userId}`;
+}
+
 const _token_separators = ['+', '-', '@', '.', '_', ' ', '=', '\\', ';', ',', ':', "'", '|', '&', '(', ')', '[', ']', '{', '}', '<', '>', '/', '?', '!', '#', '$', '%', '^', '*', '~', '`', '"', '\n', '\t', '\r', '\f', '\v'];
 
-// Track conversation models whose api_key has been synced this process lifetime
-const syncedConvoModels = new Set();
+// Track conversation model signatures synced in this process lifetime.
+const syncedConvoModels = new Map();
 const TRANSIENT_TYPESENSE_HTTP_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const TYPESENSE_CIRCUIT_OPEN_MS = 30_000;
 
@@ -1102,15 +1107,29 @@ Always include project_id in action params. If the user doesn't specify a projec
 
 /**
  * Ensure the conversation store collection and conversation model exist for a user.
- * Model ID: convo-{userId}, one per user.
+ * Model ID: convo-{userId}, one per user and scope.
  * Collection: conversation_store_{hostId}, shared per tenant.
  */
-export async function ensureConversationModel(hostId, userId) {
+export async function ensureConversationModel(hostId, userId, options = {}) {
 	const ts = getTypesenseClient();
 	const collectionName = `conversation_store_${hostId}`;
-	const modelId = `convo-${userId}`;
+	const llmScope = normalizeLlmScope(options.llmScope);
+	const modelId = getConversationModelId(userId, llmScope);
 
-	// 1. Ensure conversation store collection exists
+	// 1. Resolve model configuration
+	let tsModelName = config.llm.tsConversationModel || 'gemini-2.0-flash';
+	const tsProvider = config.llm.tsConversationProvider || 'google';
+	if (!tsModelName.includes('/')) {
+		tsModelName = `${tsProvider}/${tsModelName}`;
+	}
+	const apiKey = await resolveLlmApiKey({ hostId, provider: tsProvider, scope: llmScope });
+	const desiredSignature = buildConversationModelSignature(tsModelName, apiKey);
+
+	if (syncedConvoModels.get(modelId) === desiredSignature) {
+		return;
+	}
+
+	// 2. Ensure conversation store collection exists
 	try {
 		await ts.collections(collectionName).retrieve({ 'exclude_fields': 'fields' });
 	} catch (err) {
@@ -1136,15 +1155,6 @@ export async function ensureConversationModel(hostId, userId) {
 		}
 	}
 
-	// 2. Resolve model configuration
-	let tsModelName = config.llm.tsConversationModel || 'gemini-2.0-flash';
-	const tsProvider = config.llm.tsConversationProvider || 'google';
-	if (!tsModelName.includes('/')) {
-		tsModelName = `${tsProvider}/${tsModelName}`;
-	}
-	const apiKey = tsProvider === 'google' ? config.llm.googleApiKey : config.llm.openaiApiKey;
-	const desiredSignature = buildConversationModelSignature(tsModelName, apiKey);
-
 	// 3. Check if conversation model exists and sync if needed
 	let existing = null;
 	try {
@@ -1159,11 +1169,11 @@ export async function ensureConversationModel(hostId, userId) {
 			updateFields.history_collection = collectionName;
 		}
 
-		// Model exists — sync provider config at most once per process unless the history collection drifted.
-		if (!syncedConvoModels.has(modelId)) {
+		// Model exists — sync when the desired model/key signature has changed.
+		if (syncedConvoModels.get(modelId) !== desiredSignature) {
 			const storedSignature = await getStoredConversationModelSignature(modelId);
 			if (storedSignature === desiredSignature && !updateFields.history_collection) {
-				syncedConvoModels.add(modelId);
+				syncedConvoModels.set(modelId, desiredSignature);
 				return;
 			}
 
@@ -1186,7 +1196,7 @@ export async function ensureConversationModel(hostId, userId) {
 			}
 		}
 
-		syncedConvoModels.add(modelId);
+		syncedConvoModels.set(modelId, desiredSignature);
 		return;
 	}
 
@@ -1214,7 +1224,7 @@ export async function ensureConversationModel(hostId, userId) {
 			if (createResp.status === 409) {
 				console.log(`Conversation model ${modelId} already exists`);
 				await setStoredConversationModelSignature(modelId, desiredSignature);
-				syncedConvoModels.add(modelId);
+				syncedConvoModels.set(modelId, desiredSignature);
 				return;
 			}
 			throw new Error(`Create conversation model failed (${createResp.status}): ${body}`);
@@ -1227,7 +1237,7 @@ export async function ensureConversationModel(hostId, userId) {
 		}
 
 		await setStoredConversationModelSignature(modelId, desiredSignature);
-		syncedConvoModels.add(modelId);
+		syncedConvoModels.set(modelId, desiredSignature);
 		console.log(`Created conversation model: ${modelId}`);
 	} catch (err) {
 		console.error(`Error creating conversation model ${modelId}:`, err.message);
@@ -1265,12 +1275,16 @@ async function _updateConversationModel(modelId, fields) {
  * @param {string} options.conversationId - Continue existing conversation (optional)
  * @param {string} options.projectId - Filter by project (optional)
  * @param {number} options.perPage - Results per collection (default 10)
+ * @param {string} options.llmScope - LLM key scope: global or email
  * @returns {{ results: object, conversation: { answer: string, conversationId: string, itemIds: string[] }, action: object|null }}
  */
 export async function conversationSearch(hostId, userId, query, options = {}) {
 	const ts = getTypesenseClient();
-	const convoModelId = `convo-${userId}`;
+	const llmScope = normalizeLlmScope(options.llmScope);
+	const convoModelId = getConversationModelId(userId, llmScope);
 	const { conversationId, projectId, perPage = 10, includeEmails = true } = options;
+
+	await ensureConversationModel(hostId, userId, { llmScope });
 
 	// Build per-collection search requests
 	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
@@ -1347,7 +1361,7 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 
 		if (needsConversationRepair) {
 			console.warn(`Conversation model ${convoModelId} needs repair, recreating metadata...`);
-			await ensureConversationModel(hostId, userId);
+			await ensureConversationModel(hostId, userId, { llmScope });
 			try {
 				data = await performConversationMultiSearch();
 			} catch (retryErr) {

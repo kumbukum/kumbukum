@@ -527,6 +527,44 @@
           }
         }
       },
+      "ByoAiProviderStatus": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "masked": {
+            "type": "string",
+            "description": "Masked placeholder when a custom key is configured"
+          }
+        }
+      },
+      "ByoAiScopeSettings": {
+        "type": "object",
+        "properties": {
+          "openai_api_key": {
+            "$ref": "#/components/schemas/ByoAiProviderStatus"
+          },
+          "gemini_api_key": {
+            "$ref": "#/components/schemas/ByoAiProviderStatus"
+          }
+        }
+      },
+      "ByoAiScopeUpdate": {
+        "type": "object",
+        "properties": {
+          "openai_api_key": {
+            "type": "string",
+            "nullable": true,
+            "description": "New OpenAI API key. Use null or empty string to clear."
+          },
+          "gemini_api_key": {
+            "type": "string",
+            "nullable": true,
+            "description": "New Gemini API key. Use null or empty string to clear."
+          }
+        }
+      },
       "GitRepo": {
         "type": "object",
         "properties": {
@@ -3490,6 +3528,120 @@
           },
           "403": {
             "description": "Account admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings/byo-ai": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Get BYO AI key status",
+        "description": "Returns masked/configured status for hosted Pro account BYO AI API keys. Raw API keys are never returned.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "global": {
+                          "$ref": "#/components/schemas/ByoAiScopeSettings"
+                        },
+                        "email": {
+                          "$ref": "#/components/schemas/ByoAiScopeSettings"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Hosted Pro account admin access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Update BYO AI API keys",
+        "description": "Stores or clears hosted Pro account BYO AI API keys. Omitted fields are left unchanged; null or empty string clears a key.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "global": {
+                    "$ref": "#/components/schemas/ByoAiScopeUpdate"
+                  },
+                  "email": {
+                    "$ref": "#/components/schemas/ByoAiScopeUpdate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "global": {
+                          "$ref": "#/components/schemas/ByoAiScopeSettings"
+                        },
+                        "email": {
+                          "$ref": "#/components/schemas/ByoAiScopeSettings"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid key payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Hosted Pro account admin access required",
             "content": {
               "application/json": {
                 "schema": {

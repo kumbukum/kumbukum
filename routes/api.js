@@ -32,6 +32,7 @@ import * as auditService from '../services/audit_service.js';
 import * as gitSyncService from '../services/git_sync_service.js';
 import * as oauthService from '../services/oauth_service.js';
 import * as teamService from '../services/team_service.js';
+import * as byoAiService from '../services/byo_ai_service.js';
 import { createChatLimiter } from '../middleware/rate_limit.js';
 import config from '../config.js';
 import crypto from 'node:crypto';
@@ -62,6 +63,21 @@ function requireTeamManager(req, res, next) {
 function requireRestrictedSettingsAccess(req, res, next) {
 	if (teamService.canManageTeam(req.memberRole)) return next();
 	return res.status(403).json({ error: 'Account admin access is required' });
+}
+
+function isByoAiSettingsAccessEnabled(plan) {
+	return (is_hosted && plan === 'pro') || (!is_hosted && config.env !== 'production');
+}
+
+async function requireByoAiAccess(req, res, next) {
+	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
+	const plan = tenant?.plan || 'free';
+	if (isByoAiSettingsAccessEnabled(plan)) return next();
+
+	if (!is_hosted && config.env === 'production') {
+		return res.status(403).json({ error: 'BYO AI keys are configured through environment variables in self-hosted installs' });
+	}
+	return res.status(403).json({ error: 'BYO AI is available on the Pro plan' });
 }
 
 // ---- Projects ----
@@ -692,6 +708,28 @@ router.post('/reindex', requireRestrictedSettingsAccess, async (req, res) => {
 	} catch (err) {
 		console.error('Reindex error:', err);
 		res.status(500).json({ error: 'Reindex failed: ' + err.message });
+	}
+});
+
+// ---- BYO AI Settings ----
+
+router.get('/settings/byo-ai', requireRestrictedSettingsAccess, requireByoAiAccess, async (req, res) => {
+	try {
+		const settings = await byoAiService.getByoAiSettings(req.host_id);
+		res.json({ settings });
+	} catch (err) {
+		console.error('BYO AI settings read error:', err);
+		res.status(500).json({ error: 'Failed to load BYO AI settings' });
+	}
+});
+
+router.put('/settings/byo-ai', requireRestrictedSettingsAccess, requireByoAiAccess, async (req, res) => {
+	try {
+		const settings = await byoAiService.updateByoAiSettings(req.host_id, req.body || {});
+		res.json({ settings });
+	} catch (err) {
+		console.error('BYO AI settings update error:', err);
+		res.status(400).json({ error: err.message || 'Failed to update BYO AI settings' });
 	}
 });
 
