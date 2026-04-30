@@ -125,8 +125,8 @@ describe('MCP Tools — Notes', () => {
         assert.equal(api.lastCall.body.options.perPage, 3);
     });
 
-    it('search_notes — excludes bulky search fields', async () => {
+    it('search_notes — requests searchable body fields for excerpts', async () => {
         await tools.search_notes.handler({ query: 'hello' });
-        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding,text_content');
+        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding');
     });
 });

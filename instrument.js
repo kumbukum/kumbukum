@@ -1,9 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
-// When ENABLE_OTEL=true, Sentry is initialized in tracing.cjs with
-// skipOpenTelemetrySetup so it integrates with the existing OTel SDK.
-if (process.env.SENTRY_DSN && process.env.ENABLE_OTEL !== 'true') {
+if (process.env.SENTRY_DSN) {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
         integrations: [

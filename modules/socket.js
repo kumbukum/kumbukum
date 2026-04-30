@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-streams-adapter';
 import Redis from 'ioredis';
 import config from '../config.js';
+import { buildRedisConnectionOptions, isTransientRedisError } from './redis_options.js';
 
 let io;
 let bridgePublisher;
@@ -10,49 +11,17 @@ let bridgeSubscriber;
 const TENANT_EVENT_BRIDGE_CHANNEL = 'tenant-events';
 
 function createRedisClient() {
-	const opts = config.redisOptions;
-	const isSentinel = typeof opts === 'object' && opts.sentinels && Array.isArray(opts.sentinels);
-
-	if (typeof opts === 'string') {
-		return new Redis(opts, { lazyConnect: true });
-	}
-
-	if (isSentinel) {
-		return new Redis({
-			sentinels: opts.sentinels,
-			name: opts.name,
-			lazyConnect: true,
-			keepAlive: 10000,
-			enableOfflineQueue: true,
-			sentinelRetryStrategy(times) {
-				return Math.min(times * 100, 5000);
-			},
-			connectTimeout: 10000,
-			commandTimeout: 5000,
-			sentinelCommandTimeout: 10000,
-			enableReadyCheck: false,
-			maxRetriesPerRequest: null,
-			retryStrategy(times) {
-				return Math.min(times * 100, 5000);
-			},
-			sentinelMaxConnections: 3,
-			updateSentinels: true,
-			failoverDetector: false,
-		});
-	}
-
-	return new Redis({ ...opts, lazyConnect: true });
-}
-
-function isTransientRedisError(msg) {
-	return msg.includes('sentinels are unreachable') ||
-		msg.includes('EHOSTUNREACH') ||
-		msg.includes('ECONNREFUSED') ||
-		msg.includes('Connection is closed');
+	const connection = buildRedisConnectionOptions(config.redisOptions, { lazyConnect: true });
+	return connection.url
+		? new Redis(connection.url, connection.options)
+		: new Redis(connection.options);
 }
 
 function attachRedisErrorHandler(redisClient, label) {
 	redisClient.on('error', (err) => {
+		if (err && !err.handled) {
+			err.handled = true;
+		}
 		const msg = err?.message || '';
 		if (isTransientRedisError(msg)) return;
 		console.warn(`${label}:`, msg);

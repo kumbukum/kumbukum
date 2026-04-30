@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { slimSearchResults } from './search-results.js';
 
-const MCP_URL_SEARCH_EXCLUDE_FIELDS = 'embedding,text_content';
+const MCP_URL_SEARCH_EXCLUDE_FIELDS = 'embedding';
 
 /**
  * MCP tool definitions: URLs
@@ -55,7 +55,7 @@ export function urlTools(api, defaultProjectId) {
             exclude_fields: MCP_URL_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
+        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results, { type: 'urls' }), null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 

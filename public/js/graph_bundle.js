@@ -6415,9 +6415,9 @@ var require_cose_base = __commonJS({
   }
 });
 
-// node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.33.2/node_modules/cytoscape-fcose/cytoscape-fcose.js
+// node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.33.3/node_modules/cytoscape-fcose/cytoscape-fcose.js
 var require_cytoscape_fcose = __commonJS({
-  "node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.33.2/node_modules/cytoscape-fcose/cytoscape-fcose.js"(exports, module) {
+  "node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.33.3/node_modules/cytoscape-fcose/cytoscape-fcose.js"(exports, module) {
     (function webpackUniversalModuleDefinition(root, factory) {
       if (typeof exports === "object" && typeof module === "object")
         module.exports = factory(require_cose_base());
@@ -7702,7 +7702,7 @@ var require_cytoscape_fcose = __commonJS({
   }
 });
 
-// node_modules/.pnpm/cytoscape@3.33.2/node_modules/cytoscape/dist/cytoscape.esm.mjs
+// node_modules/.pnpm/cytoscape@3.33.3/node_modules/cytoscape/dist/cytoscape.esm.mjs
 function _arrayLikeToArray(r, a) {
   (null == a || a > r.length) && (a = r.length);
   for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -29195,6 +29195,20 @@ BRp$4.getCachedImage = function(url, crossOrigin, onLoad) {
     return image;
   }
 };
+var setGrabState = function setGrabState2(ele, grabbed) {
+  var ele0 = ele[0];
+  if (!ele0 || ele0._private.grabbed === grabbed) {
+    return;
+  }
+  ele0._private.grabbed = grabbed;
+  ele.updateStyle(false);
+};
+var setGrabbed = function setGrabbed2(ele) {
+  setGrabState(ele, true);
+};
+var setFreed = function setFreed2(ele) {
+  setGrabState(ele, false);
+};
 var BRp$3 = {};
 BRp$3.registerBinding = function(target, event3, handler, useCapture) {
   var args = Array.prototype.slice.apply(arguments, [1]);
@@ -29301,12 +29315,6 @@ BRp$3.load = function() {
       allowPassthrough = true;
     }
     return allowPassthrough;
-  };
-  var setGrabbed = function setGrabbed2(ele) {
-    ele[0]._private.grabbed = true;
-  };
-  var setFreed = function setFreed2(ele) {
-    ele[0]._private.grabbed = false;
   };
   var setInDragLayer = function setInDragLayer2(ele) {
     ele[0]._private.rscratch.inDragLayer = true;
@@ -36240,10 +36248,11 @@ var ElementDrawingWebGL = /* @__PURE__ */ (function() {
       }
       var indexView = this.indexBuffer.getView(instance2);
       indexToVec4(eleIndex, indexView);
-      var opacity = this.renderTarget.picking ? 1 : node.pstyle(props.opacity).value;
+      var opacity = this.renderTarget.picking ? 1 : type === "node-body" ? node.effectiveOpacity() : 1;
+      var bgOpacity = this.renderTarget.picking ? 1 : node.pstyle(props.opacity).value * opacity;
       var color = node.pstyle(props.color).value;
       var colorView = this.colorBuffer.getView(instance2);
-      toWebGLColor(color, opacity, colorView);
+      toWebGLColor(color, bgOpacity, colorView);
       var lineWidthView = this.lineWidthBuffer.getView(instance2);
       lineWidthView[0] = 0;
       lineWidthView[1] = 0;
@@ -36251,7 +36260,7 @@ var ElementDrawingWebGL = /* @__PURE__ */ (function() {
         var borderWidth = node.pstyle("border-width").value;
         if (borderWidth > 0) {
           var borderColor = node.pstyle("border-color").value;
-          var borderOpacity = node.pstyle("border-opacity").value;
+          var borderOpacity = opacity * node.pstyle("border-opacity").value;
           var borderColorView = this.borderColorBuffer.getView(instance2);
           toWebGLColor(borderColor, borderOpacity, borderColorView);
           var borderPos = node.pstyle("border-position").value;
@@ -37945,7 +37954,7 @@ sheetfn.appendToStyle = function(style3) {
   }
   return style3;
 };
-var version = "3.33.2";
+var version = "3.33.3";
 var cytoscape2 = function cytoscape3(options2) {
   if (options2 === void 0) {
     options2 = {};
