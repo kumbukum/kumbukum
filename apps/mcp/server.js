@@ -17,6 +17,7 @@ import { graphTools } from './tools/graph.js';
 import { gitSyncTools } from './tools/git_sync.js';
 import { MCP_SERVER_INSTRUCTIONS } from './instructions.js';
 import { buildProtectedResourceMetadata } from '../../modules/oauth.js';
+import { captureException, flush, setupExpressErrorHandler } from './sentry.js';
 
 const PORT = mcpConfig.port;
 const API_BASE_URL = mcpConfig.apiBaseUrl;
@@ -128,6 +129,13 @@ async function createServer(apiAuth, { projectId } = {}) {
         });
         return result;
       } catch (err) {
+        captureException(err, {
+          tags: {
+            phase: 'tool_call',
+            tool: name,
+            client,
+          },
+        });
         logToolTelemetry({
           tool: name,
           client,
@@ -159,9 +167,16 @@ if (transportArg === '--stdio' || !transportArg) {
   }
 
   const projectId = process.env['PROJECT-ID'] || null;
-  const server = await createServer(token, { projectId });
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  try {
+    const server = await createServer(token, { projectId });
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+  } catch (err) {
+    captureException(err, { tags: { phase: 'stdio_startup' } });
+    console.error('Fatal error starting Kumbukum MCP stdio server:', err);
+    await flush();
+    process.exit(1);
+  }
 } else {
   // HTTP/SSE transport
   const app = express();
@@ -199,58 +214,84 @@ if (transportArg === '--stdio' || !transportArg) {
   const sseTransports = new Map();
 
   app.get('/sse', async (req, res) => {
-    const authContext = authenticateHttpRequest(req);
-    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
+    try {
+      const authContext = authenticateHttpRequest(req);
+      if (!authContext.ok) return sendAuthResponse(res, authContext.response);
 
-    const projectId = req.headers['x-project-id'] || null;
-    const server = await createServer(authContext.apiAuth, { projectId });
-    const transport = new SSEServerTransport('/messages', res);
-    sseTransports.set(transport.sessionId, {
+      const projectId = req.headers['x-project-id'] || null;
+      const server = await createServer(authContext.apiAuth, { projectId });
+      const transport = new SSEServerTransport('/messages', res);
+      sseTransports.set(transport.sessionId, {
 		server,
 		transport,
 		authKey: authKeyForContext(authContext),
 		mode: authContext.mode,
 	});
 
-    res.on('close', () => {
-      sseTransports.delete(transport.sessionId);
-    });
+      res.on('close', () => {
+        sseTransports.delete(transport.sessionId);
+      });
 
-    server.connect(transport);
+      await server.connect(transport);
+    } catch (err) {
+      captureException(err, { tags: { phase: 'sse_connect' } });
+      console.error('Error starting Kumbukum MCP SSE connection:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
   });
 
-  app.post('/messages', (req, res) => {
-    const authContext = authenticateHttpRequest(req);
-    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
-    const sessionId = req.query.sessionId;
-    const session = sseTransports.get(sessionId);
-    if (!session) return res.status(404).json({ error: 'Session not found' });
-    if (session.authKey !== authKeyForContext(authContext)) {
+  app.post('/messages', async (req, res) => {
+    try {
+      const authContext = authenticateHttpRequest(req);
+      if (!authContext.ok) return sendAuthResponse(res, authContext.response);
+      const sessionId = req.query.sessionId;
+      const session = sseTransports.get(sessionId);
+      if (!session) return res.status(404).json({ error: 'Session not found' });
+      if (session.authKey !== authKeyForContext(authContext)) {
 		return sendAuthResponse(res, authContext.response || { status: 401, body: { error: 'Session authentication mismatch' } });
 	}
 	const scopeResponse = checkRequestScopes(authContext, req.body);
 	if (scopeResponse) return sendAuthResponse(res, scopeResponse);
-    session.transport.handlePostMessage(req, res);
+      await session.transport.handlePostMessage(req, res);
+    } catch (err) {
+      captureException(err, { tags: { phase: 'sse_message' } });
+      console.error('Error handling Kumbukum MCP SSE message:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
   });
 
   // Streamable HTTP endpoint — stateless (no sessions)
   // Shared handler for all methods on /mcp
   const handleMcp = async (req, res) => {
-    const authContext = authenticateHttpRequest(req);
-    if (!authContext.ok) return sendAuthResponse(res, authContext.response);
+    try {
+      const authContext = authenticateHttpRequest(req);
+      if (!authContext.ok) return sendAuthResponse(res, authContext.response);
 	const scopeResponse = checkRequestScopes(authContext, req.body);
 	if (scopeResponse) return sendAuthResponse(res, scopeResponse);
 
-    const projectId = req.headers['x-project-id'] || null;
-    const server = await createServer(authContext.apiAuth, { projectId });
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
+      const projectId = req.headers['x-project-id'] || null;
+      const server = await createServer(authContext.apiAuth, { projectId });
+      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (err) {
+      captureException(err, { tags: { phase: 'streamable_http' } });
+      console.error('Error handling Kumbukum MCP HTTP request:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
   };
 
   app.post('/mcp', handleMcp);
   app.get('/mcp', handleMcp);
   app.delete('/mcp', handleMcp);
+
+  setupExpressErrorHandler(app);
 
   app.listen(PORT, () => {
     console.log(`Kumbukum MCP server running on port ${PORT}`);

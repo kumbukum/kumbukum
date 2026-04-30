@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { slimSearchResults } from './search-results.js';
 
-const MCP_EMAIL_SEARCH_EXCLUDE_FIELDS = 'embedding,text_content,attachment_text_content';
+const MCP_EMAIL_SEARCH_EXCLUDE_FIELDS = 'embedding';
 
 /**
  * MCP tool definitions: Emails
@@ -68,7 +68,7 @@ export function emailTools(api, defaultProjectId) {
 						exclude_fields: MCP_EMAIL_SEARCH_EXCLUDE_FIELDS,
 					},
 				});
-				return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
+				return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results, { type: 'emails' }), null, 2), cache_control: { type: 'ephemeral' } }] };
 			},
 		},
 

@@ -154,7 +154,7 @@ html(lang="en")
 								li.nav-item
 									button.nav-link.active#rm-url-tab-details(type="button") Details
 								li.nav-item
-									button.nav-link#rm-url-tab-pages(type="button")
+									button.nav-link.d-none#rm-url-tab-pages(type="button")
 										| Crawled pages
 										span.badge.rounded-pill.ms-2#rm-url-tab-pages-count 0
 							#rm-url-pane-details
@@ -168,15 +168,16 @@ html(lang="en")
 										.mb-3
 											.form-text Title (optional)
 											input.form-control#rm-url-title(type="text")
+										.mb-4
+											.form-text Description (optional)
+											textarea.form-control#rm-url-description(type="text" rows="3")
 										.mb-3.form-check
 											input.form-check-input#rm-url-crawl(type="checkbox")
 											label.form-check-label(for="rm-url-crawl") Enable full-site crawling
-										.mb-3
-											.form-text Description (optional)
-											textarea.form-control#rm-url-description(type="text" rows="3")
-										.mb-3.d-none#rm-url-crawl-wrap
-											.form-text Crawled pages
-											.small.text-muted.mb-2#rm-url-crawl-meta
+											.text-muted.fs-9 If checked will index all pages of URL 
+										//- .mb-3.d-none#rm-url-crawl-wrap
+										//- 	.form-text Crawled pages
+										//- 	.small.text-muted.mb-2#rm-url-crawl-meta
 								.mb-3.px-3.position-relative
 									.form-text Links (optional)
 									.source-search-wrap

@@ -2544,6 +2544,24 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "URL already saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "$ref": "#/components/schemas/Url"
+                    },
+                    "duplicate": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "201": {
             "description": "Created",
             "content": {
@@ -2611,6 +2629,7 @@
           "URLs"
         ],
         "summary": "Update a URL",
+        "description": "Set crawl_enabled to false to stop full-site crawling and remove crawled page documents for this URL from the pages index.",
         "parameters": [
           {
             "name": "id",
@@ -2656,6 +2675,10 @@
                   "properties": {
                     "url": {
                       "$ref": "#/components/schemas/Url"
+                    },
+                    "deleted_pages": {
+                      "type": "integer",
+                      "description": "Number of crawled page documents removed when crawling was disabled."
                     }
                   }
                 }

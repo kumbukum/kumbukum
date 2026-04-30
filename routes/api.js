@@ -325,12 +325,13 @@ router.get('/urls', async (req, res) => {
 
 router.post('/urls', async (req, res) => {
 	const url = await urlService.saveUrl(req.userId, req.host_id, req.body, auditCtx(req));
+	const wasDuplicate = !!url.$locals?.wasDuplicate;
 
-	if (url.crawl_enabled) {
+	if (!wasDuplicate && url.crawl_enabled) {
 		crawlSite(url).catch((err) => console.error('Background crawl error:', err.message));
 	}
 
-	res.status(201).json({ url });
+	res.status(wasDuplicate ? 200 : 201).json({ url, duplicate: wasDuplicate });
 });
 
 router.get('/urls/:id', async (req, res) => {
@@ -378,6 +379,11 @@ router.get('/urls/:id/pages', async (req, res) => {
 	}
 });
 
+async function removeUrlPages(hostId, urlId) {
+	const result = await removeDocumentsByFilter(hostId, 'pages', `parent_url_id:=${urlId}`);
+	return typeof result?.num_deleted === 'number' ? result.num_deleted : 0;
+}
+
 router.post('/urls/:id/resync', async (req, res) => {
 	const url = await urlService.getUrl(req.host_id, req.params.id);
 	if (!url) return res.status(404).json({ error: 'URL not found' });
@@ -392,8 +398,7 @@ router.delete('/urls/:id/pages', async (req, res) => {
 	if (!url) return res.status(404).json({ error: 'URL not found' });
 
 	try {
-		const result = await removeDocumentsByFilter(req.host_id, 'pages', `parent_url_id:=${req.params.id}`);
-		const deleted = typeof result?.num_deleted === 'number' ? result.num_deleted : 0;
+		const deleted = await removeUrlPages(req.host_id, req.params.id);
 		res.json({ message: `${deleted} crawled page${deleted === 1 ? '' : 's'} deleted`, deleted });
 	} catch (err) {
 		console.error('Delete URL pages error:', err);
@@ -409,6 +414,17 @@ router.put('/urls/:id', async (req, res) => {
 	const shouldStartFirstCrawl = !!url.crawl_enabled && !before?.crawl_enabled;
 	if (shouldStartFirstCrawl) {
 		crawlSite(url).catch((err) => console.error('Background crawl error:', err.message));
+	}
+
+	const shouldRemoveCrawledPages = req.body.crawl_enabled === false;
+	if (shouldRemoveCrawledPages) {
+		try {
+			const deletedPages = await removeUrlPages(req.host_id, req.params.id);
+			return res.json({ url, deleted_pages: deletedPages });
+		} catch (err) {
+			console.error('Disable URL crawl cleanup error:', err);
+			return res.status(500).json({ error: 'URL saved but failed to delete crawled pages' });
+		}
 	}
 
 	res.json({ url });

@@ -2,13 +2,13 @@ import { z } from 'zod';
 import { slimSearchResults } from './search-results.js';
 
 const MCP_KNOWLEDGE_SEARCH_EXCLUDE_FIELDS = {
-  notes: 'embedding,text_content',
-  memory: 'embedding,content',
-  urls: 'embedding,text_content',
-  emails: 'embedding,text_content,attachment_text_content',
-  pages: 'embedding,text_content',
+  notes: 'embedding',
+  memory: 'embedding',
+  urls: 'embedding',
+  emails: 'embedding',
+  pages: 'embedding',
 };
-const MCP_MEMORY_SEARCH_EXCLUDE_FIELDS = 'embedding,content';
+const MCP_MEMORY_SEARCH_EXCLUDE_FIELDS = 'embedding';
 
 /**
  * MCP tool definitions: Memory
@@ -45,7 +45,7 @@ export function memoryTools(api, defaultProjectId) {
             exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
+        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results, { type: 'memory' }), null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 
@@ -63,7 +63,7 @@ export function memoryTools(api, defaultProjectId) {
             exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results), null, 2), cache_control: { type: 'ephemeral' } }] };
+        return { content: [{ type: 'text', text: JSON.stringify(slimSearchResults(results, { type: 'memory' }), null, 2), cache_control: { type: 'ephemeral' } }] };
       },
     },
 

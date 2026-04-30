@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const urlSchema = new mongoose.Schema(
 	{
 		url: { type: String, required: true, trim: true },
+		normalized_url: { type: String, default: '', trim: true },
 		title: { type: String, default: '' },
 		description: { type: String, default: '' },
 		og_image: { type: String, default: '' },
@@ -21,6 +22,7 @@ const urlSchema = new mongoose.Schema(
 );
 
 urlSchema.index({ host_id: 1, in_trash: 1, project: 1 });
+urlSchema.index({ host_id: 1, normalized_url: 1, in_trash: 1 });
 urlSchema.index({ is_indexed: 1, in_trash: 1 });
 urlSchema.index({ crawl_enabled: 1, last_crawled: 1 });
 urlSchema.index({ trashed_at: 1 }, { expireAfterSeconds: 2592000, partialFilterExpression: { trashed_at: { $type: 'date' }, in_trash: true } });

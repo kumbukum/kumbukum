@@ -26,6 +26,8 @@ POST /api/v1/urls
 
 When saved, Kumbukum auto-extracts the page title, description, Open Graph image, and text content using Cheerio.
 
+If the account already has the same active URL saved, Kumbukum returns the existing URL with `duplicate: true` and does not create another record.
+
 Set `crawl_enabled: true` to enable full-site crawling with Playwright. Crawled pages are re-indexed every 24 hours.
 
 ## Get URL
@@ -47,6 +49,8 @@ PUT /api/v1/urls/:id
     "crawl_enabled": true
 }
 ```
+
+Set `crawl_enabled: false` to stop full-site crawling and remove crawled pages for this URL from the pages index.
 
 ## Delete URL
 

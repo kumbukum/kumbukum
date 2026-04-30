@@ -1,12 +1,11 @@
 x-env: &env
     NODE_ENV: development
     PORT: 3000
-    MONGO_URI: mongodb://dbh.pipefish-mermaid.ts.net:27017/kumbukum?replicaSet=hmrs0
-    # MONGO_URI: mongodb://mongo:27017/kumbukum?replicaSet=rs0
+    MONGO_URI: ${DEV_KUMBUKUM_MONGODB_URI}
     REDIS_URL: redis://redis:6379
-    TYPESENSE_HOST: typesense
+    TYPESENSE_HOST: ${DEV_TYPESENSE_HOST:-typesense}
     TYPESENSE_PORT: 8108
-    TYPESENSE_API_KEY: kumbukum-dev-key
+    TYPESENSE_API_KEY: ${DEV_TYPESENSE_KEY:-kumbukum-dev-key}
     TYPESENSE_NODES: ""
     SESSION_SECRET: dev-session-secret-change-me
     JWT_SECRET: dev-jwt-secret-change-me
@@ -36,12 +35,9 @@ x-env: &env
     OPENPANEL_CLIENT_ID: "${OPENPANEL_CLIENT_ID:-}"
     OPENPANEL_CLIENT_SECRET: "${OPENPANEL_CLIENT_SECRET:-}"
     OPENPANEL_API_URL: "${OPENPANEL_API_URL:-}"
+    SENTRY_DSN_KUMBUKUM: "${SENTRY_DSN_KUMBUKUM:-}"
     SENTRY_DSN: "${SENTRY_DSN:-}"
     SENTRY_TUNNEL_PROJECT_IDS: "${SENTRY_TUNNEL_PROJECT_IDS:-}"
-    ENABLE_OTEL: "${ENABLE_OTEL:-false}"
-    OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-kumbukum}"
-    OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
-    OTEL_EXPORTER_OTLP_HEADERS: "${OTEL_EXPORTER_OTLP_HEADERS:-}"
     STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
     STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
     STRIPE_STARTER_PRICE_ID: "${STRIPE_STARTER_PRICE_ID:-}"
@@ -138,10 +134,10 @@ services:
             init:
                 condition: service_completed_successfully
 
-    # mongo:
+    # mongodb:
     #     image: percona/percona-server-mongodb:6.0
     #     ports:
-    #         - "27017:27017"
+    #         - "27017"
     #     volumes:
     #         - mongo_data:/data/db
     #     command: mongod --setParameter perconaTelemetry=false --replSet rs0 --bind_ip_all
@@ -151,7 +147,7 @@ services:
     # mongo-init:
     #     image: percona/percona-server-mongodb:6.0
     #     depends_on:
-    #         mongo:
+    #         mongodb:
     #             condition: service_started
     #     volumes:
     #         - ./docker/mongo-init-replset.sh:/docker-entrypoint-initdb.d/init.sh:ro
