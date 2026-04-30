@@ -51,6 +51,7 @@ List notes, optionally filtered by project.
 
 ### `search_notes`
 Search notes using semantic/text search. Use only for specs, docs, ADRs, structured write-ups, or when `search_knowledge` results point to notes.
+Returns lean hits with metadata and a bounded `excerpt`; use `read_note` for full content.
 
 | Parameter  | Type   | Required |
 | ---------- | ------ | -------- |
@@ -72,6 +73,7 @@ Store a new memory — persist conversation context, decisions, or learnings.
 
 ### `recall_memory`
 Search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings.
+Returns lean hits with metadata and a bounded `excerpt`; use `read_memory` for full content.
 
 | Parameter  | Type   | Required |
 | ---------- | ------ | -------- |
@@ -115,6 +117,7 @@ Get suggested tags based on existing memory tags. No parameters.
 
 ### `search_knowledge`
 Search across ALL data types (notes, memories, URLs, pages). **Default first retrieval tool.** Use a specific query with `per_page: 3`, then broaden or raise `per_page` only if results are weak.
+Returns lean hits with metadata and bounded `excerpt` fields where searchable body text exists; use the matching read tool for full content.
 
 | Parameter    | Type   | Required |
 | ------------ | ------ | -------- |

@@ -70,9 +70,9 @@ describe('MCP Tools — Memory', () => {
         assert.equal(api.lastCall.body.options.perPage, 3);
     });
 
-    it('recall_memory — excludes bulky search fields', async () => {
+    it('recall_memory — requests searchable body fields for excerpts', async () => {
         await tools.recall_memory.handler({ query: 'important' });
-        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding,content');
+        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding');
     });
 
     it('search_memory — same behaviour as recall_memory', async () => {
@@ -87,9 +87,9 @@ describe('MCP Tools — Memory', () => {
         assert.equal(api.lastCall.body.options.perPage, 3);
     });
 
-    it('search_memory — excludes bulky search fields', async () => {
+    it('search_memory — requests searchable body fields for excerpts', async () => {
         await tools.search_memory.handler({ query: 'facts' });
-        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding,content');
+        assert.equal(api.lastCall.body.options.exclude_fields, 'embedding');
     });
 
     it('read_memory — calls GET /memories/:id', async () => {
@@ -149,14 +149,14 @@ describe('MCP Tools — Memory', () => {
         assert.equal(api.lastCall.body.per_page, 3);
     });
 
-    it('search_knowledge — excludes bulky search fields', async () => {
+    it('search_knowledge — requests searchable body fields for excerpts', async () => {
         await tools.search_knowledge.handler({ query: 'test' });
         assert.deepEqual(api.lastCall.body.options.exclude_fields, {
-            notes: 'embedding,text_content',
-            memory: 'embedding,content',
-            urls: 'embedding,text_content',
-            emails: 'embedding,text_content,attachment_text_content',
-            pages: 'embedding,text_content',
+            notes: 'embedding',
+            memory: 'embedding',
+            urls: 'embedding',
+            emails: 'embedding',
+            pages: 'embedding',
         });
     });
 
