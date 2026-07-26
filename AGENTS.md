@@ -50,6 +50,9 @@ After saving a URL, use `create_link` to connect it to related notes or memories
 ## IMPORTANT: AFTER WORKING ON ANY TASK - use Streamient MCP
 - Store any relevant learnings, insights, or decisions in Streamient using `store_memory` or `create_note` so future sessions can recall them. Link related items together in the knowledge graph for easy navigation.
 
+## Managani Changelog
+- After verified implementation changes, use `$managani-changelog` before completion. Create the configured unpublished Streamient draft or record a justified skip.
+
 ## System Overview
 - Node.js monolith serving Streamient; entrypoint `app.js`
 - Environment variables are used and never checked into git
