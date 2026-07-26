@@ -6769,7 +6769,7 @@ function sinkListItem(itemType) {
   };
 }
 
-// node_modules/.pnpm/prosemirror-view@1.42.1/node_modules/prosemirror-view/dist/index.js
+// node_modules/.pnpm/prosemirror-view@1.42.2/node_modules/prosemirror-view/dist/index.js
 var domIndex = function(node) {
   for (var index = 0; ; index++) {
     node = node.previousSibling;
@@ -7431,7 +7431,7 @@ var ViewDesc = class {
   // When parsing in-editor content (in domchange.js), we allow
   // descriptions to determine the parse rules that should be used to
   // parse them.
-  parseRule() {
+  parseRule(addedNodes) {
     return null;
   }
   // Used by the editor's event handler to ignore events that come
@@ -7965,7 +7965,7 @@ var NodeViewDesc = class _NodeViewDesc extends ViewDesc {
     else
       return new _NodeViewDesc(parent, node, outerDeco, innerDeco, dom, contentDOM || null, nodeDOM);
   }
-  parseRule() {
+  parseRule(addedNodes) {
     if (this.node.type.spec.reparseInView)
       return null;
     let rule = { node: this.node.type.name, attrs: this.node.attrs };
@@ -7983,8 +7983,13 @@ var NodeViewDesc = class _NodeViewDesc extends ViewDesc {
           break;
         }
       }
-      if (!rule.contentElement)
-        rule.getContent = () => Fragment.empty;
+      if (!rule.contentElement) {
+        let found2 = addedNodes && addedNodes.find((n) => n.nodeType == 1 && addedNodes.indexOf(n.parentNode) < 0 && this.dom.contains(n));
+        if (found2)
+          rule.contentElement = found2;
+        else
+          rule.getContent = () => Fragment.empty;
+      }
     }
     return rule;
   }
@@ -10271,7 +10276,7 @@ handlers.blur = (view, _event) => {
 };
 handlers.beforeinput = (view, _event) => {
   let event = _event;
-  if (chrome && android && event.inputType == "deleteContentBackward") {
+  if (android && event.inputType == "deleteContentBackward") {
     view.domObserver.flushSoon();
     let { domChangeCount } = view.input;
     setTimeout(() => {
@@ -11256,7 +11261,7 @@ function fixUpBadSafariComposition(view, addedNodes) {
     }
   }
 }
-function parseBetween(view, from_, to_) {
+function parseBetween(view, from_, to_, addedNodes) {
   let { node: parent, fromOffset, toOffset, from: from2, to } = view.docView.parseRange(from_, to_);
   let domSel = view.domSelectionRange();
   let find2;
@@ -11288,7 +11293,7 @@ function parseBetween(view, from_, to_) {
     to: toOffset,
     preserveWhitespace: $from.parent.type.whitespace == "pre" ? "full" : true,
     findPositions: find2,
-    ruleFromNode,
+    ruleFromNode: ruleFromNode(addedNodes),
     context: $from
   });
   if (find2 && find2[0].pos != null) {
@@ -11299,10 +11304,10 @@ function parseBetween(view, from_, to_) {
   }
   return { doc: doc3, sel, from: from2, to };
 }
-function ruleFromNode(dom) {
+var ruleFromNode = (added) => (dom) => {
   let desc = dom.pmViewDesc;
   if (desc) {
-    return desc.parseRule();
+    return desc.parseRule(added);
   } else if (dom.nodeName == "BR" && dom.parentNode) {
     if (safari && /^(ul|ol)$/i.test(dom.parentNode.nodeName)) {
       let skip = document.createElement("div");
@@ -11315,7 +11320,7 @@ function ruleFromNode(dom) {
     return { ignore: true };
   }
   return null;
-}
+};
 var isInline = /^(a|abbr|acronym|b|bd[io]|big|br|button|cite|code|data(list)?|del|dfn|em|i|img|ins|kbd|label|map|mark|meter|output|q|ruby|s|samp|small|span|strong|su[bp]|time|u|tt|var)$/i;
 function readDOMChange(view, from2, to, typeOver, addedNodes) {
   let compositionID = view.input.compositionPendingChanges || (view.composing ? view.input.compositionID : 0);
@@ -11342,7 +11347,7 @@ function readDOMChange(view, from2, to, typeOver, addedNodes) {
   from2 = $before.before(shared + 1);
   to = view.state.doc.resolve(to).after(shared + 1);
   let sel = view.state.selection;
-  let parse = parseBetween(view, from2, to);
+  let parse = parseBetween(view, from2, to, addedNodes);
   let doc3 = view.state.doc, compare = doc3.slice(parse.from, parse.to);
   let preferredPos, preferredSide;
   if (view.input.lastKeyCode === 8 && Date.now() - 100 < view.input.lastKeyCodeTime) {
@@ -12243,7 +12248,7 @@ function keydownHandler(bindings) {
   };
 }
 
-// node_modules/.pnpm/@tiptap+core@3.27.4_@tiptap+pm@3.27.4/node_modules/@tiptap/core/dist/index.js
+// node_modules/.pnpm/@tiptap+core@3.29.0_@tiptap+pm@3.29.0/node_modules/@tiptap/core/dist/index.js
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -12403,6 +12408,7 @@ __export(commands_exports, {
   forEach: () => forEach,
   insertContent: () => insertContent,
   insertContentAt: () => insertContentAt,
+  insertDefaultBlock: () => insertDefaultBlock,
   joinBackward: () => joinBackward2,
   joinDown: () => joinDown2,
   joinForward: () => joinForward2,
@@ -12599,6 +12605,9 @@ var deleteSelection2 = () => ({ state, dispatch }) => {
       const { from: from2, to } = expandSelectionForInlineText($from, $to, state.schema);
       tr2.deleteRange(from2, to);
     });
+    if (!tr2.selection.empty) {
+      tr2.setSelection(TextSelection.near(tr2.doc.resolve(tr2.selection.from)));
+    }
     tr2.scrollIntoView();
     dispatch(tr2);
   }
@@ -12745,7 +12754,7 @@ function resolveFocusPosition(doc3, position = null) {
   );
 }
 function isAndroid() {
-  return navigator.platform === "Android" || /android/i.test(navigator.userAgent);
+  return ["Android"].includes(navigator.platform) || /android/i.test(navigator.userAgent);
 }
 function isiOS() {
   return ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(
@@ -13038,6 +13047,49 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
     }
     if (options.applyPasteRules) {
       tr2.setMeta("applyPasteRules", { from: from2, text: newContent });
+    }
+  }
+  return true;
+};
+function defaultBlockAt2(match) {
+  for (let i2 = 0; i2 < match.edgeCount; i2 += 1) {
+    const { type } = match.edge(i2);
+    if (type.isTextblock && !type.hasRequiredAttrs()) {
+      return type;
+    }
+  }
+  return null;
+}
+var insertDefaultBlock = (options = {}) => ({ tr: tr2, dispatch, editor }) => {
+  const { pos, attrs, content, updateSelection: updateSelection2 = true } = options;
+  let $pos;
+  if (typeof pos === "number") {
+    $pos = tr2.doc.resolve(pos);
+  } else if (pos) {
+    $pos = pos;
+  } else {
+    $pos = tr2.selection.$from;
+  }
+  const defaultType = defaultBlockAt2($pos.parent.contentMatchAt($pos.index()));
+  if (!defaultType) {
+    return false;
+  }
+  const validAttrKeys = Object.keys(defaultType.spec.attrs || {});
+  const filteredAttrs = attrs ? Object.fromEntries(Object.entries(attrs).filter(([key]) => validAttrKeys.includes(key))) : {};
+  let node;
+  if (content) {
+    const parsed = createNodeFromContent(content, editor.schema);
+    node = defaultType.createAndFill(filteredAttrs, parsed);
+  } else {
+    node = defaultType.createAndFill(filteredAttrs);
+  }
+  if (!node) {
+    return false;
+  }
+  if (dispatch) {
+    tr2.insert($pos.pos, node);
+    if (updateSelection2) {
+      selectionToInsertionEnd2(tr2, tr2.steps.length - 1, -1);
     }
   }
   return true;
@@ -13350,15 +13402,6 @@ function combineTransactionSteps(oldDoc, transactions) {
     });
   });
   return transform;
-}
-function defaultBlockAt2(match) {
-  for (let i2 = 0; i2 < match.edgeCount; i2 += 1) {
-    const { type } = match.edge(i2);
-    if (type.isTextblock && !type.hasRequiredAttrs()) {
-      return type;
-    }
-  }
-  return null;
 }
 function findChildrenInRange(node, range, predicate) {
   const nodesWithPos = [];
@@ -15598,6 +15641,13 @@ function run(config) {
     if (!match) {
       return;
     }
+    const matchedDocLength = match[0].length - text.length;
+    if (matchedDocLength > 0) {
+      const matchStartOffset = $from.parentOffset - matchedDocLength;
+      if (matchStartOffset < 0 || $from.parent.textBetween(matchStartOffset, $from.parentOffset) !== match[0].slice(0, matchedDocLength)) {
+        return;
+      }
+    }
     const tr2 = view.state.tr;
     const state = createChainableState({
       state: view.state,
@@ -17190,12 +17240,14 @@ var Editor = class extends EventEmitter {
     this.on("paste", ({ event, slice: slice2 }) => this.options.onPaste(event, slice2));
     this.on("delete", this.options.onDelete);
     const initialDoc = this.createDoc();
-    const selection = resolveFocusPosition(initialDoc, this.options.autofocus);
-    this.editorState = EditorState.create({
-      doc: initialDoc,
-      schema: this.schema,
-      selection: selection || void 0
-    });
+    if (!this.editorState) {
+      const selection = resolveFocusPosition(initialDoc, this.options.autofocus);
+      this.editorState = EditorState.create({
+        doc: initialDoc,
+        schema: this.schema,
+        selection: selection || void 0
+      });
+    }
     if (this.options.element) {
       this.mount(this.options.element);
     }
@@ -17466,6 +17518,19 @@ var Editor = class extends EventEmitter {
       )) {
         throw e;
       }
+      const fallbackDoc = createDocument(
+        this.options.content,
+        this.schema,
+        this.options.parseOptions,
+        {
+          errorOnInvalidContent: false
+        }
+      );
+      this.editorState = EditorState.create({
+        doc: fallbackDoc,
+        schema: this.schema,
+        selection: resolveFocusPosition(fallbackDoc, this.options.autofocus) || void 0
+      });
       this.emit("contentError", {
         editor: this,
         error: e,
@@ -17480,9 +17545,7 @@ var Editor = class extends EventEmitter {
           this.createExtensionManager();
         }
       });
-      doc3 = createDocument(this.options.content, this.schema, this.options.parseOptions, {
-        errorOnInvalidContent: false
-      });
+      return this.editorState.doc;
     }
     return doc3;
   }
@@ -17691,7 +17754,7 @@ var Editor = class extends EventEmitter {
   }
   $pos(pos) {
     const $pos = this.state.doc.resolve(pos);
-    const node = pos > 0 && $pos.nodeAfter && !$pos.nodeAfter.isText ? $pos.nodeAfter : null;
+    const node = pos > 0 && $pos.nodeAfter && !$pos.nodeAfter.isText && $pos.nodeAfter.isAtom ? $pos.nodeAfter : null;
     return new NodePos($pos, this, false, node);
   }
   get $doc() {
@@ -18415,7 +18478,7 @@ function markPasteRule(config) {
   });
 }
 
-// node_modules/.pnpm/@tiptap+core@3.27.4_@tiptap+pm@3.27.4/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
+// node_modules/.pnpm/@tiptap+core@3.29.0_@tiptap+pm@3.29.0/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
 var h = (tag, attributes) => {
   if (tag === "slot") {
     return 0;
@@ -18432,7 +18495,7 @@ var h = (tag, attributes) => {
   return [tag, rest, children];
 };
 
-// node_modules/.pnpm/@tiptap+extension-blockquote@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4__@tiptap+pm@3.27.4/node_modules/@tiptap/extension-blockquote/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-blockquote@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-blockquote/dist/index.js
 var handleBackspace = (editor, type) => {
   var _a;
   const { state, view } = editor;
@@ -18534,7 +18597,7 @@ ${prefix}
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-bold@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-bold/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-bold@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-bold/dist/index.js
 var starInputRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))$/;
 var starPasteRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))/g;
 var underscoreInputRegex = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
@@ -18626,7 +18689,7 @@ var Bold = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-code/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-code/dist/index.js
 var inputRegexMatch = (text) => {
   const match = /`([^`]+)`(?!`)$/.exec(text);
   if (!match) {
@@ -18719,7 +18782,7 @@ var Code = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code-block@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4__@tiptap+pm@3.27.4/node_modules/@tiptap/extension-code-block/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code-block@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-code-block/dist/index.js
 var DEFAULT_TAB_SIZE = 4;
 var backtickInputRegex = /^```([a-z]+)?[\s\n]$/;
 var tildeInputRegex = /^~~~([a-z]+)?[\s\n]$/;
@@ -18730,6 +18793,7 @@ var CodeBlock = Node3.create({
       languageClassPrefix: "language-",
       exitOnTripleEnter: true,
       exitOnArrowDown: true,
+      exitOnArrowUp: true,
       defaultLanguage: null,
       enableTabIndentation: false,
       tabSize: DEFAULT_TAB_SIZE,
@@ -18945,6 +19009,26 @@ var CodeBlock = Node3.create({
           return true;
         }).exitCode().run();
       },
+      // exit node on arrow up if there is no node before it
+      ArrowUp: ({ editor }) => {
+        if (!this.options.exitOnArrowUp) {
+          return false;
+        }
+        const { state } = editor;
+        const { selection } = state;
+        const { $from, empty: empty2 } = selection;
+        if (!empty2 || $from.parent.type !== this.type) {
+          return false;
+        }
+        if ($from.parentOffset !== 0) {
+          return false;
+        }
+        const before = $from.before();
+        if (before > 0) {
+          return false;
+        }
+        return editor.commands.insertDefaultBlock({ pos: before });
+      },
       // exit node on arrow down
       ArrowDown: ({ editor }) => {
         if (!this.options.exitOnArrowDown) {
@@ -19033,7 +19117,7 @@ var CodeBlock = Node3.create({
 });
 var index_default = CodeBlock;
 
-// node_modules/.pnpm/@tiptap+extension-document@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-document/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-document@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-document/dist/index.js
 var Document = Node3.create({
   name: "doc",
   topNode: true,
@@ -19046,7 +19130,7 @@ var Document = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-hard-break@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-hard-break/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-hard-break@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-hard-break/dist/index.js
 var HardBreak = Node3.create({
   name: "hardBreak",
   markdownTokenName: "br",
@@ -19097,7 +19181,7 @@ var HardBreak = Node3.create({
                 tr2.ensureMarks(filteredMarks);
               }
               return true;
-            }).run();
+            }).scrollIntoView().run();
           })
         ]);
       }
@@ -19111,7 +19195,7 @@ var HardBreak = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-heading@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-heading/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-heading@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-heading/dist/index.js
 var Heading = Node3.create({
   name: "heading",
   addOptions() {
@@ -19196,7 +19280,7 @@ var Heading = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4__@tiptap+pm@3.27.4/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
 var HorizontalRule = Node3.create({
   name: "horizontalRule",
   addOptions() {
@@ -19273,7 +19357,7 @@ var HorizontalRule = Node3.create({
 });
 var index_default2 = HorizontalRule;
 
-// node_modules/.pnpm/@tiptap+extension-italic@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-italic/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-italic@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-italic/dist/index.js
 var starInputRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))$/;
 var starPasteRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))/g;
 var underscoreInputRegex2 = /(?:^|\s)(_(?!\s+_)((?:[^_]+))_(?!\s+_))$/;
@@ -20511,7 +20595,7 @@ function find(str, type = null, opts = null) {
   return filtered;
 }
 
-// node_modules/.pnpm/@tiptap+extension-link@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4__@tiptap+pm@3.27.4/node_modules/@tiptap/extension-link/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-link@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-link/dist/index.js
 var UNICODE_WHITESPACE_PATTERN = "[\0- \xA0\u1680\u180E\u2000-\u2029\u205F\u3000]";
 var UNICODE_WHITESPACE_REGEX = new RegExp(UNICODE_WHITESPACE_PATTERN);
 var UNICODE_WHITESPACE_REGEX_END = new RegExp(`${UNICODE_WHITESPACE_PATTERN}$`);
@@ -20664,6 +20748,131 @@ function clickHandler(options) {
     }
   });
 }
+var MARKDOWN_LINK_INPUT_REGEX = /\[([^[\]]+)\]\(((?:[^\s()]|\([^\s()]*\))+)(?:\s+(?:(["'])(.*?)\3|“(.*?)”|‘(.*?)’))?\)$/;
+var MARKDOWN_LINK_PASTE_REGEX = /\[([^[\]]+)\]\(((?:[^\s()]|\([^\s()]*\))+)(?:\s+(?:(["'])(.*?)\3|“(.*?)”|‘(.*?)’))?\)/g;
+function isEscaped(text, index) {
+  let backslashes = 0;
+  for (let position = index - 1; position >= 0 && text[position] === "\\"; position -= 1) {
+    backslashes += 1;
+  }
+  return backslashes % 2 === 1;
+}
+function isInsideCodeSpan(text, matchIndex) {
+  let openRunLength = 0;
+  let index = 0;
+  while (index < matchIndex) {
+    if (text[index] !== "`") {
+      index += 1;
+      continue;
+    }
+    if (openRunLength === 0 && isEscaped(text, index)) {
+      index += 1;
+      continue;
+    }
+    let runLength = 0;
+    while (index < matchIndex && text[index] === "`") {
+      runLength += 1;
+      index += 1;
+    }
+    if (openRunLength === 0) {
+      openRunLength = runLength;
+    } else if (runLength === openRunLength) {
+      openRunLength = 0;
+    }
+  }
+  return openRunLength > 0;
+}
+function isConvertibleLink(text, match, isAllowedHref) {
+  var _a, _b;
+  const [, linkText, href] = match;
+  const characterBefore = match.index ? text[match.index - 1] : void 0;
+  if (characterBefore === "!" || isEscaped(text, (_a = match.index) != null ? _a : 0)) {
+    return false;
+  }
+  if (isInsideCodeSpan(text, (_b = match.index) != null ? _b : 0)) {
+    return false;
+  }
+  return !!linkText.trim() && isAllowedHref(href);
+}
+function toRuleMatch(match) {
+  var _a, _b;
+  const [linkSyntax, linkText, href, , straightQuotedTitle, curlyDoubleTitle, curlySingleTitle] = match;
+  const title = (_a = straightQuotedTitle != null ? straightQuotedTitle : curlyDoubleTitle) != null ? _a : curlySingleTitle;
+  return {
+    index: (_b = match.index) != null ? _b : 0,
+    text: linkSyntax,
+    replaceWith: linkText,
+    data: {
+      href,
+      // an empty title ("") counts as no title, as in CommonMark
+      title: title || null,
+      markdown: true
+    }
+  };
+}
+function matchesOverlap(a, b) {
+  return a.index < b.index + b.text.length && b.index < a.index + a.text.length;
+}
+function getMarkdownLinkAttributes(match) {
+  var _a, _b, _c;
+  return {
+    href: (_a = match.data) == null ? void 0 : _a.href,
+    title: (_c = (_b = match.data) == null ? void 0 : _b.title) != null ? _c : null
+  };
+}
+function markdownLinkInputRule(config) {
+  const rule = markInputRule({
+    find: (text) => {
+      const match = MARKDOWN_LINK_INPUT_REGEX.exec(text);
+      if (!match || !isConvertibleLink(text, match, config.isAllowedHref)) {
+        return null;
+      }
+      return toRuleMatch(match);
+    },
+    type: config.type,
+    getAttributes: getMarkdownLinkAttributes
+  });
+  return new InputRule({
+    find: rule.find,
+    handler: (props) => {
+      const result = rule.handler(props);
+      if (result !== null && props.state.tr.steps.length) {
+        props.state.tr.setMeta("preventAutolink", true);
+      }
+      return result;
+    }
+  });
+}
+function markdownLinkPasteRule(config) {
+  const rule = markPasteRule({
+    find: (text) => {
+      var _a, _b;
+      const markdownMatches = [];
+      for (const match of text.matchAll(MARKDOWN_LINK_PASTE_REGEX)) {
+        if (isConvertibleLink(text, match, config.isAllowedHref)) {
+          markdownMatches.push(toRuleMatch(match));
+        }
+      }
+      const plainUrlMatches = ((_b = (_a = config.findPlainUrls) == null ? void 0 : _a.call(config, text)) != null ? _b : []).filter(
+        (urlMatch) => !markdownMatches.some((markdownMatch) => matchesOverlap(markdownMatch, urlMatch))
+      );
+      return [...markdownMatches, ...plainUrlMatches];
+    },
+    type: config.type,
+    getAttributes: getMarkdownLinkAttributes
+  });
+  return new PasteRule({
+    find: rule.find,
+    handler: (props) => {
+      var _a;
+      const result = rule.handler(props);
+      if (result !== null && props.state.tr.steps.length && ((_a = props.match.data) == null ? void 0 : _a.markdown)) {
+        props.state.tr.setMeta("preventAutolink", true);
+      }
+      return result;
+    }
+  });
+}
 function pasteHandler(options) {
   return new Plugin({
     key: new PluginKey("handlePasteLink"),
@@ -20752,6 +20961,8 @@ var Link = Mark2.create({
       openOnClick: true,
       enableClickSelection: false,
       linkOnPaste: true,
+      markdownLinks: false,
+      // TODO (major) - default to true on next major version
       autolink: true,
       protocols: [],
       defaultProtocol: "http",
@@ -20877,37 +21088,64 @@ var Link = Mark2.create({
       }
     };
   },
+  addInputRules() {
+    if (!this.options.markdownLinks) {
+      return [];
+    }
+    return [
+      markdownLinkInputRule({
+        type: this.type,
+        isAllowedHref: (href) => this.options.isAllowedUri(href, {
+          defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
+          protocols: this.options.protocols,
+          defaultProtocol: this.options.defaultProtocol
+        })
+      })
+    ];
+  },
   addPasteRules() {
+    const findPlainUrls = (text) => {
+      const foundLinks = [];
+      if (text) {
+        const { protocols, defaultProtocol } = this.options;
+        const links = find(text).filter(
+          (item) => item.isLink && this.options.isAllowedUri(item.value, {
+            defaultValidate: (href) => !!isAllowedUri(href, protocols),
+            protocols,
+            defaultProtocol
+          })
+        );
+        links.forEach((link) => {
+          if (!this.options.shouldAutoLink(link.value)) {
+            return;
+          }
+          foundLinks.push({
+            text: link.value,
+            data: {
+              href: link.href
+            },
+            index: link.start
+          });
+        });
+      }
+      return foundLinks;
+    };
+    if (this.options.markdownLinks) {
+      return [
+        markdownLinkPasteRule({
+          type: this.type,
+          isAllowedHref: (href) => this.options.isAllowedUri(href, {
+            defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
+            protocols: this.options.protocols,
+            defaultProtocol: this.options.defaultProtocol
+          }),
+          findPlainUrls
+        })
+      ];
+    }
     return [
       markPasteRule({
-        find: (text) => {
-          const foundLinks = [];
-          if (text) {
-            const { protocols, defaultProtocol } = this.options;
-            const links = find(text).filter(
-              (item) => item.isLink && this.options.isAllowedUri(item.value, {
-                defaultValidate: (href) => !!isAllowedUri(href, protocols),
-                protocols,
-                defaultProtocol
-              })
-            );
-            if (links.length) {
-              links.forEach((link) => {
-                if (!this.options.shouldAutoLink(link.value)) {
-                  return;
-                }
-                foundLinks.push({
-                  text: link.value,
-                  data: {
-                    href: link.href
-                  },
-                  index: link.start
-                });
-              });
-            }
-          }
-          return foundLinks;
-        },
+        find: findPlainUrls,
         type: this.type,
         getAttributes: (match) => {
           var _a;
@@ -20957,7 +21195,7 @@ var Link = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-list@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4__@tiptap+pm@3.27.4/node_modules/@tiptap/extension-list/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-list@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-list/dist/index.js
 var __defProp2 = Object.defineProperty;
 var __export2 = (target, all) => {
   for (var name in all)
@@ -21684,9 +21922,6 @@ var ListKeymap = Extension.create({
 var ORDERED_LIST_ITEM_REGEX = new RegExp(
   `^(\\s*)(${ORDERED_LIST_MARKER_PATTERN})([.)])\\s+(.*)$`
 );
-var ORDERED_LIST_LINE_START_REGEX = new RegExp(
-  `^(\\s*)(${ORDERED_LIST_MARKER_PATTERN})([.)])\\s+`
-);
 var INDENTED_LINE_REGEX = /^\s/;
 var PARAGRAPH_INTERRUPTERS = {
   heading: /^#{1,6}(?:\s|$)/,
@@ -22039,11 +22274,12 @@ var OrderedList = Node3.create({
   markdownTokenizer: {
     name: "orderedList",
     level: "block",
-    start: (src) => {
-      const match = src.match(ORDERED_LIST_LINE_START_REGEX);
-      const index = match == null ? void 0 : match.index;
-      return index !== void 0 ? index : -1;
-    },
+    // marked already breaks paragraphs before a start-of-line list marker. It
+    // probes this with `src.slice(1)`, so any marker it surfaces here is
+    // mid-line (like the "216)" in "(216) 555-1234") and must not start a list.
+    // We still define the callback so marked does not fall back to probing
+    // `tokenize`, which would re-introduce the mid-line split.
+    start: () => -1,
     tokenize: (src, _tokens, lexer) => {
       var _a, _b;
       const lines = src.split("\n");
@@ -22503,7 +22739,7 @@ var ListKit = Extension.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-paragraph@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-paragraph/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-paragraph@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-paragraph/dist/index.js
 var EMPTY_PARAGRAPH_MARKDOWN = "&nbsp;";
 var NBSP_CHAR = "\xA0";
 var Paragraph = Node3.create({
@@ -22561,7 +22797,7 @@ var Paragraph = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-strike@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-strike/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-strike@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-strike/dist/index.js
 var inputRegex3 = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))$/;
 var pasteRegex = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))/g;
 var Strike = Mark2.create({
@@ -22635,7 +22871,7 @@ var Strike = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-text@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-text/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-text@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-text/dist/index.js
 var Text2 = Node3.create({
   name: "text",
   group: "inline",
@@ -22648,7 +22884,7 @@ var Text2 = Node3.create({
   renderMarkdown: (node) => node.text || ""
 });
 
-// node_modules/.pnpm/@tiptap+extension-underline@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-underline/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-underline@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-underline/dist/index.js
 var Underline = Mark2.create({
   name: "underline",
   addOptions() {
@@ -23615,7 +23851,7 @@ var redo = buildCommand(true, true);
 var undoNoScroll = buildCommand(false, false);
 var redoNoScroll = buildCommand(true, false);
 
-// node_modules/.pnpm/@tiptap+extensions@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4__@tiptap+pm@3.27.4/node_modules/@tiptap/extensions/dist/index.js
+// node_modules/.pnpm/@tiptap+extensions@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extensions/dist/index.js
 var CharacterCount = Extension.create({
   name: "characterCount",
   addOptions() {
@@ -24288,7 +24524,7 @@ var UndoRedo = Extension.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+starter-kit@3.27.4/node_modules/@tiptap/starter-kit/dist/index.js
+// node_modules/.pnpm/@tiptap+starter-kit@3.29.0/node_modules/@tiptap/starter-kit/dist/index.js
 var StarterKit = Extension.create({
   name: "starterKit",
   addExtensions() {
@@ -24365,16 +24601,16 @@ var StarterKit = Extension.create({
 });
 var index_default3 = StarterKit;
 
-// node_modules/.pnpm/@tiptap+extension-placeholder@3.27.4_@tiptap+extensions@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4__@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-placeholder/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-placeholder@3.29.0_@tiptap+extensions@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-placeholder/dist/index.js
 var index_default4 = Placeholder;
 
-// node_modules/.pnpm/@tiptap+extension-task-list@3.27.4_@tiptap+extension-list@3.27.4_@tiptap+core@3.27.4_@t_839996ae830e25d2fd247a33d72d9c59/node_modules/@tiptap/extension-task-list/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-task-list@3.29.0_@tiptap+extension-list@3.29.0_@tiptap+core@3.29.0_@t_c3c75af7ec27d7ca2102583b291c0d4c/node_modules/@tiptap/extension-task-list/dist/index.js
 var index_default5 = TaskList;
 
-// node_modules/.pnpm/@tiptap+extension-task-item@3.27.4_@tiptap+extension-list@3.27.4_@tiptap+core@3.27.4_@t_4d3fc8ee4450cbdc62a0fc62698b1969/node_modules/@tiptap/extension-task-item/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-task-item@3.29.0_@tiptap+extension-list@3.29.0_@tiptap+core@3.29.0_@t_699024d365e2c073dc41913617ff246a/node_modules/@tiptap/extension-task-item/dist/index.js
 var index_default6 = TaskItem;
 
-// node_modules/.pnpm/@tiptap+extension-image@3.27.4_@tiptap+core@3.27.4_@tiptap+pm@3.27.4_/node_modules/@tiptap/extension-image/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-image@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-image/dist/index.js
 var inputRegex4 = /(?:^|\s)(!\[(.+|:?)]\((\S+)(?:(?:\s+)["'](\S+)["'])?\))$/;
 var Image = Node3.create({
   name: "image",
@@ -24441,6 +24677,7 @@ var Image = Node3.create({
       return null;
     }
     const { directions, minWidth, minHeight, alwaysPreserveAspectRatio } = this.options.resize;
+    const resizeManagedAttributes = /* @__PURE__ */ new Set(["src", "width", "height"]);
     return ({ node, getPos, HTMLAttributes, editor }) => {
       const el = document.createElement("img");
       el.draggable = false;
@@ -24448,6 +24685,7 @@ var Image = Node3.create({
       Object.entries(mergedAttributes).forEach(([key, value]) => {
         if (value != null) {
           switch (key) {
+            case "src":
             case "width":
             case "height":
               break;
@@ -24460,6 +24698,49 @@ var Image = Node3.create({
       if (mergedAttributes.src !== null) {
         el.src = mergedAttributes.src;
       }
+      let previousHTMLAttributes = { ...HTMLAttributes };
+      const syncImageSource = (src) => {
+        if (typeof src === "string" && src !== "") {
+          if (el.getAttribute("src") !== src) {
+            el.src = src;
+          }
+          return;
+        }
+        if (el.hasAttribute("src")) {
+          el.removeAttribute("src");
+        }
+        if (el.src !== "") {
+          el.src = "";
+        }
+      };
+      syncImageSource(HTMLAttributes.src);
+      const onUpdate = (updatedNode) => {
+        if (updatedNode.type !== node.type) {
+          return false;
+        }
+        const extensionAttributes = editor.extensionManager.attributes.filter(
+          (attribute) => attribute.type === updatedNode.type.name
+        );
+        const newHTMLAttributes = getRenderedAttributes(updatedNode, extensionAttributes);
+        Object.keys(previousHTMLAttributes).forEach((key) => {
+          if (!resizeManagedAttributes.has(key) && !(key in newHTMLAttributes)) {
+            el.removeAttribute(key);
+          }
+        });
+        Object.entries(newHTMLAttributes).forEach(([key, value]) => {
+          if (resizeManagedAttributes.has(key)) {
+            return;
+          }
+          if (value != null) {
+            el.setAttribute(key, value);
+          } else {
+            el.removeAttribute(key);
+          }
+        });
+        syncImageSource(newHTMLAttributes.src);
+        previousHTMLAttributes = newHTMLAttributes;
+        return true;
+      };
       const nodeView = new ResizableNodeView({
         element: el,
         editor,
@@ -24479,12 +24760,7 @@ var Image = Node3.create({
             height
           }).run();
         },
-        onUpdate: (updatedNode, _decorations, _innerDecorations) => {
-          if (updatedNode.type !== node.type) {
-            return false;
-          }
-          return true;
-        },
+        onUpdate,
         options: {
           directions,
           min: {

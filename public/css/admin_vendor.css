@@ -23814,15 +23814,15 @@ a.mention.hover {
   transform: rotate(-4deg);
 }
 
-/* node_modules/.pnpm/@tabler+icons-webfont@3.44.0_chokidar@3.6.0_supports-color@5.5.0/node_modules/@tabler/icons-webfont/dist/tabler-icons.css */
+/* node_modules/.pnpm/@tabler+icons-webfont@3.45.0_chokidar@3.6.0_supports-color@5.5.0/node_modules/@tabler/icons-webfont/dist/tabler-icons.css */
 @font-face {
   font-family: "tabler-icons";
   font-style: normal;
   font-weight: 400;
   src:
-    url("./tabler-icons-OGJIQI2D.woff2?v3.44.0") format("woff2"),
-    url("./tabler-icons-4EZ3JWXZ.woff?") format("woff"),
-    url("./tabler-icons-W3VCPZGU.ttf?v3.44.0") format("truetype");
+    url("./tabler-icons-UZ76IZC6.woff2?v3.45.0") format("woff2"),
+    url("./tabler-icons-QXDYZUJC.woff?") format("woff"),
+    url("./tabler-icons-7KWIMYBJ.ttf?v3.45.0") format("truetype");
 }
 .ti {
   font-family: "tabler-icons" !important;
@@ -24246,6 +24246,18 @@ a.mention.hover {
 .ti-app-window:before {
   content: "\efe6";
 }
+.ti-app-window-bottom:before {
+  content: "\10278";
+}
+.ti-app-window-bottom-left:before {
+  content: "\1027a";
+}
+.ti-app-window-bottom-right:before {
+  content: "\10279";
+}
+.ti-app-window-center:before {
+  content: "\10277";
+}
 .ti-apple:before {
   content: "\ef21";
 }
@@ -24464,6 +24476,9 @@ a.mention.hover {
 }
 .ti-arrow-fork:before {
   content: "\f04a";
+}
+.ti-arrow-fork-triple:before {
+  content: "\10276";
 }
 .ti-arrow-forward:before {
   content: "\ea17";
@@ -25719,7 +25734,7 @@ a.mention.hover {
 .ti-brand-adobe:before {
   content: "\f0dc";
 }
-.ti-brand-adobe-after-effect:before {
+.ti-brand-adobe-after-effects:before {
   content: "\ff2a";
 }
 .ti-brand-adobe-illustrator:before {
@@ -26223,7 +26238,7 @@ a.mention.hover {
 .ti-brand-juejin:before {
   content: "\f7b0";
 }
-.ti-brand-kako-talk:before {
+.ti-brand-kakao-talk:before {
   content: "\fd2d";
 }
 .ti-brand-kbin:before {
@@ -26510,6 +26525,9 @@ a.mention.hover {
 }
 .ti-brand-shopee:before {
   content: "\f252";
+}
+.ti-brand-signal:before {
+  content: "\10275";
 }
 .ti-brand-sketch:before {
   content: "\ec24";
@@ -29172,7 +29190,7 @@ a.mention.hover {
 .ti-currency-riyal:before {
   content: "\ee66";
 }
-.ti-currency-rubel:before {
+.ti-currency-ruble:before {
   content: "\ee67";
 }
 .ti-currency-rufiyaa:before {
@@ -29850,6 +29868,9 @@ a.mention.hover {
 .ti-device-vision-pro:before {
   content: "\fae7";
 }
+.ti-device-vision-pro-wifi:before {
+  content: "\10274";
+}
 .ti-device-watch:before {
   content: "\ebf9";
 }
@@ -29918,6 +29939,9 @@ a.mention.hover {
 }
 .ti-device-watch-x:before {
   content: "\f8e5";
+}
+.ti-device-workstation:before {
+  content: "\10273";
 }
 .ti-devices:before {
   content: "\eb87";
@@ -30149,6 +30173,9 @@ a.mention.hover {
 }
 .ti-drag-drop-2:before {
   content: "\eb88";
+}
+.ti-dragon:before {
+  content: "\10272";
 }
 .ti-drone:before {
   content: "\ed79";
@@ -31251,7 +31278,7 @@ a.mention.hover {
 .ti-folders-off:before {
   content: "\f133";
 }
-.ti-foodsteps:before {
+.ti-footsteps:before {
   content: "\10265";
 }
 .ti-forbid:before {
@@ -31392,7 +31419,7 @@ a.mention.hover {
 .ti-gender-transgender:before {
   content: "\f0f1";
 }
-.ti-gender-trasvesti:before {
+.ti-gender-travesti:before {
   content: "\f0f2";
 }
 .ti-geometry:before {
@@ -32226,6 +32253,9 @@ a.mention.hover {
 .ti-icons-off:before {
   content: "\f3fc";
 }
+.ti-icosahedron:before {
+  content: "\fec6";
+}
 .ti-id:before {
   content: "\eac3";
 }
@@ -32240,9 +32270,6 @@ a.mention.hover {
 }
 .ti-id-off:before {
   content: "\f149";
-}
-.ti-ikosaedr:before {
-  content: "\fec6";
 }
 .ti-image-generation:before {
   content: "\101ef";
@@ -32366,6 +32393,9 @@ a.mention.hover {
 }
 .ti-italic:before {
   content: "\eb93";
+}
+.ti-italic-off:before {
+  content: "\10271";
 }
 .ti-jacket:before {
   content: "\f661";
@@ -34002,7 +34032,7 @@ a.mention.hover {
 .ti-mood-cog:before {
   content: "\f7b4";
 }
-.ti-mood-confuzed:before {
+.ti-mood-confused:before {
   content: "\eaf3";
 }
 .ti-mood-crazy-happy:before {
@@ -35292,7 +35322,7 @@ a.mention.hover {
 .ti-photo-x:before {
   content: "\f367";
 }
-.ti-physotherapist:before {
+.ti-physiotherapist:before {
   content: "\eebe";
 }
 .ti-piano:before {
@@ -37056,7 +37086,7 @@ a.mention.hover {
 .ti-spiral-off:before {
   content: "\f42e";
 }
-.ti-sport-billard:before {
+.ti-sport-billiard:before {
   content: "\eee4";
 }
 .ti-spray:before {
@@ -37719,6 +37749,9 @@ a.mention.hover {
 .ti-swords:before {
   content: "\f132";
 }
+.ti-tab-close:before {
+  content: "\10270";
+}
 .ti-table:before {
   content: "\eba1";
 }
@@ -37917,11 +37950,29 @@ a.mention.hover {
 .ti-text-orientation:before {
   content: "\f2a4";
 }
+.ti-text-outline:before {
+  content: "\1026f";
+}
 .ti-text-plus:before {
   content: "\f2a5";
 }
 .ti-text-recognition:before {
   content: "\f204";
+}
+.ti-text-regex-asterisk:before {
+  content: "\1026e";
+}
+.ti-text-regex-end:before {
+  content: "\1026d";
+}
+.ti-text-regex-plus:before {
+  content: "\1026c";
+}
+.ti-text-regex-question:before {
+  content: "\1026b";
+}
+.ti-text-regex-start:before {
+  content: "\1026a";
 }
 .ti-text-resize:before {
   content: "\ef87";
@@ -38379,6 +38430,9 @@ a.mention.hover {
 .ti-underline:before {
   content: "\eba2";
 }
+.ti-underline-off:before {
+  content: "\10269";
+}
 .ti-unicycle:before {
   content: "\10244";
 }
@@ -38630,6 +38684,9 @@ a.mention.hover {
 }
 .ti-vip-off:before {
   content: "\f43a";
+}
+.ti-virtual-space:before {
+  content: "\10268";
 }
 .ti-virus:before {
   content: "\eb74";
@@ -39276,8 +39333,35 @@ a.mention.hover {
 .ti-brand-adobe-premier:before {
   content: "\ff26";
 }
+.ti-foodsteps:before {
+  content: "\10265";
+}
+.ti-mood-confuzed:before {
+  content: "\eaf3";
+}
+.ti-currency-rubel:before {
+  content: "\ee67";
+}
+.ti-sport-billard:before {
+  content: "\eee4";
+}
+.ti-physotherapist:before {
+  content: "\eebe";
+}
+.ti-ikosaedr:before {
+  content: "\fec6";
+}
+.ti-gender-trasvesti:before {
+  content: "\f0f2";
+}
+.ti-brand-kako-talk:before {
+  content: "\fd2d";
+}
+.ti-brand-adobe-after-effect:before {
+  content: "\ff2a";
+}
 
-/* node_modules/.pnpm/@fontsource-variable+noto-sans@5.2.10/node_modules/@fontsource-variable/noto-sans/index.css */
+/* node_modules/.pnpm/@fontsource-variable+noto-sans@5.3.0/node_modules/@fontsource-variable/noto-sans/index.css */
 @font-face {
   font-family: "Noto Sans Variable";
   font-style: normal;
@@ -39419,7 +39503,7 @@ a.mention.hover {
     U+FFFD;
 }
 
-/* node_modules/.pnpm/@fontsource-variable+noto-sans-mono@5.2.10/node_modules/@fontsource-variable/noto-sans-mono/index.css */
+/* node_modules/.pnpm/@fontsource-variable+noto-sans-mono@5.3.0/node_modules/@fontsource-variable/noto-sans-mono/index.css */
 @font-face {
   font-family: "Noto Sans Mono Variable";
   font-style: normal;
@@ -39543,13 +39627,13 @@ a.mention.hover {
     U+FFFD;
 }
 
-/* node_modules/.pnpm/@fontsource-variable+material-symbols-outlined@5.2.45/node_modules/@fontsource-variable/material-symbols-outlined/index.css */
+/* node_modules/.pnpm/@fontsource-variable+material-symbols-outlined@5.3.1/node_modules/@fontsource-variable/material-symbols-outlined/index.css */
 @font-face {
   font-family: "Material Symbols Outlined Variable";
   font-style: normal;
   font-display: swap;
   font-weight: 100 700;
-  src: url("./material-symbols-outlined-latin-wght-normal-NCNPQMBR.woff2") format("woff2-variations");
+  src: url("./material-symbols-outlined-latin-wght-normal-DLF7CSWY.woff2") format("woff2-variations");
 }
 
 /* node_modules/.pnpm/huebee@2.1.1/node_modules/huebee/huebee.css */
@@ -41721,8 +41805,8 @@ a.mention.hover {
 
 @tabler/icons-webfont/dist/tabler-icons.css:
   (*!
-   * Tabler Icons 3.44.0 by tabler - https://tabler.io
-   * License - https://github.com/tabler/tabler-icons/blob/master/LICENSE
+   * Tabler Icons 3.45.0 by tabler - https://tabler.io
+   * License - https://github.com/tabler/tabler-icons/blob/main/LICENSE
    *)
 
 huebee/huebee.css:

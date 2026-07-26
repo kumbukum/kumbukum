@@ -420,6 +420,13 @@ html(lang="en")
 		script(src=`/static/v-${v}/js/batch.js`)
 		include includes/openpanel
 		include includes/hyperdx
+		if typeof custom_footer_code !== 'undefined' && custom_footer_code && custom_footer_code.css_snippet
+			!= custom_footer_code.css_snippet
+		if typeof managani_browser !== 'undefined' && managani_browser
+			- const __managaniScriptUrl = `${managani_browser.base_url}/managani.js`
+			script(async src=__managaniScriptUrl data-site-key=managani_browser.site_key data-user-token=managani_browser.user_token)
+		if typeof custom_footer_code !== 'undefined' && custom_footer_code && custom_footer_code.js_snippet
+			!= custom_footer_code.js_snippet
 		if impersonating
 			script.
 				document.getElementById('exit-impersonation')?.addEventListener('click', async () => {

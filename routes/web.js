@@ -6,7 +6,9 @@ import { listProjects, getProject, getProjectCounts, getProjectDeleteState } fro
 import { listGitRepos } from '../services/git_sync_service.js';
 import { formatTrialEndsIn, getBillingUserForHost, hasProductAccess, hasProFeatureAccess } from '../services/subscription_access_service.js';
 import { serializeWhiteLabelSettings } from '../services/white_label_service.js';
+import { getCustomCode } from '../services/custom_code_service.js';
 import { isTenantLimitReached, resolveStoredTenantLimits } from '../modules/tenant_limits.js';
+import managani from '../modules/managani.js';
 import config from '../config.js';
 import { createLogger } from '../modules/logger.js';
 
@@ -67,11 +69,16 @@ async function renderUsageSettings(req, res, view) {
 
 // Inject user + sidebar data into all views
 router.use(async (req, res, next) => {
-	const [user, projects, tenant, billingUser] = await Promise.all([
+	const rendersAppLayout = !req.path.startsWith('/ajax/');
+	const [user, projects, tenant, billingUser, customFooterCode] = await Promise.all([
 		User.findById(req.userId),
 		listProjects(req.host_id),
 		Tenant.findOne({ host_id: req.host_id }).select('plan limit_projects limit_users limit_ai_workflows_per_day settings.byo_ai settings.white_label').lean(),
 		getBillingUserForHost(req.host_id, req.userId),
+		rendersAppLayout ? getCustomCode().catch((err) => {
+			log.error({ err }, 'Custom footer code load error');
+			return { js_snippet: '', css_snippet: '' };
+		}) : Promise.resolve({ js_snippet: '', css_snippet: '' }),
 	]);
 	const activeTenant = (req.accessibleTenants || []).find((item) => item.tenantId === req.tenantId) || null;
 	const plan = tenant?.plan || 'free';
@@ -110,6 +117,8 @@ router.use(async (req, res, next) => {
 	res.locals.trial_available = is_hosted && plan !== 'pro' && billingStatus === 'incomplete' && !billingUser?.trial_ends_at;
 	res.locals.can_upgrade = is_hosted && plan !== 'pro' && !res.locals.is_trialing;
 	res.locals.hide_chat_sidebar = req.path === '/settings' || req.path.startsWith('/settings/');
+	res.locals.custom_footer_code = customFooterCode;
+	res.locals.managani_browser = rendersAppLayout ? await managani.getBrowserContext(user, { req, res, billingUser }) : null;
 	next();
 });
 
