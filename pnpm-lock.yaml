@@ -48,6 +48,12 @@ importers:
       '@keyv/valkey':
         specifier: ^1.0.11
         version: 1.0.11(supports-color@5.5.0)
+      '@managani/express':
+        specifier: ^0.1.2
+        version: 0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.1.1)(axios@1.18.1(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(postcss@8.5.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3))(vue@3.5.40)
+      '@managani/node':
+        specifier: ^0.1.2
+        version: 0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.1.1)(axios@1.18.1(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(postcss@8.5.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3))(vue@3.5.40)
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
@@ -1245,6 +1251,16 @@ packages:
 
   '@levischuck/tiny-cbor@0.2.11':
     resolution: {integrity: sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow==}
+
+  '@managani/express@0.1.2':
+    resolution: {integrity: sha512-B724bV3zAscQTb23kfj65j37Ff3SnEUYVJmCKT0jqgMrnkesjS5Sq2bGPdgKb41ZS9RLzmgoamGuXHYKjkzZeA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      express: '>=4'
+
+  '@managani/node@0.1.2':
+    resolution: {integrity: sha512-sP27hTiVHVgoK3S1P4Jzu9LHk7ji08RLaBd2D8qxepoLnw4Maas+FvSR1LEYzRqsDc5qcLfaFVc83r2MUucObw==}
+    engines: {node: '>=18'}
 
   '@mixmark-io/domino@2.2.0':
     resolution: {integrity: sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw==}
@@ -7169,6 +7185,31 @@ snapshots:
   '@kwsites/promise-deferred@1.1.1': {}
 
   '@levischuck/tiny-cbor@0.2.11': {}
+
+  '@managani/express@0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.1.1)(axios@1.18.1(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(postcss@8.5.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3))(vue@3.5.40)':
+    dependencies:
+      '@hyperdx/node-opentelemetry': 0.11.0(encoding@0.1.13)(supports-color@5.5.0)
+      '@managani/node': 0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.1.1)(axios@1.18.1(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(postcss@8.5.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3))(vue@3.5.40)
+      express: 5.2.1(supports-color@5.5.0)
+      vitepress-openapi: 0.2.2(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.1.1)(axios@1.18.1(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(postcss@8.5.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3))(vue@3.5.40)
+    transitivePeerDependencies:
+      - '@vue/composition-api'
+      - encoding
+      - supports-color
+      - vitepress
+      - vue
+
+  '@managani/node@0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.1.1)(axios@1.18.1(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(postcss@8.5.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3))(vue@3.5.40)':
+    dependencies:
+      '@hyperdx/node-opentelemetry': 0.11.0(encoding@0.1.13)(supports-color@5.5.0)
+      jsonwebtoken: 9.0.3
+      vitepress-openapi: 0.2.2(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.1.1)(axios@1.18.1(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(postcss@8.5.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3))(vue@3.5.40)
+    transitivePeerDependencies:
+      - '@vue/composition-api'
+      - encoding
+      - supports-color
+      - vitepress
+      - vue
 
   '@mixmark-io/domino@2.2.0': {}
 
