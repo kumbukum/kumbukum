@@ -94,7 +94,7 @@
     "cytoscape": "^3.34.0",
     "cytoscape-fcose": "^2.2.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.0",
+    "express-rate-limit": "^8.6.1",
     "express-session": "^1.19.0",
     "file-type": "^22.0.1",
     "filepond": "^4.32.12",

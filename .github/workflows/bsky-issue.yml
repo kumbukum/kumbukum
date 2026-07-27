@@ -13,7 +13,7 @@ jobs:
 
         steps:
             - name: Post to Bluesky
-              uses: zentered/bluesky-post-action@v0.1.0
+              uses: zentered/bluesky-post-action@v0.4.0
               with:
                   post: "🆕 ${{ github.event.issue.title }} — ${{ github.event.issue.html_url }}"
               env:
