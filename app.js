@@ -15,6 +15,7 @@ import { initRedis } from './modules/redis.js';
 import { resolveTenant, backfillStarterPlan, backfillTenantLimits } from './modules/tenancy.js';
 import { resolveRequestHosted } from './config.js';
 import { installIconLocals } from './modules/icons.js';
+import managani from './modules/managani.js';
 
 import { createApiLimiters } from './middleware/rate_limit.js';
 import { verifyScreenshotSignature, resolveScreenshotPath } from './modules/screenshot.js';
@@ -184,6 +185,7 @@ app.use(resolveTenant);
 
 // HTTP request logging — after tenant resolution so host_id/user_id are available.
 app.use(getPinoMiddleware());
+app.use(managani.middleware);
 
 // Auth routes mounted at root (/login, /signup, /logout, etc.)
 app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -237,6 +239,7 @@ OtelRuntime.setupExpressErrorHandler(app);
 
 async function start() {
 	await connectDB();
+	if (SERVER_MODE === 'app') await managani.initialize();
 	await backfillGitSyncMode();
 	await backfillTypesenseTrashFields();
 	await backfillStarterPlan();

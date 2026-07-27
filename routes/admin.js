@@ -12,6 +12,9 @@ import { ensureFreeSubscriptionForAccountHolder, ensureStripeCustomerForAccountH
 import { sendMagicLink } from '../services/magic_link_service.js';
 import { AccountProvisioningError, provisionAccount } from '../services/account_provisioning_service.js';
 import { AdminAccountError, getAdminAccount, listAdminAccounts, updateAdminAccount } from '../services/admin_account_service.js';
+import { CustomCodeSettingsError, getCustomCode, updateCustomCode } from '../services/custom_code_service.js';
+import managani from '../modules/managani.js';
+import { ManaganiSettingsError } from '../modules/managani_module.js';
 import { createLogger } from '../modules/logger.js';
 
 const log = createLogger('admin');
@@ -91,6 +94,10 @@ router.get('/accounts/:id/edit', async (req, res) => {
 		log.error({ err, account_id: req.params.id }, 'Admin account edit page error');
 		res.redirect('/admin');
 	}
+});
+
+router.get('/settings', (req, res) => {
+	res.render('admin/settings', { title: 'Settings', activeNav: 'settings' });
 });
 
 // ---- Admin API ----
@@ -184,6 +191,46 @@ router.delete('/api/accounts/:id', async (req, res) => {
 	} catch (err) {
 		log.error({ err, account_id: req.params.id }, 'Admin delete account error');
 		res.status(500).json({ error: 'Failed to delete account' });
+	}
+});
+
+// ---- Settings ----
+
+router.get('/api/settings/managani', async (req, res) => {
+	try {
+		res.json({ settings: await managani.getAdminSettings() });
+	} catch (err) {
+		log.error({ err }, 'Admin Managani settings load error');
+		res.status(500).json({ error: 'Failed to load Managani settings' });
+	}
+});
+
+router.put('/api/settings/managani', async (req, res) => {
+	try {
+		res.json({ ok: true, settings: await managani.saveAdminSettings(req.body) });
+	} catch (err) {
+		if (err instanceof ManaganiSettingsError) return res.status(err.status).json({ error: err.message, code: err.code });
+		log.error({ err }, 'Admin Managani settings update error');
+		res.status(500).json({ error: 'Failed to update Managani settings' });
+	}
+});
+
+router.get('/api/settings/custom-code', async (req, res) => {
+	try {
+		res.json({ settings: await getCustomCode({ force: true }) });
+	} catch (err) {
+		log.error({ err }, 'Admin custom code settings load error');
+		res.status(500).json({ error: 'Failed to load custom code settings' });
+	}
+});
+
+router.put('/api/settings/custom-code', async (req, res) => {
+	try {
+		res.json({ ok: true, settings: await updateCustomCode(req.body) });
+	} catch (err) {
+		if (err instanceof CustomCodeSettingsError) return res.status(err.status).json({ error: err.message, code: err.code });
+		log.error({ err }, 'Admin custom code settings update error');
+		res.status(500).json({ error: 'Failed to update custom code settings' });
 	}
 });
 

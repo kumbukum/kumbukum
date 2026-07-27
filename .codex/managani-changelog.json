@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "repository": "streamient/streamient",
+  "selection": "single",
+  "targets": {
+    "streamient": {
+      "name": "Streamient",
+      "site_id": "6a41cb050469393e8f22be4e"
+    }
+  }
+}

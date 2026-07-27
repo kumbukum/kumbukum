@@ -1,0 +1,69 @@
+extends layout
+
+block content
+	.d-flex.justify-content-between.align-items-center.mb-5
+		h1.mb-0 Settings
+
+	.row.align-items-start
+		.col-md-3.col-lg-2
+			.list-group.mb-5(role="tablist" aria-label="Settings sections")
+				button.list-group-item.list-group-item-action.active.cursor-pointer#settings-nav-managani(type="button" role="tab" aria-selected="true" aria-controls="settings-panel-managani" data-settings-panel="managani")
+					span Managani
+				button.list-group-item.list-group-item-action.cursor-pointer#settings-nav-custom-code(type="button" role="tab" aria-selected="false" aria-controls="settings-panel-custom-code" data-settings-panel="custom-code")
+					span Custom Code
+
+		.col-md-9.col-lg-10
+			#settings-panel-managani(role="tabpanel" aria-labelledby="settings-nav-managani")
+				h2.mb-3 Managani
+				p.text-muted.mb-5 Configure the hosted Managani widget and authenticated activity tracking for Streamient.
+
+				form#managani-settings-form
+					.form-check.form-switch.d-flex.align-items-center.mb-3
+						input.form-check-input.h-20px.w-30px.cursor-pointer#managani-enabled(type="checkbox" role="switch")
+						label.form-check-label.ms-3.cursor-pointer(for="managani-enabled") Enable Managani
+
+					.mb-3
+						label.form-label(for="managani-base-url") Managani Base URL
+						input.form-control.form-control-sm#managani-base-url(type="url" autocomplete="url")
+						.form-text Enter only the base URL, such as https://app.managani.com. Do not include /managani.js or API paths.
+
+					.mb-3
+						label.form-label(for="managani-site-key") Public Site Key
+						input.form-control.form-control-sm#managani-site-key(type="text" autocomplete="off")
+						.form-text This public key is passed to the hosted browser widget.
+
+					.mb-3
+						.d-flex.align-items-center
+							label.form-label.mb-0(for="managani-site-secret") Site Secret
+							span.badge.bg-secondary-lt.ms-3#managani-secret-status Not configured
+						input.form-control.form-control-sm.mt-2#managani-site-secret(type="password" autocomplete="new-password")
+						.form-text Leave blank to preserve the saved secret. Enter a value only to replace it.
+
+					.d-flex.align-items-center.justify-content-between.mb-5
+						button.btn.btn-outline-danger.btn-sm.cursor-pointer#managani-clear-secret(type="button" disabled)
+							span Clear Site Secret
+						button.btn.btn-primary.btn-sm.cursor-pointer(type="submit")
+							span Save Managani Settings
+
+			#settings-panel-custom-code.d-none(role="tabpanel" aria-labelledby="settings-nav-custom-code")
+				h2.mb-3 Custom Code
+				.alert.alert-warning.mb-5(role="alert")
+					span This is trusted raw HTML. It executes in the footer for every signed-in Streamient user.
+
+				form#custom-code-settings-form
+					.mb-3
+						label.form-label(for="custom-css-snippet") CSS Snippet
+						textarea.form-control.form-control-sm.font-monospace#custom-css-snippet(rows="12" spellcheck="false")
+						.form-text Include complete tags, for example a full style or link tag. Multiple tags are supported.
+
+					.mb-3
+						label.form-label(for="custom-js-snippet") JS Snippet
+						textarea.form-control.form-control-sm.font-monospace#custom-js-snippet(rows="12" spellcheck="false")
+						.form-text Include complete script tags. Multiple tags are supported.
+
+					.d-flex.justify-content-end.mb-5
+						button.btn.btn-primary.btn-sm.cursor-pointer(type="submit")
+							span Save Custom Code
+
+block scripts
+	script(src=`/static/v-${v}/js/admin_settings.js`)
