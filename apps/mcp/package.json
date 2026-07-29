@@ -12,7 +12,7 @@
     "start": "node --import ./tracing.js server.js --http"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.1",
     "vitepress-openapi": "^0.2.2",
