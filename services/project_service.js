@@ -1,5 +1,5 @@
 import { Project } from '../model/project.js';
-import { hydratedQuery } from '../model/mongoose.js';
+import { queryForSave } from '../model/mongoose.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
@@ -90,7 +90,7 @@ export async function updateProject(host_id, projectId, data, ctx = {}) {
 }
 
 export async function deleteProject(host_id, projectId, ctx = {}) {
-	const project = await hydratedQuery(Project.findOne({ _id: projectId, host_id }));
+	const project = await queryForSave(Project.findOne({ _id: projectId, host_id }));
 	if (!project) return null;
 	if (project.is_default) throw new Error('Cannot delete the default project');
 

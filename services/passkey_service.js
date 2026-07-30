@@ -4,7 +4,7 @@ import {
 	generateAuthenticationOptions,
 	verifyAuthenticationResponse,
 } from '@simplewebauthn/server';
-import { hydratedQuery } from '../model/mongoose.js';
+import { queryForSave } from '../model/mongoose.js';
 import { UserPasskey } from '../model/user_passkey.js';
 import config from '../config.js';
 
@@ -77,7 +77,7 @@ export async function getAuthenticationOptions() {
 }
 
 export async function verifyAuthentication(response, challenge) {
-	const passkey = await hydratedQuery(UserPasskey.findOne({ credential_id: response.id }));
+	const passkey = await queryForSave(UserPasskey.findOne({ credential_id: response.id }));
 	if (!passkey) throw new Error('Passkey not found');
 
 	const publicKeyBuffer = Buffer.from(passkey.public_key, 'base64url');

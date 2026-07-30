@@ -1,5 +1,5 @@
 import { getStripe } from '../modules/stripe.js';
-import { hydratedQuery } from '../model/mongoose.js';
+import { queryForSave } from '../model/mongoose.js';
 import { User } from '../model/user.js';
 import { Tenant } from '../modules/tenancy.js';
 import config from '../config.js';
@@ -308,7 +308,7 @@ export async function handleWebhook(rawBody, sig) {
             const subscription = event.data.object;
             // The $0 tracking subscription never drives plan or status.
             if (isFreePriceSubscription(subscription)) break;
-            const user = await hydratedQuery(User.findOne({ stripe_subscription_id: subscription.id }));
+            const user = await queryForSave(User.findOne({ stripe_subscription_id: subscription.id }));
             if (user) {
                 Object.assign(user, buildSubscriptionUserUpdate(subscription));
                 await user.save();
@@ -323,7 +323,7 @@ export async function handleWebhook(rawBody, sig) {
             // Deleting the $0 tracking subscription (e.g. on upgrade) must not
             // re-enter paid-cancellation handling or re-create anything.
             if (isFreePriceSubscription(subscription)) break;
-            const user = await hydratedQuery(
+            const user = await queryForSave(
                 User.findOne({ stripe_subscription_id: subscription.id }).select('+stripe_customer_id +stripe_free_subscription_id'),
             );
             if (user) {
@@ -348,7 +348,7 @@ export async function handleWebhook(rawBody, sig) {
         case 'invoice.payment_failed': {
             const invoice = event.data.object;
             if (invoice.subscription) {
-                const user = await hydratedQuery(User.findOne({ stripe_subscription_id: invoice.subscription }));
+                const user = await queryForSave(User.findOne({ stripe_subscription_id: invoice.subscription }));
                 if (user) {
                     user.subscription_status = 'past_due';
                     await user.save();

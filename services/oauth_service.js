@@ -3,7 +3,7 @@ import { isIP } from 'node:net';
 import bcrypt from 'bcryptjs';
 import { createLocalJWKSet, createRemoteJWKSet, jwtVerify } from 'jose';
 
-import { hydratedQuery } from '../model/mongoose.js';
+import { queryForSave } from '../model/mongoose.js';
 import { OAuthAuthorizationCode } from '../model/oauth_authorization_code.js';
 import { OAuthClient } from '../model/oauth_client.js';
 import { OAuthConsent } from '../model/oauth_consent.js';
@@ -425,7 +425,7 @@ async function findStoredClient(clientId, { host_id = null, includeSecret = fals
 		? { client_id: clientId, $or: [{ host_id }, { host_id: null }] }
 		: { client_id: clientId };
 	const projection = includeSecret ? '+client_secret_hash' : '';
-	return hydratedQuery(OAuthClient.findOne(query).select(projection));
+	return OAuthClient.findOne(query).select(projection);
 }
 
 export async function resolveClient(clientId, { host_id = null, includeSecret = false } = {}) {
@@ -475,7 +475,7 @@ export async function registerClient({ tenantId = null, host_id = null, createdB
 export async function authenticateClientForToken({ clientId, clientSecret, clientAssertionType, clientAssertion, host_id = null }) {
 	const client = await resolveClient(clientId, { host_id, includeSecret: true });
 
-	if (client instanceof OAuthClient) {
+	if (client.registration_source !== 'metadata') {
 		if (client.token_endpoint_auth_method === 'client_secret_post') {
 			if (!clientSecret) {
 				throw new OAuthError('invalid_client', 'client_secret is required for this client', 401);
@@ -552,7 +552,7 @@ export async function listConsents(userId, host_id) {
 }
 
 export async function revokeConsent(consentId, userId, host_id, ctx = {}) {
-	const consent = await hydratedQuery(OAuthConsent.findOne({ _id: consentId, user: userId, host_id, revoked_at: null }));
+	const consent = await queryForSave(OAuthConsent.findOne({ _id: consentId, user: userId, host_id, revoked_at: null }));
 	if (!consent) throw new Error('Authorized app not found');
 
 	consent.revoked_at = new Date();
@@ -572,14 +572,22 @@ export async function revokeConsent(consentId, userId, host_id, ctx = {}) {
 	return consent;
 }
 
-export async function findConsent({ userId, host_id, clientId, resource }) {
-	return hydratedQuery(OAuthConsent.findOne({
+function consentLookupQuery({ userId, host_id, clientId, resource }) {
+	return OAuthConsent.findOne({
 		user: userId,
 		host_id,
 		client_id: clientId,
 		resource,
 		revoked_at: null,
-	}));
+	});
+}
+
+export async function findConsent(options) {
+	return consentLookupQuery(options).lean();
+}
+
+async function findConsentForSave(options) {
+	return queryForSave(consentLookupQuery(options));
 }
 
 export function consentCoversScopes(consent, requestedScopes) {
@@ -589,7 +597,7 @@ export function consentCoversScopes(consent, requestedScopes) {
 }
 
 export async function approveConsent({ userId, tenantId, host_id, client, requestedScopes, resource, redirectUri, ctx = {} }) {
-	const existing = await findConsent({ userId, host_id, clientId: client.client_id, resource });
+	const existing = await findConsentForSave({ userId, host_id, clientId: client.client_id, resource });
 	const scopes = normalizeScopesForResource([...(existing?.scopes || []), ...normalizeScopeInput(requestedScopes)], resource);
 	const redirectUris = [...new Set([...(client.redirect_uris || []), redirectUri].filter(Boolean))];
 	const snapshot = {
@@ -664,7 +672,7 @@ export async function exchangeAuthorizationCode({ code, clientId, redirectUri, c
 	if (!redirectUri) throw new OAuthError('invalid_grant', 'redirect_uri is required', 400);
 	if (!codeVerifier) throw new OAuthError('invalid_grant', 'code_verifier is required', 400);
 
-	const authCode = await hydratedQuery(OAuthAuthorizationCode.findOne({ code_hash: sha256Hex(code) }));
+	const authCode = await queryForSave(OAuthAuthorizationCode.findOne({ code_hash: sha256Hex(code) }));
 	if (!authCode || authCode.used_at || authCode.expires_at <= new Date()) {
 		throw new OAuthError('invalid_grant', 'authorization code is invalid or expired', 400);
 	}
@@ -752,7 +760,7 @@ export async function exchangeRefreshToken({ refreshToken, client, host_id = nul
 		throw new OAuthError('invalid_grant', 'refresh_token is required', 400);
 	}
 
-	const refresh = await hydratedQuery(OAuthRefreshToken.findOne({ token_hash: sha256Hex(refreshToken) }));
+	const refresh = await queryForSave(OAuthRefreshToken.findOne({ token_hash: sha256Hex(refreshToken) }));
 	if (!refresh || refresh.revoked_at || refresh.rotated_at || refresh.expires_at <= new Date()) {
 		throw new OAuthError('invalid_grant', 'refresh_token is invalid or expired', 400);
 	}

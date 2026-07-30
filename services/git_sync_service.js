@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
-import mongoose, { hydratedQuery } from '../model/mongoose.js';
+import mongoose, { queryForSave } from '../model/mongoose.js';
 import simpleGit from 'simple-git';
 import matter from 'gray-matter';
 import { marked } from 'marked';
@@ -405,15 +405,15 @@ export async function updateGitRepo(hostId, repoId, data, ctx = {}) {
 	if (data.commit_sync_enabled !== undefined) update.commit_sync_enabled = data.commit_sync_enabled;
 	if (data.commit_history_days !== undefined) update.commit_history_days = data.commit_history_days;
 
-	const repo = await hydratedQuery(GitRepo.findOneAndUpdate(
+	const repo = await GitRepo.findOneAndUpdate(
 		{ _id: repoId, host_id: hostId },
 		{ $set: update },
 		{ returnDocument: 'after' },
-	));
+	);
 	if (repo) {
 		audit.log({ action: 'update', resource: 'git_repo', resource_id: repoId, host_id: hostId, ...ctx });
 	}
-	return repo ? { ...repo.toObject(), auth_token: repo.auth_token ? '••••••••' : '' } : null;
+	return repo ? { ...repo, auth_token: repo.auth_token ? '••••••••' : '' } : null;
 }
 
 export async function deleteGitRepo(hostId, repoId, ctx = {}) {
@@ -431,7 +431,7 @@ export async function deleteGitRepo(hostId, repoId, ctx = {}) {
 // ── Sync ──
 
 async function prepareSyncRepo(repoId, userId, hostId, ctx = { channel: 'api' }) {
-	const gitRepoDoc = await hydratedQuery(GitRepo.findOne({ _id: repoId, host_id: hostId }));
+	const gitRepoDoc = await queryForSave(GitRepo.findOne({ _id: repoId, host_id: hostId }));
 	if (!gitRepoDoc) throw new Error('Git repo not found');
 	if (!gitRepoDoc.enabled) throw new Error('Git sync is disabled for this repo');
 

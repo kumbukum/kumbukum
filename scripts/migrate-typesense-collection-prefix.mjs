@@ -13,7 +13,7 @@
 // - pages_* collections are crawler-populated; they are recreated empty and
 //   repopulate on the next crawl.
 // - conversation_store is global/unprefixed and intentionally untouched.
-import mongoose from 'mongoose';
+import mongoose from '../model/mongoose.js';
 import config from '../config.js';
 import { Tenant } from '../modules/tenancy.js';
 import { getTypesenseClient, reindexHost, buildCollectionName } from '../modules/typesense.js';

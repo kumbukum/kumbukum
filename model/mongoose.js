@@ -11,7 +11,7 @@ function mergeLeanVirtuals(leanOptions) {
 	return leanOptions;
 }
 
-export function hydratedQuery(query) {
+export function queryForSave(query) {
 	return typeof query?.lean === 'function' ? query.lean(false) : query;
 }
 

@@ -6,7 +6,8 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
 
-import { syncRepo, backfillGitSyncMode } from '../services/git_sync_service.js';
+import { syncRepo, backfillGitSyncMode, updateGitRepo } from '../services/git_sync_service.js';
+import { AuditLog } from '../model/audit_log.js';
 import { GitRepo } from '../model/git_repo.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
@@ -203,6 +204,31 @@ function cleanupClone(hostId) {
 
 test.afterEach(() => {
 	restoreModelMocks();
+});
+
+test('updates Git repo from a lean plain-object result', async () => {
+	const originalFindOneAndUpdate = GitRepo.findOneAndUpdate;
+	const originalAuditCreate = AuditLog.create;
+	const plainRepo = { _id: 'repo-1', host_id: 'host-1', name: 'Updated', auth_token: 'encrypted-token' };
+	let captured = null;
+	GitRepo.findOneAndUpdate = async (query, update, options) => {
+		captured = { query, update, options };
+		return plainRepo;
+	};
+	AuditLog.create = async () => ({});
+
+	try {
+		const result = await updateGitRepo('host-1', 'repo-1', { name: 'Updated' });
+		assert.deepEqual(captured, {
+			query: { _id: 'repo-1', host_id: 'host-1' },
+			update: { $set: { name: 'Updated' } },
+			options: { returnDocument: 'after' },
+		});
+		assert.deepEqual(result, { ...plainRepo, auth_token: '••••••••' });
+	} finally {
+		GitRepo.findOneAndUpdate = originalFindOneAndUpdate;
+		AuditLog.create = originalAuditCreate;
+	}
 });
 
 test('imports markdown notes, memories, and recent commit memories', async (t) => {
