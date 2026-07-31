@@ -100,7 +100,7 @@ importers:
         specifier: ^3.46.0
         version: 3.46.0(chokidar@3.6.0)(supports-color@5.5.0)
       '@tiptap/core':
-        specifier: ^3.22.3
+        specifier: ^3.29.2
         version: 3.29.2(@tiptap/pm@3.29.2)
       '@tiptap/extension-blockquote':
         specifier: ^3.29.2
@@ -109,7 +109,7 @@ importers:
         specifier: ^3.29.2
         version: 3.29.2(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
       '@tiptap/extension-code-block':
-        specifier: ^3.22.3
+        specifier: ^3.29.2
         version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
       '@tiptap/extension-heading':
         specifier: ^3.29.2
@@ -133,7 +133,7 @@ importers:
         specifier: ^3.29.2
         version: 3.29.2(@tiptap/extension-list@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
       '@tiptap/pm':
-        specifier: ^3.22.3
+        specifier: ^3.29.2
         version: 3.29.2
       '@tiptap/starter-kit':
         specifier: ^3.29.2
@@ -232,11 +232,11 @@ importers:
         specifier: ^7.5.0
         version: 7.5.0(socks@2.8.9)
       mongoose:
-        specifier: ^9.8.1
-        version: 9.8.1(socks@2.8.9)
+        specifier: ^9.9.0
+        version: 9.9.0(socks@2.8.9)
       mongoose-lean-virtuals:
         specifier: ^2.1.0
-        version: 2.1.0(mongoose@9.8.1(socks@2.8.9))
+        version: 2.1.0(mongoose@9.9.0(socks@2.8.9))
       n-readlines:
         specifier: ^3.4.1
         version: 3.4.1
@@ -277,8 +277,8 @@ importers:
         specifier: ^4.8.3
         version: 4.8.3(supports-color@5.5.0)
       stripe:
-        specifier: ^22.3.2
-        version: 22.3.2(@types/node@26.1.2)
+        specifier: ^22.4.0
+        version: 22.4.0(@types/node@26.1.2)
       striptags:
         specifier: ^3.2.0
         version: 3.2.0
@@ -455,28 +455,28 @@ packages:
     resolution: {integrity: sha512-PIOUXlSnrqM0S+WOgDRb4RzotydJH7ZoT6tOyL7tAO7qJOfvX5wsEW8Pe+PMKMwvuI4/gIyK9cg2H7lJXqnc4Q==}
     engines: {node: '>= 14.0.0'}
 
-  '@apify/consts@2.55.0':
-    resolution: {integrity: sha512-qINMfu3UcQgV5irLqMAeQdfmf0hWIN/ClPZAEe90mXBy/A2i9QvSuJ/SacCPjPnymdnYfGsSk6dTBX5AjMWjcA==}
+  '@apify/consts@2.56.1':
+    resolution: {integrity: sha512-ZfrnC2dcv1+XfkBr48Pxth8Z2qwbkUIETtAmnlrE+nLXi8LbYa5mNywEH1q+wiTomIdicboAkYjnZPCtWNZELA==}
 
   '@apify/datastructures@2.0.6':
     resolution: {integrity: sha512-hI/Q5cCjXXI/g4OPwX+/xuk+JsOtXRhKNXl2wnq/nKmdrji3nYCc9vGsAEc1iXVbs16xQMZy5uRhoY3XTABovA==}
 
-  '@apify/log@2.5.45':
-    resolution: {integrity: sha512-wauWf8suX5+T3pNERfxOLF/VJt/hToCY1iIhGdRyw6LE5YasIiBD5mfKYDRGbSpr5VPu2Jkuf66Kkb2ZYydl4w==}
+  '@apify/log@2.5.47':
+    resolution: {integrity: sha512-mr2M0DBJuZBKbPEqwuSDpZ7101nxwSFfHbxfZiEPErJznDiRKUkb1u9tsRoC7DJVEsN2idQfYX2/a0m9Tr5FZA==}
 
   '@apify/ps-tree@1.2.0':
     resolution: {integrity: sha512-VHIswI7rD/R4bToeIDuJ9WJXt+qr5SdhfoZ9RzdjmCs9mgy7l0P4RugQEUCcU+WB4sfImbd4CKwzXcn0uYx1yw==}
     engines: {node: '>= 0.10'}
     hasBin: true
 
-  '@apify/pseudo_url@2.0.86':
-    resolution: {integrity: sha512-uQdh7650fpV/OwMD/z67j3qpFFZXD+kJFttMVxhblSknpG0yglR0swvjdSSeBLfhixwvyRL05d7jXXlxebYEqw==}
+  '@apify/pseudo_url@2.0.88':
+    resolution: {integrity: sha512-UT58iNBi43Y6BBbzZFu5UsNyH+eUA7G8iuyddb79vsYyF8EnrFdtLKrexFZUspTKLkX+XsaAwmdcGn5uMdquXQ==}
 
   '@apify/timeout@0.3.5':
     resolution: {integrity: sha512-3nuQXwxh2sKxBo5tgDoZWuZHiSpqrKg1+sJHjFSk8blhyX6I2FZzpfW7UaCELeYLZiSjWUPh2rXNrc3zLmJGJg==}
 
-  '@apify/utilities@2.35.2':
-    resolution: {integrity: sha512-k+2CkvF4bSyo4c+T93X6PIFjZvN4zgCt0bqCv8TwqcIEyHz9kqZo3FboRQ4KnDtJ6Ai4epfOJWVmLOwiuJn85A==}
+  '@apify/utilities@2.35.4':
+    resolution: {integrity: sha512-SlgH9vQxcbFzHDrEt4LFEtpLbnGrJ1l+umvXoYEyjsmAN+Qdh6aGNG8K7fJk7fUnq/oXmyYavmG+Q45aCNuFfg==}
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -3144,8 +3144,8 @@ packages:
     resolution: {integrity: sha512-lGe34o6EHj9y3Kts9R4ZYs/Gr+6N7MCaMlIFA3F1R2O5/m7K06AxfSeO5530PEERE6/WyEg3lsuyw4GHlPZHog==}
     engines: {node: ^4.5.0 || >= 5.9}
 
-  baseline-browser-mapping@2.11.7:
-    resolution: {integrity: sha512-APw5YuIQAg6L9w4sHDI6j26DGFJI6RpYOhnkMPdC9lWbkKvsyPHzDsve1yd73lk21yz7Y09Kci8B2Pp9FonzWA==}
+  baseline-browser-mapping@2.11.8:
+    resolution: {integrity: sha512-zAgkquC2WYF0PIc6XbNYkA2uuxxFavzgmX61R+dHDUa558V8Ejf8ozTZFR6QzM24RWu4kBcRkhJ5kpz77j9fnQ==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -3196,11 +3196,11 @@ packages:
     peerDependencies:
       '@popperjs/core': ^2.11.8
 
-  brace-expansion@2.1.3:
-    resolution: {integrity: sha512-DRdx5neNsG/QXbniLFWi2YmC/68oeOOmKz6zOjVk6ZS1ZLXgLIKqVEc6hWsmkjBbgii0SwaBTcJ5XKj5gzY/4A==}
+  brace-expansion@2.1.4:
+    resolution: {integrity: sha512-hGfVzPxthbf3+2yjg/RBs60cB0FhqBS/zvdV/4wn4/BmN0bNMMHPc4V/BbFieqf1TKAGGAHnY4eSjajCl0f2Xg==}
 
-  brace-expansion@5.0.8:
-    resolution: {integrity: sha512-JZyDyq3D4AUifKTPOB7DELf6XsB3WdPuNxCtob1vFXPsSXhdAiHBWJ/tJ8HAc9aH84BK+5JFZLNkJKx3G9kzQg==}
+  brace-expansion@5.0.9:
+    resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
     engines: {node: 20 || >=22}
 
   braces@3.0.3:
@@ -3644,8 +3644,8 @@ packages:
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
-  devtools-protocol@0.0.1669207:
-    resolution: {integrity: sha512-7/s6rk++9nRcZZHAmW1LwmJbXZjGSOLjHUYjGtVxEc6mo5A3pk5PW9fPzw7R/hLw2gJPlY3GzYCvfZhS46Tvlw==}
+  devtools-protocol@0.0.1670834:
+    resolution: {integrity: sha512-O5ypoNxHSTiz4Kli6lfF1i8q8rPMWGTaXPAcVlfTbqU8DveLKuT8Gvj+njQgcjhpyR17/lmStVPTC6oWc2TXug==}
 
   dezalgo@1.0.4:
     resolution: {integrity: sha512-rXSP0bf+5n0Qonsb+SVVfNfIsimO4HEtmnIpPHY8Q1UCzKlQrDMfdobr8nJOOsRgWCyMRqeSBQzmWUMq7zvVig==}
@@ -3712,8 +3712,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  electron-to-chromium@1.5.398:
-    resolution: {integrity: sha512-AsvhAxopJGh6museTDMIjn6JpDYOfgu4RLlygomt87MUwBUqTfd/1EiPtx10/LZE8xpTvkP2E9Gafq7lkLtodQ==}
+  electron-to-chromium@1.5.399:
+    resolution: {integrity: sha512-lEcqhErbHjXRvd41rnWLpzbyU/IXfIYo7QwaFWmxGeLiLyY2TBCdHnWY88vB+p3ubnihRypDm66panXl7TylLA==}
 
   emoji-regex-xs@1.0.0:
     resolution: {integrity: sha512-LRlerrMYoIDrT6jgpeZ2YYl/L8EulRTt5hQcYjy5AInh7HWXKimpqx68aknBFpGL2+/IcogTcaydJEgaTmOpDg==}
@@ -4786,8 +4786,8 @@ packages:
     peerDependencies:
       mongoose: '>=8.0.0 || ^9.0.0-0'
 
-  mongoose@9.8.1:
-    resolution: {integrity: sha512-1ncioLSBWeFSXIiKw6aR4YYFAhpvS7uSbPpkzq5ELSP9PEScGkbzFg6Q0mNuHighosmgZPYPsY4sSIXqkY3/hw==}
+  mongoose@9.9.0:
+    resolution: {integrity: sha512-xtBH8CU5oRK16F14rC8/KlRHeuPGP+w/URjDdwHV0oyN7otVuqglLje1FePX9+SaSBGj0/QiM65Tg86R7iNbPg==}
     engines: {node: '>=20.19.0'}
 
   mpath@0.8.4:
@@ -5149,8 +5149,8 @@ packages:
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
 
-  process-warning@5.0.0:
-    resolution: {integrity: sha512-a39t9ApHNx2L4+HBnQKqxxHNs1r7KF+Intd8Q/g1bUh6q0WIp9voPXJ/x0j+ZL45KF1pJd9+q2jLIRMfvEshkA==}
+  process-warning@5.1.0:
+    resolution: {integrity: sha512-jQSaVHsPgtyw60e1rQ/A+/ArPEj/S8pS/vFnyGa/gYFXrKk/6RuDkoqVDQ5NI5MmS01698ltlAk0NoDBNLujRw==}
 
   process@0.11.10:
     resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
@@ -5687,8 +5687,8 @@ packages:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
 
-  stripe@22.3.2:
-    resolution: {integrity: sha512-O13QOvgEIQvDlTy6Ubb5kB980wpbhmoZNsgCXKILjCMZS67f+bW+6w99k3gnSi/N1lkryoj1WYdpGT5Wc5edjg==}
+  stripe@22.4.0:
+    resolution: {integrity: sha512-LVJ+tcSYeqOSnXr3i+Kz2tZ7y0crLLdP2uwD/4wccrmEVyn0g/Heo0pF7as7rxS/sOjJzrb1lxgZY0Y0Dx1pSA==}
     engines: {node: '>=18'}
     peerDependencies:
       '@types/node': '>=18'
@@ -5828,15 +5828,15 @@ packages:
   tldts-core@6.1.86:
     resolution: {integrity: sha512-Je6p7pkk+KMzMv2XXKmAE3McmolOQFdxkKw0R8EYNr7sELW46JqnNeTX8ybPiQgvg1ymCoF8LXs5fzFaZvJPTA==}
 
-  tldts-core@7.4.9:
-    resolution: {integrity: sha512-DxKfPBI52p2msTEu7MPhdpdDTBhhVQg1a/8PjQckeyAvO13eMYElX545grIp6nnTGIMZlRvFZPvFhvI/WIz2Vg==}
+  tldts-core@7.4.10:
+    resolution: {integrity: sha512-KnQjp53ZekKgm/r3l+u8kJGGzYgrWdP8+Mql7a4vijh2WE0IrZWspQj/TpTxDho/YxO+AnOZnIjQcCD+q6iJsw==}
 
   tldts@6.1.86:
     resolution: {integrity: sha512-WMi/OQ2axVTf/ykqCQgXiIct+mSQDFdH2fkwhPwgEwvJ1kSzZRiinb0zF2Xb8u4+OqPChmyI6MEu4EezNJz+FQ==}
     hasBin: true
 
-  tldts@7.4.9:
-    resolution: {integrity: sha512-3kZ8wQQ/k5DrChD4X4FVvr2D7E5uoRgAqkPyLpSCGUvqOvqu+JEdr3mwMUaVWb+vMHZaKhF5fp2PBigKsui7hA==}
+  tldts@7.4.10:
+    resolution: {integrity: sha512-GgouD1B+sWwvkaEq8vXC15DjQitxbvs12oIXELpconwm+Tg3zfcEv4jgzq3vtKverDXsg3VI8aRgNL2Nra0Iog==}
     hasBin: true
 
   to-regex-range@5.0.1:
@@ -6399,29 +6399,29 @@ snapshots:
     dependencies:
       '@algolia/client-common': 5.56.0
 
-  '@apify/consts@2.55.0': {}
+  '@apify/consts@2.56.1': {}
 
   '@apify/datastructures@2.0.6': {}
 
-  '@apify/log@2.5.45':
+  '@apify/log@2.5.47':
     dependencies:
-      '@apify/consts': 2.55.0
+      '@apify/consts': 2.56.1
       ansi-colors: 4.1.3
 
   '@apify/ps-tree@1.2.0':
     dependencies:
       event-stream: 3.3.4
 
-  '@apify/pseudo_url@2.0.86':
+  '@apify/pseudo_url@2.0.88':
     dependencies:
-      '@apify/log': 2.5.45
+      '@apify/log': 2.5.47
 
   '@apify/timeout@0.3.5': {}
 
-  '@apify/utilities@2.35.2':
+  '@apify/utilities@2.35.4':
     dependencies:
-      '@apify/consts': 2.55.0
-      '@apify/log': 2.5.45
+      '@apify/consts': 2.56.1
+      '@apify/log': 2.5.47
 
   '@asamuzakjp/css-color@3.2.0':
     dependencies:
@@ -6452,9 +6452,9 @@ snapshots:
 
   '@crawlee/basic@3.17.0(supports-color@5.5.0)':
     dependencies:
-      '@apify/log': 2.5.45
+      '@apify/log': 2.5.47
       '@apify/timeout': 0.3.5
-      '@apify/utilities': 2.35.2
+      '@apify/utilities': 2.35.4
       '@crawlee/core': 3.17.0(supports-color@5.5.0)
       '@crawlee/types': 3.17.0
       '@crawlee/utils': 3.17.0(supports-color@5.5.0)
@@ -6462,7 +6462,7 @@ snapshots:
       fs-extra: 11.4.0
       got-scraping: 4.2.1
       ow: 0.28.2
-      tldts: 7.4.9
+      tldts: 7.4.10
       tslib: 2.8.1
       type-fest: 4.41.0
     transitivePeerDependencies:
@@ -6470,7 +6470,7 @@ snapshots:
 
   '@crawlee/browser-pool@3.17.0(supports-color@5.5.0)':
     dependencies:
-      '@apify/log': 2.5.45
+      '@apify/log': 2.5.47
       '@apify/timeout': 0.3.5
       '@crawlee/core': 3.17.0(supports-color@5.5.0)
       '@crawlee/types': 3.17.0
@@ -6525,12 +6525,12 @@ snapshots:
 
   '@crawlee/core@3.17.0(supports-color@5.5.0)':
     dependencies:
-      '@apify/consts': 2.55.0
+      '@apify/consts': 2.56.1
       '@apify/datastructures': 2.0.6
-      '@apify/log': 2.5.45
-      '@apify/pseudo_url': 2.0.86
+      '@apify/log': 2.5.47
+      '@apify/pseudo_url': 2.0.88
       '@apify/timeout': 0.3.5
-      '@apify/utilities': 2.35.2
+      '@apify/utilities': 2.35.4
       '@crawlee/memory-storage': 3.17.0
       '@crawlee/types': 3.17.0
       '@crawlee/utils': 3.17.0(supports-color@5.5.0)
@@ -6543,7 +6543,7 @@ snapshots:
       minimatch: 9.0.9
       ow: 0.28.2
       stream-json: 1.9.1
-      tldts: 7.4.9
+      tldts: 7.4.10
       tough-cookie: 6.0.2
       tslib: 2.8.1
       type-fest: 4.41.0
@@ -6553,7 +6553,7 @@ snapshots:
   '@crawlee/http@3.17.0(supports-color@5.5.0)':
     dependencies:
       '@apify/timeout': 0.3.5
-      '@apify/utilities': 2.35.2
+      '@apify/utilities': 2.35.4
       '@crawlee/basic': 3.17.0(supports-color@5.5.0)
       '@crawlee/types': 3.17.0
       '@crawlee/utils': 3.17.0(supports-color@5.5.0)
@@ -6572,7 +6572,7 @@ snapshots:
   '@crawlee/jsdom@3.17.0(supports-color@5.5.0)':
     dependencies:
       '@apify/timeout': 0.3.5
-      '@apify/utilities': 2.35.2
+      '@apify/utilities': 2.35.4
       '@crawlee/http': 3.17.0(supports-color@5.5.0)
       '@crawlee/types': 3.17.0
       '@crawlee/utils': 3.17.0(supports-color@5.5.0)
@@ -6590,7 +6590,7 @@ snapshots:
   '@crawlee/linkedom@3.17.0(supports-color@5.5.0)':
     dependencies:
       '@apify/timeout': 0.3.5
-      '@apify/utilities': 2.35.2
+      '@apify/utilities': 2.35.4
       '@crawlee/http': 3.17.0(supports-color@5.5.0)
       '@crawlee/types': 3.17.0
       linkedom: 0.18.13
@@ -6602,7 +6602,7 @@ snapshots:
 
   '@crawlee/memory-storage@3.17.0':
     dependencies:
-      '@apify/log': 2.5.45
+      '@apify/log': 2.5.47
       '@crawlee/types': 3.17.0
       '@sapphire/async-queue': 1.5.5
       '@sapphire/shapeshift': 3.9.7
@@ -6617,7 +6617,7 @@ snapshots:
   '@crawlee/playwright@3.17.0(supports-color@5.5.0)':
     dependencies:
       '@apify/datastructures': 2.0.6
-      '@apify/log': 2.5.45
+      '@apify/log': 2.5.47
       '@apify/timeout': 0.3.5
       '@crawlee/browser': 3.17.0(supports-color@5.5.0)
       '@crawlee/browser-pool': 3.17.0(supports-color@5.5.0)
@@ -6639,13 +6639,13 @@ snapshots:
   '@crawlee/puppeteer@3.17.0(supports-color@5.5.0)':
     dependencies:
       '@apify/datastructures': 2.0.6
-      '@apify/log': 2.5.45
+      '@apify/log': 2.5.47
       '@crawlee/browser': 3.17.0(supports-color@5.5.0)
       '@crawlee/browser-pool': 3.17.0(supports-color@5.5.0)
       '@crawlee/types': 3.17.0
       '@crawlee/utils': 3.17.0(supports-color@5.5.0)
       cheerio: 1.0.0-rc.12
-      devtools-protocol: 0.0.1669207
+      devtools-protocol: 0.0.1670834
       jquery: 3.7.1
       ow: 0.28.2
       tslib: 2.8.1
@@ -6669,7 +6669,7 @@ snapshots:
 
   '@crawlee/utils@3.17.0(supports-color@5.5.0)':
     dependencies:
-      '@apify/log': 2.5.45
+      '@apify/log': 2.5.47
       '@apify/ps-tree': 1.2.0
       '@crawlee/types': 3.17.0
       '@types/sax': 1.2.7
@@ -9634,7 +9634,7 @@ snapshots:
 
   base64id@2.0.0: {}
 
-  baseline-browser-mapping@2.11.7: {}
+  baseline-browser-mapping@2.11.8: {}
 
   bcryptjs@3.0.3: {}
 
@@ -9698,11 +9698,11 @@ snapshots:
     dependencies:
       '@popperjs/core': 2.11.8
 
-  brace-expansion@2.1.3:
+  brace-expansion@2.1.4:
     dependencies:
       balanced-match: 1.0.2
 
-  brace-expansion@5.0.8:
+  brace-expansion@5.0.9:
     dependencies:
       balanced-match: 4.0.4
 
@@ -9712,9 +9712,9 @@ snapshots:
 
   browserslist@4.28.7:
     dependencies:
-      baseline-browser-mapping: 2.11.7
+      baseline-browser-mapping: 2.11.8
       caniuse-lite: 1.0.30001806
-      electron-to-chromium: 1.5.398
+      electron-to-chromium: 1.5.399
       node-releases: 2.0.51
       update-browserslist-db: 1.2.3(browserslist@4.28.7)
 
@@ -10151,7 +10151,7 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  devtools-protocol@0.0.1669207: {}
+  devtools-protocol@0.0.1670834: {}
 
   dezalgo@1.0.4:
     dependencies:
@@ -10226,7 +10226,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-to-chromium@1.5.398: {}
+  electron-to-chromium@1.5.399: {}
 
   emoji-regex-xs@1.0.0: {}
 
@@ -11458,11 +11458,11 @@ snapshots:
 
   minimatch@10.2.6:
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.9
 
   minimatch@9.0.9:
     dependencies:
-      brace-expansion: 2.1.3
+      brace-expansion: 2.1.4
 
   minimist@1.2.8: {}
 
@@ -11542,12 +11542,12 @@ snapshots:
     optionalDependencies:
       socks: 2.8.9
 
-  mongoose-lean-virtuals@2.1.0(mongoose@9.8.1(socks@2.8.9)):
+  mongoose-lean-virtuals@2.1.0(mongoose@9.9.0(socks@2.8.9)):
     dependencies:
-      mongoose: 9.8.1(socks@2.8.9)
+      mongoose: 9.9.0(socks@2.8.9)
       mpath: 0.8.4
 
-  mongoose@9.8.1(socks@2.8.9):
+  mongoose@9.9.0(socks@2.8.9):
     dependencies:
       '@standard-schema/spec': 1.1.0
       kareem: 3.3.0
@@ -11857,7 +11857,7 @@ snapshots:
       get-caller-file: 2.0.5
       pino: 10.3.1
       pino-std-serializers: 7.1.0
-      process-warning: 5.0.0
+      process-warning: 5.1.0
 
   pino-pretty@13.1.3:
     dependencies:
@@ -11884,7 +11884,7 @@ snapshots:
       on-exit-leak-free: 2.1.2
       pino-abstract-transport: 3.0.0
       pino-std-serializers: 7.1.0
-      process-warning: 5.0.0
+      process-warning: 5.1.0
       quick-format-unescaped: 4.0.4
       real-require: 0.2.0
       safe-stable-stringify: 2.5.0
@@ -11921,7 +11921,7 @@ snapshots:
 
   process-nextick-args@2.0.1: {}
 
-  process-warning@5.0.0: {}
+  process-warning@5.1.0: {}
 
   process@0.11.10: {}
 
@@ -12685,7 +12685,7 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  stripe@22.3.2(@types/node@26.1.2):
+  stripe@22.4.0(@types/node@26.1.2):
     optionalDependencies:
       '@types/node': 26.1.2
 
@@ -12854,15 +12854,15 @@ snapshots:
 
   tldts-core@6.1.86: {}
 
-  tldts-core@7.4.9: {}
+  tldts-core@7.4.10: {}
 
   tldts@6.1.86:
     dependencies:
       tldts-core: 6.1.86
 
-  tldts@7.4.9:
+  tldts@7.4.10:
     dependencies:
-      tldts-core: 7.4.9
+      tldts-core: 7.4.10
 
   to-regex-range@5.0.1:
     dependencies:
@@ -12895,7 +12895,7 @@ snapshots:
 
   tough-cookie@6.0.2:
     dependencies:
-      tldts: 7.4.9
+      tldts: 7.4.10
 
   tr46@0.0.3: {}
 
