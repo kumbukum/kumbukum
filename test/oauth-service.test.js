@@ -5,8 +5,10 @@ import { fileURLToPath } from 'node:url';
 import pug from 'pug';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 
-import { authenticateClientForToken, buildAuthorizationServerMetadata, buildOauthUiConfig, mapDynamicRegistrationClientResponse, parseAuthorizationRequest, validateAuthorizationRequest } from '../services/oauth_service.js';
+import { authenticateClientForToken, buildAuthorizationServerMetadata, buildOauthUiConfig, findConsent, mapDynamicRegistrationClientResponse, parseAuthorizationRequest, validateAuthorizationRequest } from '../services/oauth_service.js';
 import { MCP_APP_DEFAULT_SCOPES, MCP_DEFAULT_SCOPES, getMcpAppEndpointUrl, getMcpEndpointUrl, getOauthIssuer, listScopeDetailsForResource, signMcpAccessToken, verifyMcpAccessToken } from '../modules/oauth.js';
+import { OAuthClient } from '../model/oauth_client.js';
+import { OAuthConsent } from '../model/oauth_consent.js';
 
 const oauthAuthorizeViewPath = fileURLToPath(new URL('../views/auth/oauth_authorize.pug', import.meta.url));
 const clientAssertionType = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer';
@@ -30,6 +32,21 @@ function mockMetadataFetch(metadata) {
 	};
 	return () => {
 		globalThis.fetch = originalFetch;
+	};
+}
+
+function mockQueryResult(result, onLean) {
+	return {
+		select() {
+			return this;
+		},
+		lean(value = true) {
+			onLean(value);
+			return this;
+		},
+		then(resolve, reject) {
+			return Promise.resolve(result).then(resolve, reject);
+		},
 	};
 }
 
@@ -65,6 +82,48 @@ async function signClientAssertion(privateKey, clientId, options = {}) {
 }
 
 describe('oauth helpers', () => {
+	it('authenticates stored clients from lean query results', async () => {
+		const originalFindOne = OAuthClient.findOne;
+		const leanValues = [];
+		const storedClient = {
+			_id: 'client-record-1',
+			client_id: 'kk_manual_test',
+			client_name: 'Stored client',
+			redirect_uris: ['https://example.com/callback'],
+			grant_types: ['authorization_code', 'refresh_token'],
+			response_types: ['code'],
+			token_endpoint_auth_method: 'none',
+			registration_source: 'manual',
+			host_id: 'host-1',
+		};
+		OAuthClient.findOne = () => mockQueryResult(storedClient, (value) => leanValues.push(value));
+
+		try {
+			const client = await authenticateClientForToken({ clientId: storedClient.client_id, host_id: storedClient.host_id });
+			assert.equal(client.client_id, storedClient.client_id);
+			assert.equal(client.registration_source, 'manual');
+			assert.equal(client.doc, storedClient);
+			assert.deepEqual(leanValues, []);
+		} finally {
+			OAuthClient.findOne = originalFindOne;
+		}
+	});
+
+	it('keeps read-only consent lookup on the global lean default', async () => {
+		const originalFindOne = OAuthConsent.findOne;
+		const leanValues = [];
+		const storedConsent = { _id: 'consent-1', scopes: ['mcp:read'] };
+		OAuthConsent.findOne = () => mockQueryResult(storedConsent, (value) => leanValues.push(value));
+
+		try {
+			const consent = await findConsent({ userId: 'user-1', host_id: 'host-1', clientId: 'client-1', resource: getMcpEndpointUrl() });
+			assert.equal(consent, storedConsent);
+			assert.deepEqual(leanValues, [true]);
+		} finally {
+			OAuthConsent.findOne = originalFindOne;
+		}
+	});
+
 	it('advertises DCR instead of client metadata documents for OAuth discovery', () => {
 		const metadata = buildAuthorizationServerMetadata();
 		const uiConfig = buildOauthUiConfig();

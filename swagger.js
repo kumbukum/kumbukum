@@ -206,6 +206,16 @@ const swaggerSpec = {
                     },
                 },
             },
+            UserProfile: {
+                type: 'object',
+                properties: {
+                    _id: { type: 'string' },
+                    name: { type: 'string' },
+                    email: { type: 'string', format: 'email' },
+                    timezone: { type: 'string', example: 'America/New_York' },
+                    time_format: { type: 'string', enum: ['12-hour', '24-hour'], description: 'Saved clock format. Omitted until the user explicitly saves a preference.' },
+                },
+            },
             OAuthClient: {
                 type: 'object',
                 properties: {
@@ -922,6 +932,33 @@ const swaggerSpec = {
                         },
                     },
                     403: { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                },
+            },
+        },
+        '/profile': {
+            put: {
+                tags: ['Account'],
+                summary: 'Update current user profile',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                    email: { type: 'string', format: 'email' },
+                                    timezone: { type: 'string', description: 'IANA timezone identifier. UTC is also accepted.', example: 'America/New_York' },
+                                    time_format: { type: 'string', enum: ['12-hour', '24-hour'], description: 'Clock format to use for signed-in date and time displays.' },
+                                },
+                            },
+                        },
+                    },
+                },
+                responses: {
+                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { user: { $ref: '#/components/schemas/UserProfile' } } } } } },
+                    400: { description: 'Invalid profile payload', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    404: { description: 'User not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
         },

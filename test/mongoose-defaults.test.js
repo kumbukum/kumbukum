@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, it } from 'node:test';
 
-import mongoose from '../model/mongoose.js';
+import mongoose, { queryForSave } from '../model/mongoose.js';
 import { User } from '../model/user.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,7 +13,8 @@ const modelDir = path.join(rootDir, 'model');
 const modelFiles = fs.readdirSync(modelDir)
 	.filter((file) => file.endsWith('.js') && file !== 'mongoose.js')
 	.sort();
-const rawMongooseAllowed = new Set(['model/mongoose.js', 'test/mongoose-defaults.test.js']);
+const sourceExtensions = new Set(['.js', '.mjs', '.cjs', '.ts']);
+const excludedSourceDirectories = new Set(['node_modules', 'coverage', 'dist', 'build', 'public']);
 
 await Promise.all(modelFiles.map((file) => import(pathToFileURL(path.join(modelDir, file)).href)));
 await import(pathToFileURL(path.join(rootDir, 'modules/tenancy.js')).href);
@@ -28,33 +29,45 @@ async function runPreHook(model, op, query) {
 	await query._queryMiddleware.execPre(op, query, []);
 }
 
-function jsFiles(dir) {
+function sourceFiles(dir) {
+	if (!fs.existsSync(dir)) return [];
 	const entries = fs.readdirSync(dir, { withFileTypes: true });
 	return entries.flatMap((entry) => {
-		if (entry.name === 'node_modules' || entry.name === '.git') return [];
 		const fullPath = path.join(dir, entry.name);
-		if (entry.isDirectory()) return jsFiles(fullPath);
-		return entry.name.endsWith('.js') ? [fullPath] : [];
+		if (entry.isDirectory()) return excludedSourceDirectories.has(entry.name) ? [] : sourceFiles(fullPath);
+		return entry.isFile() && sourceExtensions.has(path.extname(entry.name)) ? [fullPath] : [];
 	});
 }
 
-describe('Mongoose defaults', () => {
-	it('keeps app-side files on the configured Mongoose singleton', () => {
-		const roots = ['model', 'modules', 'routes', 'services', 'middleware', 'test']
-			.map((dir) => path.join(rootDir, dir))
-			.filter((dir) => fs.existsSync(dir));
-		const files = [
-			path.join(rootDir, 'db.js'),
-			path.join(rootDir, 'app.js'),
-			...roots.flatMap(jsFiles),
-		];
+const productionFiles = [
+	...['apps', 'middleware', 'model', 'modules', 'routes', 'scripts', 'services'].flatMap((dir) => sourceFiles(path.join(rootDir, dir))),
+	...['app.js', 'build.js', 'config.js', 'db.js', 'diag_chat2.mjs', 'swagger.js', 'tracing.js'].map((file) => path.join(rootDir, file)).filter((file) => fs.existsSync(file)),
+].sort();
+const mongooseWrapperPath = path.join(modelDir, 'mongoose.js');
 
-		for (const file of files) {
-			const rel = path.relative(rootDir, file);
-			if (rawMongooseAllowed.has(rel)) continue;
+describe('Mongoose defaults', () => {
+	it('keeps legacy clock format unset until the user saves it', () => {
+		const user = new User({ email: 'timezone-default@example.com', password: 'password', name: 'Timezone Default' });
+
+		assert.equal(user.timezone, 'UTC');
+		assert.equal(user.timezone_configured, false);
+		assert.equal(user.time_format, undefined);
+	});
+
+	it('keeps app-side files on the configured Mongoose singleton', () => {
+		for (const file of productionFiles) {
+			if (file === mongooseWrapperPath) continue;
 			const source = fs.readFileSync(file, 'utf8');
-			assert.equal(source.includes("from 'mongoose'"), false, `${rel} imports raw mongoose`);
-			assert.equal(source.includes('from "mongoose"'), false, `${rel} imports raw mongoose`);
+			assert.equal(/(?:from\s*|import\s*\(|require\s*\()\s*['"]mongoose['"]/.test(source), false, `${path.relative(rootDir, file)} imports raw mongoose`);
+		}
+	});
+
+	it('reserves direct hydration bypasses for queryForSave', () => {
+		for (const file of productionFiles) {
+			if (file === mongooseWrapperPath) continue;
+			const source = fs.readFileSync(file, 'utf8');
+			assert.doesNotMatch(source, /\.lean\s*\(\s*false\s*\)/, `${path.relative(rootDir, file)} bypasses queryForSave`);
+			assert.equal(source.includes('hydratedQuery'), false, `${path.relative(rootDir, file)} uses the retired hydration helper`);
 		}
 	});
 
@@ -76,8 +89,8 @@ describe('Mongoose defaults', () => {
 		assert.deepEqual(query._mongooseOptions.lean, { virtuals: true });
 	});
 
-	it('preserves explicit hydrated query opt-outs', async () => {
-		const query = User.findOne({ email: 'a@example.com' }).lean(false);
+	it('preserves queryForSave hydration opt-outs', async () => {
+		const query = queryForSave(User.findOne({ email: 'a@example.com' }));
 		await runPreHook(User, 'findOne', query);
 		assert.equal(query._mongooseOptions.lean, false);
 	});

@@ -9,12 +9,34 @@ function safeAccessTokens(access_tokens = []) {
 	}));
 }
 
+export async function compareUserPassword(user, candidate) {
+	if (!user?.password) return false;
+	return bcrypt.compare(candidate, user.password);
+}
+
+export function toSafeUser(user) {
+	const obj = typeof user?.toObject === 'function' ? user.toObject() : { ...(user || {}) };
+	delete obj.password;
+	delete obj.totp_secret;
+	delete obj.verification_token;
+	delete obj.password_reset_token;
+	delete obj.password_reset_expires;
+	delete obj.stripe_customer_id;
+	delete obj.stripe_subscription_id;
+	delete obj.stripe_free_subscription_id;
+	delete obj.timezone_configured;
+	if (Array.isArray(obj.access_tokens)) obj.access_tokens = safeAccessTokens(obj.access_tokens);
+	return obj;
+}
+
 const userSchema = new mongoose.Schema(
 	{
 		email: { type: String, required: true, unique: true, lowercase: true, trim: true },
 		password: { type: String, required: true, select: false },
 		name: { type: String, required: true, trim: true },
 		timezone: { type: String, default: 'UTC' },
+		timezone_configured: { type: Boolean, default: false },
+		time_format: { type: String, enum: ['12-hour', '24-hour'] },
 		tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
 		host_id: { type: String, index: true },
 		is_active: { type: Boolean, default: false },
@@ -61,21 +83,11 @@ userSchema.pre('save', async function () {
 });
 
 userSchema.methods.comparePassword = async function (candidate) {
-	return bcrypt.compare(candidate, this.password);
+	return compareUserPassword(this, candidate);
 };
 
 userSchema.methods.toSafe = function () {
-	const obj = this.toObject();
-	delete obj.password;
-	delete obj.totp_secret;
-	delete obj.verification_token;
-	delete obj.password_reset_token;
-	delete obj.password_reset_expires;
-	delete obj.stripe_customer_id;
-	delete obj.stripe_subscription_id;
-	delete obj.stripe_free_subscription_id;
-	if (Array.isArray(obj.access_tokens)) obj.access_tokens = safeAccessTokens(obj.access_tokens);
-	return obj;
+	return toSafeUser(this);
 };
 
 export const User = mongoose.model('User', userSchema);

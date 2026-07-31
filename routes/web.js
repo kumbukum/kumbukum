@@ -11,6 +11,8 @@ import { isTenantLimitReached, resolveStoredTenantLimits } from '../modules/tena
 import managani from '../modules/managani.js';
 import config from '../config.js';
 import { createLogger } from '../modules/logger.js';
+import { createDateFormatters } from '../modules/date_format.js';
+import { getTimezoneOptions } from '../modules/timezones.js';
 
 const log = createLogger('web');
 
@@ -84,6 +86,7 @@ router.use(async (req, res, next) => {
 	const plan = tenant?.plan || 'free';
 	const is_hosted = req.isHosted;
 	const proOnlyFeatureEnabled = hasProFeatureAccess(billingUser, plan, is_hosted);
+	const dateFormatters = createDateFormatters(user || {});
 	res.locals.user = user;
 	res.locals.billing_user = billingUser;
 	res.locals.projects = projects;
@@ -103,6 +106,7 @@ router.use(async (req, res, next) => {
 		: { limit_projects: 0, limit_users: 0, limit_ai_workflows_per_day: 0 };
 	res.locals.can_create_project = !is_hosted || !isTenantLimitReached(res.locals.account_limits.limit_projects, projects.length);
 	res.locals.byo_ai_enabled = isByoAiSettingsAccessEnabled(req);
+	res.locals.timezone_options = getTimezoneOptions();
 	res.locals.host_id = req.host_id;
 	res.locals.ws_url = config.wsUrl;
 	res.locals.user_id = req.userId;
@@ -119,6 +123,7 @@ router.use(async (req, res, next) => {
 	res.locals.hide_chat_sidebar = req.path === '/settings' || req.path.startsWith('/settings/');
 	res.locals.custom_footer_code = customFooterCode;
 	res.locals.managani_browser = rendersAppLayout ? await managani.getBrowserContext(user, { req, res, billingUser }) : null;
+	Object.assign(res.locals, dateFormatters);
 	next();
 });
 

@@ -99,7 +99,7 @@ if can_manage_restricted_settings
 					return;
 				}
 				tbody.innerHTML = logs.map(function (log) {
-					var time = new Date(log.createdAt).toLocaleString();
+					var time = window.StreamientDateFormat?.formatLocale(log.createdAt, { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }) || '';
 					var badge = channelBadge(log.channel);
 					var tokenClient = log.mcp_client || log.token_label || '\u2014';
 					var details = log.details ? '<code class="small">' + escHtml(JSON.stringify(log.details)).slice(0, 100) + '</code>' : '\u2014';

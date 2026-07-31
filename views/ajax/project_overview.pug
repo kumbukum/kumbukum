@@ -1,4 +1,4 @@
-- const createdAt = new Date(project.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+- const createdAt = formatLocaleDate(project.createdAt, { year: 'numeric', month: 'long', day: 'numeric' })
 - const pc = counts[project._id.toString()] || { notes: 0, memory: 0, urls: 0, emails: 0 }
 - const forwardingEmail = emailForwardDomain ? `${project._id}@${emailForwardDomain}` : ''
 - const blockers = deleteBlockers || []
@@ -20,7 +20,9 @@
 .d-flex.w-100.align-items-center.mb-4
 	.text-muted.small.fs-7.user-select-all #{project._id}
 	.ms-auto
-		span.text-muted.small.fs-7 Created #{createdAt}
+		span.text-muted.small.fs-7
+			span.me-1 Created
+			time(datetime=project.createdAt data-date-value=project.createdAt data-date-format="locale" data-date-options='{"year":"numeric","month":"long","day":"numeric"}')= createdAt
 
 if !project.is_default && !canDelete
 	.alert.alert-light.border.fs-7.py-2.mb-4(role="status")

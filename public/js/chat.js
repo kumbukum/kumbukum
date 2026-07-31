@@ -382,7 +382,10 @@ function renderResults(results, listEl, panelEl) {
 		if (ts) {
 			const dateEl = document.createElement('small');
 			dateEl.className = 'text-muted text-nowrap flex-shrink-0 ms-auto';
-			dateEl.textContent = new Date(ts * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+			dateEl.dataset.dateValue = String(Number(ts) * 1000);
+			dateEl.dataset.dateFormat = 'locale';
+			dateEl.dataset.dateOptions = JSON.stringify({ year: 'numeric', month: 'short', day: 'numeric' });
+			dateEl.textContent = window.StreamientDateFormat?.formatLocale(Number(ts) * 1000, { year: 'numeric', month: 'short', day: 'numeric' }) || '';
 			titleRow.appendChild(dateEl);
 		}
 
@@ -691,7 +694,7 @@ function renderEmailThread(thread = [], currentId) {
 	threadEl.innerHTML = thread.map((msg) => {
 		const msgId = msg._id || msg.id || '';
 		const subject = escapeHtml(msg.subject || '(No subject)');
-		const date = msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : '';
+		const date = msg.createdAt ? window.StreamientDateFormat?.formatLocale(msg.createdAt) || '' : '';
 		const active = msgId === currentId ? ' is-active' : '';
 		return `<button type="button" class="rm-email-thread-item${active}" data-email-id="${msgId}">
 			<div class="rm-email-thread-subject fw-semibold text-truncate">${subject}</div>

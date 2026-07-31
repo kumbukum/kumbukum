@@ -1,5 +1,5 @@
 import { User } from '../model/user.js';
-import { hydratedQuery } from '../model/mongoose.js';
+import { queryForSave } from '../model/mongoose.js';
 import { TeamInvite } from '../model/team_invite.js';
 import { TenantMember, TEAM_MEMBER_ROLE_RANK } from '../model/tenant_member.js';
 import { Tenant } from '../modules/tenancy.js';
@@ -131,7 +131,7 @@ export async function createTeamMember(userId, host_id, data, ctx = {}) {
 }
 
 export async function updateTeamMemberRole(host_id, membershipId, actor, nextRole, ctx = {}) {
-	const membership = await hydratedQuery(TenantMember.findOne({ _id: membershipId, host_id }).populate('user', 'name email'));
+	const membership = await queryForSave(TenantMember.findOne({ _id: membershipId, host_id }).populate('user', 'name email'));
 	if (!membership) throw new Error('Member not found');
 	if (!membership.user) throw new Error('Member user no longer exists');
 	if (!['admin', 'member'].includes(nextRole)) throw new Error('Invalid role');

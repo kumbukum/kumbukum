@@ -50,7 +50,7 @@
 
 	function formatResultDate(value) {
 		if (!value) return '';
-		return new Date(Number(value) * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+		return window.StreamientDateFormat?.formatLocale(Number(value) * 1000, { month: 'short', day: 'numeric' }) || '';
 	}
 
 	function createHighlightedText(item) {

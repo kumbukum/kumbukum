@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from './model/mongoose.js';
 import config from './config.js';
 import { processChat } from './services/ai_chat_service.js';
 await mongoose.connect(config.mongoUri);

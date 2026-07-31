@@ -3,7 +3,7 @@
 //
 // Usage (inside the app container):
 //   docker compose exec app node scripts/reset-subscription.mjs <email>
-import mongoose from 'mongoose';
+import mongoose from '../model/mongoose.js';
 import config from '../config.js';
 import { User } from '../model/user.js';
 import { Tenant } from '../modules/tenancy.js';

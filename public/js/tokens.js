@@ -116,7 +116,7 @@
 		var deleteBtn = rowEl.querySelector('.delete-token');
 
 		nameEl.textContent = token.name;
-		createdEl.textContent = `Created ${new Date(token.created_at).toLocaleDateString()}`;
+		createdEl.textContent = `Created ${window.StreamientDateFormat?.formatLocale(token.created_at) || ''}`;
 		deleteBtn.dataset.id = token._id;
 
 		return rowEl;
