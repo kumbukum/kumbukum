@@ -24,6 +24,7 @@ export function toSafeUser(user) {
 	delete obj.stripe_customer_id;
 	delete obj.stripe_subscription_id;
 	delete obj.stripe_free_subscription_id;
+	delete obj.timezone_configured;
 	if (Array.isArray(obj.access_tokens)) obj.access_tokens = safeAccessTokens(obj.access_tokens);
 	return obj;
 }
@@ -34,6 +35,8 @@ const userSchema = new mongoose.Schema(
 		password: { type: String, required: true, select: false },
 		name: { type: String, required: true, trim: true },
 		timezone: { type: String, default: 'UTC' },
+		timezone_configured: { type: Boolean, default: false },
+		time_format: { type: String, enum: ['12-hour', '24-hour'] },
 		tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
 		host_id: { type: String, index: true },
 		is_active: { type: Boolean, default: false },

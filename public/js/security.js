@@ -132,7 +132,7 @@
 				if (pk.device_type === 'multiDevice') details.push('Synced');
 				if (pk.backed_up) details.push('Backed up');
 				const detailStr = details.length ? `<small class="text-muted d-block fs-7 ms-4 ps-1">${details.join(' · ')}</small>` : '';
-				const lastUsed = pk.last_used_at ? `<small class="text-muted">Last used ${new Date(pk.last_used_at).toLocaleDateString()}</small>` : '';
+				const lastUsed = pk.last_used_at ? `<small class="text-muted">Last used ${window.StreamientDateFormat?.formatLocale(pk.last_used_at) || ''}</small>` : '';
 
 				return `
 				<div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2">
@@ -145,8 +145,8 @@
 							</button>
 						</div>
 						<div class="ms-4 ps-1">
-							<small class="text-muted fs-7">Added ${new Date(pk.createdAt).toLocaleDateString()}</small>
-							${lastUsed ? `<small class="text-muted ms-2">Last used ${new Date(pk.last_used_at).toLocaleDateString()}</small>` : ''}
+							<small class="text-muted fs-7">Added ${window.StreamientDateFormat?.formatLocale(pk.createdAt) || ''}</small>
+							${lastUsed ? `<small class="text-muted ms-2">Last used ${window.StreamientDateFormat?.formatLocale(pk.last_used_at) || ''}</small>` : ''}
 						</div>
 						${detailStr}
 					</div>
@@ -426,7 +426,7 @@
 
 	function formatDate(value) {
 		if (!value) return 'never';
-		return new Date(value).toLocaleString();
+		return window.StreamientDateFormat?.formatLocale(value, { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }) || 'never';
 	}
 
 	function escapeHtml(str) {

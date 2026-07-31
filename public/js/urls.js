@@ -26,7 +26,7 @@
 	}
 
 	function renderUrlItemHtml(u) {
-		var date = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '';
+		var date = u.createdAt ? window.StreamientDateFormat?.formatLocale(u.createdAt) || '' : '';
 		var image = u.screenshot_url || u.og_image || '';
 		return '<div class="list-group-item url-item d-flex align-items-start gap-3" data-id="' + escapeHtml(u._id) + '" role="button" style="cursor:pointer">'
 			+ '<div class="batch-cb-wrap"><input type="checkbox" class="form-check-input batch-cb" value="' + escapeHtml(u._id) + '"></div>'
@@ -34,7 +34,7 @@
 			+ '<div class="flex-grow-1 overflow-hidden">'
 			+ '<div class="d-flex justify-content-between align-items-center gap-2">'
 			+ '<strong class="text-truncate">' + escapeHtml(u.title || u.url) + '</strong>'
-			+ '<span class="text-muted small text-nowrap flex-shrink-0">' + escapeHtml(date) + '</span>'
+			+ '<span class="text-muted small text-nowrap flex-shrink-0" data-date-value="' + escapeHtml(u.createdAt || '') + '" data-date-format="locale">' + escapeHtml(date) + '</span>'
 			+ '</div>'
 			+ '<div class="text-truncate"><a href="' + escapeHtml(u.url) + '" target="_blank" class="text-muted small url-link">' + escapeHtml(u.url) + '</a></div>'
 			+ '<p class="mb-0 text-muted small text-truncate">' + escapeHtml(u.description?.slice(0, 200) || '') + '</p>'

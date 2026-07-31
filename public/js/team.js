@@ -55,7 +55,7 @@
 				var removeButton = (!isOwner && !isCurrentUser)
 					? '<button class="btn btn-sm btn-outline-danger team-remove-member" data-id="' + member._id + '">' + kkIcon('delete') + '</button>'
 					: '';
-				var lastLogin = user.last_login ? '<small class="text-muted">Last login ' + escapeHtml(new Date(user.last_login).toLocaleDateString()) + '</small>' : '<small class="text-muted">No recent login recorded</small>';
+				var lastLogin = user.last_login ? '<small class="text-muted">Last login ' + escapeHtml(window.StreamientDateFormat?.formatLocale(user.last_login) || '') + '</small>' : '<small class="text-muted">No recent login recorded</small>';
 
 				return '<div class="list-group-item d-flex justify-content-between align-items-start gap-3 mb-3">'
 					+ '<div class="flex-grow-1">'

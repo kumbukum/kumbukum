@@ -28,9 +28,7 @@
 	}
 
 	function trashDate(value) {
-		var date = new Date(value);
-		if (!Number.isFinite(date.getTime())) return '';
-		return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+		return window.StreamientDateFormat?.formatLocale(value, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) || '';
 	}
 
 	function getSelected() {
@@ -78,7 +76,7 @@
 			+ '<span class="badge text-bg-secondary tag-badge rounded-pill">' + kkIcon(ICONS[item._type] || 'file') + ' ' + escapeHtml(LABELS[item._type] || item._type) + '</span>'
 			+ '<strong>' + escapeHtml(itemTitle(item)) + '</strong>'
 			+ '</div>'
-			+ '<small class="text-muted">Trashed ' + escapeHtml(trashDate(item.trashed_at)) + '</small>'
+			+ '<small class="text-muted" data-date-value="' + escapeHtml(item.trashed_at || '') + '" data-date-format="locale" data-date-prefix="Trashed " data-date-options="{&quot;year&quot;:&quot;numeric&quot;,&quot;month&quot;:&quot;short&quot;,&quot;day&quot;:&quot;numeric&quot;,&quot;hour&quot;:&quot;2-digit&quot;,&quot;minute&quot;:&quot;2-digit&quot;}">Trashed ' + escapeHtml(trashDate(item.trashed_at)) + '</small>'
 			+ '</div>'
 			+ '<div class="btn-group btn-group-sm ms-2">'
 			+ '<button class="btn btn-link restore-btn" title="Restore">' + kkIcon('restore') + '</button>'

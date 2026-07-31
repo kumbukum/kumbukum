@@ -28,7 +28,7 @@
 	function renderMemoryItemHtml(m) {
 		var excerpt = m.content?.slice(0, 200) || '';
 		var dateValue = m.git_commit?.committed_at || m.updatedAt;
-		var date = dateValue ? new Date(dateValue).toLocaleDateString() : '';
+		var date = dateValue ? window.StreamientDateFormat?.formatLocale(dateValue) || '' : '';
 		var tags = (m.tags || []).map(function (t) {
 			return '<span class="badge text-bg-secondary tag-badge rounded-pill me-1">' + escapeHtml(t) + '</span>';
 		}).join('');
@@ -39,7 +39,7 @@
 			+ '<div class="flex-grow-1 overflow-hidden">'
 			+ '<div class="d-flex justify-content-between align-items-center gap-2">'
 			+ '<strong class="text-truncate">' + escapeHtml(m.title) + '</strong>'
-			+ '<small class="text-muted text-nowrap flex-shrink-0">' + escapeHtml(date) + '</small>'
+			+ '<small class="text-muted text-nowrap flex-shrink-0" data-date-value="' + escapeHtml(dateValue || '') + '" data-date-format="locale">' + escapeHtml(date) + '</small>'
 			+ '</div>'
 			+ (excerpt ? '<p class="mb-0 text-muted small text-truncate">' + escapeHtml(excerpt) + '</p>' : '')
 			+ '<div class="text-muted small">' + tags + '</div>'

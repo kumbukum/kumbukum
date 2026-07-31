@@ -46,6 +46,14 @@ const productionFiles = [
 const mongooseWrapperPath = path.join(modelDir, 'mongoose.js');
 
 describe('Mongoose defaults', () => {
+	it('keeps legacy clock format unset until the user saves it', () => {
+		const user = new User({ email: 'timezone-default@example.com', password: 'password', name: 'Timezone Default' });
+
+		assert.equal(user.timezone, 'UTC');
+		assert.equal(user.timezone_configured, false);
+		assert.equal(user.time_format, undefined);
+	});
+
 	it('keeps app-side files on the configured Mongoose singleton', () => {
 		for (const file of productionFiles) {
 			if (file === mongooseWrapperPath) continue;

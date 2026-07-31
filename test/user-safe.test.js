@@ -15,6 +15,7 @@ describe('User.toSafe', () => {
 			password_reset_expires: new Date(),
 			stripe_customer_id: 'stripe-customer',
 			stripe_subscription_id: 'stripe-subscription',
+			timezone_configured: true,
 			access_tokens: [{ token: 'raw-token', name: 'MCP token' }],
 		});
 
@@ -26,6 +27,7 @@ describe('User.toSafe', () => {
 		assert.ok(!safe.password_reset_expires, 'password_reset_expires must not be exposed');
 		assert.ok(!safe.stripe_customer_id, 'stripe_customer_id must not be exposed');
 		assert.ok(!safe.stripe_subscription_id, 'stripe_subscription_id must not be exposed');
+		assert.equal(safe.timezone_configured, undefined);
 		assert.equal(safe.access_tokens.length, 1);
 		assert.ok(!safe.access_tokens[0].token, 'access token value must not be exposed');
 		assert.equal(safe.access_tokens[0].name, 'MCP token');
@@ -44,6 +46,7 @@ describe('User.toSafe', () => {
 			stripe_customer_id: 'stripe-customer',
 			stripe_subscription_id: 'stripe-subscription',
 			stripe_free_subscription_id: 'stripe-free-subscription',
+			timezone_configured: true,
 			access_tokens: [{ _id: 'token-1', token: 'raw-token', name: 'MCP token', created_at: new Date() }],
 		};
 
@@ -57,6 +60,7 @@ describe('User.toSafe', () => {
 		assert.equal(safe.stripe_customer_id, undefined);
 		assert.equal(safe.stripe_subscription_id, undefined);
 		assert.equal(safe.stripe_free_subscription_id, undefined);
+		assert.equal(safe.timezone_configured, undefined);
 		assert.deepEqual(safe.access_tokens, [{ _id: 'token-1', name: 'MCP token', created_at: user.access_tokens[0].created_at }]);
 		assert.equal(user.password, 'password-hash');
 	});

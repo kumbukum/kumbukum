@@ -1,0 +1,35 @@
+h2.h4.mb-4 Profile Settings
+
+.text-center.mb-4
+	+avatar(user.name, 'xl')
+	p.text-muted.mt-2.mb-0= user.email
+
+form#profile-form
+	.mb-3
+		label.form-label.small(for="profile-name") Name
+		input.form-control.form-control-sm#profile-name(type="text" value=user.name)
+	.mb-3
+		label.form-label.small(for="profile-email") Email
+		input.form-control.form-control-sm#profile-email(type="email" value=user.email)
+	.mb-3
+		label.form-label.small(for="profile-timezone") Timezone
+		select.form-select.form-select-sm#profile-timezone(data-timezone-select data-timezone-configured=(user.timezone_configured === true ? "true" : "false"))
+			each zone in timezone_options
+				option(value=zone.value selected=(user.timezone === zone.value))= zone.label
+		.form-text#profile-timezone-hint
+			if user.timezone === 'UTC' && user.timezone_configured !== true
+				span Your browser timezone will be suggested. Save to apply it.
+			else
+				span Times are displayed in this timezone.
+	.mb-3
+		label.form-label.small(for="profile-time-format") Time format
+		select.form-select.form-select-sm#profile-time-format(data-saved-time-format=(user.time_format || ""))
+			option(value="12-hour" selected=(user.time_format === '12-hour')) 12-hour
+			option(value="24-hour" selected=(user.time_format === '24-hour')) 24-hour
+		.form-text#profile-time-format-hint
+			if !user.time_format
+				span Your browser clock format is suggested. Save to apply it.
+			else
+				span Times use this clock format.
+	.d-flex.justify-content-end
+		button.btn.btn-sm.btn-primary(type="submit") Save Changes

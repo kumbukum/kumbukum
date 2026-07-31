@@ -30,6 +30,9 @@ function renderProjectOverview(overrides = {}) {
 		canManageProjectSettings: true,
 		is_hosted: false,
 		icon,
+		formatLocaleDate(value, options) {
+			return new Intl.DateTimeFormat('en-US', options).format(new Date(value));
+		},
 		...overrides,
 	});
 }

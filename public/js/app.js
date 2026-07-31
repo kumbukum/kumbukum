@@ -1187,7 +1187,7 @@ async function showGitSyncLogs(repoId) {
 	try {
 		const { logs } = await api('GET', `/git-repos/${repoId}/logs?limit=200`);
 		const rows = logs.map((log) => {
-			const date = new Date(log.createdAt).toLocaleString();
+			const date = window.StreamientDateFormat?.formatLocale(log.createdAt, { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }) || '';
 			const details = log.details && Object.keys(log.details).length
 				? `<div class="text-muted small">${escapeHtml(JSON.stringify(log.details))}</div>`
 				: '';
