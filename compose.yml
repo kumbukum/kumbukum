@@ -140,7 +140,7 @@ services:
     extends:
       file: ./compose.base.yml
       service: base
-    command: ["npm", "run", "dev"]
+    command: ["pnpm", "run", "dev"]
     ports:
       - 3000
     environment:
@@ -170,7 +170,7 @@ services:
       file: ./compose.base.yml
       service: base
     working_dir: /opt/streamient/apps/mcp
-    command: ["npm", "run", "start"]
+    command: ["pnpm", "run", "start"]
     ports:
       - 3000
     environment:
@@ -194,7 +194,7 @@ services:
     extends:
       file: ./compose.base.yml
       service: base
-    command: ["npm", "run", "start"]
+    command: ["pnpm", "run", "start"]
     environment:
       <<: *env
       STREAMIENT_APP: scheduler
@@ -210,7 +210,7 @@ services:
     extends:
       file: ./compose.base.yml
       service: base
-    command: ["npm", "run", "start"]
+    command: ["pnpm", "run", "start"]
     environment:
       <<: *env
       STREAMIENT_APP: email-worker

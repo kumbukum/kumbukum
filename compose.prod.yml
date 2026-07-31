@@ -104,7 +104,7 @@ x-environment: &environment
 services:
   app:
     image: ghcr.io/streamient/streamient:latest
-    command: ["npm", "run", "start"]
+    command: ["pnpm", "run", "start"]
     ports:
       - "3000:3000"
     environment: *environment
@@ -124,7 +124,7 @@ services:
 
   ws:
     image: ghcr.io/streamient/streamient:latest
-    command: ["npm", "run", "start"]
+    command: ["pnpm", "run", "start"]
     ports:
       - "3001:3001"
     environment:
@@ -147,7 +147,7 @@ services:
   mcp:
     image: ghcr.io/streamient/streamient:latest
     working_dir: /opt/streamient/apps/mcp
-    command: ["npm", "run", "start"]
+    command: ["pnpm", "run", "start"]
     ports:
       - "3002:3002"
     environment:
@@ -164,7 +164,7 @@ services:
 
   scheduler:
     image: ghcr.io/streamient/streamient:latest
-    command: ["npm", "run", "start"]
+    command: ["pnpm", "run", "start"]
     environment:
       <<: *environment
       STREAMIENT_APP: scheduler
