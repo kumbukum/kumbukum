@@ -605,6 +605,30 @@ small,
 	color: initial !important;
 }
 
+body.backend-admin .list-group-item-action {
+	color: var(--tblr-list-group-action-color, var(--bs-list-group-action-color, var(--bs-body-color))) !important;
+}
+
+body.backend-admin .list-group-item-action.active {
+	color: var(--tblr-list-group-active-color, var(--bs-list-group-active-color, var(--bs-body-color))) !important;
+}
+
+body.backend-admin .list-group-item-action:not(.active):hover,
+body.backend-admin .list-group-item-action:not(.active):focus {
+	color: var(--tblr-list-group-action-hover-color, var(--bs-list-group-action-hover-color, var(--bs-body-color))) !important;
+}
+
+body.backend-admin .list-group-item-action:not(.active):active {
+	color: var(--tblr-list-group-action-active-color, var(--bs-list-group-action-active-color, var(--bs-body-color))) !important;
+}
+
+[data-bs-theme="light"] .admin-theme-label-light,
+[data-theme="light"] .admin-theme-label-light,
+[data-bs-theme="dark"] .admin-theme-label-dark,
+[data-theme="dark"] .admin-theme-label-dark {
+	display: none;
+}
+
 .st-scroll-sentinel,
 .emails-scroll-sentinel {
 	display: block;

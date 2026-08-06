@@ -9,18 +9,25 @@ html(lang="en")
 			(function () {
 				try {
 					var t = localStorage.getItem('st-theme') || localStorage.getItem('kk-theme');
-					if (t !== 'light' && t !== 'dark') t = 'dark';
+					if (t !== 'light' && t !== 'dark') t = 'light';
 					document.documentElement.setAttribute('data-theme', t);
 					document.documentElement.setAttribute('data-bs-theme', t);
 				} catch (e) {
-					document.documentElement.setAttribute('data-theme', 'dark');
-					document.documentElement.setAttribute('data-bs-theme', 'dark');
+					document.documentElement.setAttribute('data-theme', 'light');
+					document.documentElement.setAttribute('data-bs-theme', 'light');
 				}
 			})();
 		link(href=`/static/v-${v}/css/admin_vendor.css` rel="stylesheet")
 		link(href=`/static/v-${v}/css/app.css` rel="stylesheet")
 		link(href=`/static/v-${v}/css/streamient-tabler.css` rel="stylesheet")
-	body
+	body.backend-admin
+		button.btn.btn-outline-secondary.btn-sm.position-absolute.top-0.end-0.m-3(type="button" data-admin-theme-toggle data-theme-storage-key="st-theme" data-theme-change-event="st-theme-change" aria-label="Toggle color theme" title="Toggle color theme")
+			span.admin-theme-label-dark
+				!= icon('darkMode', 'me-1')
+				span Dark theme
+			span.admin-theme-label-light
+				!= icon('lightMode', 'me-1')
+				span Light theme
 		.container
 			.row.justify-content-center.mt-5
 				.col-md-4
@@ -39,3 +46,4 @@ html(lang="en")
 									label.form-label(for="password") Password
 									input.form-control#password(type="password" name="password" required)
 								button.btn.btn-primary.w-100(type="submit") Sign In
+		script(src=`/static/v-${v}/js/admin_theme.js`)

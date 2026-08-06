@@ -9,12 +9,12 @@ html(lang="en")
 			(function () {
 				try {
 					var t = localStorage.getItem('st-theme') || localStorage.getItem('kk-theme');
-					if (t !== 'light' && t !== 'dark') t = 'dark';
+					if (t !== 'light' && t !== 'dark') t = 'light';
 					document.documentElement.setAttribute('data-theme', t);
 					document.documentElement.setAttribute('data-bs-theme', t);
 				} catch (e) {
-					document.documentElement.setAttribute('data-theme', 'dark');
-					document.documentElement.setAttribute('data-bs-theme', 'dark');
+					document.documentElement.setAttribute('data-theme', 'light');
+					document.documentElement.setAttribute('data-bs-theme', 'light');
 				}
 			})();
 		link(href=`/static/v-${v}/css/admin_vendor.css` rel="stylesheet")
@@ -26,7 +26,7 @@ html(lang="en")
 			body { display: flex; flex-direction: column; }
 			.admin-main { flex: 1; }
 			.admin-footer { flex-shrink: 0; }
-	body
+	body.backend-admin
 		nav.navbar.navbar-expand-lg.navbar-dark.bg-dark.sticky-top
 			.container-fluid
 				a.navbar-brand.ms-2(href="/admin") Streamient Admin
@@ -42,10 +42,17 @@ html(lang="en")
 								a.nav-link(href="/admin/audit-logs" class=(activeNav === 'audit-logs' ? 'active' : '')) Audit Logs
 							li.nav-item
 								a.nav-link(href="/admin/settings" class=(activeNav === 'settings' ? 'active' : '')) Settings
+					button.btn.btn-outline-light.btn-sm.me-3(type="button" data-admin-theme-toggle data-theme-storage-key="st-theme" data-theme-change-event="st-theme-change" aria-label="Toggle color theme" title="Toggle color theme")
+						span.admin-theme-label-dark
+							!= icon('darkMode', 'me-1')
+							span.d-none.d-sm-inline Dark theme
+						span.admin-theme-label-light
+							!= icon('lightMode', 'me-1')
+							span.d-none.d-sm-inline Light theme
 					form(action="/admin/logout" method="POST")
 						button.btn.btn-outline-light.btn-sm(type="submit")
 							!= icon('signOut', 'me-1')
-							| Logout
+							span Logout
 
 		.container-fluid.admin-main.py-4
 			block content
@@ -65,4 +72,5 @@ html(lang="en")
 		script(src=`/static/v-${v}/js/icons.js`)
 		script(src=`/static/v-${v}/js/autofill_guard.js`)
 		script(src=`/static/v-${v}/js/vendor.js` type="module")
+		script(src=`/static/v-${v}/js/admin_theme.js`)
 		block scripts

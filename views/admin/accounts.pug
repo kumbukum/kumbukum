@@ -12,7 +12,9 @@ block content
 				div
 					h1.mb-1 Accounts
 					.text-muted #{total} account#{total === 1 ? '' : 's'}
-				a.btn.btn-primary.btn-sm(href="/admin/accounts/new") Add Account
+				.d-flex.align-items-center
+					a.btn.btn-outline-secondary.btn-sm.me-3(href="/admin/api/users.csv") Export Users CSV
+					a.btn.btn-primary.btn-sm(href="/admin/accounts/new") Add Account
 
 			if error
 				.alert.alert-danger.mb-5= error

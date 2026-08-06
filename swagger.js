@@ -591,6 +591,25 @@ const swaggerSpec = {
 				},
 			},
 		},
+		'/admin/api/users.csv': {
+			get: {
+				tags: ['Admin'],
+				summary: 'Export registered users as CSV',
+				description: 'Returns one row per registered user across all tenant accounts with first_name, last_name, and email columns. Requires a backend-admin session.',
+				operationId: 'adminExportUsersCsv',
+				security: [{ AdminSession: [] }],
+				servers: [{ url: '/', description: 'Root application endpoint' }],
+				responses: {
+					200: {
+						description: 'UTF-8 user CSV download',
+						headers: { 'Content-Disposition': { schema: { type: 'string' }, description: 'Attachment filename containing the product and export date.' } },
+						content: { 'text/csv': { schema: { type: 'string' } } },
+					},
+					403: { description: 'Backend-admin session required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+					500: { description: 'Failed to export users', content: { 'text/plain': { schema: { type: 'string' } } } },
+				},
+			},
+		},
 		'/admin/api/accounts/{tenantId}': {
 			parameters: [{ name: 'tenantId', in: 'path', required: true, schema: { type: 'string' } }],
 			get: {
