@@ -12,6 +12,7 @@ import { ensureFreeSubscriptionForAccountHolder, ensureStripeCustomerForAccountH
 import { sendMagicLink } from '../services/magic_link_service.js';
 import { AccountProvisioningError, provisionAccount } from '../services/account_provisioning_service.js';
 import { AdminAccountError, getAdminAccount, listAdminAccounts, updateAdminAccount } from '../services/admin_account_service.js';
+import { buildAdminUsersCsv } from '../services/admin_user_export_service.js';
 import { CustomCodeSettingsError, getCustomCode, updateCustomCode } from '../services/custom_code_service.js';
 import managani from '../modules/managani.js';
 import { ManaganiSettingsError } from '../modules/managani_module.js';
@@ -108,6 +109,20 @@ router.get('/api/accounts', async (req, res) => {
 	} catch (err) {
 		log.error({ err }, 'Admin list accounts error');
 		res.status(500).json({ error: 'Failed to list accounts' });
+	}
+});
+
+router.get('/api/users.csv', async (req, res) => {
+	try {
+		const csv = await buildAdminUsersCsv();
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+		res.setHeader('Content-Disposition', `attachment; filename="streamient-users-${date}.csv"`);
+		res.setHeader('Cache-Control', 'no-store');
+		res.status(200).send(csv);
+	} catch (err) {
+		log.error({ err }, 'Admin user CSV export error');
+		res.status(500).type('text/plain').send('Failed to export users');
 	}
 });
 
