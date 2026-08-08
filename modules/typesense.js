@@ -40,6 +40,13 @@ const _chunk_fields = {
 	pages: ['text_content'],
 };
 const _trash_filtered_types = new Set(['notes', 'memory', 'urls', 'emails']);
+const _trash_query_by = {
+	notes: 'title',
+	memory: 'title',
+	urls: 'title',
+	emails: 'subject',
+};
+const TYPESENSE_MAX_PAGE_SIZE = 250;
 
 function chunkMetadataFields() {
 	return [
@@ -776,15 +783,20 @@ export async function removeDocument(host_id, type, docId) {
 /**
  * Remove documents by filter from a collection.
  */
-export async function removeDocumentsByFilter(host_id, type, filterBy) {
+export async function removeDocumentsByFilter(host_id, type, filterBy, options = {}) {
 	const ts = getTypesenseClient();
 	const collectionName = buildCollectionName(type, host_id);
-	try {
-		return await ts.collections(collectionName).documents().delete({ filter_by: filterBy });
-	} catch (err) {
-		if (err?.httpStatus === 404) return null;
-		throw err;
-	}
+	return withTypesenseResilience(
+		`delete by filter ${collectionName}`,
+		async () => {
+			try {
+				return await ts.collections(collectionName).documents().delete({ filter_by: filterBy, ...options });
+			} catch (err) {
+				if (err?.httpStatus === 404) return null;
+				throw err;
+			}
+		},
+	);
 }
 
 /**
@@ -807,13 +819,12 @@ export async function removeDocumentsBySourceIds(host_id, type, sourceIds) {
 		`bulk delete ${collectionName} (${ids.length} sources)`,
 		async () => {
 			try {
-				return await ts.collections(collectionName).documents().delete({ filter_by: filterBy });
+				return await ts.collections(collectionName).documents().delete({ filter_by: filterBy, batch_size: 250 });
 			} catch (err) {
 				if (err?.httpStatus === 404) return null;
 				throw err;
 			}
 		},
-		{ fallback: null },
 	);
 }
 
@@ -937,6 +948,113 @@ export async function listDocuments(host_id, type, options = {}) {
 	}
 	if (allHits.length > limit) allHits.length = limit;
 	return { hits: allHits, found };
+}
+
+function validateTrashMultiSearchResponse(response, expectedResults) {
+	if (!Array.isArray(response?.results) || response.results.length !== expectedResults) {
+		const err = new Error('Typesense trash multi-search returned an incomplete response');
+		err.code = 'TS_INCOMPLETE_MULTI_SEARCH';
+		throw err;
+	}
+	for (const result of response.results) {
+		if (!result?.error) continue;
+		const err = new Error(result.error);
+		err.httpStatus = Number(result.code || 500);
+		throw err;
+	}
+	return response;
+}
+
+function validateTrashUnionResponse(response) {
+	if (response?.error) {
+		const err = new Error(response.error);
+		err.httpStatus = Number(response.code || 500);
+		throw err;
+	}
+	if (!Array.isArray(response?.hits) || !Number.isFinite(Number(response.found))) {
+		const err = new Error('Typesense trash union search returned an incomplete response');
+		err.code = 'TS_INCOMPLETE_UNION_SEARCH';
+		throw err;
+	}
+	return response;
+}
+
+/**
+ * List exact trash anchor documents across tenant-scoped collections in one
+ * multi-search request. Union mode provides correctly merged pagination;
+ * federated mode provides exact per-collection counts.
+ */
+export async function listTrashDocuments(host_id, types = [..._trash_filtered_types], options = {}, deps = {}) {
+	const ts = deps.client || getTypesenseClient();
+	const selectedTypes = [...new Set(types)].filter((type) => _trash_filtered_types.has(type));
+	const requested = Math.max(1, Number(options.perPage || TYPESENSE_MAX_PAGE_SIZE));
+	if (options.union === true) {
+		const searches = selectedTypes.map((type) => {
+			const includeFields = resolveIncludeFields(options.include_fields, type);
+			const search = {
+				collection: buildCollectionName(type, host_id),
+				q: '*',
+				query_by: _trash_query_by[type],
+				prefix: false,
+				filter_by: combineFilters(options.filter_by, 'in_trash:=true', 'chunk_index:=0'),
+				sort_by: options.sort_by || 'trashed_at:desc',
+				exclude_fields: 'embedding',
+			};
+			if (includeFields) search.include_fields = includeFields;
+			return search;
+		});
+		const pagination = Number.isSafeInteger(options.offset) && options.offset >= 0
+			? { offset: options.offset, limit: requested }
+			: { page: options.page || 1, per_page: requested };
+		return withTypesenseResilience(
+			`trash union search host ${host_id}`,
+			async () => validateTrashUnionResponse(await ts.multiSearch.perform({ union: true, searches }, pagination)),
+		);
+	}
+	const searches = selectedTypes.map((type) => {
+		const includeFields = resolveIncludeFields(options.include_fields, type);
+		const search = {
+			collection: buildCollectionName(type, host_id),
+			q: '*',
+			query_by: _trash_query_by[type],
+			prefix: false,
+			per_page: Math.min(requested, TYPESENSE_MAX_PAGE_SIZE),
+			page: 1,
+			filter_by: combineFilters(options.filter_by, 'in_trash:=true', 'chunk_index:=0'),
+			sort_by: options.sort_by || 'trashed_at:desc',
+			exclude_fields: 'embedding',
+		};
+		if (includeFields) search.include_fields = includeFields;
+		return search;
+	});
+
+	const response = await withTypesenseResilience(
+		`trash multi-search host ${host_id}`,
+		async () => validateTrashMultiSearchResponse(await ts.multiSearch.perform({ searches }, {}), searches.length),
+	);
+	const merged = Object.fromEntries(selectedTypes.map((type) => [type, { hits: [], found: 0 }]));
+	response.results.forEach((result, index) => {
+		const type = selectedTypes[index];
+		merged[type].found = Number(result.found || 0);
+		merged[type].hits.push(...(result.hits || []));
+	});
+	for (const result of Object.values(merged)) {
+		if (result.hits.length > requested) result.hits.length = requested;
+	}
+	return merged;
+}
+
+/** Export all indexed trash chunks for reconciliation. */
+export async function exportTrashDocuments(host_id, type, deps = {}) {
+	if (!_trash_filtered_types.has(type)) throw new Error(`Invalid trash collection type: ${type}`);
+	const ts = deps.client || getTypesenseClient();
+	const collectionName = buildCollectionName(type, host_id);
+	const jsonl = await withTypesenseResilience(
+		`export trash ${collectionName}`,
+		() => ts.collections(collectionName).documents().export({ filter_by: 'in_trash:=true', include_fields: 'id,source_id,chunk_index,in_trash,trashed_at' }),
+	);
+	if (!jsonl) return [];
+	return String(jsonl).split('\n').filter(Boolean).map((line) => JSON.parse(line));
 }
 
 /**

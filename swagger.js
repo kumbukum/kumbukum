@@ -2196,19 +2196,22 @@ const swaggerSpec = {
             get: {
                 tags: ['Trash'],
                 summary: 'List trashed items',
-                description: 'Typesense-backed mixed trash listing for notes, memories, URLs, and emails. Items are sorted by trashed_at descending and writes still use Mongo.',
+                description: 'Typesense-backed mixed trash listing for notes, memories, URLs, and emails. Exact totals count only chunk_index 0 anchor documents from one tenant-scoped multi-search. Items are sorted by trashed_at descending.',
                 parameters: [
                     { name: 'type', in: 'query', schema: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] } },
                     { $ref: '#/components/parameters/page' },
                     { $ref: '#/components/parameters/limit' },
+                    { name: 'offset', in: 'query', description: 'Optional continuation offset used by incremental clients after local mutations.', schema: { type: 'integer', minimum: 0 } },
                 ],
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object' } } } },
+                    503: { description: 'Typesense unavailable', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
             delete: {
                 tags: ['Trash'],
                 summary: 'Empty trash',
+                description: 'Permanently deletes Mongo trash records and every matching Typesense trash document, including orphaned index documents.',
                 parameters: [{ name: 'confirm', in: 'query', required: true, schema: { type: 'string', enum: ['true'] } }],
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, deleted: { type: 'integer' } } } } } },
@@ -2219,9 +2222,10 @@ const swaggerSpec = {
             get: {
                 tags: ['Trash'],
                 summary: 'Get trash item count',
-                description: 'Typesense-backed count across notes, memories, URLs, and emails.',
+                description: 'Exact Typesense anchor-document count across notes, memories, URLs, and emails from one tenant-scoped multi-search. Errors propagate so clients can retain their previous count.',
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { count: { type: 'integer' } } } } } },
+                    503: { description: 'Typesense unavailable', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
                 },
             },
         },
@@ -2229,6 +2233,7 @@ const swaggerSpec = {
             post: {
                 tags: ['Trash'],
                 summary: 'Restore a trashed item',
+                description: 'Restores an existing Mongo record. If Mongo no longer contains it, removes the stale Typesense document and returns 404.',
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { type: 'object', properties: { type: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] }, id: { type: 'string' } }, required: ['type', 'id'] } } },
@@ -2243,13 +2248,13 @@ const swaggerSpec = {
             delete: {
                 tags: ['Trash'],
                 summary: 'Permanently delete a trashed item',
+                description: 'Idempotent. Always removes the requested Typesense source ID and returns success when Mongo already removed the record.',
                 parameters: [
                     { name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] } },
                     { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
                 ],
                 responses: {
-                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' } } } } } },
-                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+                    200: { description: 'Deleted or already absent', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, deleted: { type: 'boolean' }, already_missing: { type: 'boolean' } } } } } },
                 },
             },
         },

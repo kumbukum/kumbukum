@@ -1214,11 +1214,12 @@ router.get('/trash', async (req, res) => {
 			type: req.query.type,
 			page: parseInt(req.query.page, 10) || 1,
 			limit: parseInt(req.query.limit, 10) || 50,
+			offset: req.query.offset === undefined ? undefined : parseInt(req.query.offset, 10),
 		});
 		res.json(result);
 	} catch (err) {
 		log.error({ err }, 'List trash error');
-		res.status(500).json({ error: 'Failed to list trash' });
+		res.status(503).json({ error: 'Failed to list trash' });
 	}
 });
 
@@ -1228,7 +1229,7 @@ router.get('/trash/count', async (req, res) => {
 		res.json({ count });
 	} catch (err) {
 		log.error({ err }, 'Trash count error');
-		res.json({ count: 0 });
+		res.status(503).json({ error: 'Failed to count trash' });
 	}
 });
 
@@ -1238,10 +1239,10 @@ router.post('/trash/restore', async (req, res) => {
 		if (!type || !id) return res.status(400).json({ error: 'type and id required' });
 
 		const doc = await trashService.restoreItem(req.host_id, type, id);
-		if (!doc) return res.status(404).json({ error: 'Item not found in trash' });
 		emitToTenant(req.host_id, 'counts:refresh');
 		res.json({ message: 'Item restored', item: doc });
 	} catch (err) {
+		if (err?.code === 'TRASH_ITEM_NOT_FOUND') return res.status(404).json({ error: err.message, stale: true });
 		log.error({ err }, 'Restore error');
 		res.status(500).json({ error: 'Restore failed' });
 	}
@@ -1252,9 +1253,8 @@ router.delete('/trash/:type/:id', async (req, res) => {
 		const { type, id } = req.params;
 		if (!['notes', 'memories', 'urls', 'emails'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
 
-		const doc = await trashService.permanentDelete(req.host_id, type, id);
-		if (!doc) return res.status(404).json({ error: 'Item not found in trash' });
-		res.json({ message: 'Item permanently deleted' });
+		const result = await trashService.permanentDelete(req.host_id, type, id);
+		res.json({ message: 'Item permanently deleted', deleted: result.deleted, already_missing: result.missing });
 	} catch (err) {
 		log.error({ err }, 'Permanent delete error');
 		res.status(500).json({ error: 'Delete failed' });

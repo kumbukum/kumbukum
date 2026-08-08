@@ -5,18 +5,19 @@ import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { Email } from '../model/email.js';
-import { batchRestore, emptyTrash, getTrashCount, listTrash } from '../services/trash_service.js';
+import { batchRestore, emptyTrash, getTrashCount, listTrash, permanentDelete, restoreItem } from '../services/trash_service.js';
 
 function cloneDoc(doc) {
 	return { ...doc };
 }
 
 function chainFindIds(ids) {
-	return {
-		select: () => ({
-			lean: async () => ids.map((id) => ({ _id: { toString: () => id } })),
-		}),
+	const query = {
+		select: () => query,
+		read: () => query,
+		lean: async () => ids.map((id) => ({ _id: { toString: () => id } })),
 	};
+	return query;
 }
 
 describe('Trash service Typesense bulk writes', () => {
@@ -48,9 +49,12 @@ describe('Trash service Typesense bulk writes', () => {
 		};
 
 		const result = await listTrash('host-1', { page: 1, limit: 2 }, {
-			listDocuments: async (hostId, type, options) => {
-				calls.push({ hostId, type, options });
-				return responses[type];
+			listTrashDocuments: async (hostId, types, options) => {
+				calls.push({ hostId, types, options });
+				return {
+					found: 3,
+					hits: [responses.emails.hits[0], responses.notes.hits[0]],
+				};
 			},
 		});
 
@@ -58,9 +62,12 @@ describe('Trash service Typesense bulk writes', () => {
 		assert.equal(result.items[0]._type, 'emails');
 		assert.equal(result.items[0].subject, 'Email subject');
 		assert.equal(result.total, 3);
-		assert.deepEqual(calls.map((call) => call.type), ['notes', 'memory', 'urls', 'emails']);
-		assert.ok(calls.every((call) => call.options.filter_by === 'in_trash:=true'));
-		assert.ok(calls.every((call) => call.options.sort_by === 'trashed_at:desc'));
+		assert.equal(calls.length, 1);
+		assert.deepEqual(calls[0].types, ['notes', 'memory', 'urls', 'emails']);
+		assert.equal(calls[0].options.sort_by, 'trashed_at:desc');
+		assert.equal(calls[0].options.union, true);
+		assert.equal(calls[0].options.page, 1);
+		assert.equal(calls[0].options.perPage, 2);
 	});
 
 	it('gets trash count from Typesense', async () => {
@@ -68,16 +75,16 @@ describe('Trash service Typesense bulk writes', () => {
 		const calls = [];
 
 		const count = await getTrashCount('host-1', {
-			listDocuments: async (hostId, type, options) => {
-				calls.push({ hostId, type, options });
-				return { found: counts[type], hits: [] };
+			listTrashDocuments: async (hostId, types, options) => {
+				calls.push({ hostId, types, options });
+				return Object.fromEntries(types.map((type) => [type, { found: counts[type], hits: [] }]));
 			},
 		});
 
 		assert.equal(count, 14);
-		assert.deepEqual(calls.map((call) => call.type), ['notes', 'memory', 'urls', 'emails']);
-		assert.ok(calls.every((call) => call.options.filter_by === 'in_trash:=true'));
-		assert.ok(calls.every((call) => call.options.perPage === 1));
+		assert.equal(calls.length, 1);
+		assert.deepEqual(calls[0].types, ['notes', 'memory', 'urls', 'emails']);
+		assert.equal(calls[0].options.perPage, 1);
 	});
 
 	it('restores selected items with one bulk index call per type', async () => {
@@ -133,8 +140,11 @@ describe('Trash service Typesense bulk writes', () => {
 			]);
 			assert.deepEqual(stateUpdates.map((call) => call.query), [
 				{ _id: { $in: ['note-1', 'note-2'] }, host_id: 'host-1' },
+				{ _id: { $in: ['note-1', 'note-2'] }, host_id: 'host-1' },
+				{ _id: { $in: ['memory-1'] }, host_id: 'host-1' },
 				{ _id: { $in: ['memory-1'] }, host_id: 'host-1' },
 			]);
+			assert.deepEqual(stateUpdates.map((call) => call.update.$set.is_indexed), [false, true, false, true]);
 		} finally {
 			Note.findOneAndUpdate = originals.noteFindOneAndUpdate;
 			Note.updateMany = originals.noteUpdateMany;
@@ -144,9 +154,11 @@ describe('Trash service Typesense bulk writes', () => {
 	});
 
 	it('empty trash removes Typesense docs once per non-empty type', async () => {
+		const activeId = '507f1f77bcf86cd799439011';
 		const originals = {
 			noteFind: Note.find,
 			noteDeleteMany: Note.deleteMany,
+			noteUpdateMany: Note.updateMany,
 			memoryFind: Memory.find,
 			memoryDeleteMany: Memory.deleteMany,
 			urlFind: Url.find,
@@ -155,41 +167,109 @@ describe('Trash service Typesense bulk writes', () => {
 			emailDeleteMany: Email.deleteMany,
 		};
 		const removeCalls = [];
+		const graphCalls = [];
 		const deleteQueries = [];
+		const indexCalls = [];
+		const stateUpdates = [];
 
-		Note.find = () => chainFindIds(['note-1', 'note-2']);
-		Memory.find = () => chainFindIds(['memory-1']);
+		Note.find = (query) => chainFindIds(query.in_trash ? ['note-1', 'note-2'] : query._id?.$in?.includes(activeId) ? [activeId] : []);
+		Memory.find = (query) => chainFindIds(query.in_trash ? ['memory-1'] : []);
 		Url.find = () => chainFindIds([]);
-		Email.find = () => chainFindIds(['email-1']);
+		Email.find = (query) => chainFindIds(query.in_trash ? ['email-1'] : []);
 		Note.deleteMany = async (query) => deleteQueries.push({ type: 'notes', query });
 		Memory.deleteMany = async (query) => deleteQueries.push({ type: 'memory', query });
 		Url.deleteMany = async (query) => deleteQueries.push({ type: 'urls', query });
 		Email.deleteMany = async (query) => deleteQueries.push({ type: 'emails', query });
+		Note.updateMany = async (query, update) => stateUpdates.push({ query, update });
 
 		try {
 			const result = await emptyTrash('host-1', {
-				bulkRemoveDocuments: async (hostId, type, ids) => {
-					removeCalls.push({ hostId, type, ids });
-					return ids.map((id) => ({ id, success: true }));
+				exportTrashDocuments: async (hostId, type) => type === 'notes' ? [{ source_id: 'note-1' }, { source_id: 'note-orphan' }, { source_id: activeId }] : [],
+				removeDocumentsByFilter: async (hostId, type, filter, options) => removeCalls.push({ hostId, type, filter, options }),
+				removeGraphLinks: async (hostId, ids) => graphCalls.push({ hostId, ids }),
+				bulkIndexDocuments: async (hostId, type, docs, options) => {
+					indexCalls.push({ hostId, type, ids: docs.map((doc) => String(doc._id)), options });
+					return docs.map((doc) => ({ id: String(doc._id), success: true }));
 				},
 			});
 
-			assert.deepEqual(result, { deleted: 4 });
-			assert.deepEqual(removeCalls, [
-				{ hostId: 'host-1', type: 'notes', ids: ['note-1', 'note-2'] },
-				{ hostId: 'host-1', type: 'memory', ids: ['memory-1'] },
-				{ hostId: 'host-1', type: 'emails', ids: ['email-1'] },
-			]);
+			assert.deepEqual(result, { deleted: 5 });
+			assert.deepEqual(removeCalls.map((call) => call.type), ['notes', 'memory', 'urls', 'emails']);
+			assert.ok(removeCalls.every((call) => call.filter === 'in_trash:=true'));
+			assert.ok(removeCalls.every((call) => call.options.batch_size === 250));
+			assert.deepEqual(graphCalls[0], { hostId: 'host-1', ids: ['note-1', 'note-orphan', 'note-2'] });
+			assert.deepEqual(indexCalls, [{ hostId: 'host-1', type: 'notes', ids: [activeId], options: { removeExisting: false } }]);
+			assert.deepEqual(stateUpdates.map((call) => call.update.$set.is_indexed), [false, true]);
 			assert.equal(deleteQueries.length, 4);
 		} finally {
 			Note.find = originals.noteFind;
 			Note.deleteMany = originals.noteDeleteMany;
+			Note.updateMany = originals.noteUpdateMany;
 			Memory.find = originals.memoryFind;
 			Memory.deleteMany = originals.memoryDeleteMany;
 			Url.find = originals.urlFind;
 			Url.deleteMany = originals.urlDeleteMany;
 			Email.find = originals.emailFind;
 			Email.deleteMany = originals.emailDeleteMany;
+		}
+	});
+
+	it('permanent delete is idempotent and always cleans the source ID', async () => {
+		const originals = { findOneAndDelete: Note.findOneAndDelete, findOne: Note.findOne };
+		const removeCalls = [];
+		const graphCalls = [];
+		let present = true;
+		Note.findOneAndDelete = async () => {
+			if (present) return { _id: 'note-1' };
+			throw Object.assign(new Error('invalid ObjectId'), { name: 'CastError' });
+		};
+		Note.findOne = () => ({ read: () => ({ lean: async () => { throw Object.assign(new Error('invalid ObjectId'), { name: 'CastError' }); } }) });
+
+		try {
+			const deps = {
+				bulkRemoveDocuments: async (hostId, type, ids) => removeCalls.push({ hostId, type, ids }),
+				removeGraphLinks: async (hostId, ids) => graphCalls.push({ hostId, ids }),
+			};
+			const first = await permanentDelete('host-1', 'notes', 'note-1', deps);
+			present = false;
+			const second = await permanentDelete('host-1', 'notes', 'note-1', deps);
+
+			assert.deepEqual(first, { id: 'note-1', deleted: true, missing: false, repaired: false });
+			assert.deepEqual(second, { id: 'note-1', deleted: false, missing: true, repaired: false });
+			assert.deepEqual(removeCalls, [
+				{ hostId: 'host-1', type: 'notes', ids: ['note-1'] },
+				{ hostId: 'host-1', type: 'notes', ids: ['note-1'] },
+			]);
+			assert.deepEqual(graphCalls, [
+				{ hostId: 'host-1', ids: ['note-1'] },
+				{ hostId: 'host-1', ids: ['note-1'] },
+			]);
+		} finally {
+			Note.findOneAndDelete = originals.findOneAndDelete;
+			Note.findOne = originals.findOne;
+		}
+	});
+
+	it('strict restore removes an orphan index entry and reports stale not-found', async () => {
+		const originals = { findOneAndUpdate: Note.findOneAndUpdate, findOne: Note.findOne };
+		const removeCalls = [];
+		const graphCalls = [];
+		Note.findOneAndUpdate = async () => { throw Object.assign(new Error('invalid ObjectId'), { name: 'CastError' }); };
+		Note.findOne = () => ({ read: () => ({ lean: async () => { throw Object.assign(new Error('invalid ObjectId'), { name: 'CastError' }); } }) });
+
+		try {
+			await assert.rejects(
+				() => restoreItem('host-1', 'notes', 'note-orphan', {
+					bulkRemoveDocuments: async (hostId, type, ids) => removeCalls.push({ hostId, type, ids }),
+					removeGraphLinks: async (hostId, ids) => graphCalls.push({ hostId, ids }),
+				}),
+				(err) => err.code === 'TRASH_ITEM_NOT_FOUND' && err.stale === true && err.message === 'Item no longer exists',
+			);
+			assert.deepEqual(removeCalls, [{ hostId: 'host-1', type: 'notes', ids: ['note-orphan'] }]);
+			assert.deepEqual(graphCalls, [{ hostId: 'host-1', ids: ['note-orphan'] }]);
+		} finally {
+			Note.findOneAndUpdate = originals.findOneAndUpdate;
+			Note.findOne = originals.findOne;
 		}
 	});
 });

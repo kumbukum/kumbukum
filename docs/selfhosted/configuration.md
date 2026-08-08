@@ -72,6 +72,7 @@ When `REDIS_SENTINEL` is set, the app connects via Sentinel for automatic failov
 | `TYPESENSE_API_KEY` | Typesense API key | Yes | — |
 | `TYPESENSE_NODES` | Multi-node cluster config as JSON. Example: `[{"host":"ts1","port":8108,"protocol":"http"},{"host":"ts2","port":8108,"protocol":"http"}]` | No | — |
 | `TYPESENSE_COLLECTION_PREFIX` | Prefix added to all collection names (`st_emails_<id>`), so multiple products can share one Typesense cluster. Set to an empty string to keep unprefixed names on a dedicated cluster. | No | `st` |
+| `SCHEDULER_TRASH_RECONCILIATION_ENABLED` | Enables nightly targeted trash reconciliation. Set to `true` only after every Typesense follower is healthy with no material Raft applied gap or restart loop. | No | `false` |
 
 When `TYPESENSE_NODES` is set, the individual host/port/protocol variables are ignored and the cluster config is used instead.
 
