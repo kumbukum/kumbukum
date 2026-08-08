@@ -32,7 +32,6 @@ urlSchema.index({ host_id: 1, in_trash: 1, project: 1 });
 urlSchema.index({ host_id: 1, project: 1, normalized_url: 1, in_trash: 1 });
 urlSchema.index({ is_indexed: 1, in_trash: 1 });
 urlSchema.index({ crawl_enabled: 1, crawl_partial: 1, last_crawled: 1 });
-urlSchema.index({ trashed_at: 1 }, { expireAfterSeconds: 2592000, partialFilterExpression: { trashed_at: { $type: 'date' }, in_trash: true } });
 
 urlSchema.plugin(textSanitizerPlugin);
 

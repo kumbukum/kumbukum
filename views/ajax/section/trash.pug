@@ -1,42 +1,43 @@
 .d-flex.justify-content-between.align-items-center.mb-3
-	h4
+	h1
 		!= icon('delete', 'me-2')
-		| Trash
+		span Trash
 	button.btn.btn-outline-danger.btn-sm#empty-trash-btn
 		!= icon('delete', 'me-1')
-		| Empty Trash
+		span Empty Trash
 
 .alert.alert-info.py-2.mb-3
 	!= icon('info', 'me-1')
-	| Items in trash are automatically deleted after 30 days.
+	span Items in trash are automatically deleted after 30 days.
 
 .d-flex.align-items-center.mb-2.gap-2
 	.btn-group.btn-group-sm(role="group")
 		button.btn.btn-outline-secondary.active.trash-filter-btn(data-type="") All
 		button.btn.btn-outline-secondary.trash-filter-btn(data-type="notes")
 			!= icon('description', 'me-1')
-			| Notes
+			span Notes
 		button.btn.btn-outline-secondary.trash-filter-btn(data-type="memories")
 			!= icon('lightbulb', 'me-1')
-			| Memories
+			span Memories
 		button.btn.btn-outline-secondary.trash-filter-btn(data-type="urls")
 			!= icon('link', 'me-1')
-			| URLs
+			span URLs
 		button.btn.btn-outline-secondary.trash-filter-btn(data-type="emails")
 			!= icon('mail', 'me-1')
 			span Emails
 
 .d-flex.align-items-center.mb-2.gap-2#trash-batch-toolbar
 	.form-check
-		input.form-check-input#trash-select-all-cb(type="checkbox")
+		input.form-check-input.h-20px.w-30px#trash-select-all-cb(type="checkbox")
 		label.form-check-label.small(for="trash-select-all-cb") Select all
 	.batch-actions.d-none.d-flex.align-items-center.gap-2#trash-batch-actions
 		span.badge.bg-secondary#trash-batch-count 0 selected
 		button.btn.btn-link.btn-sm#trash-batch-restore-btn
 			!= icon('restore', 'me-1')
-			| Restore
+			span Restore
 		button.btn.btn-link.btn-sm#trash-batch-delete-btn
 			!= icon('delete', 'me-1')
-			| Delete Forever
+			span Delete Forever
 
 #trash-list.list-group
+#trash-empty-state.text-muted.p-3.d-none Trash is empty.

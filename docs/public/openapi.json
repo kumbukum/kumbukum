@@ -1587,6 +1587,67 @@
         }
       }
     },
+    "/admin/api/users.csv": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Export registered users as CSV",
+        "description": "Returns one row per registered user across all tenant accounts with first_name, last_name, and email columns. Requires a backend-admin session.",
+        "operationId": "adminExportUsersCsv",
+        "security": [
+          {
+            "AdminSession": []
+          }
+        ],
+        "servers": [
+          {
+            "url": "/",
+            "description": "Root application endpoint"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "UTF-8 user CSV download",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Attachment filename containing the product and export date."
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Backend-admin session required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to export users",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/api/accounts/{tenantId}": {
       "parameters": [
         {
@@ -6299,7 +6360,7 @@
           "Trash"
         ],
         "summary": "List trashed items",
-        "description": "Typesense-backed mixed trash listing for notes, memories, URLs, and emails. Items are sorted by trashed_at descending and writes still use Mongo.",
+        "description": "Typesense-backed mixed trash listing for notes, memories, URLs, and emails. Exact totals count only chunk_index 0 anchor documents from one tenant-scoped multi-search. Items are sorted by trashed_at descending.",
         "parameters": [
           {
             "name": "type",
@@ -6319,6 +6380,15 @@
           },
           {
             "$ref": "#/components/parameters/limit"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Optional continuation offset used by incremental clients after local mutations.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -6331,6 +6401,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Typesense unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -6339,6 +6419,7 @@
           "Trash"
         ],
         "summary": "Empty trash",
+        "description": "Permanently deletes Mongo trash records and every matching Typesense trash document, including orphaned index documents.",
         "parameters": [
           {
             "name": "confirm",
@@ -6380,7 +6461,7 @@
           "Trash"
         ],
         "summary": "Get trash item count",
-        "description": "Typesense-backed count across notes, memories, URLs, and emails.",
+        "description": "Exact Typesense anchor-document count across notes, memories, URLs, and emails from one tenant-scoped multi-search. Errors propagate so clients can retain their previous count.",
         "responses": {
           "200": {
             "description": "OK",
@@ -6396,6 +6477,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Typesense unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -6406,6 +6497,7 @@
           "Trash"
         ],
         "summary": "Restore a trashed item",
+        "description": "Restores an existing Mongo record. If Mongo no longer contains it, removes the stale Typesense document and returns 404.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6472,6 +6564,7 @@
           "Trash"
         ],
         "summary": "Permanently delete a trashed item",
+        "description": "Idempotent. Always removes the requested Typesense source ID and returns success when Mongo already removed the record.",
         "parameters": [
           {
             "name": "type",
@@ -6498,7 +6591,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Deleted or already absent",
             "content": {
               "application/json": {
                 "schema": {
@@ -6506,18 +6599,14 @@
                   "properties": {
                     "message": {
                       "type": "string"
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "already_missing": {
+                      "type": "boolean"
                     }
                   }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

@@ -313,28 +313,34 @@ describe('email retention scheduler cleanup', () => {
 		const spamEmail = { _id: 'spam-email', host_id: 'host-2' };
 		const findQueries = [];
 		const findLimits = [];
+		const readPreferences = [];
 		const deleteQueries = [];
 		const removedSearchDocs = [];
 		const removedGraphLinks = [];
 		const findBatches = [[trashEmail, secondTrashEmail, spamEmail], []];
 		const emailModel = {
-			find: (query) => ({
-				select: (fields) => {
+			find: (query) => {
+				findQueries.push(query);
+				const chain = {
+					select: (fields) => {
 					assert.equal(fields, '_id host_id');
-					return {
-						limit: (limit) => {
-							findQueries.push(query);
-							findLimits.push(limit);
-							return {
-								lean: async () => findBatches.shift(),
-							};
-						},
-					};
-				},
-			}),
+						return chain;
+					},
+					limit: (limit) => {
+						findLimits.push(limit);
+						return chain;
+					},
+					read: (preference) => {
+						readPreferences.push(preference);
+						return chain;
+					},
+					lean: async () => findBatches.shift(),
+				};
+				return chain;
+			},
 			deleteMany: async (query) => {
 				deleteQueries.push(query);
-				return { deletedCount: query._id.$in.length };
+				return { deletedCount: 3 };
 			},
 		};
 
@@ -349,13 +355,24 @@ describe('email retention scheduler cleanup', () => {
 		assert.equal(summary.deleted, 3);
 		assert.equal(summary.cutoff.toISOString(), '2026-01-01T02:30:00.000Z');
 		assert.equal(findLimits[0], 25);
+		assert.deepEqual(readPreferences, ['primary', 'primary']);
 		assert.deepEqual(findQueries[0], {
 			$or: [
 				{ in_trash: true, trashed_at: { $lte: summary.cutoff } },
 				{ in_trash: { $ne: true }, mailbox: 'spam', updatedAt: { $lte: summary.cutoff } },
 			],
 		});
-		assert.deepEqual(deleteQueries, [{ _id: { $in: ['trash-email', 'trash-email-2', 'spam-email'] } }]);
+		assert.deepEqual(deleteQueries, [{
+			$and: [
+				findQueries[0],
+				{
+					$or: [
+						{ host_id: 'host-1', _id: { $in: ['trash-email', 'trash-email-2'] } },
+						{ host_id: 'host-2', _id: { $in: ['spam-email'] } },
+					],
+				},
+			],
+		}]);
 		assert.deepEqual(removedSearchDocs, [
 			{ hostId: 'host-1', type: 'emails', ids: ['trash-email', 'trash-email-2'] },
 			{ hostId: 'host-2', type: 'emails', ids: ['spam-email'] },

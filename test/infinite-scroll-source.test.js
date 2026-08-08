@@ -85,10 +85,28 @@ describe('record infinite scroll wiring', () => {
 		assert.ok(trash.includes("sentinelClass: 'trash-scroll-sentinel'"));
 		assert.ok(trash.includes('onLoadMore: loadMoreTrash'));
 		assert.ok(trash.includes('renderTrashItems(items, true)'));
-		assert.ok(trash.includes('hasMore = pageNum * PAGE_SIZE < total'));
+		assert.ok(trash.includes("params.push('offset=' + offset)"));
+		assert.ok(trash.includes('hasMore = loadedTrashItemCount() < total'));
 		assert.ok(trash.includes('infiniteScroll?.kick()'));
 		assert.ok(trash.includes('infiniteScroll.destroy()'));
 		assert.ok(!trash.includes('new IntersectionObserver'));
+	});
+
+	it('updates global trash mutations incrementally without page or section reloads', () => {
+		const trash = read('public/js/trash.js');
+		const itemMutations = trash.slice(trash.indexOf('function bindTrashItem'), trash.indexOf('function renderTrashItems'));
+		const batchMutations = trash.slice(trash.indexOf("batchRestoreBtn?.addEventListener"), trash.indexOf('filterBtns.forEach'));
+
+		assert.match(trash, /function removeTrashItems\(items\)/);
+		assert.match(trash, /item\.remove\(\)/);
+		assert.match(trash, /function setButtonLoading\(button, loading\)/);
+		assert.match(itemMutations, /removeTrashItems\(\[item\]\)/);
+		assert.match(batchMutations, /removeTrashItems\(items\)/);
+		assert.match(batchMutations, /listEl\.replaceChildren\(\)/);
+		assert.match(itemMutations, /showError\(/);
+		assert.match(batchMutations, /showError\(/);
+		assert.doesNotMatch(itemMutations, /loadTrash\(|location\.reload|loadSection|navigateTo/);
+		assert.doesNotMatch(batchMutations, /loadTrash\(|location\.reload|loadSection|navigateTo/);
 	});
 
 	it('gives scroll sentinels nonzero dimensions', () => {

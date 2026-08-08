@@ -1,6 +1,6 @@
 import { Cron } from 'croner';
 import { reindexDue } from './crawler.js';
-import { removeDocumentsBySourceIds, runStreamientIndexer } from './typesense.js';
+import { runStreamientIndexer } from './typesense.js';
 import { User } from '../model/user.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
@@ -9,14 +9,15 @@ import { Email } from '../model/email.js';
 import { sendTrialEnding3DayEmail, sendTrialEnding24HourEmail, sendTrialExpiredEmail } from '../services/email_service.js';
 import { cleanupExpiredExports } from '../services/export_service.js';
 import { runScheduledSync } from '../services/git_sync_service.js';
-import { removeLinksForItems } from '../services/graph_service.js';
+import { reconcileActiveTrashTenants } from '../services/trash_reconciliation_service.js';
+import { runEmailRetentionCleanup, runTrashRetentionCleanup } from '../services/trash_retention_service.js';
 import { createLogger } from './logger.js';
+
+export { runEmailRetentionCleanup };
 
 const log = createLogger('scheduler');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const EMAIL_RETENTION_DAYS = 30;
-const EMAIL_RETENTION_BATCH_SIZE = 500;
 
 async function sendTrialReminder(userModel, user, fieldName, now, sendEmail) {
 	const endDate = new Date(user.trial_ends_at).toLocaleDateString();
@@ -97,71 +98,6 @@ export async function runTrialLifecycle({
 	};
 }
 
-function buildExpiredEmailRetentionQuery(cutoff) {
-	return {
-		$or: [
-			{ in_trash: true, trashed_at: { $lte: cutoff } },
-			{ in_trash: { $ne: true }, mailbox: 'spam', updatedAt: { $lte: cutoff } },
-		],
-	};
-}
-
-async function cleanupDeletedEmailReferences(emails, removeSearchDocuments, removeGraphLinks) {
-	const emailIdsByHost = new Map();
-
-	for (const email of emails) {
-		const emailId = email._id?.toString ? email._id.toString() : String(email._id || '');
-		const hostId = email.host_id?.toString ? email.host_id.toString() : String(email.host_id || '');
-		if (!emailId || !hostId) continue;
-		if (!emailIdsByHost.has(hostId)) emailIdsByHost.set(hostId, []);
-		emailIdsByHost.get(hostId).push(emailId);
-	}
-
-	for (const [hostId, emailIds] of emailIdsByHost) {
-		await Promise.all([
-			Promise.resolve(removeSearchDocuments(hostId, 'emails', emailIds)).catch((err) => {
-				log.error({ err }, 'Typesense bulk remove error');
-			}),
-			Promise.resolve(removeGraphLinks(hostId, emailIds)).catch((err) => {
-				log.error({ err }, 'Graph link bulk cleanup error');
-			}),
-		]);
-	}
-}
-
-export async function runEmailRetentionCleanup({
-	now = new Date(),
-	emailModel = Email,
-	removeSearchDocuments = removeDocumentsBySourceIds,
-	removeGraphLinks = removeLinksForItems,
-	batchSize = EMAIL_RETENTION_BATCH_SIZE,
-} = {}) {
-	const cutoff = new Date(now.getTime() - EMAIL_RETENTION_DAYS * DAY_MS);
-	const query = buildExpiredEmailRetentionQuery(cutoff);
-	let deleted = 0;
-
-	while (true) {
-		const emails = await emailModel
-			.find(query)
-			.select('_id host_id')
-			.limit(batchSize)
-			.lean();
-
-		if (!emails.length) break;
-
-		const ids = emails.map((email) => email._id);
-		const result = await emailModel.deleteMany({ _id: { $in: ids } });
-		const deletedInBatch = result?.deletedCount ?? emails.length;
-		deleted += deletedInBatch;
-
-		await cleanupDeletedEmailReferences(emails, removeSearchDocuments, removeGraphLinks);
-
-		if (deletedInBatch === 0 || emails.length < batchSize) break;
-	}
-
-	return { deleted, cutoff };
-}
-
 /**
  * Schedule crawl reindexing for due URLs every 10 minutes.
  * Schedule trial-ending reminders daily at 9 AM.
@@ -222,13 +158,34 @@ export function startScheduler() {
 		}
 	});
 
-	// Email retention: permanently delete spam/trash emails older than 30 days.
+	// Retention: permanently delete all trash plus non-trash spam emails older than 30 days.
 	new Cron('30 2 * * *', async () => {
 		try {
-			const summary = await runEmailRetentionCleanup();
-			log.info({ deleted: summary.deleted }, 'Email retention cleanup complete');
+			const summary = await runTrashRetentionCleanup();
+			log.info({ deleted: summary.deleted, errors: summary.errors.length, types: summary.types }, 'Trash retention cleanup complete');
 		} catch (err) {
-			log.error({ err }, 'Email retention cleanup error');
+			log.error({ err }, 'Trash retention cleanup error');
+		}
+	});
+
+	let trashReconciliationRunning = false;
+	new Cron('10 3 * * *', async () => {
+		if (process.env.SCHEDULER_TRASH_RECONCILIATION_ENABLED !== 'true') {
+			log.info('Scheduled trash reconciliation skipped: set SCHEDULER_TRASH_RECONCILIATION_ENABLED=true after Typesense health verification');
+			return;
+		}
+		if (trashReconciliationRunning) {
+			log.warn('Scheduled trash reconciliation skipped: previous run active');
+			return;
+		}
+		trashReconciliationRunning = true;
+		try {
+			const summaries = await reconcileActiveTrashTenants({ dryRun: false });
+			for (const summary of summaries) log.info({ summary }, 'Trash reconciliation tenant complete');
+		} catch (err) {
+			log.error({ err }, 'Trash reconciliation error');
+		} finally {
+			trashReconciliationRunning = false;
 		}
 	});
 
@@ -242,5 +199,5 @@ export function startScheduler() {
 		}
 	});
 
-	log.info('Scheduler started: due crawl every 10min, trial lifecycle at 09:00, batch index every 20s, export cleanup hourly, email retention daily at 02:30, git sync every 10min');
+	log.info('Scheduler started: due crawl every 10min, trial lifecycle at 09:00, batch index every 20s, export cleanup hourly, trash retention daily at 02:30, trash reconciliation daily at 03:10, git sync every 10min');
 }

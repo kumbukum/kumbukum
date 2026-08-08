@@ -14,6 +14,8 @@
     "dev": "nodemon --max-old-space-size=4096 --trace-warnings --import ./tracing.js app.js",
     "test": "node --test --test-force-exit test/*.test.js test/**/*.test.js",
     "test:mcp": "node --test --test-force-exit test/mcp/**/*.test.js",
+    "trash:reconcile": "node scripts/reconcile-trash.mjs",
+    "trash:migrate-ttl": "node scripts/migrate-trash-ttl-indexes.mjs",
     "docs:dev": "pnpm --filter @streamient/docs dev",
     "docs:build": "pnpm --filter @streamient/docs build",
     "docs:preview": "pnpm --filter @streamient/docs preview"

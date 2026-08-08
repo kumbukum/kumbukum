@@ -47,3 +47,24 @@ curl https://your-instance.com/api/v1/urls \
 ## Migration Notes
 
 Breaking changes, if any, are documented in the [GitHub releases](https://github.com/streamient/streamient/releases). Check the release notes before upgrading to a new major version.
+
+### Typesense-backed Trash retention
+
+After every app and scheduler replica runs the new release:
+
+1. Verify every Typesense follower is healthy, has no material Raft applied gap, and is not restarting.
+2. Preview and then remove only the obsolete `trashed_at_1` MongoDB indexes:
+
+```bash
+docker compose exec app pnpm trash:migrate-ttl
+docker compose exec app pnpm trash:migrate-ttl --apply --confirm-all-replicas-upgraded
+```
+
+3. Preview targeted reconciliation for the affected tenant, then apply it:
+
+```bash
+docker compose exec app pnpm trash:reconcile --host-id <host_id>
+docker compose exec app pnpm trash:reconcile --host-id <host_id> --apply --confirm-typesense-healthy
+```
+
+4. Set `SCHEDULER_TRASH_RECONCILIATION_ENABLED=true` to enable nightly reconciliation.
