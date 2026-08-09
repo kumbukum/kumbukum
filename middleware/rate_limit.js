@@ -18,6 +18,7 @@ const SEARCH_READ_API_PATHS = new Set([
 	'/search/all',
 	'/search/quick',
 	'/chat/search',
+	'/mobile/search',
 ]);
 
 const EXPENSIVE_API_METHOD_PATHS = new Set([
@@ -33,6 +34,7 @@ const EXPENSIVE_API_METHOD_PATHS = new Set([
 	'POST /settings/byo-ai/verify',
 	'POST /settings/white-label/domain/verify',
 	'POST /settings/white-label/domain/refresh',
+	'POST /mobile/chat/stream',
 ]);
 
 const EXPENSIVE_API_PATTERNS = [
@@ -44,6 +46,8 @@ const EXPENSIVE_API_PATTERNS = [
 const UPLOAD_API_PATTERNS = [
 	{ method: 'POST', pattern: /^\/notes\/import$/ },
 	{ method: 'POST', pattern: /^\/settings\/white-label\/assets\/[^/]+$/ },
+	{ method: 'POST', pattern: /^\/mobile\/note-imports$/ },
+	{ method: 'POST', pattern: /^\/mobile\/note-imports\/[^/]+\/complete$/ },
 ];
 
 function hashValue(value) {
@@ -195,6 +199,10 @@ export function shouldSkipCommon(request) {
 	return request.method === 'OPTIONS' || isApiPing(request);
 }
 
+export function isMobileUploadChunk(request) {
+	return String(request.method || '').toUpperCase() === 'PATCH' && /^\/mobile\/note-imports\/[^/]+$/.test(getRequestPath(request));
+}
+
 function createNoopLimiter() {
 	return function noopRateLimiter(_request, _response, next) {
 		return next();
@@ -261,7 +269,7 @@ export function createGeneralApiLimiter() {
 		name: 'api-general',
 		limit: rateLimitConfig.generalPerMinute,
 		skip: function skipGeneral(request) {
-			return shouldSkipCommon(request) || isSearchReadApi(request);
+			return shouldSkipCommon(request) || isSearchReadApi(request) || isMobileUploadChunk(request);
 		},
 	});
 }

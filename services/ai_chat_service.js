@@ -264,7 +264,7 @@ export async function processChat({ hostId, userId, query, conversationId, proje
  * If stream is set, the caller should iterate it for text tokens; answer will be null.
  * If answer is set, the response is already complete (no streaming needed).
  */
-export async function processChatStream({ hostId, userId, query, conversationId, projectId, contextResults = [], includeEmails = true, ctx = {} }) {
+export async function processChatStream({ hostId, userId, query, conversationId, projectId, contextResults = [], includeEmails = true, allowActions = true, ctx = {} }) {
 	// Free (BYOK) tenants with no key configured: short-circuit with guidance
 	// (the non-stream answer path renders it as a normal assistant message).
 	if (!(await hasLlmApiKey({ hostId }))) {
@@ -277,6 +277,7 @@ export async function processChatStream({ hostId, userId, query, conversationId,
 
 	switch (intent.intent) {
 		case 'action': {
+			if (!allowActions) return { stream: null, answer: 'AI actions are unavailable in the mobile app. Use the Add button to save a note, URL, or document.', metadata: { results: [], action: null, conversationId: conversationId || null, displayIn: 'chat' } };
 			const result = await handleAction({ hostId, userId, query, conversationId, projectId, contextResults, intent, includeEmails, ctx });
 			return { stream: null, answer: result.answer, metadata: { results: result.results, action: result.action, conversationId: result.conversationId, displayIn: result.displayIn } };
 		}

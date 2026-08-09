@@ -10,7 +10,7 @@ const oauthConsentSchema = new mongoose.Schema(
 		client_uri: { type: String },
 		logo_uri: { type: String },
 		redirect_uris: [{ type: String }],
-		registration_source: { type: String, enum: ['manual', 'dynamic', 'metadata'], required: true },
+		registration_source: { type: String, enum: ['manual', 'dynamic', 'metadata', 'first-party'], required: true },
 		scopes: [{ type: String, required: true }],
 		resource: { type: String, required: true },
 		granted_at: { type: Date, default: Date.now },

@@ -1,11 +1,11 @@
-import fs from 'node:fs';
 import mammoth from 'mammoth';
-import extractPdf from 'pdfjs-parse';
-import lineByLine from 'n-readlines';
+import { createReadStream } from 'node:fs';
+import { spawn } from 'node:child_process';
 import striptags from 'striptags';
 import { createLogger } from '../modules/logger.js';
 
 const log = createLogger('import');
+const MAX_EXTRACTED_CHARACTERS = 1_500_000;
 
 const PDF_TYPES = ['application/pdf'];
 const WORD_TYPES = [
@@ -47,25 +47,30 @@ export async function extractText(filePath, mimeType, originalName) {
 }
 
 /**
- * Extract text from PDF using pdfjs-parse (proven in Razuna).
+ * Extract PDF text through Poppler's page-wise parser. Stdout is consumed in
+ * bounded chunks, so source-file size does not determine JavaScript memory use.
  */
 async function extractPdfContent(filePath) {
-    const buf = fs.readFileSync(filePath);
-    const origLog = console.log;
-    console.log = (...args) => {
-        if (typeof args[0] === 'string' && args[0].includes('TT:')) return;
-        origLog.apply(console, args);
-    };
-    let data;
-    try {
-        data = await extractPdf(buf);
-    } finally {
-        console.log = origLog;
-    }
-    let text = (data.text || '').trim();
-    text = striptags(text, [], ' ');
-    text = collapseWhitespace(text);
-    return { text, html: `<p>${escapeHtml(text).replace(/\n/g, '</p><p>')}</p>` };
+	return new Promise((resolve, reject) => {
+		const process = spawn('pdftotext', ['-layout', filePath, '-'], { stdio: ['ignore', 'pipe', 'pipe'] });
+		let text = '';
+		let stderr = '';
+		let truncated = false;
+		process.stdout.setEncoding('utf8');
+		process.stdout.on('data', (chunk) => {
+			if (text.length >= MAX_EXTRACTED_CHARACTERS) return;
+			const remaining = MAX_EXTRACTED_CHARACTERS - text.length;
+			text += chunk.slice(0, remaining);
+			if (chunk.length > remaining) truncated = true;
+		});
+		process.stderr.setEncoding('utf8');
+		process.stderr.on('data', (chunk) => { if (stderr.length < 4000) stderr += chunk.slice(0, 4000 - stderr.length); });
+		process.on('error', reject);
+		process.on('close', (code) => {
+			if (code && !text) return reject(new Error(stderr.trim() || `PDF extraction failed with exit code ${code}`));
+			resolve(extractedResult(text, truncated));
+		});
+	});
 }
 
 /**
@@ -73,7 +78,7 @@ async function extractPdfContent(filePath) {
  */
 async function extractWordContent(filePath) {
     const result = await mammoth.convertToHtml({ path: filePath });
-    const html = (result.value || '').trim();
+	const html = (result.value || '').slice(0, MAX_EXTRACTED_CHARACTERS).trim();
     let text = striptags(html, [], ' ');
     text = collapseWhitespace(text);
     return { text, html: html || `<p>${escapeHtml(text)}</p>` };
@@ -84,32 +89,31 @@ async function extractWordContent(filePath) {
  * Handles MD, TXT, RTF, code, and any other text-based file.
  */
 async function extractTextContent(filePath) {
-    const liner = new lineByLine(filePath);
-    const lines = [];
-    let line;
-    let errorCount = 0;
+	const decoder = new TextDecoder('utf-8', { fatal: false });
+	let text = '';
+	let truncated = false;
+	for await (const chunk of createReadStream(filePath, { highWaterMark: 64 * 1024 })) {
+		const decoded = decoder.decode(chunk, { stream: true });
+		const remaining = MAX_EXTRACTED_CHARACTERS - text.length;
+		if (decoded.length > remaining) {
+			text += decoded.slice(0, remaining);
+			truncated = true;
+			break;
+		}
+		text += decoded;
+	}
+	if (!truncated) text += decoder.decode();
+	if (truncated) log.info({ file_path: filePath, extracted_characters: MAX_EXTRACTED_CHARACTERS }, 'Imported text preview truncated after bounded extraction');
+	return extractedResult(text, truncated);
+}
 
-    while ((line = liner.next())) {
-        try {
-            lines.push(line.toString('utf8'));
-        } catch (e) {
-            errorCount++;
-            if (errorCount >= 10) {
-                log.warn({ file_path: filePath }, 'Too many read errors, stopping extraction');
-                break;
-            }
-        }
-    }
-
-    let text = lines.join('\n');
-    let stripped = striptags(text, [], ' ');
-    stripped = collapseWhitespace(stripped);
-    // For the HTML content, wrap lines in paragraphs while preserving blank-line breaks
-    const html = text
-        .split(/\n{2,}/)
-        .map((block) => `<p>${escapeHtml(block.trim()).replace(/\n/g, '<br>')}</p>`)
-        .join('');
-    return { text: stripped, html };
+function extractedResult(value, truncated = false) {
+	const suffix = truncated ? '\n\n[Imported content truncated after bounded extraction.]' : '';
+	const raw = `${String(value || '').trim()}${suffix}`;
+	let text = striptags(raw, [], ' ');
+	text = collapseWhitespace(text);
+	const html = raw.split(/\n{2,}/).map((block) => `<p>${escapeHtml(block.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+	return { text, html, truncated };
 }
 
 function collapseWhitespace(str) {

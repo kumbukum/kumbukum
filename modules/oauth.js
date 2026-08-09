@@ -37,10 +37,33 @@ export const MCP_APP_SCOPE_DETAILS = {
 	},
 };
 
+export const MOBILE_SCOPE_DETAILS = {
+	'knowledge:read': {
+		label: 'Read knowledge',
+		description: 'Read projects, notes, memories, URLs, emails, search results, and conversation history.',
+	},
+	'knowledge:write': {
+		label: 'Modify knowledge',
+		description: 'Create and edit notes, import documents, and save URLs.',
+	},
+	'ai:chat': {
+		label: 'Use Streamient AI',
+		description: 'Ask questions and use AI chat with project knowledge.',
+	},
+	'profile:write': {
+		label: 'Update profile',
+		description: 'Update profile and mobile preferences.',
+	},
+};
+
 export const MCP_BASELINE_SCOPES = ['mcp:read'];
 export const MCP_ALL_SCOPES = Object.keys(MCP_SCOPE_DETAILS);
 export const MCP_DEFAULT_SCOPES = ['mcp:read', 'mcp:write', 'mcp:email', 'mcp:git'];
 export const MCP_APP_DEFAULT_SCOPES = ['mcp:read', 'mcp:write'];
+export const MOBILE_ALL_SCOPES = Object.keys(MOBILE_SCOPE_DETAILS);
+export const MOBILE_DEFAULT_SCOPES = [...MOBILE_ALL_SCOPES];
+export const MOBILE_CLIENT_ID = 'streamient-mobile';
+export const MOBILE_REDIRECT_URI = 'com.streamient.mobile://oauth/callback';
 
 export const MCP_TOOL_SCOPES = {
 	chat: ['mcp:read', 'mcp:write'],
@@ -82,6 +105,14 @@ function normalizeBaseUrl(value, fallback) {
 
 export function getOauthIssuer() {
 	return `${normalizeBaseUrl(config.appUrl, 'http://localhost:3000')}/oauth`;
+}
+
+export function getApiResourceUrl() {
+	return `${normalizeBaseUrl(config.appUrl, 'http://localhost:3000')}/api/v1`;
+}
+
+export function getApiProtectedResourceMetadataUrl() {
+	return `${normalizeBaseUrl(config.appUrl, 'http://localhost:3000')}/.well-known/oauth-protected-resource/api/v1`;
 }
 
 export function getMcpBaseUrl() {
@@ -150,6 +181,10 @@ export function getAllowedMcpResourceUrls(extraResources = []) {
 	return [...new Set([base, getMcpEndpointUrl(), getMcpAppEndpointUrl(), getMcpSseUrl(), ...extraResources].map((url) => normalizeBaseUrl(url)).filter(Boolean))];
 }
 
+export function getAllowedOauthResourceUrls(extraResources = []) {
+	return [...new Set([...getAllowedMcpResourceUrls(), getApiResourceUrl(), ...extraResources].map((url) => normalizeBaseUrl(url)).filter(Boolean))];
+}
+
 export function getAuthorizationServerMetadataUrls() {
 	const issuer = getOauthIssuer();
 	const appBase = normalizeBaseUrl(config.appUrl, 'http://localhost:3000');
@@ -169,7 +204,7 @@ export function normalizeScopeInput(scope) {
 			.filter(Boolean);
 
 	return [...new Set(values)]
-		.filter((item) => MCP_SCOPE_DETAILS[item])
+		.filter((item) => MCP_SCOPE_DETAILS[item] || MOBILE_SCOPE_DETAILS[item])
 		.sort();
 }
 
@@ -189,11 +224,17 @@ export function isMcpAppResource(resource) {
 	}
 }
 
+export function isApiResource(resource) {
+	return normalizeBaseUrl(resource) === getApiResourceUrl();
+}
+
 export function getSupportedScopesForResource(resource) {
+	if (isApiResource(resource)) return MOBILE_ALL_SCOPES;
 	return isMcpAppResource(resource) ? MCP_APP_DEFAULT_SCOPES : MCP_ALL_SCOPES;
 }
 
 export function getDefaultScopesForResource(resource) {
+	if (isApiResource(resource)) return MOBILE_DEFAULT_SCOPES;
 	return isMcpAppResource(resource) ? MCP_APP_DEFAULT_SCOPES : MCP_DEFAULT_SCOPES;
 }
 
@@ -209,15 +250,15 @@ export function hasRequiredScopes(grantedScopes, requiredScopes) {
 export function listScopeDetails(scopes) {
 	return normalizeScopeInput(scopes).map((scope) => ({
 		scope,
-		...(MCP_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
+		...(MCP_SCOPE_DETAILS[scope] || MOBILE_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
 	}));
 }
 
 export function listScopeDetailsForResource(resource, scopes) {
-	const details = isMcpAppResource(resource) ? MCP_APP_SCOPE_DETAILS : MCP_SCOPE_DETAILS;
+	const details = isApiResource(resource) ? MOBILE_SCOPE_DETAILS : isMcpAppResource(resource) ? MCP_APP_SCOPE_DETAILS : MCP_SCOPE_DETAILS;
 	return normalizeScopeInput(scopes).map((scope) => ({
 		scope,
-		...(details[scope] || MCP_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
+		...(details[scope] || MCP_SCOPE_DETAILS[scope] || MOBILE_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
 	}));
 }
 
@@ -267,6 +308,16 @@ export function verifyMcpAccessToken(token, options = {}) {
 	});
 }
 
+export function verifyApiAccessToken(token) {
+	const payload = jwt.verify(token, config.jwtSecret, {
+		algorithms: ['HS256'],
+		issuer: getOauthIssuer(),
+		audience: getApiResourceUrl(),
+	});
+	if (payload.token_use !== 'access' || !payload.client_id) throw new Error('Invalid API access token');
+	return payload;
+}
+
 export function verifyMcpBridgeToken(token) {
 	return jwt.verify(token, config.jwtSecret, {
 		algorithms: ['HS256'],
@@ -304,6 +355,10 @@ export function buildProtectedResourceMetadata(resource) {
 
 export function isAllowedMcpResource(resource) {
 	return getAllowedMcpResourceUrls().includes(String(resource || '').replace(/\/$/, ''));
+}
+
+export function isAllowedOauthResource(resource) {
+	return getAllowedOauthResourceUrls().includes(String(resource || '').replace(/\/$/, ''));
 }
 
 export function sha256Base64Url(value) {

@@ -9,7 +9,7 @@ const oauthAuthorizationCodeSchema = new mongoose.Schema(
 		client_id: { type: String, required: true, index: true },
 		client_name: { type: String, required: true },
 		redirect_uri: { type: String, required: true },
-		registration_source: { type: String, enum: ['manual', 'dynamic', 'metadata'], required: true },
+		registration_source: { type: String, enum: ['manual', 'dynamic', 'metadata', 'first-party'], required: true },
 		scope: { type: String, required: true },
 		resource: { type: String, required: true },
 		code_challenge: { type: String, required: true },

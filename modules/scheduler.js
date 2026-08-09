@@ -11,6 +11,7 @@ import { cleanupExpiredExports } from '../services/export_service.js';
 import { runScheduledSync } from '../services/git_sync_service.js';
 import { reconcileActiveTrashTenants } from '../services/trash_reconciliation_service.js';
 import { runEmailRetentionCleanup, runTrashRetentionCleanup } from '../services/trash_retention_service.js';
+import { cleanupOrphanedImportFiles, createNoteImportWorker, logImportWorkerError } from '../services/note_import_service.js';
 import { createLogger } from './logger.js';
 
 export { runEmailRetentionCleanup };
@@ -105,6 +106,9 @@ export async function runTrialLifecycle({
  * Schedule spam/trash email retention cleanup daily.
  */
 export function startScheduler() {
+	const noteImportWorker = createNoteImportWorker();
+	noteImportWorker.start().catch(logImportWorkerError);
+
 	let crawlReindexRunning = false;
 	new Cron('*/10 * * * *', async () => {
 		if (process.env.SCHEDULER_CRAWL_ENABLED === 'false') {
@@ -158,6 +162,15 @@ export function startScheduler() {
 		}
 	});
 
+	new Cron('15 * * * *', async () => {
+		try {
+			const removed = await cleanupOrphanedImportFiles();
+			if (removed) log.info({ removed }, 'Orphaned mobile import cleanup complete');
+		} catch (err) {
+			log.error({ err }, 'Orphaned mobile import cleanup error');
+		}
+	});
+
 	// Retention: permanently delete all trash plus non-trash spam emails older than 30 days.
 	new Cron('30 2 * * *', async () => {
 		try {
@@ -199,5 +212,5 @@ export function startScheduler() {
 		}
 	});
 
-	log.info('Scheduler started: due crawl every 10min, trial lifecycle at 09:00, batch index every 20s, export cleanup hourly, trash retention daily at 02:30, trash reconciliation daily at 03:10, git sync every 10min');
+	log.info('Scheduler started: mobile import worker, due crawl every 10min, trial lifecycle at 09:00, batch index every 20s, export/import cleanup hourly, trash retention daily at 02:30, trash reconciliation daily at 03:10, git sync every 10min');
 }

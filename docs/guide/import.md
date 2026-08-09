@@ -24,7 +24,7 @@ You can import multiple files at once. Each file becomes a separate note.
 
 ## What Happens During Import
 
-- **PDF files** — Text is extracted from all pages using `pdfjs-parse`
+- **PDF files** — Text is extracted page-wise with bounded memory
 - **Word documents** — Converted to HTML via `mammoth`, then plain text is extracted
 - **Text files** — Read line by line, preserving paragraph structure
 

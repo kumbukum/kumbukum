@@ -8,7 +8,7 @@ const oauthRefreshTokenSchema = new mongoose.Schema(
 		host_id: { type: String, required: true, index: true },
 		client_id: { type: String, required: true, index: true },
 		client_name: { type: String, required: true },
-		registration_source: { type: String, enum: ['manual', 'dynamic', 'metadata'], required: true },
+		registration_source: { type: String, enum: ['manual', 'dynamic', 'metadata', 'first-party'], required: true },
 		scope: { type: String, required: true },
 		resource: { type: String, required: true },
 		expires_at: { type: Date, required: true },

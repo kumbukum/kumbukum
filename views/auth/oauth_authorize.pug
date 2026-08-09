@@ -15,7 +15,7 @@ block body
 				p.text-muted.mb-0
 					span Allow access to
 					strong.ms-1= (active_tenant && active_tenant.name) || 'this account'
-					span.ms-1 through Streamient MCP.
+					span.ms-1 through Streamient.
 
 			section.oauth-section.mb-4
 				h2.h6.mb-2 Signed in as
@@ -52,7 +52,7 @@ block body
 							div.text-muted.small Redirect URI
 							code.small= oauth_request.redirect_uri
 						li
-							div.text-muted.small MCP Resource
+							div.text-muted.small Resource
 							code.small= oauth_request.resource
 
 			form(method="POST" action="/oauth/authorize")

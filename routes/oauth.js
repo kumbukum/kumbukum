@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Tenant } from '../modules/tenancy.js';
-import { listScopeDetailsForResource } from '../modules/oauth.js';
+import { buildProtectedResourceMetadata, getApiResourceUrl, listScopeDetailsForResource } from '../modules/oauth.js';
 import * as oauthService from '../services/oauth_service.js';
 import { createLogger } from '../modules/logger.js';
 
@@ -75,6 +75,10 @@ router.get('/.well-known/openid-configuration/oauth', (_req, res) => {
 
 router.get('/oauth/.well-known/openid-configuration', (_req, res) => {
 	res.json(metadataResponse());
+});
+
+router.get('/.well-known/oauth-protected-resource/api/v1', (_req, res) => {
+	res.json(buildProtectedResourceMetadata(getApiResourceUrl()));
 });
 
 router.get('/oauth/authorize', async (req, res) => {

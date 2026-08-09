@@ -1,0 +1,21 @@
+export type RecordType = "notes" | "memories" | "urls" | "emails";
+export type FeedFilter = "all" | RecordType;
+export type AppView = "projects" | "ai" | "search" | "settings";
+
+export type ServerOption = { baseUrl: string; hosted: boolean; name: string; resourceUrl: string };
+export type TokenSet = { access_token: string; refresh_token?: string; expires_in: number; scope: string; token_type: string; obtained_at: number };
+export type ProjectCounts = { notes: number; memories: number; urls: number; emails?: number };
+export type Project = { id: string; name: string; color: string; is_default: boolean; counts: ProjectCounts };
+export type MobileUser = { _id: string; name: string; email: string; timezone?: string; time_format?: "12-hour" | "24-hour" };
+export type BootstrapResponse = { user: MobileUser; account: { host_id: string }; projects: Project[]; features: { emails: boolean; realtime: boolean; offline_mutations: boolean; push_notifications: boolean }; server_time: string; change_cursor: string };
+export type RecordSummary = { key: string; type: RecordType; id: string; project_id: string; title: string; excerpt: string; created_at: string; updated_at: string; metadata: Record<string, unknown> };
+export type RecordDetail = RecordSummary & { content: string; text_content: string };
+export type RecordsResponse = { records: RecordSummary[]; next_cursor: string | null };
+export type ChangesResponse = { changes: ({ action: "upsert"; key: string; record: RecordSummary } | { action: "delete"; key: string })[]; next_cursor: string; has_more: boolean };
+export type SearchResult = RecordSummary;
+export type UploadState = "uploading" | "paused" | "processing" | "complete" | "failed" | "canceled";
+export type UploadSession = { id: string; project_id: string; original_name: string; title: string; mime_type: string; upload_length: number; upload_offset: number; chunk_size: number; state: UploadState; note_id: string | null; error: string | null; created_at: string; updated_at: string; expires_at: string };
+export type LocalUpload = UploadSession & { localId: string; source: Blob | { uri: string }; progress: number };
+export type SharePayload = { title: string; texts: string[]; files: { uri: string; name: string; mimeType: string }[] };
+export type ChatConversation = { conversation_id: string; title: string; timestamp: string };
+export type ChatMessage = { role: "user" | "assistant"; message: string; timestamp?: string; sources?: SearchResult[] };

@@ -2674,4 +2674,133 @@ const swaggerSpec = {
 	    },
 	};
 
+swaggerSpec.components.securitySchemes.MobileOAuth = {
+	type: 'oauth2',
+	description: 'OAuth 2.0 Authorization Code with PKCE for Streamient Mobile. Client: streamient-mobile.',
+	flows: {
+		authorizationCode: {
+			authorizationUrl: '/oauth/authorize',
+			tokenUrl: '/oauth/token',
+			scopes: {
+				'knowledge:read': 'Read projects and knowledge records',
+				'knowledge:write': 'Create notes, save URLs, and import documents',
+				'ai:chat': 'Use streaming AI chat and history',
+				'profile:write': 'Update profile and mobile preferences',
+			},
+		},
+	},
+};
+
+Object.assign(swaggerSpec.components.schemas, {
+	MobileRecordSummary: {
+		type: 'object',
+		required: ['key', 'type', 'id', 'project_id', 'title', 'excerpt', 'created_at', 'updated_at', 'metadata'],
+		properties: {
+			key: { type: 'string', example: 'notes:64f0c3e72e62bd2ea6c41a11' },
+			type: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] },
+			id: { type: 'string' },
+			project_id: { type: 'string' },
+			title: { type: 'string' },
+			excerpt: { type: 'string' },
+			created_at: { type: 'string', format: 'date-time' },
+			updated_at: { type: 'string', format: 'date-time' },
+			metadata: { type: 'object', additionalProperties: true },
+		},
+	},
+	MobileUploadSession: {
+		type: 'object',
+		required: ['id', 'project_id', 'original_name', 'upload_length', 'upload_offset', 'chunk_size', 'state'],
+		properties: {
+			id: { type: 'string' },
+			project_id: { type: 'string' },
+			original_name: { type: 'string', example: 'research.pdf' },
+			title: { type: 'string' },
+			mime_type: { type: 'string' },
+			upload_length: { type: 'integer', format: 'int64', description: 'Total bytes. No application-level maximum.' },
+			upload_offset: { type: 'integer', format: 'int64' },
+			chunk_size: { type: 'integer', enum: [20000000] },
+			state: { type: 'string', enum: ['uploading', 'processing', 'complete', 'failed', 'canceled'] },
+			note_id: { type: 'string', nullable: true },
+			error: { type: 'string', nullable: true },
+			expires_at: { type: 'string', format: 'date-time' },
+		},
+	},
+});
+
+const mobileReadSecurity = [{ MobileOAuth: ['knowledge:read'] }];
+const mobileWriteSecurity = [{ MobileOAuth: ['knowledge:write'] }];
+const mobileErrorResponses = {
+	400: { description: 'Invalid request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+	401: { description: 'Missing or expired OAuth access token' },
+	403: { description: 'Insufficient OAuth scope or tenant access' },
+};
+
+Object.assign(swaggerSpec.paths, {
+	'/mobile/bootstrap': {
+		get: { tags: ['Mobile'], summary: 'Bootstrap the saved mobile account', security: mobileReadSecurity, responses: { ...mobileErrorResponses, 200: { description: 'User, projects, feature flags, and changes cursor' } } },
+	},
+	'/mobile/projects': {
+		get: { tags: ['Mobile'], summary: 'List active projects with per-type counts', security: mobileReadSecurity, responses: { ...mobileErrorResponses, 200: { description: 'Default project first, then alphabetical' } } },
+	},
+	'/mobile/projects/counts': {
+		get: { tags: ['Mobile'], summary: 'Refresh project counts only', security: mobileReadSecurity, responses: { ...mobileErrorResponses, 200: { description: 'Project count snapshot' } } },
+	},
+	'/mobile/records': {
+		get: {
+			tags: ['Mobile'], summary: 'List the stable-cursor unified record feed', security: mobileReadSecurity,
+			parameters: [{ name: 'project_id', in: 'query', required: true, schema: { type: 'string' } }, { name: 'type', in: 'query', schema: { type: 'string', enum: ['all', 'notes', 'memories', 'urls', 'emails'] } }, { name: 'cursor', in: 'query', schema: { type: 'string' } }, { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100 } }],
+			responses: { ...mobileErrorResponses, 200: { description: 'Newest-updated records', content: { 'application/json': { schema: { type: 'object', properties: { records: { type: 'array', items: { $ref: '#/components/schemas/MobileRecordSummary' } }, next_cursor: { type: 'string', nullable: true } } } } } } },
+		},
+	},
+	'/mobile/records/changes': {
+		get: { tags: ['Mobile'], summary: 'Fetch incremental record changes after reconnect', security: mobileReadSecurity, parameters: [{ name: 'cursor', in: 'query', required: true, schema: { type: 'string' } }, { name: 'project_id', in: 'query', required: true, schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 200: { description: 'Idempotent upsert/delete change list and next cursor' } } },
+	},
+	'/mobile/records/{type}/{id}': {
+		get: { tags: ['Mobile'], summary: 'Get a mobile record detail', security: mobileReadSecurity, parameters: [{ name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['notes', 'memories', 'urls', 'emails'] } }, { name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 200: { description: 'Record detail' }, 404: { description: 'Record not found' } } },
+	},
+	'/mobile/search': {
+		get: { tags: ['Mobile'], summary: 'Search active or all projects', security: mobileReadSecurity, parameters: [{ name: 'q', in: 'query', required: true, schema: { type: 'string' } }, { name: 'project_id', in: 'query', schema: { type: 'string' } }, { name: 'all_projects', in: 'query', schema: { type: 'boolean' } }, { name: 'type', in: 'query', schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 200: { description: 'Normalized search results' } } },
+	},
+	'/mobile/notes': {
+		post: { tags: ['Mobile'], summary: 'Create a note', security: mobileWriteSecurity, requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['project_id'], properties: { project_id: { type: 'string' }, title: { type: 'string' }, content: { type: 'string' }, text_content: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } } } } } }, responses: { ...mobileErrorResponses, 201: { description: 'Note created' } } },
+	},
+	'/mobile/notes/tags': {
+		get: { tags: ['Mobile'], summary: 'List available note and memory tags', security: mobileReadSecurity, parameters: [{ name: 'project_id', in: 'query', schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 200: { description: 'Sorted unique tags' } } },
+	},
+	'/mobile/notes/{id}': {
+		put: { tags: ['Mobile'], summary: 'Update an editable note', security: mobileWriteSecurity, parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } }, responses: { ...mobileErrorResponses, 200: { description: 'Note updated' }, 404: { description: 'Note not found' } } },
+	},
+	'/mobile/urls': {
+		post: { tags: ['Mobile'], summary: 'Save an HTTP(S) URL', security: mobileWriteSecurity, requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['url', 'project_id'], properties: { url: { type: 'string', format: 'uri' }, title: { type: 'string' }, project_id: { type: 'string' } } } } } }, responses: { ...mobileErrorResponses, 201: { description: 'URL saved' } } },
+	},
+	'/mobile/note-imports': {
+		post: { tags: ['Mobile imports'], summary: 'Create a tenant/user/project-bound resumable upload', description: 'Rate-limited by session creation and concurrent active sessions. No total-byte ceiling.', security: mobileWriteSecurity, requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['project_id', 'file_name', 'upload_length'], properties: { project_id: { type: 'string' }, file_name: { type: 'string' }, mime_type: { type: 'string' }, upload_length: { type: 'integer', format: 'int64', minimum: 0 }, title: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } }, example: { project_id: '64f0c3e72e62bd2ea6c41a10', file_name: 'research.pdf', mime_type: 'application/pdf', upload_length: 83000000 } } } } }, responses: { ...mobileErrorResponses, 201: { description: 'Upload session', headers: { Location: { schema: { type: 'string' } } }, content: { 'application/json': { schema: { type: 'object', properties: { upload: { $ref: '#/components/schemas/MobileUploadSession' } } } } } }, 429: { description: 'Too many active imports' } } },
+	},
+	'/mobile/note-imports/{id}': {
+		head: { tags: ['Mobile imports'], summary: 'Read the authoritative resume offset', security: mobileWriteSecurity, parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 204: { description: 'Current upload state', headers: { 'Upload-Offset': { schema: { type: 'integer', format: 'int64' } }, 'Upload-Length': { schema: { type: 'integer', format: 'int64' } }, 'Upload-State': { schema: { type: 'string' } }, 'Upload-Chunk-Size': { schema: { type: 'integer', enum: [20000000] } } } }, 404: { description: 'Session not found' } } },
+		patch: { tags: ['Mobile imports'], summary: 'Append one integrity-checked chunk', description: 'Each non-final chunk must contain exactly 20,000,000 bytes; the final chunk contains the remaining bytes. PATCH requests are exempt from the request-count upload limiter. Exact retries are idempotent; overlaps conflict.', security: mobileWriteSecurity, parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }, { name: 'Upload-Offset', in: 'header', required: true, schema: { type: 'integer', format: 'int64' } }, { name: 'Upload-Length', in: 'header', required: true, schema: { type: 'integer', format: 'int64' } }, { name: 'Upload-Checksum', in: 'header', required: true, schema: { type: 'string', example: 'sha256 47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' } }], requestBody: { required: true, content: { 'application/offset+octet-stream': { schema: { type: 'string', format: 'binary', maxLength: 20000000 } } } }, responses: { 204: { description: 'Chunk accepted', headers: { 'Upload-Offset': { schema: { type: 'integer', format: 'int64' } } } }, 409: { description: 'Offset, overlap, chunk size, length, or state conflict' }, 413: { description: 'Chunk exceeds 20,000,000 bytes' }, 460: { description: 'SHA-256 checksum mismatch' }, 507: { description: 'Insufficient shared-volume storage' } } },
+		get: { tags: ['Mobile imports'], summary: 'Get upload or extraction status', security: mobileWriteSecurity, parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 200: { description: 'uploading, processing, complete, or failed status' } } },
+		delete: { tags: ['Mobile imports'], summary: 'Cancel an import and remove temporary data', security: mobileWriteSecurity, parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 200: { description: 'Canceled' }, 409: { description: 'Import can no longer be canceled' } } },
+	},
+	'/mobile/note-imports/{id}/complete': {
+		post: { tags: ['Mobile imports'], summary: 'Verify the complete upload and queue extraction', security: mobileWriteSecurity, parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 202: { description: 'Extraction queued' }, 409: { description: 'Upload incomplete or invalid state' } } },
+	},
+	'/mobile/chat/stream': {
+		post: { tags: ['Mobile AI'], summary: 'Stream a grounded AI answer as SSE', security: [{ MobileOAuth: ['ai:chat'] }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['query'], properties: { query: { type: 'string' }, conversation_id: { type: 'string' }, project_id: { type: 'string' }, all_projects: { type: 'boolean' } } } } } }, responses: { 200: { description: 'SSE token, done, and error events', content: { 'text/event-stream': { schema: { type: 'string' } } } }, 403: { description: 'Insufficient ai:chat scope' }, 429: { description: 'AI daily limit reached' } } },
+	},
+	'/mobile/chat/conversations': {
+		get: { tags: ['Mobile AI'], summary: 'List the signed-in user’s AI conversation history', security: [{ MobileOAuth: ['ai:chat'] }], parameters: [{ name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50 } }], responses: { ...mobileErrorResponses, 200: { description: 'Newest conversations first' } } },
+	},
+	'/mobile/chat/conversations/{id}/messages': {
+		get: { tags: ['Mobile AI'], summary: 'Read one scoped AI conversation', security: [{ MobileOAuth: ['ai:chat'] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...mobileErrorResponses, 200: { description: 'Oldest-to-newest conversation messages' } } },
+	},
+	'/mobile/profile': {
+		get: { tags: ['Mobile'], summary: 'Get the mobile profile', security: mobileReadSecurity, responses: { ...mobileErrorResponses, 200: { description: 'Profile' } } },
+		put: { tags: ['Mobile'], summary: 'Update name, timezone, or time format', security: [{ MobileOAuth: ['profile:write'] }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' }, timezone: { type: 'string', example: 'America/New_York' }, time_format: { type: 'string', enum: ['12-hour', '24-hour'] } } } } } }, responses: { ...mobileErrorResponses, 200: { description: 'Profile updated' } } },
+	},
+	'/mobile/socket-token': {
+		post: { tags: ['Mobile'], summary: 'Issue a short-lived Socket.IO token', security: mobileReadSecurity, responses: { ...mobileErrorResponses, 200: { description: '15-minute token and refresh interval' } } },
+	},
+});
+
 export default swaggerSpec;

@@ -10,12 +10,15 @@ import { OAuthConsent } from '../model/oauth_consent.js';
 import { OAuthRefreshToken } from '../model/oauth_refresh_token.js';
 import {
 	getAllowedMcpResourceUrls,
+	getAllowedOauthResourceUrls,
+	getApiProtectedResourceMetadataUrl,
+	getApiResourceUrl,
 	getAuthorizationServerMetadataUrls,
 	getDefaultScopesForResource,
 	getSupportedScopesForResource,
 	getOauthIssuer,
 	getProtectedResourceMetadataUrl,
-	isAllowedMcpResource,
+	isAllowedOauthResource,
 	listScopeDetails,
 	normalizeScopeInput,
 	OAUTH_CODE_CHALLENGE_METHODS,
@@ -23,6 +26,9 @@ import {
 	OAUTH_RESPONSE_TYPES,
 	OAUTH_TOKEN_ENDPOINT_AUTH_METHODS,
 	MCP_ALL_SCOPES,
+	MOBILE_ALL_SCOPES,
+	MOBILE_CLIENT_ID,
+	MOBILE_REDIRECT_URI,
 	scopeString,
 	sha256Base64Url,
 	signMcpAccessToken,
@@ -142,7 +148,12 @@ function validatePublicHttpsUrl(value, fieldName) {
 	return parsed.toString();
 }
 
-function validateRedirectUri(uri) {
+function firstPartyMobileWebOrigins() {
+	const configured = String(process.env.STREAMIENT_MOBILE_WEB_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean);
+	return [...new Set(['http://localhost:5176', 'http://mobile.streamient.orb.local', ...configured].map((value) => value.replace(/\/$/, '')))];
+}
+
+function validateRedirectUri(uri, { firstPartyMobile = false } = {}) {
 	let parsed;
 	try {
 		parsed = new URL(uri);
@@ -155,7 +166,8 @@ function validateRedirectUri(uri) {
 	}
 
 	const loopback = isLoopbackHost(parsed.hostname);
-	if (!loopback && parsed.protocol !== 'https:' && !isPrivateUseRedirectScheme(parsed.protocol)) {
+	const firstPartyHttp = firstPartyMobile && parsed.protocol === 'http:' && firstPartyMobileWebOrigins().includes(parsed.origin);
+	if (!loopback && !firstPartyHttp && parsed.protocol !== 'https:' && !isPrivateUseRedirectScheme(parsed.protocol)) {
 		throw new OAuthError('invalid_redirect_uri', 'redirect_uri must use HTTPS unless it targets localhost or uses a reverse-domain private-use scheme', 400);
 	}
 	if (parsed.hash) {
@@ -428,6 +440,20 @@ async function findStoredClient(clientId, { host_id = null, includeSecret = fals
 	return OAuthClient.findOne(query).select(projection);
 }
 
+function firstPartyMobileClient() {
+	return {
+		client_id: MOBILE_CLIENT_ID,
+		client_name: 'Streamient Mobile',
+		client_uri: 'https://streamient.com',
+		logo_uri: null,
+		redirect_uris: [MOBILE_REDIRECT_URI, ...firstPartyMobileWebOrigins().map((origin) => `${origin}/oauth/callback`)],
+		grant_types: ['authorization_code', 'refresh_token'],
+		response_types: ['code'],
+		token_endpoint_auth_method: 'none',
+		registration_source: 'first-party',
+	};
+}
+
 export async function resolveClient(clientId, { host_id = null, includeSecret = false } = {}) {
 	if (!clientId) {
 		throw new OAuthError('invalid_client', 'client_id is required', 400);
@@ -436,6 +462,7 @@ export async function resolveClient(clientId, { host_id = null, includeSecret = 
 	if (String(clientId).startsWith('https://')) {
 		return fetchClientMetadataDocument(clientId);
 	}
+	if (clientId === MOBILE_CLIENT_ID) return firstPartyMobileClient();
 
 	const stored = await findStoredClient(clientId, { host_id, includeSecret });
 	if (!stored) {
@@ -679,7 +706,7 @@ export async function exchangeAuthorizationCode({ code, clientId, redirectUri, c
 	if (authCode.client_id !== clientId) {
 		throw new OAuthError('invalid_grant', 'authorization code was not issued to this client', 400);
 	}
-	if (authCode.redirect_uri !== validateRedirectUri(redirectUri)) {
+	if (authCode.redirect_uri !== validateRedirectUri(redirectUri, { firstPartyMobile: clientId === MOBILE_CLIENT_ID })) {
 		throw new OAuthError('invalid_grant', 'redirect_uri does not match the authorization request', 400);
 	}
 	if (authCode.code_challenge_method !== 'S256') {
@@ -801,7 +828,7 @@ export function buildAuthorizationServerMetadata() {
 		token_endpoint_auth_signing_alg_values_supported: PRIVATE_KEY_JWT_SIGNING_ALGS,
 		code_challenge_methods_supported: ['S256'],
 		client_id_metadata_document_supported: false,
-		scopes_supported: MCP_ALL_SCOPES,
+		scopes_supported: [...MCP_ALL_SCOPES, ...MOBILE_ALL_SCOPES],
 	};
 }
 
@@ -815,10 +842,12 @@ export function buildOauthUiConfig() {
 		authorization_server_metadata_url: getAuthorizationServerMetadataUrls().oauth_authorization_server,
 		openid_configuration_url: getAuthorizationServerMetadataUrls().openid_configuration_path_inserted,
 		resource_metadata_url: getProtectedResourceMetadataUrl(),
+		api_resource_metadata_url: getApiProtectedResourceMetadataUrl(),
+		api_resource: getApiResourceUrl(),
 		mcp_base_url: getAllowedMcpResourceUrls()[0],
 		mcp_endpoint: getAllowedMcpResourceUrls()[1],
-		allowed_resources: getAllowedMcpResourceUrls(),
-		scope_details: listScopeDetails(['mcp:read', 'mcp:write', 'mcp:email', 'mcp:git']),
+		allowed_resources: getAllowedOauthResourceUrls(),
+		scope_details: listScopeDetails(['mcp:read', 'mcp:write', 'mcp:email', 'mcp:git', ...MOBILE_ALL_SCOPES]),
 		client_registration: {
 			client_id_metadata_document_supported: false,
 			dynamic_registration_supported: true,
@@ -857,8 +886,8 @@ export function parseAuthorizationRequest(input = {}) {
 	if (!codeChallenge) throw new OAuthError('invalid_request', 'code_challenge is required', 400);
 	if (codeChallengeMethod !== 'S256') throw new OAuthError('invalid_request', 'code_challenge_method must be S256', 400);
 	if (!resource) throw new OAuthError('invalid_target', 'resource is required', 400);
-	if (!isAllowedMcpResource(resource)) {
-		throw new OAuthError('invalid_target', 'resource must target this MCP server', 400);
+	if (!isAllowedOauthResource(resource)) {
+		throw new OAuthError('invalid_target', 'resource must target this Streamient server', 400);
 	}
 	scope = normalizeScopesForResource(scope, resource);
 	if (!scope.length) {
@@ -867,7 +896,7 @@ export function parseAuthorizationRequest(input = {}) {
 
 	return {
 		client_id: clientId,
-		redirect_uri: validateRedirectUri(redirectUri),
+		redirect_uri: validateRedirectUri(redirectUri, { firstPartyMobile: clientId === MOBILE_CLIENT_ID }),
 		response_type: responseType,
 		scopes: scope,
 		state,
@@ -880,6 +909,9 @@ export function parseAuthorizationRequest(input = {}) {
 export async function validateAuthorizationRequest(request, { host_id }) {
 	const parsed = parseAuthorizationRequest(request);
 	const client = await resolveClient(parsed.client_id, { host_id });
+	if (parsed.client_id === MOBILE_CLIENT_ID && parsed.scopes.some((scope) => !MOBILE_ALL_SCOPES.includes(scope))) {
+		throw new OAuthError('invalid_scope', 'Streamient Mobile may request only mobile scopes', 400);
+	}
 	const redirectUris = client.redirect_uris || [];
 	if (!redirectUris.includes(parsed.redirect_uri)) {
 		throw new OAuthError('invalid_request', 'redirect_uri is not registered for this client', 400);
