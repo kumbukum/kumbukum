@@ -1,31 +1,66 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import type { ServerOption } from "../types";
 import { HOSTED_SERVER, LOCAL_SERVER, serverOption } from "../lib/config";
 import { Icon } from "./Icon";
 
 export function LoginScreen({ initialServer, loading, error, onLogin }: { initialServer: ServerOption; loading: boolean; error: string; onLogin: (server: ServerOption) => void }) {
-	const [choice, setChoice] = useState(initialServer.hosted ? "hosted" : initialServer.baseUrl === LOCAL_SERVER.baseUrl ? "local" : "custom");
-	const [customUrl, setCustomUrl] = useState(initialServer.hosted || initialServer.baseUrl === LOCAL_SERVER.baseUrl ? "" : initialServer.baseUrl);
-	const submit = () => {
-		if (choice === "hosted") return onLogin(HOSTED_SERVER);
-		if (choice === "local") return onLogin(LOCAL_SERVER);
-		onLogin(serverOption(customUrl));
+	const rememberedCustomServer = !initialServer.hosted && initialServer.baseUrl !== LOCAL_SERVER.baseUrl;
+	const [advancedOpen, setAdvancedOpen] = useState(rememberedCustomServer);
+	const [customUrl, setCustomUrl] = useState(initialServer.hosted ? "" : initialServer.baseUrl);
+	const [validationError, setValidationError] = useState("");
+	const [loginTarget, setLoginTarget] = useState<"cloud" | "custom" | null>(null);
+	const loginWithCloud = () => {
+		setLoginTarget("cloud");
+		setValidationError("");
+		onLogin(HOSTED_SERVER);
 	};
-	return <main className="login-screen">
-		<div className="login-brand"><span className="brand-mark">S</span><span>Streamient</span></div>
-		<section className="login-card">
-			<div className="login-icon"><Icon name="auto_awesome" /></div>
-			<h1>Your knowledge, everywhere</h1>
-			<p>Notes, memories, URLs, email, and AI—ready when you are.</p>
-			<div className="server-options">
-				<label className={choice === "hosted" ? "selected" : ""}><input type="radio" checked={choice === "hosted"} onChange={() => setChoice("hosted")} /><span><strong>Streamient Cloud</strong><small>app.streamient.com</small></span><Icon name="cloud" /></label>
-				<label className={choice === "local" ? "selected" : ""}><input type="radio" checked={choice === "local"} onChange={() => setChoice("local")} /><span><strong>Local development</strong><small>{LOCAL_SERVER.baseUrl}</small></span><Icon name="developer_mode" /></label>
-				<label className={choice === "custom" ? "selected" : ""}><input type="radio" checked={choice === "custom"} onChange={() => setChoice("custom")} /><span><strong>Custom server</strong><small>Self-hosted Streamient</small></span><Icon name="dns" /></label>
-			</div>
-			{choice === "custom" && <div className="form-group"><label htmlFor="server-url">Server URL</label><input id="server-url" className="form-control" type="url" value={customUrl} onChange={(event) => setCustomUrl(event.target.value)} /></div>}
-			{error && <div className="inline-error">{error}</div>}
-			<button className="button primary full" onClick={submit} disabled={loading}>{loading ? <span className="spinner" /> : <Icon name="login" />}{loading ? "Connecting…" : "Continue securely"}</button>
-			<small className="login-security"><Icon name="lock" /> OAuth PKCE. Your password never enters the app.</small>
-		</section>
-	</main>;
+	const submitCustom = (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		try {
+			setLoginTarget("custom");
+			setValidationError("");
+			onLogin(serverOption(customUrl));
+		} catch (serverError) {
+			setLoginTarget(null);
+			setValidationError(serverError instanceof Error ? serverError.message : "Enter a valid server URL");
+		}
+	};
+
+	return (
+		<main className="login-screen">
+			<div className="login-orbit login-orbit-one" aria-hidden="true" />
+			<div className="login-orbit login-orbit-two" aria-hidden="true" />
+
+			<section className="login-card">
+				<div className="login-brand"><span className="brand-mark">S</span><strong>Streamient</strong></div>
+				<span className="login-eyebrow">Your knowledge, in motion</span>
+				<h1>Everything you know. Wherever you go.</h1>
+				<p className="login-intro">Your projects, notes, memories, URLs, email, and AI—together on your phone.</p>
+
+				{error || validationError ? <div className="inline-error" role="alert"><Icon name="error" /><span>{error || validationError}</span></div> : null}
+
+				<button className="login-cloud-button" disabled={loading} onClick={loginWithCloud} type="button">
+					<span className="login-cloud-icon"><Icon className={loading && loginTarget === "cloud" ? "login-spinner-icon" : ""} name={loading && loginTarget === "cloud" ? "progress_activity" : "cloud"} /></span>
+					<span><strong>{loading && loginTarget === "cloud" ? "Opening Streamient Cloud…" : "Continue with Cloud"}</strong><small>app.streamient.com</small></span>
+					<Icon name="arrow_forward" />
+				</button>
+
+				<button aria-controls="login-custom-server-form" aria-expanded={advancedOpen} className="login-advanced-toggle" disabled={loading} onClick={() => setAdvancedOpen((current) => !current)} type="button">
+					<span>Advanced</span>
+					<Icon name={advancedOpen ? "expand_less" : "expand_more"} />
+				</button>
+
+				{advancedOpen ? (
+					<form className="login-custom-server" id="login-custom-server-form" onSubmit={submitCustom}>
+						<label htmlFor="server-url">Custom server URL</label>
+						<input autoCapitalize="none" autoComplete="url" autoCorrect="off" id="server-url" inputMode="url" onChange={(event) => { setCustomUrl(event.target.value); setValidationError(""); }} spellCheck={false} type="url" value={customUrl} />
+						<button disabled={loading || !customUrl.trim()} type="submit"><span>{loading && loginTarget === "custom" ? "Connecting…" : "Connect to custom server"}</span><Icon name="arrow_forward" /></button>
+						<small>HTTPS is required except during local development.</small>
+					</form>
+				) : null}
+
+				<p className="login-security"><Icon name="lock" /><span>Secure sign-in with OAuth PKCE</span></p>
+			</section>
+		</main>
+	);
 }

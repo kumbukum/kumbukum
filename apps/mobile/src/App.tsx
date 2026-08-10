@@ -1,7 +1,8 @@
+import { Browser } from "@capacitor/browser";
 import { Network } from "@capacitor/network";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import Swal from "sweetalert2";
 import { BottomNav } from "./components/BottomNav";
 import { Icon } from "./components/Icon";
@@ -11,7 +12,7 @@ import { Sheet } from "./components/Sheet";
 import { StreamientApi } from "./lib/api";
 import { beginOAuth, clearAuth, exchangeCode, listenForOAuthCallbacks, loadSelectedServer, loadTokens, parseOAuthCallback, saveTokens } from "./lib/auth";
 import { clearDraft, loadDraft, saveDraft } from "./lib/cache";
-import { APP_VERSION, LOCAL_SERVER } from "./lib/config";
+import { APP_VERSION, HOSTED_SERVER } from "./lib/config";
 import { startRealtime } from "./lib/realtime";
 import { clearPendingShare, listenForShares, loadPendingShare, sharedTextKind } from "./lib/shareTarget";
 import { forgetUpload, rememberUpload, restoreUploads, sourceSize, updateRememberedUpload, uploadWithResume, waitForProcessing, type UploadSource } from "./lib/uploads";
@@ -31,6 +32,12 @@ const FILTERS: { value: FeedFilter; label: string; icon: string }[] = [
 
 const TYPE_ICONS: Record<RecordType, string> = { notes: "edit_note", memories: "neurology", urls: "link", emails: "mail" };
 const TYPE_LABELS: Record<RecordType, string> = { notes: "Note", memories: "Memory", urls: "URL", emails: "Email" };
+const FAMILY_APPS = [
+	{ name: "Razuna", description: "Digital Asset Management", href: "https://razuna.com/" },
+	{ name: "Managani", description: "product growth platform", href: "https://managani.com/" },
+	{ name: "Helpmonks", description: "email management platform", href: "https://helpmonks.com/" },
+	{ name: "Mailtwine", description: "AI email triage & AI email assistant", href: "https://mailtwine.com/" },
+];
 
 function activeProjectKey(server: ServerOption) {
 	return `streamient_active_project:${server.baseUrl}`;
@@ -67,8 +74,17 @@ function markdown(value: string) {
 	return { __html: DOMPurify.sanitize(marked.parse(value, { async: false }) as string) };
 }
 
+function BrandHomeButton({ onClick }: { onClick: () => void }) {
+	return <button aria-label="Show all records" className="brand-home" onClick={onClick} title="Show all records" type="button"><img alt="" src="/favicon.svg" /></button>;
+}
+
+function openExternal(event: MouseEvent<HTMLAnchorElement>) {
+	event.preventDefault();
+	void Browser.open({ url: event.currentTarget.href });
+}
+
 export function App() {
-	const [server, setServer] = useState<ServerOption>(LOCAL_SERVER);
+	const [server, setServer] = useState<ServerOption>(HOSTED_SERVER);
 	const [tokens, setTokens] = useState<TokenSet | null>(null);
 	const [authReady, setAuthReady] = useState(false);
 	const [loginLoading, setLoginLoading] = useState(false);
@@ -149,7 +165,7 @@ export function App() {
 		};
 		void (async () => {
 			const [storedServer, storedTokens] = await Promise.all([loadSelectedServer(), loadTokens()]);
-			const selectedServer = storedServer || LOCAL_SERVER;
+			const selectedServer = storedServer || HOSTED_SERVER;
 			setServer(selectedServer);
 			if (window.location.pathname === "/oauth/callback" && !authHandled.current) {
 				authHandled.current = true;
@@ -453,13 +469,27 @@ export function App() {
 	}
 
 	function chooseProject(id: string) {
+		const refreshCurrent = id === activeProjectId && view === "projects" && filter === "all";
 		setActiveProjectId(id);
 		activeProjectIdRef.current = id;
 		localStorage.setItem(activeProjectKey(server), id);
 		setProjectDrawer(false);
+		setFilter("all");
+		setView("projects");
+		if (refreshCurrent) void loadFeed();
+	}
+
+	function showAllRecords() {
+		const refreshCurrent = view === "projects" && filter === "all";
+		setProjectDrawer(false);
+		setHistoryDrawer(false);
+		setFilter("all");
+		setView("projects");
+		if (refreshCurrent) void loadFeed();
 	}
 
 	function changeView(next: AppView) {
+		if (next === "ai") setChatAllProjects(true);
 		if (next === "ai" && !online) { void Swal.fire({ icon: "info", title: "AI needs a connection", text: "Offline records remain available in Projects." }); return; }
 		setView(next);
 	}
@@ -472,21 +502,21 @@ export function App() {
 		{(!online || offline) && <div className="offline-banner"><Icon name="cloud_off" /> Offline — showing cached records</div>}
 		{view === "projects" && <>
 			<header className="top-bar">
-				<button className="project-trigger" onClick={() => setProjectDrawer(true)}><span className="project-dot" style={{ background: activeProject?.color }} /><span><small>Project</small><strong>{activeProject?.name || "Projects"}</strong></span><Icon name="keyboard_arrow_down" /></button>
+				<BrandHomeButton onClick={showAllRecords} />
 				<div className="top-actions"><button className="icon-button" onClick={() => setView("search")} aria-label="Search"><Icon name="search" /></button><button className="avatar-button" onClick={() => setView("settings")} aria-label="Settings">{initials(bootstrap.user.name)}</button></div>
 			</header>
 			<main className="content feed-content">
-				<div className="feed-heading"><div><h1>Records</h1><p>{countTotal(activeProject || bootstrap.projects[0])} items in this project</p></div>{uploads.some((item) => !["complete", "canceled"].includes(item.session.state)) && <button className="upload-pill" onClick={() => setUploadTray(true)}><Icon name="upload" />{uploads.filter((item) => !["complete", "canceled"].includes(item.session.state)).length}</button>}</div>
-				<div className="filter-row" role="tablist">{visibleFilters.map((item) => <button key={item.value} className={filter === item.value ? "active" : ""} onClick={() => setFilter(item.value)}><Icon name={item.icon} />{item.label}</button>)}</div>
+				<div className="feed-heading"><div><h1>Records</h1><p><span className="feed-project-dot" style={{ background: activeProject?.color }} />{activeProject?.name || "Project"} · {activeProject ? countTotal(activeProject) : 0} records</p></div>{uploads.some((item) => !["complete", "canceled"].includes(item.session.state)) && <button className="upload-pill" onClick={() => setUploadTray(true)}><Icon name="upload" />{uploads.filter((item) => !["complete", "canceled"].includes(item.session.state)).length}</button>}</div>
+				<div className="filter-row" role="tablist">{visibleFilters.map((item) => <button aria-selected={filter === item.value} key={item.value} className={filter === item.value ? "active" : ""} onClick={() => setFilter(item.value)} role="tab" type="button"><Icon name={item.icon} />{item.label}</button>)}</div>
 				{feedLoading ? <RecordSkeleton /> : records.length ? <div className="record-list">{records.map((record) => <RecordRow key={record.key} record={record} onOpen={() => void openRecord(record)} />)}{nextCursor && <button className="button subtle full" disabled={loadingMore} onClick={() => void loadFeed(nextCursor)}>{loadingMore ? "Loading…" : "Load more"}</button>}</div> : <EmptyFeed filter={filter} onAdd={() => openAdd(filter === "urls" ? "url" : "note")} />}
 			</main>
 		</>}
 
 		{view === "search" && <SearchScreen query={searchQuery} setQuery={setSearchQuery} allProjects={searchAllProjects} setAllProjects={setSearchAllProjects} type={searchType} setType={setSearchType} filters={visibleFilters} results={searchResults} searching={searching} onBack={() => setView("projects")} onSearch={() => void runSearch()} onOpen={(record) => void openRecord(record)} />}
-		{view === "ai" && <AiScreen project={activeProject} allProjects={chatAllProjects} setAllProjects={setChatAllProjects} messages={chatMessages} query={chatQuery} setQuery={setChatQuery} chatting={chatting} onSend={() => void sendChat()} onHistory={() => void openHistory()} onNew={() => { setChatMessages([]); setConversationId(""); }} onOpen={(record) => void openRecord(record)} />}
+		{view === "ai" && <AiScreen project={activeProject} allProjects={chatAllProjects} setAllProjects={setChatAllProjects} messages={chatMessages} query={chatQuery} setQuery={setChatQuery} chatting={chatting} onHome={showAllRecords} onSend={() => void sendChat()} onHistory={() => void openHistory()} onNew={() => { setChatMessages([]); setConversationId(""); }} onOpen={(record) => void openRecord(record)} />}
 		{view === "settings" && <SettingsScreen bootstrap={bootstrap} server={server} appearance={appearance} setAppearance={setAppearance} onBack={() => setView("projects")} onSave={async (data) => { if (!api) return; const result = await api.updateProfile(data); setBootstrap((current) => current ? { ...current, user: { ...current.user, ...result.user } } : current); }} onRefresh={async () => { if (!api) return; applyBootstrap((await api.bootstrap()).value); await loadFeed(); }} onSignOut={() => void signOut()} />}
 
-		<BottomNav active={view} onChange={changeView} onAdd={() => openAdd()} />
+		<BottomNav active={view} onProjects={() => setProjectDrawer(true)} onAdd={() => openAdd()} onAi={() => changeView("ai")} />
 
 		<Sheet open={projectDrawer} title="Switch project" onClose={() => setProjectDrawer(false)}>{bootstrap.projects.map((project) => <button key={project.id} className="project-row" onClick={() => chooseProject(project.id)}><span className="project-icon" style={{ background: `${project.color}20`, color: project.color }}><Icon name="folder" /></span><span className="project-info"><strong>{project.name}</strong><small>{countTotal(project)} records · {project.counts.notes} notes · {project.counts.memories} memories · {project.counts.urls} URLs{project.counts.emails === undefined ? "" : ` · ${project.counts.emails} emails`}</small></span>{project.id === activeProjectId && <Icon name="check_circle" className="check" />}</button>)}</Sheet>
 
@@ -540,11 +570,11 @@ function RecordView({ record, onEdit }: { record: RecordDetail; onEdit: () => vo
 }
 
 function SearchScreen(props: { query: string; setQuery: (value: string) => void; allProjects: boolean; setAllProjects: (value: boolean) => void; type: FeedFilter; setType: (value: FeedFilter) => void; filters: typeof FILTERS; results: RecordSummary[]; searching: boolean; onBack: () => void; onSearch: () => void; onOpen: (record: RecordSummary) => void }) {
-	return <><header className="top-bar search-bar"><button className="icon-button" onClick={props.onBack}><Icon name="arrow_back" /></button><form onSubmit={(event) => { event.preventDefault(); props.onSearch(); }}><Icon name="search" /><label className="sr-only" htmlFor="global-search">Search</label><input id="global-search" autoFocus value={props.query} onChange={(event) => props.setQuery(event.target.value)} /><button type="button" className="clear-search" onClick={() => props.setQuery("")}><Icon name="cancel" /></button></form></header><main className="content search-content"><div className="search-options"><label><input type="checkbox" checked={props.allProjects} onChange={(event) => props.setAllProjects(event.target.checked)} /><span>All projects</span></label><select className="form-control" value={props.type} onChange={(event) => props.setType(event.target.value as FeedFilter)}>{props.filters.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></div>{props.searching ? <RecordSkeleton /> : props.results.length ? <div className="record-list">{props.results.map((record) => <RecordRow key={record.key} record={record} onOpen={() => props.onOpen(record)} />)}</div> : <div className="search-prompt"><Icon name="manage_search" /><h1>Search your knowledge</h1><p>Find notes, memories, URLs, and email across Streamient.</p></div>}</main></>;
+	return <><header className="top-bar search-bar"><button aria-label="Back to records" className="icon-button" onClick={props.onBack} type="button"><Icon name="arrow_back" /></button><form onSubmit={(event) => { event.preventDefault(); props.onSearch(); }}><Icon name="search" /><label className="sr-only" htmlFor="global-search">Search</label><input id="global-search" autoFocus value={props.query} onChange={(event) => props.setQuery(event.target.value)} /><button aria-label="Clear search" type="button" className="clear-search" onClick={() => props.setQuery("")}><Icon name="cancel" /></button></form></header><main className="content search-content"><div className="search-options"><label><input type="checkbox" checked={props.allProjects} onChange={(event) => props.setAllProjects(event.target.checked)} /><span>All projects</span></label><select className="form-control" value={props.type} onChange={(event) => props.setType(event.target.value as FeedFilter)}>{props.filters.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></div>{props.searching ? <RecordSkeleton /> : props.results.length ? <div className="record-list">{props.results.map((record) => <RecordRow key={record.key} record={record} onOpen={() => props.onOpen(record)} />)}</div> : <div className="search-prompt"><Icon name="manage_search" /><h1>Search your knowledge</h1><p>Find notes, memories, URLs, and email across Streamient.</p></div>}</main></>;
 }
 
-function AiScreen(props: { project: Project | null; allProjects: boolean; setAllProjects: (value: boolean) => void; messages: ChatMessage[]; query: string; setQuery: (value: string) => void; chatting: boolean; onSend: () => void; onHistory: () => void; onNew: () => void; onOpen: (record: SearchResult) => void }) {
-	return <><header className="top-bar"><div className="ai-title"><span><Icon name="auto_awesome" /></span><div><small>Streamient</small><strong>AI Assistant</strong></div></div><div className="top-actions"><button className="icon-button" onClick={props.onHistory}><Icon name="history" /></button><button className="icon-button" onClick={props.onNew}><Icon name="add_comment" /></button></div></header><main className="content ai-content"><label className="scope-toggle"><Icon name="folder" /><span>{props.allProjects ? "All projects" : props.project?.name}</span><input type="checkbox" checked={props.allProjects} onChange={(event) => props.setAllProjects(event.target.checked)} /><small>All</small></label>{props.messages.length ? <div className="chat-list">{props.messages.map((message, index) => <div className={`chat-message ${message.role}`} key={index}>{message.role === "assistant" && <span className="ai-avatar"><Icon name="auto_awesome" /></span>}<div><div className="chat-bubble" dangerouslySetInnerHTML={message.role === "assistant" ? markdown(message.message || (props.chatting ? "Thinking…" : "")) : { __html: DOMPurify.sanitize(message.message) }} />{!!message.sources?.length && <div className="chat-sources"><strong>Sources</strong>{message.sources.slice(0, 4).map((source) => <button type="button" key={source.key} onClick={() => props.onOpen(source)}><Icon name={TYPE_ICONS[source.type]} />{source.title}</button>)}</div>}</div></div>)}</div> : <div className="ai-welcome"><span><Icon name="auto_awesome" /></span><h1>Ask your knowledge</h1><p>Get answers grounded in everything saved to Streamient.</p><div className="suggestions">{["Summarize what changed recently", "Find decisions about our roadmap", "What should I follow up on?"].map((value) => <button key={value} onClick={() => props.setQuery(value)}>{value}<Icon name="north_east" /></button>)}</div></div>}</main><form className="chat-composer" onSubmit={(event) => { event.preventDefault(); props.onSend(); }}><label className="sr-only" htmlFor="chat-query">Ask Streamient</label><textarea id="chat-query" rows={1} value={props.query} onChange={(event) => props.setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); props.onSend(); } }} /><button disabled={!props.query.trim() || props.chatting}><Icon name="arrow_upward" /></button></form></>;
+function AiScreen(props: { project: Project | null; allProjects: boolean; setAllProjects: (value: boolean) => void; messages: ChatMessage[]; query: string; setQuery: (value: string) => void; chatting: boolean; onHome: () => void; onSend: () => void; onHistory: () => void; onNew: () => void; onOpen: (record: SearchResult) => void }) {
+	return <><header className="top-bar"><div className="ai-title"><BrandHomeButton onClick={props.onHome} /><div><small>Streamient</small><strong>AI Assistant</strong></div></div><div className="top-actions"><button aria-label="Chat history" className="icon-button" onClick={props.onHistory} type="button"><Icon name="history" /></button><button aria-label="New chat" className="icon-button" onClick={props.onNew} type="button"><Icon name="add_comment" /></button></div></header><main className="content ai-content"><label className="scope-toggle"><Icon name="folder" /><span>{props.allProjects ? "All projects" : props.project?.name}</span><input type="checkbox" checked={props.allProjects} onChange={(event) => props.setAllProjects(event.target.checked)} /><small>All</small></label>{props.messages.length ? <div className="chat-list">{props.messages.map((message, index) => <div className={`chat-message ${message.role}`} key={index}>{message.role === "assistant" && <span className="ai-avatar"><Icon name="auto_awesome" /></span>}<div><div className="chat-bubble" dangerouslySetInnerHTML={message.role === "assistant" ? markdown(message.message || (props.chatting ? "Thinking…" : "")) : { __html: DOMPurify.sanitize(message.message) }} />{!!message.sources?.length && <div className="chat-sources"><strong>Sources</strong>{message.sources.slice(0, 4).map((source) => <button type="button" key={source.key} onClick={() => props.onOpen(source)}><Icon name={TYPE_ICONS[source.type]} />{source.title}</button>)}</div>}</div></div>)}</div> : <div className="ai-welcome"><span><Icon name="auto_awesome" /></span><h1>Ask your knowledge</h1><p>Get answers grounded in everything saved to Streamient.</p><div className="suggestions">{["Summarize what changed recently", "Find decisions about our roadmap", "What should I follow up on?"].map((value) => <button key={value} onClick={() => props.setQuery(value)}>{value}<Icon name="north_east" /></button>)}</div></div>}</main><form className="chat-composer" onSubmit={(event) => { event.preventDefault(); props.onSend(); }}><label className="sr-only" htmlFor="chat-query">Ask Streamient</label><textarea id="chat-query" rows={1} value={props.query} onChange={(event) => props.setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); props.onSend(); } }} /><button aria-label="Send message" disabled={!props.query.trim() || props.chatting}><Icon name="arrow_upward" /></button></form></>;
 }
 
 function SettingsScreen({ bootstrap, server, appearance, setAppearance, onBack, onSave, onRefresh, onSignOut }: { bootstrap: BootstrapResponse; server: ServerOption; appearance: string; setAppearance: (value: string) => void; onBack: () => void; onSave: (data: { name: string; timezone: string; time_format: string }) => Promise<void>; onRefresh: () => Promise<void>; onSignOut: () => void }) {
@@ -552,7 +582,7 @@ function SettingsScreen({ bootstrap, server, appearance, setAppearance, onBack, 
 	const [timezone, setTimezone] = useState(bootstrap.user.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
 	const [timeFormat, setTimeFormat] = useState(bootstrap.user.time_format || "12-hour");
 	const [busy, setBusy] = useState(false);
-	return <><header className="top-bar"><button className="icon-button" onClick={onBack}><Icon name="arrow_back" /></button><h1>Settings</h1><span className="top-spacer" /></header><main className="content settings-content"><section className="profile-card"><span className="large-avatar">{initials(bootstrap.user.name)}</span><div><strong>{bootstrap.user.name}</strong><small>{bootstrap.user.email}</small></div></section><section className="settings-section"><h2>Profile</h2><div className="form-group"><label htmlFor="settings-name">Name</label><input id="settings-name" className="form-control" value={name} onChange={(event) => setName(event.target.value)} /></div><div className="form-group"><label htmlFor="settings-timezone">Timezone</label><input id="settings-timezone" className="form-control" value={timezone} onChange={(event) => setTimezone(event.target.value)} /></div><div className="form-group"><label htmlFor="settings-time-format">Time format</label><select id="settings-time-format" className="form-control" value={timeFormat} onChange={(event) => setTimeFormat(event.target.value as "12-hour" | "24-hour")}><option value="12-hour">12-hour</option><option value="24-hour">24-hour</option></select></div><button className="button primary settings-save" disabled={busy} onClick={async () => { setBusy(true); try { await onSave({ name, timezone, time_format: timeFormat }); } finally { setBusy(false); } }}>Save profile</button></section><section className="settings-section"><h2>Appearance</h2><div className="segmented">{["system", "light", "dark"].map((value) => <button className={appearance === value ? "active" : ""} key={value} onClick={() => setAppearance(value)}><Icon name={value === "system" ? "devices" : value === "light" ? "light_mode" : "dark_mode"} />{value[0].toUpperCase() + value.slice(1)}</button>)}</div></section><section className="settings-section"><h2>Connection</h2><div className="settings-row"><Icon name="dns" /><span><strong>Server</strong><small>{server.baseUrl}</small></span><Icon name="verified" className="connected" /></div><button className="settings-row button-row" onClick={() => void onRefresh()}><Icon name="sync" /><span><strong>Refresh data</strong><small>Sync projects and records now</small></span><Icon name="chevron_right" /></button></section><section className="settings-section"><h2>About</h2><a className="settings-row" href="https://streamient.com/support" target="_blank" rel="noreferrer"><Icon name="help" /><span><strong>Support</strong></span><Icon name="open_in_new" /></a><a className="settings-row" href="https://streamient.com/privacy" target="_blank" rel="noreferrer"><Icon name="privacy_tip" /><span><strong>Privacy</strong></span><Icon name="open_in_new" /></a><div className="settings-row"><Icon name="info" /><span><strong>Version</strong></span><small>{APP_VERSION}</small></div></section><button className="button danger full" onClick={onSignOut}><Icon name="logout" /> Sign out</button></main></>;
+	return <><header className="top-bar"><button aria-label="Back to records" className="icon-button" onClick={onBack} type="button"><Icon name="arrow_back" /></button><h1>Settings</h1><span className="top-spacer" /></header><main className="content settings-content"><section className="profile-card"><span className="large-avatar">{initials(bootstrap.user.name)}</span><div><strong>{bootstrap.user.name}</strong><small>{bootstrap.user.email}</small></div></section><section className="settings-section"><h2>Profile</h2><div className="form-group"><label htmlFor="settings-name">Name</label><input id="settings-name" className="form-control" value={name} onChange={(event) => setName(event.target.value)} /></div><div className="form-group"><label htmlFor="settings-timezone">Timezone</label><input id="settings-timezone" className="form-control" value={timezone} onChange={(event) => setTimezone(event.target.value)} /></div><div className="form-group"><label htmlFor="settings-time-format">Time format</label><select id="settings-time-format" className="form-control" value={timeFormat} onChange={(event) => setTimeFormat(event.target.value as "12-hour" | "24-hour")}><option value="12-hour">12-hour</option><option value="24-hour">24-hour</option></select></div><button className="button primary settings-save" disabled={busy} onClick={async () => { setBusy(true); try { await onSave({ name, timezone, time_format: timeFormat }); } finally { setBusy(false); } }}>Save profile</button></section><section className="settings-section"><h2>Appearance</h2><div className="segmented">{["system", "light", "dark"].map((value) => <button className={appearance === value ? "active" : ""} key={value} onClick={() => setAppearance(value)}><Icon name={value === "system" ? "devices" : value === "light" ? "light_mode" : "dark_mode"} />{value[0].toUpperCase() + value.slice(1)}</button>)}</div></section><section className="settings-section"><h2>Connection</h2><div className="settings-row"><Icon name="dns" /><span><strong>Server</strong><small>{server.baseUrl}</small></span><Icon name="verified" className="connected" /></div><button className="settings-row button-row" onClick={() => void onRefresh()}><Icon name="sync" /><span><strong>Refresh data</strong><small>Sync projects and records now</small></span><Icon name="chevron_right" /></button></section><section className="settings-section"><h2>About</h2><a className="settings-row" href="https://streamient.com/support" target="_blank" rel="noreferrer"><Icon name="help" /><span><strong>Support</strong></span><Icon name="open_in_new" /></a><a className="settings-row" href="https://streamient.com/privacy" target="_blank" rel="noreferrer"><Icon name="privacy_tip" /><span><strong>Privacy</strong></span><Icon name="open_in_new" /></a><div className="settings-row"><Icon name="info" /><span><strong>Version</strong></span><small>{APP_VERSION}</small></div></section><button className="button danger full" onClick={onSignOut}><Icon name="logout" /> Sign out</button><footer aria-label="Other apps" className="settings-family"><small>Built by the team behind:</small><ul>{FAMILY_APPS.map((app) => <li key={app.name}><a href={app.href} onClick={openExternal} rel="noreferrer" target="_blank">{app.name}</a><span> - {app.description}</span></li>)}</ul></footer></main></>;
 }
 
 function UploadTray({ open, uploads, onClose, onPause, onResume, onCancel }: { open: boolean; uploads: UploadUi[]; onClose: () => void; onPause: (item: UploadUi) => void; onResume: (item: UploadUi) => void; onCancel: (item: UploadUi) => void }) {

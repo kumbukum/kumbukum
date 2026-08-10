@@ -74,6 +74,54 @@ describe('Streamient Mobile source contracts', () => {
 		assert.match(api, /getCachedJson<T>\(this\.cacheNamespace/);
 	});
 
+	it('shows a cloud-first login with custom servers behind Advanced and working icons', () => {
+		const app = read('apps/mobile/src/App.tsx');
+		const login = read('apps/mobile/src/components/LoginScreen.tsx');
+		const styles = read('apps/mobile/src/styles.css');
+
+		assert.match(login, /Continue with Cloud/);
+		assert.match(login, />Advanced</);
+		assert.match(login, /Custom server URL/);
+		assert.doesNotMatch(login, /Local development/);
+		assert.doesNotMatch(login, /server-options/);
+		assert.match(app, /useState<ServerOption>\(HOSTED_SERVER\)/);
+		assert.match(app, /storedServer \|\| HOSTED_SERVER/);
+		assert.match(styles, /font-family: "Material Symbols Outlined Variable"/);
+		assert.match(styles, /font-feature-settings: "liga"/);
+	});
+
+	it('uses the brand as records home and the bottom Projects action as the switcher', () => {
+		const app = read('apps/mobile/src/App.tsx');
+		const bottomNav = read('apps/mobile/src/components/BottomNav.tsx');
+		const chooseProject = app.slice(app.indexOf('function chooseProject'), app.indexOf('function showAllRecords'));
+		const showAllRecords = app.slice(app.indexOf('function showAllRecords'), app.indexOf('function changeView'));
+
+		assert.match(app, /className="brand-home"[\s\S]*src="\/favicon\.svg"/);
+		assert.doesNotMatch(app, /className="project-trigger"/);
+		assert.match(app, /<BottomNav active=\{view\} onProjects=\{\(\) => setProjectDrawer\(true\)\}/);
+		assert.match(bottomNav, /onProjects: \(\) => void/);
+		assert.match(bottomNav, /onClick=\{onProjects\}/);
+		assert.doesNotMatch(bottomNav, /onChange/);
+		assert.match(chooseProject, /setFilter\("all"\)/);
+		assert.match(chooseProject, /setView\("projects"\)/);
+		assert.match(showAllRecords, /setProjectDrawer\(false\)/);
+		assert.match(showAllRecords, /setFilter\("all"\)/);
+		assert.match(showAllRecords, /setView\("projects"\)/);
+		assert.match(showAllRecords, /if \(refreshCurrent\) void loadFeed\(\)/);
+	});
+
+	it('resets AI to all projects on entry and links the other product apps from Settings', () => {
+		const app = read('apps/mobile/src/App.tsx');
+		const changeView = app.slice(app.indexOf('function changeView'), app.indexOf('if (!authReady)'));
+
+		assert.match(changeView, /if \(next === "ai"\) setChatAllProjects\(true\)/);
+		assert.match(app, /checked=\{props\.allProjects\}[\s\S]*props\.setAllProjects/);
+		assert.match(app, /Browser\.open\(\{ url: event\.currentTarget\.href \}\)/);
+		assert.match(app, /Built by the team behind:/);
+		for (const value of ['https://razuna.com/', 'https://managani.com/', 'https://helpmonks.com/', 'https://mailtwine.com/']) assert.match(app, new RegExp(value.replaceAll('.', '\\.')));
+		assert.doesNotMatch(app.slice(app.indexOf('const FAMILY_APPS'), app.indexOf('function activeProjectKey')), /streamient\.com/);
+	});
+
 	it('configures native share targets and bounded URI reads on both platforms', () => {
 		const manifest = read('apps/mobile/android/app/src/main/AndroidManifest.xml');
 		const androidReader = read('apps/mobile/android/app/src/main/java/com/streamient/mobile/StreamientFileReaderPlugin.java');
