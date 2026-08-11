@@ -51,10 +51,10 @@ importers:
         version: 1.0.11(supports-color@5.5.0)
       '@managani/express':
         specifier: ^0.1.2
-        version: 0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+        version: 0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       '@managani/node':
         specifier: ^0.1.2
-        version: 0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+        version: 0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
@@ -101,7 +101,7 @@ importers:
         specifier: ^3.46.0
         version: 3.46.0
       '@tiptap/core':
-        specifier: ^3.30.0
+        specifier: ^3.22.3
         version: 3.30.0(@tiptap/pm@3.30.0)
       '@tiptap/extension-blockquote':
         specifier: ^3.30.0
@@ -110,7 +110,7 @@ importers:
         specifier: ^3.30.0
         version: 3.30.0(@tiptap/extension-list@3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0))
       '@tiptap/extension-code-block':
-        specifier: ^3.30.0
+        specifier: ^3.22.3
         version: 3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)
       '@tiptap/extension-heading':
         specifier: ^3.30.0
@@ -134,7 +134,7 @@ importers:
         specifier: ^3.30.0
         version: 3.30.0(@tiptap/extension-list@3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0))
       '@tiptap/pm':
-        specifier: ^3.30.0
+        specifier: ^3.22.3
         version: 3.30.0
       '@tiptap/starter-kit':
         specifier: ^3.30.0
@@ -203,8 +203,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       ioredis:
-        specifier: ^5.11.1
-        version: 5.11.1(supports-color@5.5.0)
+        specifier: ^6.0.0
+        version: 6.0.0(supports-color@5.5.0)
       iovalkey:
         specifier: ^0.4.0
         version: 0.4.0(supports-color@5.5.0)
@@ -297,7 +297,7 @@ importers:
         version: 3.0.6(@babel/runtime@7.29.2)(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0)
       vitepress-openapi:
         specifier: ^0.2.4
-        version: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+        version: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
     devDependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
@@ -313,7 +313,7 @@ importers:
         version: 3.1.14
       vue-demi:
         specifier: ^0.14.10
-        version: 0.14.10(vue@3.5.41(typescript@5.9.3))
+        version: 0.14.10(vue@3.5.41(typescript@6.0.3))
 
   apps/mcp:
     dependencies:
@@ -328,10 +328,10 @@ importers:
         version: 8.6.2(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)
       vitepress-openapi:
         specifier: ^0.2.4
-        version: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+        version: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       vitepress-plugin-tabs:
         specifier: ^0.9.1
-        version: 0.9.1(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+        version: 0.9.1(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -370,8 +370,8 @@ importers:
         specifier: ^8.0.1
         version: 8.0.1(@capacitor/core@8.5.0)
       '@capgo/capacitor-share-target':
-        specifier: 8.0.44
-        version: 8.0.44(@capacitor/core@8.5.0)
+        specifier: 8.0.45
+        version: 8.0.45(@capacitor/core@8.5.0)
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -380,7 +380,7 @@ importers:
         version: 5.3.2
       '@tiptap/react':
         specifier: ^3.30.0
-        version: 3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tiptap/starter-kit':
         specifier: ^3.30.0
         version: 3.30.0
@@ -416,23 +416,23 @@ importers:
         specifier: ^6.0.5
         version: 6.0.5(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
       typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
+        specifier: ^6.0.3
+        version: 6.0.3
 
   docs:
     devDependencies:
       vitepress:
         specifier: ^1.6.4
-        version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3)
+        version: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3)
       vitepress-openapi:
         specifier: ^0.2.4
-        version: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+        version: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       vitepress-plugin-tabs:
         specifier: ^0.9.1
-        version: 0.9.1(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+        version: 0.9.1(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       vue:
         specifier: ^3.5.41
-        version: 3.5.41(typescript@5.9.3)
+        version: 3.5.41(typescript@6.0.3)
 
 packages:
 
@@ -629,8 +629,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
-  '@capgo/capacitor-share-target@8.0.44':
-    resolution: {integrity: sha512-0B2ZG2gO/KUj8lSmPhC3OfeH8/aLQGMK8ZaDARxJ++Ke2O8G8Jf48lur0O6v1AixbteqcqtGX4zPOExzWxrTsg==}
+  '@capgo/capacitor-share-target@8.0.45':
+    resolution: {integrity: sha512-O/JW3dlMdahORDX0UBDrRzCJwMvmNPzI325sBOhA0fKGg4NZFISHCWTeJ/EefG/XMwegZ7nyYD7PFqAPUm9vsQ==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -1366,8 +1366,8 @@ packages:
     resolution: {integrity: sha512-3cKScz9Jx2/Pr9ijj1OzGlBDfcmx7OMVBt4+P1uRR0SSW4cm1/y3Mo4OY3lfkuaYifMNBW8Wz6lQHbs1bihr7A==}
     engines: {node: '>=16.0.0'}
 
-  '@ioredis/commands@1.10.0':
-    resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
+  '@ioredis/commands@2.0.0':
+    resolution: {integrity: sha512-vrx0AE/T0h7cRZwfo1M39Cr+ZhZrkf0V8mQN75wucKCxCLD9l/VX6no3gFvrLqD1IlG/1LtzWovqEw3t0Vr9zg==}
 
   '@iovalkey/commands@0.1.0':
     resolution: {integrity: sha512-/B9W4qKSSITDii5nkBCHyPkIkAi+ealUtr1oqBJsLxjSRLka4pxun2VvMNSmcwgAMxgXtQfl0qRv7TE+udPJzg==}
@@ -2798,11 +2798,6 @@ packages:
   '@thednp/dommatrix@3.1.1':
     resolution: {integrity: sha512-LQw9A56KeDYN9aPFGjad2xTpGNnsIsvq98k1l28HNsvi+SuRFY6M5ET3f0SFrtssOKOcvgqmObztR0/dc6kSZQ==}
 
-  '@tiptap/core@3.29.2':
-    resolution: {integrity: sha512-oKUkiPUB7noilVYxI9lNzUD4rX17sHub+PYjMfHMWHG9A3nvIy+FdePIVIIhThKWF7ijhr3eIqHY51Bn+GAFtw==}
-    peerDependencies:
-      '@tiptap/pm': ^3.22.3
-
   '@tiptap/core@3.30.0':
     resolution: {integrity: sha512-jlR5STfcpoYxvqnWoR6dhnkB0OBTNbTWd/Jw10wx1LLCrUOK2vrM1z3rXdiVSqqoDjphEu8HX/k4q+Okt+5YGg==}
     peerDependencies:
@@ -2956,9 +2951,6 @@ packages:
     peerDependencies:
       '@tiptap/core': ^3.22.3
       '@tiptap/pm': ^3.22.3
-
-  '@tiptap/pm@3.29.2':
-    resolution: {integrity: sha512-GCOme7xHaS+DSoaA4CDcAD3l6JyBlvZhvCyfsy2Vp6j8tEoBkZWio7soYVosmlyn7zq8/64VeFZP5s47yfG7fQ==}
 
   '@tiptap/pm@3.30.0':
     resolution: {integrity: sha512-0if2mMq/9nZ/IOiuuyvo36OEz/fhwFJiHNy49+NywUkkKVSsa6S7Pcsxb03RnKzW648EanOjE5oqTd4jCkgRKg==}
@@ -4483,9 +4475,9 @@ packages:
     resolution: {integrity: sha512-pFGGdaHrmRKMh4WoDDSowddgjT1Vkl90atobmTeSmcPGdYiwikch/m/Ef5wRaiamHejtw0cUUMMerzDUXCci2w==}
     engines: {node: '>=18'}
 
-  ioredis@5.11.1:
-    resolution: {integrity: sha512-ehuGcf94bQXhfagULNXrJdfnWO38v070jxSx/qE87Kjzmu2fU7ro5EFAb+OPituLqgfyuQaym5DlrNydW2sJ9A==}
-    engines: {node: '>=12.22.0'}
+  ioredis@6.0.0:
+    resolution: {integrity: sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==}
+    engines: {node: '>=20.0.0'}
 
   iovalkey@0.3.3:
     resolution: {integrity: sha512-4rTJX6Q5wTYEvxboXi8DsEiUo+OvqJGtLYOSGm37KpdRXsG5XJjbVtYKGJpPSWP+QT7rWscA4vsrdmzbEbenpw==}
@@ -6136,8 +6128,8 @@ packages:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -6768,7 +6760,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.5.0
 
-  '@capgo/capacitor-share-target@8.0.44(@capacitor/core@8.5.0)':
+  '@capgo/capacitor-share-target@8.0.45(@capacitor/core@8.5.0)':
     dependencies:
       '@capacitor/core': 8.5.0
 
@@ -7226,11 +7218,11 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@floating-ui/vue@1.1.11(vue@3.5.41(typescript@5.9.3))':
+  '@floating-ui/vue@1.1.11(vue@3.5.41(typescript@6.0.3))':
     dependencies:
       '@floating-ui/dom': 1.8.0
       '@floating-ui/utils': 0.2.12
-      vue-demi: 0.14.10(vue@3.5.41(typescript@5.9.3))
+      vue-demi: 0.14.10(vue@3.5.41(typescript@6.0.3))
     transitivePeerDependencies:
       - '@vue/composition-api'
       - vue
@@ -7547,7 +7539,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@ioredis/commands@1.10.0': {}
+  '@ioredis/commands@2.0.0': {}
 
   '@iovalkey/commands@0.1.0': {}
 
@@ -7586,12 +7578,12 @@ snapshots:
 
   '@levischuck/tiny-cbor@0.2.11': {}
 
-  '@managani/express@0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))':
+  '@managani/express@0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
     dependencies:
       '@hyperdx/node-opentelemetry': 0.11.0(encoding@0.1.13)(supports-color@5.5.0)
-      '@managani/node': 0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+      '@managani/node': 0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
       express: 5.2.1(supports-color@5.5.0)
-      vitepress-openapi: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+      vitepress-openapi: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
     transitivePeerDependencies:
       - '@vue/composition-api'
       - encoding
@@ -7599,11 +7591,11 @@ snapshots:
       - vitepress
       - vue
 
-  '@managani/node@0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))':
+  '@managani/node@0.1.2(encoding@0.1.13)(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
     dependencies:
       '@hyperdx/node-opentelemetry': 0.11.0(encoding@0.1.13)(supports-color@5.5.0)
       jsonwebtoken: 9.0.3
-      vitepress-openapi: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3))
+      vitepress-openapi: 0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
     transitivePeerDependencies:
       - '@vue/composition-api'
       - encoding
@@ -9410,16 +9402,12 @@ snapshots:
 
   '@tanstack/virtual-core@3.17.7': {}
 
-  '@tanstack/vue-virtual@3.13.35(vue@3.5.41(typescript@5.9.3))':
+  '@tanstack/vue-virtual@3.13.35(vue@3.5.41(typescript@6.0.3))':
     dependencies:
       '@tanstack/virtual-core': 3.17.7
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
 
   '@thednp/dommatrix@3.1.1': {}
-
-  '@tiptap/core@3.29.2(@tiptap/pm@3.29.2)':
-    dependencies:
-      '@tiptap/pm': 3.29.2
 
   '@tiptap/core@3.30.0(@tiptap/pm@3.30.0)':
     dependencies:
@@ -9434,11 +9422,11 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.30.0(@tiptap/pm@3.30.0)
 
-  '@tiptap/extension-bubble-menu@3.30.0(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)':
+  '@tiptap/extension-bubble-menu@3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
-      '@tiptap/pm': 3.29.2
+      '@tiptap/core': 3.30.0(@tiptap/pm@3.30.0)
+      '@tiptap/pm': 3.30.0
     optional: true
 
   '@tiptap/extension-bullet-list@3.30.0(@tiptap/extension-list@3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0))':
@@ -9462,11 +9450,11 @@ snapshots:
     dependencies:
       '@tiptap/extensions': 3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)
 
-  '@tiptap/extension-floating-menu@3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)':
+  '@tiptap/extension-floating-menu@3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
-      '@tiptap/pm': 3.29.2
+      '@tiptap/core': 3.30.0(@tiptap/pm@3.30.0)
+      '@tiptap/pm': 3.30.0
     optional: true
 
   '@tiptap/extension-gapcursor@3.30.0(@tiptap/extensions@3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0))':
@@ -9550,22 +9538,6 @@ snapshots:
       '@tiptap/core': 3.30.0(@tiptap/pm@3.30.0)
       '@tiptap/pm': 3.30.0
 
-  '@tiptap/pm@3.29.2':
-    dependencies:
-      prosemirror-changeset: 2.4.1
-      prosemirror-commands: 1.7.2
-      prosemirror-dropcursor: 1.8.3
-      prosemirror-gapcursor: 1.4.1
-      prosemirror-history: 1.5.0
-      prosemirror-inputrules: 1.5.1
-      prosemirror-keymap: 1.2.3
-      prosemirror-model: 1.25.11
-      prosemirror-schema-list: 1.5.1
-      prosemirror-state: 1.4.4
-      prosemirror-tables: 1.8.5
-      prosemirror-transform: 1.12.0
-      prosemirror-view: 1.42.2
-
   '@tiptap/pm@3.30.0':
     dependencies:
       prosemirror-changeset: 2.4.1
@@ -9582,10 +9554,10 @@ snapshots:
       prosemirror-transform: 1.12.0
       prosemirror-view: 1.42.2
 
-  '@tiptap/react@3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@tiptap/react@3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
-      '@tiptap/pm': 3.29.2
+      '@tiptap/core': 3.30.0(@tiptap/pm@3.30.0)
+      '@tiptap/pm': 3.30.0
       '@types/react': 18.3.31
       '@types/react-dom': 18.3.7(@types/react@18.3.31)
       '@types/use-sync-external-store': 0.0.6
@@ -9594,8 +9566,8 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       use-sync-external-store: 1.6.0(react@18.3.1)
     optionalDependencies:
-      '@tiptap/extension-bubble-menu': 3.30.0(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
-      '@tiptap/extension-floating-menu': 3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
+      '@tiptap/extension-bubble-menu': 3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)
+      '@tiptap/extension-floating-menu': 3.30.0(@floating-ui/dom@1.8.0)(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)
     transitivePeerDependencies:
       - '@floating-ui/dom'
 
@@ -9765,10 +9737,10 @@ snapshots:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
 
-  '@vitejs/plugin-vue@5.2.4(vite@5.4.21(@types/node@26.2.0)(lightningcss@1.33.0))(vue@3.5.41(typescript@5.9.3))':
+  '@vitejs/plugin-vue@5.2.4(vite@5.4.21(@types/node@26.2.0)(lightningcss@1.33.0))(vue@3.5.41(typescript@6.0.3))':
     dependencies:
       vite: 5.4.21(@types/node@26.2.0)(lightningcss@1.33.0)
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
 
   '@vladfrangu/async_event_emitter@2.4.7': {}
 
@@ -9844,38 +9816,38 @@ snapshots:
 
   '@vue/shared@3.5.41': {}
 
-  '@vueuse/core@12.8.2(typescript@5.9.3)':
+  '@vueuse/core@12.8.2(typescript@6.0.3)':
     dependencies:
       '@types/web-bluetooth': 0.0.21
       '@vueuse/metadata': 12.8.2
-      '@vueuse/shared': 12.8.2(typescript@5.9.3)
-      vue: 3.5.41(typescript@5.9.3)
+      '@vueuse/shared': 12.8.2(typescript@6.0.3)
+      vue: 3.5.41(typescript@6.0.3)
     transitivePeerDependencies:
       - typescript
 
-  '@vueuse/core@14.4.0(vue@3.5.41(typescript@5.9.3))':
+  '@vueuse/core@14.4.0(vue@3.5.41(typescript@6.0.3))':
     dependencies:
       '@types/web-bluetooth': 0.0.21
       '@vueuse/metadata': 14.4.0
-      '@vueuse/shared': 14.4.0(vue@3.5.41(typescript@5.9.3))
-      vue: 3.5.41(typescript@5.9.3)
+      '@vueuse/shared': 14.4.0(vue@3.5.41(typescript@6.0.3))
+      vue: 3.5.41(typescript@6.0.3)
 
-  '@vueuse/integrations@12.8.2(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(focus-trap@7.8.0)(typescript@5.9.3)':
+  '@vueuse/integrations@12.8.2(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(focus-trap@7.8.0)(typescript@6.0.3)':
     dependencies:
-      '@vueuse/core': 12.8.2(typescript@5.9.3)
-      '@vueuse/shared': 12.8.2(typescript@5.9.3)
-      vue: 3.5.41(typescript@5.9.3)
+      '@vueuse/core': 12.8.2(typescript@6.0.3)
+      '@vueuse/shared': 12.8.2(typescript@6.0.3)
+      vue: 3.5.41(typescript@6.0.3)
     optionalDependencies:
       axios: 1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0)
       focus-trap: 7.8.0
     transitivePeerDependencies:
       - typescript
 
-  '@vueuse/integrations@12.8.2(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(focus-trap@7.8.0)(typescript@5.9.3)':
+  '@vueuse/integrations@12.8.2(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(focus-trap@7.8.0)(typescript@6.0.3)':
     dependencies:
-      '@vueuse/core': 12.8.2(typescript@5.9.3)
-      '@vueuse/shared': 12.8.2(typescript@5.9.3)
-      vue: 3.5.41(typescript@5.9.3)
+      '@vueuse/core': 12.8.2(typescript@6.0.3)
+      '@vueuse/shared': 12.8.2(typescript@6.0.3)
+      vue: 3.5.41(typescript@6.0.3)
     optionalDependencies:
       axios: 1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)
       focus-trap: 7.8.0
@@ -9886,15 +9858,15 @@ snapshots:
 
   '@vueuse/metadata@14.4.0': {}
 
-  '@vueuse/shared@12.8.2(typescript@5.9.3)':
+  '@vueuse/shared@12.8.2(typescript@6.0.3)':
     dependencies:
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
     transitivePeerDependencies:
       - typescript
 
-  '@vueuse/shared@14.4.0(vue@3.5.41(typescript@5.9.3))':
+  '@vueuse/shared@14.4.0(vue@3.5.41(typescript@6.0.3))':
     dependencies:
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
 
   '@xmldom/xmldom@0.8.13': {}
 
@@ -11421,14 +11393,13 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  ioredis@5.11.1(supports-color@5.5.0):
+  ioredis@6.0.0(supports-color@5.5.0):
     dependencies:
-      '@ioredis/commands': 1.10.0
+      '@ioredis/commands': 2.0.0
       cluster-key-slot: 1.1.1
       debug: 4.4.3(supports-color@5.5.0)
       denque: 2.1.0
       redis-errors: 1.2.0
-      redis-parser: 3.0.0
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
@@ -11806,9 +11777,9 @@ snapshots:
 
   lru-cache@11.5.2: {}
 
-  lucide-vue-next@1.0.0(vue@3.5.41(typescript@5.9.3)):
+  lucide-vue-next@1.0.0(vue@3.5.41(typescript@6.0.3)):
     dependencies:
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
 
   magic-string@0.30.21:
     dependencies:
@@ -12620,19 +12591,19 @@ snapshots:
     dependencies:
       regex-utilities: 2.3.0
 
-  reka-ui@2.10.3(vue@3.5.41(typescript@5.9.3)):
+  reka-ui@2.10.3(vue@3.5.41(typescript@6.0.3)):
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@floating-ui/vue': 1.1.11(vue@3.5.41(typescript@5.9.3))
+      '@floating-ui/vue': 1.1.11(vue@3.5.41(typescript@6.0.3))
       '@internationalized/date': 3.12.3
       '@internationalized/number': 3.6.7
-      '@tanstack/vue-virtual': 3.13.35(vue@3.5.41(typescript@5.9.3))
-      '@vueuse/core': 14.4.0(vue@3.5.41(typescript@5.9.3))
-      '@vueuse/shared': 14.4.0(vue@3.5.41(typescript@5.9.3))
+      '@tanstack/vue-virtual': 3.13.35(vue@3.5.41(typescript@6.0.3))
+      '@vueuse/core': 14.4.0(vue@3.5.41(typescript@6.0.3))
+      '@vueuse/shared': 14.4.0(vue@3.5.41(typescript@6.0.3))
       aria-hidden: 1.2.6
       defu: 6.1.7
       ohash: 2.0.11
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
     transitivePeerDependencies:
       - '@vue/composition-api'
 
@@ -13310,7 +13281,7 @@ snapshots:
       media-typer: 1.1.1
       mime-types: 3.0.2
 
-  typescript@5.9.3: {}
+  typescript@6.0.3: {}
 
   typesense@3.0.6(@babel/runtime@7.29.2)(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0):
     dependencies:
@@ -13425,38 +13396,38 @@ snapshots:
       jiti: 2.7.0
       yaml: 2.9.0
 
-  vitepress-openapi@0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3)):
+  vitepress-openapi@0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3)):
     dependencies:
-      '@vueuse/core': 14.4.0(vue@3.5.41(typescript@5.9.3))
+      '@vueuse/core': 14.4.0(vue@3.5.41(typescript@6.0.3))
       class-variance-authority: 0.7.1
       clsx: 2.1.1
-      lucide-vue-next: 1.0.0(vue@3.5.41(typescript@5.9.3))
+      lucide-vue-next: 1.0.0(vue@3.5.41(typescript@6.0.3))
       markdown-it-link-attributes: 4.0.1
-      reka-ui: 2.10.3(vue@3.5.41(typescript@5.9.3))
-      vitepress: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3)
-      vue: 3.5.41(typescript@5.9.3)
+      reka-ui: 2.10.3(vue@3.5.41(typescript@6.0.3))
+      vitepress: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3)
+      vue: 3.5.41(typescript@6.0.3)
     transitivePeerDependencies:
       - '@vue/composition-api'
 
-  vitepress-openapi@0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3)):
+  vitepress-openapi@0.2.4(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3)):
     dependencies:
-      '@vueuse/core': 14.4.0(vue@3.5.41(typescript@5.9.3))
+      '@vueuse/core': 14.4.0(vue@3.5.41(typescript@6.0.3))
       class-variance-authority: 0.7.1
       clsx: 2.1.1
-      lucide-vue-next: 1.0.0(vue@3.5.41(typescript@5.9.3))
+      lucide-vue-next: 1.0.0(vue@3.5.41(typescript@6.0.3))
       markdown-it-link-attributes: 4.0.1
-      reka-ui: 2.10.3(vue@3.5.41(typescript@5.9.3))
-      vitepress: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3)
-      vue: 3.5.41(typescript@5.9.3)
+      reka-ui: 2.10.3(vue@3.5.41(typescript@6.0.3))
+      vitepress: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3)
+      vue: 3.5.41(typescript@6.0.3)
     transitivePeerDependencies:
       - '@vue/composition-api'
 
-  vitepress-plugin-tabs@0.9.1(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3))(vue@3.5.41(typescript@5.9.3)):
+  vitepress-plugin-tabs@0.9.1(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3)):
     dependencies:
-      vitepress: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3)
-      vue: 3.5.41(typescript@5.9.3)
+      vitepress: 1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3)
+      vue: 3.5.41(typescript@6.0.3)
 
-  vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3):
+  vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3):
     dependencies:
       '@docsearch/css': 3.8.2
       '@docsearch/js': 3.8.2(@algolia/client-search@5.56.0)(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)
@@ -13465,17 +13436,17 @@ snapshots:
       '@shikijs/transformers': 2.5.0
       '@shikijs/types': 2.5.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@26.2.0)(lightningcss@1.33.0))(vue@3.5.41(typescript@5.9.3))
+      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@26.2.0)(lightningcss@1.33.0))(vue@3.5.41(typescript@6.0.3))
       '@vue/devtools-api': 7.7.10
       '@vue/shared': 3.5.41
-      '@vueuse/core': 12.8.2(typescript@5.9.3)
-      '@vueuse/integrations': 12.8.2(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(focus-trap@7.8.0)(typescript@5.9.3)
+      '@vueuse/core': 12.8.2(typescript@6.0.3)
+      '@vueuse/integrations': 12.8.2(axios@1.19.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(focus-trap@7.8.0)(typescript@6.0.3)
       focus-trap: 7.8.0
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 2.5.0
       vite: 5.4.21(@types/node@26.2.0)(lightningcss@1.33.0)
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
     optionalDependencies:
       postcss: 8.5.26
     transitivePeerDependencies:
@@ -13506,7 +13477,7 @@ snapshots:
       - typescript
       - universal-cookie
 
-  vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.9.3):
+  vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.2.0)(@types/react@18.3.31)(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3):
     dependencies:
       '@docsearch/css': 3.8.2
       '@docsearch/js': 3.8.2(@algolia/client-search@5.56.0)(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)
@@ -13515,17 +13486,17 @@ snapshots:
       '@shikijs/transformers': 2.5.0
       '@shikijs/types': 2.5.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@26.2.0)(lightningcss@1.33.0))(vue@3.5.41(typescript@5.9.3))
+      '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(@types/node@26.2.0)(lightningcss@1.33.0))(vue@3.5.41(typescript@6.0.3))
       '@vue/devtools-api': 7.7.10
       '@vue/shared': 3.5.41
-      '@vueuse/core': 12.8.2(typescript@5.9.3)
-      '@vueuse/integrations': 12.8.2(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(focus-trap@7.8.0)(typescript@5.9.3)
+      '@vueuse/core': 12.8.2(typescript@6.0.3)
+      '@vueuse/integrations': 12.8.2(axios@1.19.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0))(focus-trap@7.8.0)(typescript@6.0.3)
       focus-trap: 7.8.0
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 2.5.0
       vite: 5.4.21(@types/node@26.2.0)(lightningcss@1.33.0)
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
     optionalDependencies:
       postcss: 8.5.26
     transitivePeerDependencies:
@@ -13558,11 +13529,11 @@ snapshots:
 
   void-elements@3.1.0: {}
 
-  vue-demi@0.14.10(vue@3.5.41(typescript@5.9.3)):
+  vue-demi@0.14.10(vue@3.5.41(typescript@6.0.3)):
     dependencies:
-      vue: 3.5.41(typescript@5.9.3)
+      vue: 3.5.41(typescript@6.0.3)
 
-  vue@3.5.41(typescript@5.9.3):
+  vue@3.5.41(typescript@6.0.3):
     dependencies:
       '@vue/compiler-dom': 3.5.41
       '@vue/compiler-sfc': 3.5.41
@@ -13570,7 +13541,7 @@ snapshots:
       '@vue/server-renderer': 3.5.41
       '@vue/shared': 3.5.41
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 6.0.3
 
   w3c-keyname@2.2.8: {}
 

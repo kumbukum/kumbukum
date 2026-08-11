@@ -103,7 +103,7 @@
     "formidable": "^3.5.4",
     "gray-matter": "^4.0.3",
     "huebee": "^2.1.1",
-    "ioredis": "^5.11.1",
+    "ioredis": "^6.0.0",
     "iovalkey": "^0.4.0",
     "jose": "^6.2.8",
     "jsonwebtoken": "^9.0.3",

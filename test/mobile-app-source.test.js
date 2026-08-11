@@ -129,7 +129,7 @@ describe('Streamient Mobile source contracts', () => {
 		const shareExtension = read('apps/mobile/ios/App/ShareExtension/ShareViewController.swift');
 		const packageJson = read('apps/mobile/package.json');
 
-		assert.match(packageJson, /"@capgo\/capacitor-share-target": "8\.0\.44"/);
+		assert.match(packageJson, /"@capgo\/capacitor-share-target": "8\.0\.45"/);
 		assert.match(manifest, /android\.intent\.action\.SEND/);
 		assert.match(manifest, /application\/pdf/);
 		assert.match(androidReader, /20_000_000/);
