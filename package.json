@@ -93,7 +93,7 @@
     "cloudflare": "^7.0.0",
     "connect-mongo": "^6.0.0",
     "cookie-parser": "^1.4.7",
-    "crawlee": "^3.18.0",
+    "crawlee": "^3.18.1",
     "croner": "^10.0.1",
     "cytoscape": "^3.34.1",
     "cytoscape-fcose": "^2.2.0",
