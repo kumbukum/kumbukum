@@ -101,7 +101,7 @@ importers:
         specifier: ^3.46.0
         version: 3.46.0
       '@tiptap/core':
-        specifier: ^3.30.0
+        specifier: ^3.22.3
         version: 3.30.0(@tiptap/pm@3.30.0)
       '@tiptap/extension-blockquote':
         specifier: ^3.30.0
@@ -110,7 +110,7 @@ importers:
         specifier: ^3.30.0
         version: 3.30.0(@tiptap/extension-list@3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0))
       '@tiptap/extension-code-block':
-        specifier: ^3.30.0
+        specifier: ^3.22.3
         version: 3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0)
       '@tiptap/extension-heading':
         specifier: ^3.30.0
@@ -134,7 +134,7 @@ importers:
         specifier: ^3.30.0
         version: 3.30.0(@tiptap/extension-list@3.30.0(@tiptap/core@3.30.0(@tiptap/pm@3.30.0))(@tiptap/pm@3.30.0))
       '@tiptap/pm':
-        specifier: ^3.30.0
+        specifier: ^3.22.3
         version: 3.30.0
       '@tiptap/starter-kit':
         specifier: ^3.30.0
