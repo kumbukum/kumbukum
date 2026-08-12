@@ -4,10 +4,14 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"assets": "node scripts/generate-assets.mjs",
+		"play-store-assets": "node scripts/generate-play-store-assets.mjs",
 		"dev": "vite --host 0.0.0.0 --port 5176",
 		"build": "NODE_ENV=production tsc --noEmit && NODE_ENV=production vite build",
 		"preview": "vite preview --host 0.0.0.0 --port 4176",
-		"cap:sync": "capacitor sync",
+		"cap:sync": "pnpm assets && capacitor sync",
+		"android:release": "bash scripts/android-release-bundle.sh",
+		"ios:release": "bash scripts/ios-release-archive.sh",
 		"cap:add:ios": "capacitor add ios",
 		"cap:add:android": "capacitor add android"
 	},

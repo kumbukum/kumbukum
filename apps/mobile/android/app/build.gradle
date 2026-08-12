@@ -1,8 +1,29 @@
 apply plugin: 'com.android.application'
 
+def releaseKeystorePath = System.getenv("STREAMIENT_ANDROID_KEYSTORE_PATH")
+def releaseKeystorePassword = System.getenv("STREAMIENT_ANDROID_KEYSTORE_PASSWORD")
+def releaseKeyAlias = System.getenv("STREAMIENT_ANDROID_KEY_ALIAS")
+def releaseKeyPassword = System.getenv("STREAMIENT_ANDROID_KEY_PASSWORD")
+def allowUnsignedRelease = System.getenv("ALLOW_UNSIGNED_RELEASE") == "true"
+def releaseSigningConfigured = releaseKeystorePath
+    && releaseKeystorePassword
+    && releaseKeyAlias
+    && releaseKeyPassword
+    && file(releaseKeystorePath).exists()
+
 android {
     namespace = "com.streamient.mobile"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     defaultConfig {
         applicationId "com.streamient.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -18,9 +39,45 @@ android {
     }
     buildTypes {
         release {
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+def mobileWebRoot = file('../..')
+def packagedWebIndex = file('src/main/assets/public/index.html')
+def mobileWebSources = files(
+    fileTree(dir: new File(mobileWebRoot, 'src'), include: '**/*'),
+    new File(mobileWebRoot, 'capacitor.config.ts'),
+    new File(mobileWebRoot, 'index.html'),
+    new File(mobileWebRoot, 'package.json'),
+    new File(mobileWebRoot, 'tsconfig.json'),
+    new File(mobileWebRoot, 'vite.config.ts'),
+    file('../../../../pnpm-lock.yaml'),
+    file('../../../../pnpm-workspace.yaml')
+)
+
+tasks.register('verifyFreshWebAssets') {
+    inputs.files(mobileWebSources)
+    doLast {
+        if (!packagedWebIndex.isFile()) throw new GradleException("Mobile web assets are missing. Run 'pnpm --dir apps/mobile build' and 'pnpm --dir apps/mobile exec cap sync android' before building a release.")
+        def latestSource = mobileWebSources.files.findAll { it.isFile() }.max { it.lastModified() }
+        if (latestSource && packagedWebIndex.lastModified() < latestSource.lastModified()) throw new GradleException("Mobile web assets are stale. Run 'pnpm --dir apps/mobile build' and 'pnpm --dir apps/mobile exec cap sync android' before building a release.")
+    }
+}
+
+tasks.matching { it.name == 'preReleaseBuild' }.configureEach { dependsOn('verifyFreshWebAssets') }
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def requiresSignedRelease = taskGraph.allTasks.any { task ->
+        task.project == project && task.name in ["bundleRelease", "assembleRelease"]
+    }
+    if (requiresSignedRelease && !releaseSigningConfigured && !allowUnsignedRelease) {
+        throw new GradleException("Release signing is not configured. Set STREAMIENT_ANDROID_KEYSTORE_PATH, STREAMIENT_ANDROID_KEYSTORE_PASSWORD, STREAMIENT_ANDROID_KEY_ALIAS, and STREAMIENT_ANDROID_KEY_PASSWORD, or set ALLOW_UNSIGNED_RELEASE=true.")
     }
 }
 
