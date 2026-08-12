@@ -1,3 +1,8 @@
+---
+title: Streamient Knowledge Graph Guide
+description: "Explore how Streamient's Knowledge Graph connects notes, memories, and URLs through manual links, shared tags, and semantic similarity."
+---
+
 # Knowledge Graph
 
 The Knowledge Graph is a visual map of how your knowledge connects. It draws lines between notes, memories, and URLs based on explicit links you create, shared tags, and semantic similarity.

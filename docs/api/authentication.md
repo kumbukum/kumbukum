@@ -1,3 +1,8 @@
+---
+title: Streamient API Authentication
+description: "Authenticate Streamient REST API requests with Cloud bearer tokens, self-hosted JWTs, OAuth sessions, or personal access tokens, with copy-ready examples."
+---
+
 # Authentication
 
 Streamient supports multiple authentication methods.

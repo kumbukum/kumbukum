@@ -1,3 +1,8 @@
+---
+title: Install Streamient Self-Hosted
+description: "Install self-hosted Streamient with Docker Compose, set required secrets and service URLs, start the stack, create an account, and verify health."
+---
+
 # Installation
 
 ## Running with Docker Compose

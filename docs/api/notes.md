@@ -1,3 +1,8 @@
+---
+title: Streamient Notes API
+description: "Create, list, search, update, and delete rich-text notes with Streamient's REST API, including project filters, pagination, tags, and content fields."
+---
+
 # Notes API
 
 ## List Notes

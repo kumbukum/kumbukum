@@ -1,3 +1,8 @@
+---
+title: Streamient Email API
+description: "Store, list, search, thread, update, and delete project email records through the Streamient API, with clear boundaries for Mailtwine-only workflows."
+---
+
 # Emails API
 
 Streamient email APIs store and search project email records. Triage, drafts, replies, internal notes, outbound identities, and sync providers are Mailtwine features.

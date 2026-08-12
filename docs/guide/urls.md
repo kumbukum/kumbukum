@@ -1,3 +1,8 @@
+---
+title: Save and Search URLs with Streamient
+description: "Save webpages in Streamient with automatic title, description, image, and content extraction, then organize, search, edit, crawl, and connect each URL."
+---
+
 # URLs
 
 Save links to articles, documentation, tools, or any webpage. Streamient automatically extracts the page content so you can search your bookmarks by what they say — not just their address.

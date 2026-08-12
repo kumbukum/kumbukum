@@ -1,3 +1,8 @@
+---
+title: Streamient MCP Server
+description: "Connect AI assistants to Streamient through MCP so they can securely search, create, update, and link shared notes, memories, URLs, emails, and projects."
+---
+
 # Streamient MCP Server
 
 Connect your AI tools to Streamient with the Model Context Protocol (MCP) — an open standard that lets AI assistants work directly with your notes, memories, saved URLs, emails, projects, and knowledge graph.

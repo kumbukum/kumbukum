@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vitepress dev --port 5173",
-        "build": "node scripts/export-openapi.js && vitepress build",
+        "build": "node scripts/export-openapi.js && vitepress build && node scripts/check-seo-metadata.js",
         "preview": "vitepress preview --port 4173"
     },
     "devDependencies": {

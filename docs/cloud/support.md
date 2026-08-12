@@ -1,3 +1,8 @@
+---
+title: Streamient Cloud Support
+description: "Get help with Streamient Cloud through documentation, GitHub issues, email support, system status resources, and practical troubleshooting paths."
+---
+
 # Support
 
 ## Getting Help

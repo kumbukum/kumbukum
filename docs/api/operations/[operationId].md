@@ -1,7 +1,6 @@
 ---
 aside: false
 outline: false
-title: vitepress-openapi
 ---
 
 <script setup lang="ts">

@@ -1,3 +1,8 @@
+---
+title: Streamient Memories Guide
+description: "Capture focused facts, decisions, preferences, and learnings as Streamient memories that people and AI assistants can store, search, and reuse."
+---
+
 # Memories
 
 Memories are quick, focused knowledge entries — facts, decisions, context, and learnings that you or your AI tools want to recall later.

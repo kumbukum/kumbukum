@@ -1,3 +1,8 @@
+---
+title: Streamient Cloud Account
+description: "Create and manage a Streamient Cloud account with email/password or magic-link login, team invitations, workspace switching, and profile settings."
+---
+
 # Account
 
 ## Signup, invites, and login

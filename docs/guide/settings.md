@@ -1,3 +1,8 @@
+---
+title: Streamient Settings Guide
+description: "Configure your Streamient profile, security, team, access tokens, AI provider, white-label options, search, usage, exports, activity logs, and subscription."
+---
+
 # Settings
 
 Access settings from the gear icon in the navigation bar. Each section is described below.

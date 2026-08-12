@@ -1,3 +1,8 @@
+---
+title: Self-Hosted Streamient Overview
+description: "Run the open-source Streamient memory layer on your own infrastructure, with requirements, architecture, Docker deployment, updates, and support options."
+---
+
 # Self-Hosted
 
 Run Streamient on infrastructure you control. The self-hosted edition is fully open source and includes the same product features as [Streamient Cloud](/cloud/).

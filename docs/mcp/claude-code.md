@@ -1,3 +1,8 @@
+---
+title: Claude Code and Streamient MCP
+description: "Connect Claude Code to Streamient MCP with enforced hooks and CLAUDE.md instructions for searching context and saving durable outcomes across sessions."
+---
+
 # Claude Code and Streamient MCP
 
 Claude Code can use Streamient as a **persistent memory layer** via the Model Context Protocol. Configure two layers so every session follows the same workflow: **hooks** (enforced by the harness) and **`CLAUDE.md`** (project instructions).

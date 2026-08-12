@@ -1,3 +1,8 @@
+---
+title: Browser Extension Multiple Accounts
+description: "Add and switch between multiple Streamient accounts in the browser extension while keeping each account's projects, routing, and capture settings separate."
+---
+
 # Multiple Accounts
 
 You can add more than one Streamient account to the extension and switch between them without signing out. Each account keeps its own default project, URL/email routing, email connector, and automatic‑capture settings.

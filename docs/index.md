@@ -1,5 +1,8 @@
 ---
 layout: home
+title: Streamient Documentation for AI Memory
+titleTemplate: false
+description: "Streamient documentation for building a shared memory layer for AI-native teams, with guides for Cloud, self-hosting, MCP integrations, and the REST API."
 
 hero:
     name: Streamient

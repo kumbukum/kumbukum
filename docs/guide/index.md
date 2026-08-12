@@ -1,3 +1,8 @@
+---
+title: Introduction to Streamient
+description: "Learn how Streamient turns scattered company knowledge into inspectable, reusable AI context through projects, notes, memories, URLs, search, and MCP."
+---
+
 # Introduction
 
 Welcome to Streamient — The memory layer for AI-native teams.

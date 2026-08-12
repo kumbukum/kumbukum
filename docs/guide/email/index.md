@@ -1,3 +1,8 @@
+---
+title: Streamient Email Storage and Search
+description: "Store email as searchable Streamient project context through forwarding, browser capture, API, or MCP, with attachments, headers, labels, and thread metadata."
+---
+
 # Email Storage
 
 Streamient stores emails as searchable project context alongside notes, memories, and URLs. It does not triage, draft, send replies, or manage outbound identities. Those workflows live in Mailtwine.

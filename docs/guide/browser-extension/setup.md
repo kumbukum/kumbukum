@@ -1,3 +1,8 @@
+---
+title: Streamient Browser Extension Setup
+description: "Install the Streamient Chrome extension, sign in securely, choose a default project, and configure the account used for browser-based knowledge capture."
+---
+
 # Setup
 
 The extension is Chrome‑only. It runs on any Chromium‑based browser (Chrome, Edge, Brave, Arc, Vivaldi, etc.).

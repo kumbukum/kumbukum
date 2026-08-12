@@ -1,3 +1,8 @@
+---
+title: Cursor and Streamient MCP
+description: "Connect Cursor Agent to Streamient MCP with global user rules, project rules, and AGENTS.md instructions for persistent, reusable context."
+---
+
 # Cursor (IDE) and Streamient MCP
 
 Cursor can use Streamient as a **persistent memory layer** for Agent (Chat) via the Model Context Protocol. Configure three layers so every session follows the same workflow: **global User Rules** (all repos on your machine), **project rules** (per repository), and optionally **`AGENTS.md`**.

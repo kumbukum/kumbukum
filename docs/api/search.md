@@ -1,3 +1,8 @@
+---
+title: Streamient Knowledge Search API
+description: "Search notes, memories, URLs, emails, and crawled pages through Streamient's combined knowledge, semantic, and type-specific REST API endpoints."
+---
+
 # Search API
 
 ## Combined Knowledge Search

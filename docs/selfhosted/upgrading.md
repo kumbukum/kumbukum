@@ -1,3 +1,8 @@
+---
+title: Upgrade Streamient Self-Hosted
+description: "Upgrade self-hosted Streamient safely by backing up data, pulling releases, rebuilding containers, applying migrations, and verifying service health."
+---
+
 # Upgrading
 
 ## Upgrade Process

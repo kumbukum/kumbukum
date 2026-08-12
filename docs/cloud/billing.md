@@ -1,3 +1,8 @@
+---
+title: Streamient Cloud Pricing and Billing
+description: "Compare Streamient Cloud Free and Pro plans, understand billing and trial behavior, and manage upgrades, downgrades, cancellations, and invoices."
+---
+
 # Billing
 
 ## Plans

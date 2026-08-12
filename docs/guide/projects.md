@@ -1,3 +1,8 @@
+---
+title: Streamient Projects Guide
+description: "Organize Streamient notes, memories, URLs, and emails into isolated projects with separate knowledge, permissions, forwarding addresses, and integrations."
+---
+
 # Projects
 
 Projects are organizational containers that group your notes, memories, and URLs together.
