@@ -1,3 +1,8 @@
+---
+title: Streamient Self-Hosted Configuration
+description: "Configure self-hosted Streamient with Docker Compose environment variables for URLs, authentication, MongoDB, Redis, Typesense, email, AI, and OAuth."
+---
+
 # Configuration
 
 All configuration is managed through environment variables in `compose.prod.yml`. The recommended approach is to use the production Compose file from the [GitHub repository](https://github.com/streamient/streamient) and set your secrets via shell environment or a Docker secrets workflow.

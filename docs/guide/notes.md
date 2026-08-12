@@ -1,3 +1,8 @@
+---
+title: Streamient Notes Guide
+description: "Create rich-text Streamient notes for ideas, meetings, and research, then organize them with tags, projects, links, search, and AI-assisted retrieval."
+---
+
 # Notes
 
 Notes are rich-text documents for capturing ideas, meeting notes, research, or anything you want to write down and find later.

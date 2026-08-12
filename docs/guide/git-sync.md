@@ -1,3 +1,8 @@
+---
+title: Streamient Git Sync Guide
+description: "Synchronize Markdown notes, memories, and commit history between Streamient and Git repositories with configurable read-only or bidirectional sync."
+---
+
 # Git Sync
 
 Streamient can synchronize markdown files and read commit messages from Git repositories, keeping your notes, memories, and project history in sync with a version-controlled repo. By default a repo is **read-only** — content flows from the repo into Streamient and nothing is ever written back. Switch a repo to **read/write** to also push notes and memories back to the repo as commits.

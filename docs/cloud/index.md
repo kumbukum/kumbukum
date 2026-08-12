@@ -1,3 +1,8 @@
+---
+title: Streamient Cloud Overview
+description: "Learn what Streamient Cloud includes, how managed hosting works, and how to start building a shared, AI-ready memory layer without running infrastructure."
+---
+
 # Streamient Cloud
 
 Streamient Cloud is the fully managed edition of Streamient. You get the same shared memory layer for your team without running the infrastructure yourself.

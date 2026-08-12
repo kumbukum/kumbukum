@@ -1,3 +1,8 @@
+---
+title: Browser Extension URL Capture
+description: "Save webpages to Streamient manually or automatically with the browser extension, including extracted content, project routing, notes, and capture rules."
+---
+
 # URL Capture
 
 The extension can save URLs to Streamient two ways: explicitly from the toolbar popup, or automatically as you browse.

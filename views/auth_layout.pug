@@ -3,7 +3,6 @@ html(lang="en")
 	head
 		meta(charset="UTF-8")
 		meta(name="viewport" content="width=device-width, initial-scale=1")
-		title #{title || 'Streamient'}
 		- const __wlFavicon = typeof white_label !== 'undefined' && white_label && white_label.favicon_url ? white_label.favicon_url : '/static/images/favicon.ico'
 		link(href=__wlFavicon rel="shortcut icon")
 		if !(typeof white_label !== 'undefined' && white_label && white_label.favicon_url)

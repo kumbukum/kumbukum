@@ -1,3 +1,8 @@
+---
+title: Import Documents into Streamient
+description: "Import PDF, Word, OpenDocument, text, Markdown, CSV, and email files into Streamient notes with drag-and-drop upload and automatic text extraction."
+---
+
 # Import
 
 Import existing documents into Streamient by dragging and dropping files onto the Notes page. Each file is converted into a new note with the extracted text content.

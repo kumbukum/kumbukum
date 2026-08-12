@@ -14,6 +14,17 @@ export default defineConfig({
     description: 'Documentation for Streamient — Notes, Memory, URLs, AI Chat',
     base: docsBase,
     cleanUrls: true,
+    srcExclude: ['AGENTS.md'],
+
+    transformPageData(pageData) {
+        if (!pageData.params?.seoTitle || !pageData.params?.seoDescription) return;
+
+        return {
+            title: pageData.params.seoTitle,
+            titleTemplate: 'Streamient API',
+            description: pageData.params.seoDescription,
+        };
+    },
 
     head: [
         ['link', { rel: 'icon', type: 'image/x-icon', href: `${docsBase}favicon.ico` }],

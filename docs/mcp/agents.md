@@ -1,3 +1,8 @@
+---
+title: Configure AI Agents with Streamient MCP
+description: "Configure AI coding agents to search Streamient before work, store durable learnings, create structured notes, and connect related knowledge through MCP."
+---
+
 # Agent Configuration
 
 To get the most out of Streamient with AI coding agents (GitHub Copilot, Cursor, Windsurf, Claude Code, etc.), add an `AGENTS.md` file to the root of your project. This tells agents how to use Streamient as their persistent memory layer and shared knowledge store.

@@ -1,3 +1,8 @@
+---
+title: Streamient AI Chat Guide
+description: "Use Streamient AI Chat to search, analyze, summarize, compare, and manage shared knowledge with natural-language questions and cited source results."
+---
+
 # AI Chat
 
 Streamient includes a built-in AI chat that lets you search, analyze, and manage your team's memory layer using natural language.

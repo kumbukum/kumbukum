@@ -1,3 +1,8 @@
+---
+title: Streamient URL API
+description: "Save, extract, list, search, update, recrawl, and delete bookmarked URLs through the Streamient API, with project-scoped request examples."
+---
+
 # URLs API
 
 Save and manage bookmarked URLs with automatic content extraction.

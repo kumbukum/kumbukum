@@ -1,3 +1,8 @@
+---
+title: Streamient MCP Setup
+description: "Connect an MCP client to Streamient Cloud or self-hosted in minutes using OAuth 2.1, remote HTTP, or local stdio with a personal access token."
+---
+
 # MCP Server Setup
 
 Most MCP clients can be connected in about a minute. Use Cloud for the fastest path, or point a self-hosted client at your own Streamient instance.

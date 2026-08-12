@@ -1,3 +1,8 @@
+---
+title: Streamient Browser Extension
+description: "Use the Streamient Chrome extension to capture URLs, write notes, store emails, configure automatic capture, and work across multiple accounts."
+---
+
 # Browser Extension
 
 The Streamient Chrome extension lets you capture URLs, write notes, and store emails straight from your browser.

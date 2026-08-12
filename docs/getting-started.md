@@ -1,3 +1,8 @@
+---
+title: Getting Started with Streamient
+description: "Choose Streamient Cloud or self-hosted, complete initial setup, create a project, and connect AI tools to your team's shared memory layer."
+---
+
 # Getting Started
 
 Streamient is a memory layer for AI-native teams. It's available as a managed cloud service or a self-hosted open-source application — both editions share the same product features.

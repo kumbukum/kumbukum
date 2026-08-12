@@ -1,3 +1,8 @@
+---
+title: Streamient Memory API
+description: "Create, list, search, update, and delete short-form memories with Streamient's REST API, including pagination, tags, and project-scoped examples."
+---
+
 # Memories API
 
 Memories are short-form context entries scoped to the authenticated user.

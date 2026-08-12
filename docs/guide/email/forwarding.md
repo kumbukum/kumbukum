@@ -1,3 +1,8 @@
+---
+title: Forward Email into Streamient
+description: "Forward email into a Streamient project with its unique address, then verify stored messages, attachments, threading data, and searchable content."
+---
+
 # Forwarding Email
 
 Forwarding stores email in a Streamient project.

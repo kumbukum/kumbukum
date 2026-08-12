@@ -1,3 +1,8 @@
+---
+title: How Streamient Parses Email
+description: "Learn how Streamient parses RFC822 or provider JSON email, sanitizes HTML, extracts attachments, preserves thread headers, and indexes searchable content."
+---
+
 # Email Parsing
 
 Streamient parses email into a stored project record before indexing it.

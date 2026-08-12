@@ -1,3 +1,8 @@
+---
+title: Streamient MCP Tools Reference
+description: "Reference all Streamient MCP tools for projects, notes, memories, URLs, emails, search, AI chat, crawling, tags, links, exports, and Git sync."
+---
+
 # MCP Tools Reference
 
 All 44 tools available in the Streamient MCP server. Use `search_knowledge` first when you want the fastest path to relevant context across notes, memories, URLs, emails, and pages. Parameters marked with `*` are required.

@@ -1,3 +1,8 @@
+---
+title: Streamient REST API Reference
+description: "Use the Streamient REST API to manage projects, notes, memories, URLs, emails, search, and knowledge graphs across Cloud and self-hosted deployments."
+---
+
 # API Reference
 
 Streamient exposes a REST API at `/api/v1/` for managing notes, memories, URLs, projects, and search.
