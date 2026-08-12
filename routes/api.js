@@ -739,6 +739,8 @@ router.post('/search/all', async (req, res) => {
 				results.push({ ...hit.document, _type: type });
 			}
 		}
+		const projectNames = await projectService.getProjectNames(req.host_id, results.map((result) => result.project_id));
+		for (const result of results) result.project_name = projectNames.get(String(result.project_id || '')) || '';
 
 		res.json({ results });
 	} catch (err) {

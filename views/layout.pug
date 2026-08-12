@@ -189,7 +189,7 @@ html(lang="en")
 						span Open
 
 		//- Universal modal for viewing/editing/creating items
-		.modal.fade#chat-result-modal(tabindex="-1" aria-hidden="true")
+		.modal.fade#chat-result-modal(tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false")
 			.modal-dialog.modal-xl
 				.modal-content
 					.modal-header
@@ -363,6 +363,8 @@ html(lang="en")
 						button.btn.btn-primary.btn-sm#rm-save-btn
 							!= icon('check', 'me-1')
 							| Save
+
+		include ajax/link_search_result
 
 		//- Streamient mobile apps
 		.modal.fade#mobileBetaModal(tabindex="-1" aria-labelledby="mobileBetaModalLabel" aria-hidden="true")

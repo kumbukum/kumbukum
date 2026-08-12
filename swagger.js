@@ -1634,13 +1634,42 @@ const swaggerSpec = {
         '/search/all': {
             post: {
                 tags: ['Search'],
-                summary: 'Search across all collections',
+                summary: 'Search linkable items across all collections',
+                description: 'Returns note, memory, URL, and enabled email matches with project names and Unix timestamps for the link picker.',
                 requestBody: {
                     required: true,
                     content: { 'application/json': { schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } } },
                 },
                 responses: {
-                    200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { results: { type: 'array', items: { type: 'object' } } } } } } },
+                    200: {
+                        description: 'OK',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        results: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    id: { type: 'string' },
+                                                    _type: { type: 'string', enum: ['notes', 'memory', 'urls', 'emails'] },
+                                                    title: { type: 'string' },
+                                                    subject: { type: 'string' },
+                                                    url: { type: 'string' },
+                                                    project_id: { type: 'string' },
+                                                    project_name: { type: 'string' },
+                                                    created_at: { type: 'integer', format: 'int64', description: 'Unix timestamp in seconds' },
+                                                    updated_at: { type: 'integer', format: 'int64', description: 'Unix timestamp in seconds' },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
             },
         },

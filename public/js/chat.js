@@ -1166,8 +1166,7 @@ function rmEnsureRelDropdown() {
 	if (!searchWrap) return null;
 	searchWrap.style.position = 'relative';
 	rmRelDropdown = document.createElement('div');
-	rmRelDropdown.className = 'source-dropdown list-group position-absolute w-100';
-	rmRelDropdown.style.cssText = 'z-index:1060; max-height:200px; overflow-y:auto; display:none; top:100%; left:0';
+	rmRelDropdown.className = 'source-dropdown list-group position-absolute w-100 rm-link-search-dropdown';
 	searchWrap.appendChild(rmRelDropdown);
 	return rmRelDropdown;
 }
@@ -1213,6 +1212,42 @@ function rmRenderLinkTags() {
 	}
 }
 
+function rmFormatLinkSearchTimestamp(result) {
+	const timestamp = Number(result.updated_at || result.created_at);
+	if (!Number.isFinite(timestamp) || timestamp <= 0) return '';
+	return window.StreamientDateFormat?.formatLocale(timestamp * 1000, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) || '';
+}
+
+function rmCreateLinkSearchResult(result) {
+	const template = document.getElementById('rm-link-result-template');
+	if (!template?.content?.firstElementChild) return null;
+	const button = template.content.firstElementChild.cloneNode(true);
+	const title = result.title || result.subject || result.url || result.id;
+	const iconName = rmTypeIcons[result._type] || 'link';
+	const glyph = window.StreamientIcons?.glyphs?.[iconName] || iconName;
+	const timestamp = Number(result.updated_at || result.created_at);
+	const formattedTimestamp = rmFormatLinkSearchTimestamp(result);
+
+	button.dataset.id = result.id;
+	button.dataset.type = result._type;
+	button.dataset.title = title;
+	button.querySelector('.rm-link-result-icon').classList.add(`ti-${glyph}`);
+	button.querySelector('.rm-link-result-type').textContent = rmTypeLabels[result._type] || result._type;
+	button.querySelector('.rm-link-result-title').textContent = title;
+	button.querySelector('.rm-link-result-project').textContent = result.project_name || 'Deleted project';
+
+	const updatedEl = button.querySelector('.rm-link-result-updated');
+	const separatorEl = button.querySelector('.rm-link-result-separator');
+	if (formattedTimestamp) {
+		updatedEl.dateTime = new Date(timestamp * 1000).toISOString();
+		updatedEl.textContent = `Updated ${formattedTimestamp}`;
+	} else {
+		separatorEl.remove();
+		updatedEl.remove();
+	}
+	return button;
+}
+
 async function rmSearchLinks(query) {
 	if (!query || query.length < 3) { rmHideRelDropdown(); return; }
 	const { results } = await api('POST', '/search/all', { query });
@@ -1221,15 +1256,9 @@ async function rmSearchLinks(query) {
 	const dd = rmEnsureRelDropdown();
 	if (!dd || !filtered.length) { rmHideRelDropdown(); return; }
 
-	dd.innerHTML = filtered.map(r => `
-		<button type="button" class="list-group-item list-group-item-action py-1 px-2 small" data-id="${r.id}" data-type="${r._type}" data-title="${escapeHtml(r.title || r.url || '')}">
-			<div class="d-flex align-items-center gap-1">
-				${kkIcon(rmTypeIcons[r._type] || 'link')}
-				<span class="badge bg-light text-dark" style="font-size:0.65rem">${rmTypeLabels[r._type] || r._type}</span>
-				<span class="fw-semibold text-truncate">${escapeHtml(r.title || r.url || r.id)}</span>
-			</div>
-		</button>
-	`).join('');
+	const resultElements = filtered.map(rmCreateLinkSearchResult).filter(Boolean);
+	if (!resultElements.length) { rmHideRelDropdown(); return; }
+	dd.replaceChildren(...resultElements);
 	dd.style.display = 'block';
 
 	rmRelHighlightIdx = -1;
