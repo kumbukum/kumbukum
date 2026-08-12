@@ -18,7 +18,7 @@ const auditLogSchema = new mongoose.Schema(
         channel: {
             type: String,
             required: true,
-            enum: ['web', 'api', 'mcp', 'emailforwarding'],
+            enum: ['web', 'api', 'mcp', 'mobile', 'emailforwarding'],
         },
         token_label: { type: String },
         mcp_client: { type: String },

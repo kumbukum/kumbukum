@@ -65,11 +65,6 @@ body {
 	vertical-align: -0.25em;
 }
 
-.slash-menu-icon {
-	width: 18px;
-	text-align: center;
-}
-
 .rm-shared-tag-icon {
 	font-size: 0.55rem;
 }
@@ -286,6 +281,66 @@ body.st-no-chat-sidebar #chat-results-panel {
 	gap: 0.35rem;
 }
 
+.st-mobile-beta-link {
+	color: var(--st-muted);
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 0.18rem;
+}
+
+.st-mobile-beta-link:hover,
+.st-mobile-beta-link:focus {
+	color: var(--st-primary);
+}
+
+.st-mobile-beta-header-link {
+	margin-right: 2.5rem;
+}
+
+.st-mobile-beta-card {
+	border-color: var(--st-line);
+	border-radius: 0.75rem;
+	background: var(--st-panel);
+}
+
+.st-mobile-beta-platform-icon {
+	display: grid;
+	width: 3rem;
+	height: 3rem;
+	place-items: center;
+	border-radius: 1rem;
+	background: rgba(var(--st-primary-rgb), 0.12);
+	color: var(--st-primary);
+	font-size: 1.65rem;
+}
+
+.st-mobile-beta-qr {
+	display: grid;
+	width: 11.25rem;
+	height: 11.25rem;
+	place-items: center;
+	padding: 0.45rem;
+	border: 0.0625rem solid var(--st-line);
+	border-radius: 0.75rem;
+	background: #fff;
+}
+
+.st-mobile-beta-qr svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+body.st-template1 #mobileBetaModal .text-muted {
+	color: var(--st-muted) !important;
+}
+
+body.st-template1 #mobileBetaModal a.btn-primary,
+body.st-template1 #mobileBetaModal a.btn-primary:hover,
+body.st-template1 #mobileBetaModal a.btn-primary:focus {
+	color: var(--st-ink);
+}
+
 @media (max-width: 991.98px) {
 	.st-global-search {
 		flex-basis: 180px;
@@ -320,6 +375,7 @@ body.st-no-chat-sidebar #chat-results-panel {
 	}
 }
 
+body.st-template1 #mobileBetaModal,
 body.st-template1 #settingsModal,
 body.st-template1 #projectSettingsModal {
 	--bs-body-color: var(--st-text);
@@ -952,6 +1008,14 @@ body.backend-admin .list-group-item-action:not(.active):active {
 	color: var(--tag-color) !important;
 	background-color: #dfdfdf !important;
 }
+
+[data-bs-theme="dark"] body.st-template1 .tag-badge,
+[data-theme="dark"] body.st-template1 .tag-badge {
+	color: var(--st-muted) !important;
+	background-color: var(--st-panel-muted) !important;
+	border-color: var(--st-line-strong) !important;
+}
+
 .btn-close-white {
 	--bs-btn-close-filter: var(--tag-color) !important;
 }
@@ -1028,11 +1092,52 @@ body.backend-admin .list-group-item-action:not(.active):active {
 
 #rm-note-editor .ProseMirror,
 #rm-memory-editor .ProseMirror {
-	min-height: 300px;
+	min-height: 18.75rem;
 	padding: 1rem;
-	border: 1px solid #dee2e6;
-	border-radius: 0.375rem;
+	border: 0.0625rem solid var(--bs-border-color);
+	border-radius: 0 0 0.375rem 0.375rem;
 	outline: none;
+	background: var(--bs-body-bg);
+	color: var(--bs-body-color);
+}
+
+.st-rich-editor-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	padding: 0.35rem;
+	border: 0.0625rem solid var(--bs-border-color);
+	border-bottom: 0;
+	border-radius: 0.375rem 0.375rem 0 0;
+	background: var(--bs-body-bg);
+	color: var(--bs-body-color);
+}
+
+.st-rich-editor-toolbar .btn-group {
+	flex: 0 0 auto;
+}
+
+.st-rich-editor-button {
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	cursor: pointer;
+}
+
+.st-rich-editor-button .st-icon {
+	font-size: 1rem;
+}
+
+.st-rich-editor-button.active,
+.st-rich-editor-button[aria-pressed="true"] {
+	background: rgba(var(--bs-primary-rgb), 0.14);
+	border-color: rgba(var(--bs-primary-rgb), 0.45);
+	color: var(--bs-primary);
+}
+
+.st-rich-editor-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.45;
 }
 
 #rm-note-editor .ProseMirror:focus,
@@ -1104,35 +1209,73 @@ body.backend-admin .list-group-item-action:not(.active):active {
 
 .source-search-wrap .source-search-icon {
 	position: absolute;
-	left: 12px;
+	left: 0.75rem;
 	top: 50%;
 	transform: translateY(-50%);
-	color: #adb5bd;
-	font-size: 14px;
+	color: var(--st-muted);
+	font-size: 0.875rem;
 	pointer-events: none;
 }
 
 .source-search-wrap input {
-	padding-left: 36px;
-	border: 1px solid #e1e5e9;
-	border-radius: 6px;
-	background: #f9fafb;
+	padding-left: 2.25rem;
+	border: 0.0625rem solid var(--st-line-strong);
+	border-radius: 0.375rem;
+	background: var(--st-panel-subtle);
+	color: var(--st-text);
 	transition:
 		border-color 0.15s,
 		box-shadow 0.15s;
 }
 
+.source-search-wrap input::placeholder {
+	color: var(--st-muted);
+	opacity: 1;
+}
+
 .source-search-wrap input:focus {
-	background: #fff;
-	border-color: #15171a;
+	background: var(--st-panel);
+	border-color: var(--st-primary);
 	box-shadow: none;
 }
 
 .source-dropdown {
-	border: 1px solid #e1e5e9;
-	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	background: #fff;
+	border: 0.0625rem solid var(--st-line-strong);
+	border-radius: 0.375rem;
+	box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
+	background: var(--st-panel);
+}
+
+.rm-link-search-dropdown {
+	z-index: 1060;
+	top: 100%;
+	left: 0;
+	display: none;
+	max-height: 12.5rem;
+	overflow-y: auto;
+}
+
+.rm-link-result-content {
+	min-width: 0;
+}
+
+.rm-link-result-icon {
+	margin-top: 0.1875rem;
+}
+
+.rm-link-result-title {
+	line-height: 1.25;
+}
+
+.rm-link-result-meta {
+	font-size: 0.75rem;
+	line-height: 1.25;
+}
+
+.source-dropdown .badge.bg-light {
+	color: var(--st-muted) !important;
+	background: var(--st-panel-muted) !important;
+	border: 0.0625rem solid var(--st-line);
 }
 
 .source-dropdown .list-group-item.active {
@@ -1193,6 +1336,19 @@ body.backend-admin .list-group-item-action:not(.active):active {
 
 #chat-result-modal .preview-container blockquote {
 	border-left-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] body.st-template1 .form-check-input:not(:checked),
+[data-theme="dark"] body.st-template1 .form-check-input:not(:checked) {
+	--tblr-form-check-bg: var(--st-panel-muted);
+	border-color: #607585;
+}
+
+[data-bs-theme="dark"] body.st-template1 .form-check-input:not(:checked):hover,
+[data-theme="dark"] body.st-template1 .form-check-input:not(:checked):hover,
+[data-bs-theme="dark"] body.st-template1 .form-check-input:not(:checked):focus,
+[data-theme="dark"] body.st-template1 .form-check-input:not(:checked):focus {
+	border-color: var(--st-muted);
 }
 
 #rm-url-tab-pages-count {

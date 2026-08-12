@@ -6119,7 +6119,7 @@ var PluginKey = class {
   }
 };
 
-// node_modules/.pnpm/prosemirror-commands@1.7.1/node_modules/prosemirror-commands/dist/index.js
+// node_modules/.pnpm/prosemirror-commands@1.7.2/node_modules/prosemirror-commands/dist/index.js
 var deleteSelection = (state, dispatch) => {
   if (state.selection.empty)
     return false;
@@ -6419,16 +6419,20 @@ var liftEmptyBlock = (state, dispatch) => {
 };
 function splitBlockAs(splitNode) {
   return (state, dispatch) => {
-    let { $from, $to } = state.selection;
     if (state.selection instanceof NodeSelection && state.selection.node.isBlock) {
-      if (!$from.parentOffset || !canSplit(state.doc, $from.pos))
+      let { $from: $from2 } = state.selection;
+      if (!$from2.parentOffset || !canSplit(state.doc, $from2.pos))
         return false;
       if (dispatch)
-        dispatch(state.tr.split($from.pos).scrollIntoView());
+        dispatch(state.tr.split($from2.pos).scrollIntoView());
       return true;
     }
-    if (!$from.depth)
+    if (!state.selection.$from.depth)
       return false;
+    let tr2 = state.tr;
+    if (!state.selection.empty && (state.selection instanceof TextSelection || state.selection instanceof AllSelection))
+      tr2.deleteSelection();
+    let { $from } = tr2.selection, mapFrom = tr2.steps.length;
     let types = [];
     let splitDepth, deflt, atEnd = false, atStart = false;
     for (let d = $from.depth; ; d--) {
@@ -6437,7 +6441,7 @@ function splitBlockAs(splitNode) {
         atEnd = $from.end(d) == $from.pos + ($from.depth - d);
         atStart = $from.start(d) == $from.pos - ($from.depth - d);
         deflt = defaultBlockAt($from.node(d - 1).contentMatchAt($from.indexAfter(d - 1)));
-        let splitType = splitNode && splitNode($to.parent, atEnd, $from);
+        let splitType = splitNode && splitNode($from.parent, atEnd, $from);
         types.unshift(splitType || (atEnd && deflt ? { type: deflt } : null));
         splitDepth = d;
         break;
@@ -6447,10 +6451,7 @@ function splitBlockAs(splitNode) {
         types.unshift(null);
       }
     }
-    let tr2 = state.tr;
-    if (state.selection instanceof TextSelection || state.selection instanceof AllSelection)
-      tr2.deleteSelection();
-    let splitPos = tr2.mapping.map($from.pos);
+    let splitPos = $from.pos;
     let can = canSplit(tr2.doc, splitPos, types.length, types);
     if (!can) {
       types[0] = deflt ? { type: deflt } : null;
@@ -6460,9 +6461,10 @@ function splitBlockAs(splitNode) {
       return false;
     tr2.split(splitPos, types.length, types);
     if (!atEnd && atStart && $from.node(splitDepth).type != deflt) {
-      let first2 = tr2.mapping.map($from.before(splitDepth)), $first = tr2.doc.resolve(first2);
+      let mapping = tr2.mapping.slice(mapFrom);
+      let first2 = mapping.map($from.before(splitDepth)), $first = tr2.doc.resolve(first2);
       if (deflt && $from.node(splitDepth - 1).canReplaceWith($first.index(), $first.index() + 1, deflt))
-        tr2.setNodeMarkup(tr2.mapping.map($from.before(splitDepth)), deflt);
+        tr2.setNodeMarkup(mapping.map($from.before(splitDepth)), deflt);
     }
     if (dispatch)
       dispatch(tr2.scrollIntoView());
@@ -12248,7 +12250,7 @@ function keydownHandler(bindings) {
   };
 }
 
-// node_modules/.pnpm/@tiptap+core@3.29.0_@tiptap+pm@3.29.0/node_modules/@tiptap/core/dist/index.js
+// node_modules/.pnpm/@tiptap+core@3.30.0_@tiptap+pm@3.30.0/node_modules/@tiptap/core/dist/index.js
 var __defProp = Object.defineProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -12449,6 +12451,7 @@ __export(commands_exports, {
   unsetMark: () => unsetMark,
   unsetTextDirection: () => unsetTextDirection,
   updateAttributes: () => updateAttributes,
+  updateDecorations: () => updateDecorations,
   wrapIn: () => wrapIn2,
   wrapInList: () => wrapInList2
 });
@@ -12844,16 +12847,19 @@ function elementFromString(value) {
   const html = new window.DOMParser().parseFromString(wrappedValue, "text/html").body;
   return removeWhitespaces(html);
 }
+function isProseMirrorContent(value) {
+  return typeof (value == null ? void 0 : value.nodesBetween) === "function";
+}
 function createNodeFromContent(content, schema, options) {
-  if (content instanceof Node || content instanceof Fragment) {
+  if (isProseMirrorContent(content)) {
     return content;
   }
+  const isJSONContent = typeof content === "object" && content !== null;
   options = {
     slice: true,
     parseOptions: {},
     ...options
   };
-  const isJSONContent = typeof content === "object" && content !== null;
   const isTextContent = typeof content === "string";
   if (isJSONContent) {
     try {
@@ -12925,6 +12931,9 @@ function createNodeFromContent(content, schema, options) {
   }
   return createNodeFromContent("", schema, options);
 }
+function isFragment(nodeOrFragment) {
+  return !("type" in nodeOrFragment);
+}
 function selectionToInsertionEnd2(tr2, startLen, bias) {
   const last = tr2.steps.length - 1;
   if (last < startLen) {
@@ -12943,9 +12952,6 @@ function selectionToInsertionEnd2(tr2, startLen, bias) {
   });
   tr2.setSelection(Selection.near(tr2.doc.resolve(end), bias));
 }
-var isFragment = (nodeOrFragment) => {
-  return !("type" in nodeOrFragment);
-};
 var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor }) => {
   var _a;
   if (dispatch) {
@@ -12995,7 +13001,7 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
     let { from: from2, to } = typeof position === "number" ? { from: position, to: position } : { from: position.from, to: position.to };
     let isOnlyTextContent = true;
     let isOnlyBlockContent = true;
-    const nodes = isFragment(content) ? content : [content];
+    const nodes = isFragment(content) ? content.content : [content];
     nodes.forEach((node) => {
       node.check();
       isOnlyTextContent = isOnlyTextContent ? node.isText && node.marks.length === 0 : false;
@@ -13012,15 +13018,12 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
     let newContent;
     if (isOnlyTextContent) {
       if (Array.isArray(value)) {
-        newContent = value.map((v) => v.text || "").join("");
-      } else if (value instanceof Fragment) {
-        let text = "";
-        value.forEach((node) => {
-          if (node.text) {
-            text += node.text;
-          }
-        });
-        newContent = text;
+        newContent = value.map((item) => item.text || "").join("");
+      } else if (isProseMirrorContent(value)) {
+        newContent = nodes.map((node) => {
+          var _a2;
+          return (_a2 = node.text) != null ? _a2 : "";
+        }).join("");
       } else if (typeof value === "object" && !!value && !!value.text) {
         newContent = value.text;
       } else {
@@ -13028,7 +13031,7 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
       }
       tr2.insertText(newContent, from2, to);
     } else {
-      newContent = content;
+      newContent = Fragment.from(nodes);
       const $from = tr2.doc.resolve(from2);
       const $fromNode = $from.node();
       const fromSelectionAtStart = $from.parentOffset === 0;
@@ -13037,7 +13040,7 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
       if (fromSelectionAtStart && isTextSelection2 && hasContent && isOnlyBlockContent) {
         from2 = Math.max(0, from2 - 1);
       }
-      tr2.replaceWith(from2, to, newContent);
+      tr2.replaceWith(from2, to, nodes);
     }
     if (options.updateSelection) {
       selectionToInsertionEnd2(tr2, tr2.steps.length - 1, -1);
@@ -13362,7 +13365,8 @@ var setContent = (content, { errorOnInvalidContent, emitUpdate = true, parseOpti
       errorOnInvalidContent: errorOnInvalidContent != null ? errorOnInvalidContent : editor.options.enableContentCheck
     });
     if (dispatch) {
-      tr2.replaceWith(0, doc3.content.size, document2).setMeta("preventUpdate", !emitUpdate);
+      const nodes = isFragment(document2) ? document2.content : [document2];
+      tr2.replaceWith(0, doc3.content.size, nodes).setMeta("preventUpdate", !emitUpdate);
     }
     return true;
   }
@@ -14092,6 +14096,13 @@ var getNodeAtPosition = (state, typeOrName, pos, maxDepth = 20) => {
     }
   }
   return [node, currentDepth];
+};
+var getPreviousBlockSibling = ($pos) => {
+  const parentDepth = $pos.depth - 1;
+  if (parentDepth < 0) return null;
+  const index = $pos.index(parentDepth);
+  if (index === 0) return null;
+  return $pos.node(parentDepth).child(index - 1);
 };
 function getSchemaTypeByName(name, schema) {
   return schema.nodes[name] || schema.marks[name] || null;
@@ -14962,6 +14973,16 @@ var updateAttributes = (typeOrName, attributes = {}) => ({ tr: tr2, state, dispa
   });
   return canUpdate;
 };
+var DECORATION_MANAGER_PLUGIN_KEY_NAME = "__tiptap_decorations__";
+var DECORATION_MANAGER_PLUGIN_KEY = new PluginKey(
+  DECORATION_MANAGER_PLUGIN_KEY_NAME
+);
+var updateDecorations = (extensionName) => ({ tr: tr2, dispatch }) => {
+  if (dispatch) {
+    tr2.setMeta(DECORATION_MANAGER_PLUGIN_KEY, { type: "force", name: extensionName });
+  }
+  return true;
+};
 var wrapIn2 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
   const type = getNodeType(typeOrName, state.schema);
   return wrapIn(type, attributes)(state, dispatch);
@@ -14970,6 +14991,24 @@ var wrapInList2 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
   const type = getNodeType(typeOrName, state.schema);
   return wrapInList(type, attributes)(state, dispatch);
 };
+var depthByEditor = /* @__PURE__ */ new WeakMap();
+function runInDecorationApplyScope(editor, callback) {
+  var _a, _b;
+  depthByEditor.set(editor, ((_a = depthByEditor.get(editor)) != null ? _a : 0) + 1);
+  try {
+    return callback();
+  } finally {
+    const remaining = ((_b = depthByEditor.get(editor)) != null ? _b : 1) - 1;
+    if (remaining > 0) {
+      depthByEditor.set(editor, remaining);
+    } else {
+      depthByEditor.delete(editor);
+    }
+  }
+}
+function isInDecorationApplyScope(editor) {
+  return depthByEditor.has(editor);
+}
 var EventEmitter = class {
   constructor() {
     this.callbacks = {};
@@ -15008,6 +15047,535 @@ var EventEmitter = class {
   }
   removeAllListeners() {
     this.callbacks = {};
+  }
+};
+var isDev = typeof process !== "undefined" && true;
+function isWidgetDecoration(decoration) {
+  return decoration.kind === "widget";
+}
+function decorationsToPMDecorations(decorations, extensionName) {
+  const pmDecorations = [];
+  const widgetKeys = /* @__PURE__ */ new Set();
+  for (const decoration of decorations) {
+    if (decoration.kind === "widget") {
+      if (isWidgetDecoration(decoration)) {
+        widgetKeys.add(decoration.key);
+      }
+    }
+    pmDecorations.push(decoration.toPMDecoration(extensionName));
+  }
+  return { decorations: pmDecorations, widgetKeys };
+}
+function buildDecorationSet(doc3, decorations, extensionName) {
+  const { decorations: pmDecorations, widgetKeys } = decorationsToPMDecorations(
+    decorations,
+    extensionName
+  );
+  return { set: DecorationSet.create(doc3, pmDecorations), widgetKeys };
+}
+function rangeOwnsPosition({
+  position,
+  from: from2,
+  to,
+  docSize
+}) {
+  if (position < from2) {
+    return false;
+  }
+  if (position < to) {
+    return true;
+  }
+  return position === to && to === docSize;
+}
+function filterOutOfRangeDecorations({
+  decorations,
+  from: from2,
+  to,
+  docSize,
+  extensionName,
+  warnedExtensions
+}) {
+  return decorations.filter((decoration) => {
+    if (rangeOwnsPosition({ position: decoration.anchor, from: from2, to, docSize })) {
+      return true;
+    }
+    if (decoration.anchor === to) {
+      return false;
+    }
+    if (!warnedExtensions.has(extensionName)) {
+      warnedExtensions.add(extensionName);
+      console.warn(
+        `[tiptap warn]: Extension "${extensionName}" returned a decoration outside the requested range [${from2}, ${to}). It was ignored.`
+      );
+    }
+    return false;
+  });
+}
+function widgetKeyOf(decoration) {
+  var _a;
+  const key = (_a = decoration.spec) == null ? void 0 : _a.key;
+  return typeof key === "string" ? key : void 0;
+}
+function findDuplicateWidgetKeys(decorationSet) {
+  var _a, _b, _c;
+  const extensionsByKey = /* @__PURE__ */ new Map();
+  const counts = /* @__PURE__ */ new Map();
+  for (const decoration of decorationSet.find()) {
+    const key = widgetKeyOf(decoration);
+    if (!key) {
+      continue;
+    }
+    const extension = (_a = decoration.spec.extensionName) != null ? _a : "unknown";
+    const extensions = (_b = extensionsByKey.get(key)) != null ? _b : /* @__PURE__ */ new Set();
+    extensions.add(extension);
+    extensionsByKey.set(key, extensions);
+    counts.set(key, ((_c = counts.get(key)) != null ? _c : 0) + 1);
+  }
+  return Array.from(extensionsByKey, ([key, extensions]) => ({ key, extensions })).filter(
+    ({ key }) => {
+      var _a2;
+      return ((_a2 = counts.get(key)) != null ? _a2 : 0) > 1;
+    }
+  );
+}
+function isAttrStep(step) {
+  return step.jsonID === "attr";
+}
+function hasResolvableChangedRange(step) {
+  let hasMappedRange = false;
+  step.getMap().forEach(() => {
+    hasMappedRange = true;
+  });
+  if (hasMappedRange || isAttrStep(step)) {
+    return true;
+  }
+  const positionalStep = step;
+  return typeof positionalStep.from === "number" && typeof positionalStep.to === "number";
+}
+function blockRangeFor(doc3, changed) {
+  let from2 = null;
+  let to = 0;
+  let nodeStart = 0;
+  for (let index = 0; index < doc3.childCount; index += 1) {
+    if (nodeStart > changed.to) {
+      break;
+    }
+    const nodeEnd = nodeStart + doc3.child(index).nodeSize;
+    if (nodeEnd >= changed.from) {
+      if (from2 === null) {
+        from2 = nodeStart;
+      }
+      to = nodeEnd;
+    }
+    nodeStart = nodeEnd;
+  }
+  return from2 === null ? null : { from: from2, to };
+}
+function getRebuildRanges(tr2, doc3) {
+  if (tr2.steps.some((step) => !hasResolvableChangedRange(step))) {
+    return { type: "full" };
+  }
+  const newRanges = getChangedRanges(tr2).map(({ newRange }) => newRange);
+  tr2.steps.forEach((step, index) => {
+    if (!isAttrStep(step)) {
+      return;
+    }
+    const mapping = tr2.mapping.slice(index);
+    newRanges.push({ from: mapping.map(step.pos, -1), to: mapping.map(step.pos + 1) });
+  });
+  const ranges = [];
+  for (const newRange of newRanges) {
+    const blockRange = blockRangeFor(doc3, newRange);
+    if (blockRange) {
+      ranges.push(blockRange);
+    }
+  }
+  ranges.sort((a, b) => a.from - b.from);
+  const merged = [];
+  for (const range of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && range.from <= last.to) {
+      last.to = Math.max(last.to, range.to);
+    } else {
+      merged.push({ ...range });
+    }
+  }
+  return { type: "ranges", ranges: merged };
+}
+function mapDecorationSet(set, mapping, doc3, widgetKeys) {
+  return set.map(mapping, doc3, {
+    onRemove: (removedSpec) => {
+      const key = removedSpec == null ? void 0 : removedSpec.key;
+      if (typeof key === "string") {
+        widgetKeys.delete(key);
+      }
+    }
+  });
+}
+function mapDecorations(name, previous, tr2) {
+  var _a, _b;
+  const previousSet = (_a = previous.decorationSetsByExtension[name]) != null ? _a : DecorationSet.empty;
+  const widgetKeys = new Set((_b = previous.widgetKeysByExtension[name]) != null ? _b : []);
+  const set = mapDecorationSet(previousSet, tr2.mapping, tr2.doc, widgetKeys);
+  return { set, widgetKeys };
+}
+function mergeDecorationSets(doc3, decorationSetsByExtension) {
+  const allDecorations = Object.values(decorationSetsByExtension).flatMap((set) => set.find());
+  return DecorationSet.create(doc3, allDecorations);
+}
+function unionWidgetKeys(widgetKeysByExtension) {
+  const merged = /* @__PURE__ */ new Set();
+  for (const keys2 of Object.values(widgetKeysByExtension)) {
+    for (const key of keys2) {
+      merged.add(key);
+    }
+  }
+  return merged;
+}
+function validateDecorationSpec(name, spec) {
+  var _a;
+  const strategy = (_a = spec.update) != null ? _a : "document";
+  switch (strategy) {
+    case "document":
+      if (spec.createInRange) {
+        throw new Error(
+          `[tiptap error]: Extension "${name}" provides createInRange() but does not use the "changedRanges" decoration update strategy.`
+        );
+      }
+      return;
+    case "changedRanges":
+      if (!spec.createInRange) {
+        throw new Error(
+          `[tiptap error]: Extension "${name}" uses the "changedRanges" decoration update strategy but does not provide createInRange().`
+        );
+      }
+      return;
+    case "manual":
+      if (spec.createInRange) {
+        throw new Error(
+          `[tiptap error]: Extension "${name}" uses the "manual" decoration update strategy, which is not compatible with createInRange(). createInRange() requires the "changedRanges" strategy.`
+        );
+      }
+      if (spec.shouldUpdate) {
+        throw new Error(
+          `[tiptap error]: Extension "${name}" cannot combine the "manual" decoration update strategy with shouldUpdate().`
+        );
+      }
+      return;
+    default:
+      throw new Error(
+        `[tiptap error]: Extension "${name}" uses an unknown decoration update strategy. Expected "document", "changedRanges", or "manual".`
+      );
+  }
+}
+function shouldRecomputeDecoration(spec, props, forced) {
+  if (forced) {
+    return true;
+  }
+  if (spec.update === "manual") {
+    return false;
+  }
+  return spec.shouldUpdate ? spec.shouldUpdate(props) : props.tr.docChanged;
+}
+var EMPTY_KEYS = /* @__PURE__ */ new Set();
+var DecorationManager = class {
+  constructor(options) {
+    this.warnedWidgetKeys = /* @__PURE__ */ new Set();
+    this.warnedOutOfRangeExtensions = /* @__PURE__ */ new Set();
+    this.handleBeforeTransaction = ({ nextState }) => {
+      const state = DECORATION_MANAGER_PLUGIN_KEY.getState(nextState);
+      if (state) {
+        this.warnDuplicateWidgetKeys(state);
+      }
+    };
+    this.editor = options.editor;
+    this.entries = this.resolveEntries(options.entries);
+    this.entries.forEach(({ name, spec }) => validateDecorationSpec(name, spec));
+    this.plugin = this.entries.length > 0 ? this.createPlugin() : null;
+    this.editor.on("beforeTransaction", this.handleBeforeTransaction);
+  }
+  destroy() {
+    this.editor.off("beforeTransaction", this.handleBeforeTransaction);
+  }
+  /**
+   * Returns the set of live widget keys from all decoration extensions.
+   * @returns A readonly set of widget keys
+   */
+  liveWidgetKeys() {
+    var _a, _b;
+    return (_b = (_a = DECORATION_MANAGER_PLUGIN_KEY.getState(this.editor.state)) == null ? void 0 : _a.widgetKeys) != null ? _b : EMPTY_KEYS;
+  }
+  /**
+   * The mounted editor view, or `null` when destroyed. Decoration callbacks
+   * must never receive the placeholder view `editor.view` falls back to.
+   * @returns The mounted editor view, or `null`
+   */
+  get mountedView() {
+    return this.editor.isDestroyed ? null : this.editor.view;
+  }
+  /**
+   * Resolves decoration entries by calling the addDecorations function for each extension entry.
+   * @param entries The decoration manager entries to resolve
+   * @returns An array of resolved decoration entries
+   */
+  resolveEntries(entries) {
+    const resolved = [];
+    for (const { name, addDecorations } of entries) {
+      const spec = addDecorations();
+      if (spec) {
+        resolved.push({ name, spec });
+      }
+    }
+    return resolved;
+  }
+  /**
+   * Creates the ProseMirror plugin for managing decorations.
+   * @returns A ProseMirror plugin with state management
+   */
+  createPlugin() {
+    const { editor, entries } = this;
+    return new Plugin({
+      key: DECORATION_MANAGER_PLUGIN_KEY,
+      state: {
+        init: (_config, state) => {
+          const decorationSetsByExtension = {};
+          const widgetKeysByExtension = {};
+          for (const { name, spec } of entries) {
+            const { set, widgetKeys } = this.buildFullSet(name, spec, state);
+            decorationSetsByExtension[name] = set;
+            widgetKeysByExtension[name] = widgetKeys;
+          }
+          const managerState = {
+            decorationSetsByExtension,
+            widgetKeysByExtension,
+            mergedDecorationSet: this.buildMergedSet(state.doc, decorationSetsByExtension),
+            widgetKeys: unionWidgetKeys(widgetKeysByExtension)
+          };
+          this.warnDuplicateWidgetKeys(managerState);
+          return managerState;
+        },
+        apply: (tr2, previous, oldState, newState) => {
+          const meta = tr2.getMeta(DECORATION_MANAGER_PLUGIN_KEY);
+          const forceAll = (meta == null ? void 0 : meta.type) === "force" && !meta.name;
+          const forceName = (meta == null ? void 0 : meta.type) === "force" ? meta.name : void 0;
+          const decorationSetsByExtension = {};
+          const widgetKeysByExtension = {};
+          const recomputedNames = /* @__PURE__ */ new Set();
+          runInDecorationApplyScope(editor, () => {
+            for (const { name, spec } of entries) {
+              const forced = forceAll || forceName === name;
+              const shouldRecompute = shouldRecomputeDecoration(
+                spec,
+                { editor, tr: tr2, oldState, newState },
+                forced
+              );
+              if (!shouldRecompute) {
+                const result = mapDecorations(name, previous, tr2);
+                decorationSetsByExtension[name] = result.set;
+                widgetKeysByExtension[name] = result.widgetKeys;
+              } else if (spec.update === "changedRanges" && tr2.docChanged && !forced) {
+                const result = this.applyChangedRangesRecompute(name, spec, previous, tr2, newState);
+                decorationSetsByExtension[name] = result.set;
+                widgetKeysByExtension[name] = result.widgetKeys;
+                recomputedNames.add(name);
+              } else {
+                const { set, widgetKeys } = this.buildFullSet(name, spec, newState);
+                decorationSetsByExtension[name] = set;
+                widgetKeysByExtension[name] = widgetKeys;
+                recomputedNames.add(name);
+              }
+            }
+          });
+          if (recomputedNames.size === 0 && !tr2.docChanged) {
+            return previous;
+          }
+          const mergedDecorationSet = this.mergeAfterApply({
+            entries,
+            previous,
+            tr: tr2,
+            decorationSetsByExtension,
+            recomputedNames
+          });
+          return {
+            decorationSetsByExtension,
+            widgetKeysByExtension,
+            mergedDecorationSet,
+            widgetKeys: unionWidgetKeys(widgetKeysByExtension)
+          };
+        }
+      },
+      props: {
+        decorations(state) {
+          var _a, _b;
+          return (_b = (_a = DECORATION_MANAGER_PLUGIN_KEY.getState(state)) == null ? void 0 : _a.mergedDecorationSet) != null ? _b : DecorationSet.empty;
+        }
+      }
+    });
+  }
+  /**
+   * Applies changed ranges recomputation to a decoration set, dropping stale decorations and rebuilding only the touched blocks.
+   * @param name The name of the decoration extension
+   * @param spec The decoration spec
+   * @param previous The previous decoration manager state
+   * @param tr The transaction to apply
+   * @param newState The new editor state
+   * @returns The updated decoration set and widget keys
+   */
+  applyChangedRangesRecompute(name, spec, previous, tr2, newState) {
+    const resolution = getRebuildRanges(tr2, newState.doc);
+    if (resolution.type === "full") {
+      return this.buildFullSet(name, spec, newState);
+    }
+    return this.rebuildRanges(name, spec, previous, tr2, newState, resolution.ranges);
+  }
+  /**
+   * Rebuilds decorations for the changed block ranges: maps the previous set
+   * forward, then for each range removes stale decorations, calls
+   * `createInRange`, and adds the new ones while syncing widget keys.
+   * @param name The extension name.
+   * @param spec The decoration spec.
+   * @param previous The previous decoration manager state.
+   * @param tr The transaction to apply.
+   * @param newState The new editor state.
+   * @param ranges The block ranges to rebuild.
+   * @returns The updated decoration set and widget keys.
+   */
+  rebuildRanges(name, spec, previous, tr2, newState, ranges) {
+    var _a, _b;
+    const previousSet = (_a = previous.decorationSetsByExtension[name]) != null ? _a : DecorationSet.empty;
+    const widgetKeys = new Set((_b = previous.widgetKeysByExtension[name]) != null ? _b : []);
+    let set = mapDecorationSet(previousSet, tr2.mapping, tr2.doc, widgetKeys);
+    const docSize = newState.doc.content.size;
+    for (const { from: from2, to } of ranges) {
+      const stale = set.find(from2, to).filter((decoration) => rangeOwnsPosition({ position: decoration.from, from: from2, to, docSize }));
+      for (const decoration of stale) {
+        const key = widgetKeyOf(decoration);
+        if (key) {
+          widgetKeys.delete(key);
+        }
+      }
+      set = set.remove(stale);
+      const rangeDecorations = filterOutOfRangeDecorations({
+        decorations: this.runCreate(
+          name,
+          "createInRange",
+          () => spec.createInRange({
+            editor: this.editor,
+            state: newState,
+            view: this.mountedView,
+            from: from2,
+            to
+          })
+        ),
+        from: from2,
+        to,
+        docSize,
+        extensionName: name,
+        warnedExtensions: this.warnedOutOfRangeExtensions
+      });
+      const { decorations: pmDecorations, widgetKeys: addedKeys } = decorationsToPMDecorations(
+        rangeDecorations,
+        name
+      );
+      set = set.add(newState.doc, pmDecorations);
+      for (const key of addedKeys) {
+        widgetKeys.add(key);
+      }
+    }
+    return { set, widgetKeys };
+  }
+  /**
+   * Builds a full decoration set for the entire document.
+   * @param name The name of the decoration extension
+   * @param spec The decoration spec
+   * @param state The editor state
+   * @returns The decoration set and widget keys
+   */
+  buildFullSet(name, spec, state) {
+    const decorations = this.runCreate(
+      name,
+      "create",
+      () => spec.create({
+        editor: this.editor,
+        state,
+        view: this.mountedView
+      })
+    );
+    return buildDecorationSet(state.doc, decorations, name);
+  }
+  /**
+   * Runs a decoration callback and swallows anything it throws. These run inside
+   * `state.apply`, where an uncaught error would abort the whole transaction.
+   * @param name The extension name.
+   * @param method The callback name, used in the error message.
+   * @param create The callback to run.
+   * @returns The decorations, or an empty array if the callback threw.
+   */
+  runCreate(name, method, create) {
+    try {
+      return create();
+    } catch (error) {
+      console.error(
+        `[tiptap error]: Extension "${name}" threw in \`addDecorations().${method}()\`. Its decorations were dropped for this update.`,
+        error
+      );
+      return [];
+    }
+  }
+  warnDuplicateWidgetKeys(state) {
+    if (!isDev) {
+      return;
+    }
+    if (state.widgetKeys.size === 0) {
+      this.warnedWidgetKeys.clear();
+      return;
+    }
+    const duplicateKeys = findDuplicateWidgetKeys(state.mergedDecorationSet);
+    const nextWarningKeys = new Set(duplicateKeys.map(({ key }) => key));
+    for (const { key, extensions } of duplicateKeys) {
+      if (this.warnedWidgetKeys.has(key)) {
+        continue;
+      }
+      const names = Array.from(extensions).map((name) => `"${name}"`).join(", ");
+      console.warn(
+        `[tiptap warn]: Duplicate widget decoration key "${key}" in extension${extensions.size === 1 ? "" : "s"} ${names}. Widget decoration keys must be globally unique, otherwise ProseMirror misplaces the widget DOM. Use a stable, unique key (e.g. \`comment-\${id}\`).`
+      );
+    }
+    this.warnedWidgetKeys = nextWarningKeys;
+  }
+  /**
+   * Builds the merged DecorationSet during init. Skips the merge for a
+   * single extension since its per-extension set is already correct.
+   * @param doc The document to build the merged set for.
+   * @param decorationSetsByExtension The per-extension decoration sets.
+   * @returns The merged decoration set.
+   */
+  buildMergedSet(doc3, decorationSetsByExtension) {
+    const names = Object.keys(decorationSetsByExtension);
+    if (names.length === 1) {
+      return decorationSetsByExtension[names[0]];
+    }
+    return mergeDecorationSets(doc3, decorationSetsByExtension);
+  }
+  /**
+   * Computes the merged DecorationSet after apply. Single extension skips the
+   * merge; nothing recomputed maps the previous merged set forward; otherwise
+   * the merge is rebuilt from the per-extension sets.
+   */
+  mergeAfterApply({
+    entries,
+    previous,
+    tr: tr2,
+    decorationSetsByExtension,
+    recomputedNames
+  }) {
+    if (entries.length === 1) {
+      return decorationSetsByExtension[entries[0].name];
+    }
+    if (recomputedNames.size === 0) {
+      return previous.mergedDecorationSet.map(tr2.mapping, tr2.doc);
+    }
+    return mergeDecorationSets(tr2.doc, decorationSetsByExtension);
   }
 };
 function canInsertNode(state, nodeType) {
@@ -16103,6 +16671,7 @@ var ExtensionManager = class {
   constructor(extensions, editor) {
     this.splittableMarks = [];
     this.nonClearableMarks = [];
+    this.decorationManager = null;
     this.editor = editor;
     this.baseExtensions = extensions;
     this.extensions = resolveExtensions(extensions);
@@ -16210,7 +16779,44 @@ var ExtensionManager = class {
       }
       return plugins;
     });
+    const decorationPlugin = this.createDecorationPlugin();
+    if (decorationPlugin) {
+      allPlugins.push(decorationPlugin);
+    }
     return allPlugins;
+  }
+  /**
+   * Aggregates decorations from extensions into a single plugin, or returns null
+   * if none exist. Destroys the previous manager to avoid orphaned listeners.
+   * @returns A ProseMirror plugin or `null`
+   * @example
+   * const plugin = editor.extensionManager.createDecorationPlugin()
+   */
+  createDecorationPlugin() {
+    var _a;
+    const { editor } = this;
+    (_a = this.decorationManager) == null ? void 0 : _a.destroy();
+    const entries = [];
+    this.extensions.forEach((extension) => {
+      const context = {
+        name: extension.name,
+        options: extension.options,
+        storage: this.editor.extensionStorage[extension.name],
+        editor,
+        type: getSchemaTypeByName(extension.name, this.schema)
+      };
+      const addDecorations = getExtensionField(
+        extension,
+        "addDecorations",
+        context
+      );
+      if (!addDecorations) {
+        return;
+      }
+      entries.push({ name: extension.name, addDecorations });
+    });
+    this.decorationManager = new DecorationManager({ editor, entries });
+    return this.decorationManager.plugin;
   }
   /**
    * Get all attributes from the extensions.
@@ -16389,6 +16995,8 @@ var ExtensionManager = class {
    * and non-matching forward links must remain intact.
    */
   destroy() {
+    var _a;
+    (_a = this.decorationManager) == null ? void 0 : _a.destroy();
     this.extensions.forEach((extension) => {
       let current = extension;
       while (current.parent) {
@@ -16401,6 +17009,7 @@ var ExtensionManager = class {
     });
     this.extensions = [];
     this.baseExtensions = [];
+    this.decorationManager = null;
     this.schema = null;
     this.editor = null;
   }
@@ -16912,6 +17521,25 @@ var TextDirection = Extension.create({
     ];
   }
 });
+var hasChecked = false;
+function warnOnDuplicatedProseMirrorModel(schema) {
+  if (hasChecked) {
+    return;
+  }
+  hasChecked = true;
+  let content;
+  try {
+    content = ReplaceStep.fromJSON(schema, { from: 0, to: 0 }).slice.content;
+  } catch {
+    return;
+  }
+  if (content instanceof Fragment) {
+    return;
+  }
+  console.warn(
+    "[tiptap warn]: prosemirror-model is loaded more than once. Wrapping and splitting nodes will fail. Deduplicate it in your lock file, or alias it to a single copy in your bundler."
+  );
+}
 var NodePos = class _NodePos {
   constructor(pos, editor, isBlock = false, node = null) {
     this.currentNode = null;
@@ -17179,6 +17807,7 @@ var Editor = class extends EventEmitter {
     this.isInitialized = false;
     this.extensionStorage = {};
     this.instanceId = Math.random().toString(36).slice(2, 9);
+    this.hasWarnedStaleDecorationRead = false;
     this.options = {
       element: typeof document !== "undefined" ? document.createElement("div") : null,
       content: "",
@@ -17248,6 +17877,7 @@ var Editor = class extends EventEmitter {
         selection: selection || void 0
       });
     }
+    warnOnDuplicatedProseMirrorModel(this.schema);
     if (this.options.element) {
       this.mount(this.options.element);
     }
@@ -17282,6 +17912,7 @@ var Editor = class extends EventEmitter {
    */
   unmount() {
     if (this.editorView) {
+      this.editorState = this.editorView.state;
       const dom = this.editorView.dom;
       if (dom == null ? void 0 : dom.editor) {
         delete dom.editor;
@@ -17413,6 +18044,12 @@ var Editor = class extends EventEmitter {
    * Returns the editor state.
    */
   get state() {
+    if (isDev && !this.hasWarnedStaleDecorationRead && isInDecorationApplyScope(this)) {
+      this.hasWarnedStaleDecorationRead = true;
+      console.warn(
+        "[tiptap warn]: `editor.state` was read while decoration `create()` was running. It returns the pre-transaction document. Use the `state` argument passed to `create()` instead. Helpers like `editor.isActive()` read `editor.state` too, so pass `state` to their standalone versions instead of calling them on the editor."
+      );
+    }
     if (this.editorView) {
       this.editorState = this.view.state;
     }
@@ -18478,7 +19115,7 @@ function markPasteRule(config) {
   });
 }
 
-// node_modules/.pnpm/@tiptap+core@3.29.0_@tiptap+pm@3.29.0/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
+// node_modules/.pnpm/@tiptap+core@3.30.0_@tiptap+pm@3.30.0/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
 var h = (tag, attributes) => {
   if (tag === "slot") {
     return 0;
@@ -18495,10 +19132,10 @@ var h = (tag, attributes) => {
   return [tag, rest, children];
 };
 
-// node_modules/.pnpm/@tiptap+extension-blockquote@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-blockquote/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-blockquote@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0__@tiptap+pm@3.30.0/node_modules/@tiptap/extension-blockquote/dist/index.js
 var handleBackspace = (editor, type) => {
   var _a;
-  const { state, view } = editor;
+  const { state } = editor;
   const { selection } = state;
   if (!selection.empty) return false;
   const { $from } = selection;
@@ -18518,11 +19155,18 @@ var handleBackspace = (editor, type) => {
   const blockStart = $from.before();
   const insideBlockquoteEnd = blockStart - 1;
   const targetPos = insideBlockquoteEnd - 1;
-  const { tr: tr2 } = state;
-  tr2.delete(blockStart, $from.after()).insert(targetPos, $from.parent.content);
-  tr2.setSelection(TextSelection.create(tr2.doc, targetPos));
-  view.dispatch(tr2.scrollIntoView());
-  return true;
+  return editor.commands.command(({ tr: tr2, dispatch }) => {
+    if (!dispatch) {
+      return true;
+    }
+    const content = $from.parent.content;
+    const slice2 = new Slice(content, 0, 0);
+    tr2.replace(targetPos, $from.after(), slice2);
+    tr2.setSelection(TextSelection.create(tr2.doc, targetPos + content.size));
+    tr2.scrollIntoView();
+    dispatch(tr2);
+    return true;
+  });
 };
 var inputRegex = /^\s*>\s$/;
 var Blockquote = Node3.create({
@@ -18597,7 +19241,7 @@ ${prefix}
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-bold@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-bold/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-bold@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-bold/dist/index.js
 var starInputRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))$/;
 var starPasteRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))/g;
 var underscoreInputRegex = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
@@ -18689,7 +19333,7 @@ var Bold = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-code/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-code/dist/index.js
 var inputRegexMatch = (text) => {
   const match = /`([^`]+)`(?!`)$/.exec(text);
   if (!match) {
@@ -18782,7 +19426,7 @@ var Code = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code-block@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-code-block/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code-block@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0__@tiptap+pm@3.30.0/node_modules/@tiptap/extension-code-block/dist/index.js
 var DEFAULT_TAB_SIZE = 4;
 var backtickInputRegex = /^```([a-z]+)?[\s\n]$/;
 var tildeInputRegex = /^~~~([a-z]+)?[\s\n]$/;
@@ -19117,7 +19761,7 @@ var CodeBlock = Node3.create({
 });
 var index_default = CodeBlock;
 
-// node_modules/.pnpm/@tiptap+extension-document@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-document/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-document@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-document/dist/index.js
 var Document = Node3.create({
   name: "doc",
   topNode: true,
@@ -19130,7 +19774,7 @@ var Document = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-hard-break@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-hard-break/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-hard-break@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-hard-break/dist/index.js
 var HardBreak = Node3.create({
   name: "hardBreak",
   markdownTokenName: "br",
@@ -19195,7 +19839,7 @@ var HardBreak = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-heading@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-heading/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-heading@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-heading/dist/index.js
 var Heading = Node3.create({
   name: "heading",
   addOptions() {
@@ -19280,7 +19924,7 @@ var Heading = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0__@tiptap+pm@3.30.0/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
 var HorizontalRule = Node3.create({
   name: "horizontalRule",
   addOptions() {
@@ -19357,7 +20001,7 @@ var HorizontalRule = Node3.create({
 });
 var index_default2 = HorizontalRule;
 
-// node_modules/.pnpm/@tiptap+extension-italic@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-italic/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-italic@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-italic/dist/index.js
 var starInputRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))$/;
 var starPasteRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))/g;
 var underscoreInputRegex2 = /(?:^|\s)(_(?!\s+_)((?:[^_]+))_(?!\s+_))$/;
@@ -20595,7 +21239,7 @@ function find(str, type = null, opts = null) {
   return filtered;
 }
 
-// node_modules/.pnpm/@tiptap+extension-link@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-link/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-link@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0__@tiptap+pm@3.30.0/node_modules/@tiptap/extension-link/dist/index.js
 var UNICODE_WHITESPACE_PATTERN = "[\0- \xA0\u1680\u180E\u2000-\u2029\u205F\u3000]";
 var UNICODE_WHITESPACE_REGEX = new RegExp(UNICODE_WHITESPACE_PATTERN);
 var UNICODE_WHITESPACE_REGEX_END = new RegExp(`${UNICODE_WHITESPACE_PATTERN}$`);
@@ -21195,7 +21839,7 @@ var Link = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-list@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extension-list/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-list@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0__@tiptap+pm@3.30.0/node_modules/@tiptap/extension-list/dist/index.js
 var __defProp2 = Object.defineProperty;
 var __export2 = (target, all) => {
   for (var name in all)
@@ -21695,6 +22339,7 @@ __export2(listHelpers_exports, {
   getNextListDepth: () => getNextListDepth,
   handleBackspace: () => handleBackspace2,
   handleDelete: () => handleDelete,
+  handleTab: () => handleTab,
   hasListBefore: () => hasListBefore,
   hasListItemAfter: () => hasListItemAfter,
   hasListItemBefore: () => hasListItemBefore,
@@ -21769,6 +22414,11 @@ var handleBackspace2 = (editor, name, parentListTypes) => {
   if (!isAtStartOfNode(editor.state)) {
     return false;
   }
+  const { $from } = editor.state.selection;
+  const itemDepth = $from.depth - 1;
+  if ($from.node(itemDepth).type !== editor.schema.nodes[name] || $from.index(itemDepth) !== 0) {
+    return false;
+  }
   return editor.chain().liftListItem(name).run();
 };
 var nextListIsDeeper = (typeOrName, state) => {
@@ -21812,6 +22462,34 @@ var handleDelete = (editor, name) => {
     return editor.chain().joinForward().joinBackward().run();
   }
   return editor.commands.joinItemForward();
+};
+var handleTab = (editor, name, parentListTypes) => {
+  const { state } = editor;
+  const { selection } = state;
+  if (!selection.empty) return false;
+  const { $from } = selection;
+  if ($from.parentOffset !== 0) return false;
+  if (!$from.parent.isTextblock) return false;
+  if (isNodeActive(state, name)) return false;
+  const previous = getPreviousBlockSibling($from);
+  if (!previous || !parentListTypes.includes(previous.type.name)) return false;
+  const lastItem = previous.lastChild;
+  if (!lastItem || lastItem.type.name !== name) return false;
+  const block = $from.parent;
+  if (!lastItem.canReplace(lastItem.childCount, lastItem.childCount, Fragment.from(block))) {
+    return false;
+  }
+  const blockStart = $from.before();
+  const blockEnd = $from.after();
+  const insideLastItemEnd = blockStart - 2;
+  return editor.commands.command(({ tr: tr2, dispatch }) => {
+    if (dispatch) {
+      tr2.delete(blockStart, blockEnd).insert(insideLastItemEnd, Fragment.from(block));
+      tr2.setSelection(TextSelection.create(tr2.doc, insideLastItemEnd + 1));
+      tr2.scrollIntoView();
+    }
+    return true;
+  });
 };
 var hasListItemAfter = (typeOrName, state) => {
   var _a;
@@ -21915,6 +22593,17 @@ var ListKeymap = Extension.create({
           }
         });
         return handled;
+      },
+      Tab: ({ editor }) => {
+        for (const { itemName, wrapperNames } of this.options.listTypes) {
+          if (editor.state.schema.nodes[itemName] === void 0) {
+            continue;
+          }
+          if (handleTab(editor, itemName, wrapperNames)) {
+            return true;
+          }
+        }
+        return false;
       }
     };
   }
@@ -21927,6 +22616,7 @@ var PARAGRAPH_INTERRUPTERS = {
   heading: /^#{1,6}(?:\s|$)/,
   bulletItem: /^[-+*]\s+/,
   codeFence: /^(?:```|~~~)/,
+  blockMath: /^\$\$/,
   thematicBreak: /^(?:(?:-[ \t]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})$/
 };
 function isOrderedListMarkerLine(line) {
@@ -21937,7 +22627,7 @@ function isBlockContentLine(line) {
   return PARAGRAPH_INTERRUPTERS.bulletItem.test(trimmedLine) || isOrderedListMarkerLine(trimmedLine) || PARAGRAPH_INTERRUPTERS.heading.test(trimmedLine) || // dash breaks are excluded: "---" directly below paragraph text is a
   // setext heading underline, not a thematic break
   PARAGRAPH_INTERRUPTERS.thematicBreak.test(trimmedLine) && !trimmedLine.startsWith("-") || // oxlint-disable-next-line prefer-string-starts-ends-with
-  /^>\s?/.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.codeFence.test(trimmedLine);
+  /^>\s?/.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.codeFence.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.blockMath.test(trimmedLine);
 }
 function interruptsLazyContinuation(line) {
   return Object.values(PARAGRAPH_INTERRUPTERS).some((pattern) => pattern.test(line));
@@ -22378,6 +23068,11 @@ var OrderedList = Node3.create({
   }
 });
 var inputRegex2 = /^\s*(\[([( |x])?\])\s$/;
+var visuallyHiddenStyle = "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0";
+var getCheckboxLabel = (node, checked, a11y) => {
+  var _a;
+  return ((_a = a11y == null ? void 0 : a11y.checkboxLabel) == null ? void 0 : _a.call(a11y, node, checked)) || `Task item checkbox for ${node.textContent || "empty task item"}`;
+};
 var TaskItem = Node3.create({
   name: "taskItem",
   addOptions() {
@@ -22411,7 +23106,11 @@ var TaskItem = Node3.create({
     return [
       {
         tag: `li[data-type="${this.name}"]`,
-        priority: 51
+        priority: 51,
+        contentElement: (element) => {
+          var _a;
+          return (_a = element.querySelector("div")) != null ? _a : element;
+        }
       }
     ];
   },
@@ -22482,9 +23181,11 @@ var TaskItem = Node3.create({
       const checkboxStyler = document.createElement("span");
       const checkbox = document.createElement("input");
       const content = document.createElement("div");
+      checkboxStyler.style.cssText = visuallyHiddenStyle;
       const updateA11Y = (currentNode) => {
-        var _a, _b;
-        checkbox.ariaLabel = ((_b = (_a = this.options.a11y) == null ? void 0 : _a.checkboxLabel) == null ? void 0 : _b.call(_a, currentNode, checkbox.checked)) || `Task item checkbox for ${currentNode.textContent || "empty task item"}`;
+        const label = getCheckboxLabel(currentNode, currentNode.attrs.checked, this.options.a11y);
+        checkbox.setAttribute("aria-label", label);
+        checkboxStyler.textContent = label;
       };
       updateA11Y(node);
       checkboxWrapper.contentEditable = "false";
@@ -22739,7 +23440,7 @@ var ListKit = Extension.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-paragraph@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-paragraph/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-paragraph@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-paragraph/dist/index.js
 var EMPTY_PARAGRAPH_MARKDOWN = "&nbsp;";
 var NBSP_CHAR = "\xA0";
 var Paragraph = Node3.create({
@@ -22797,7 +23498,7 @@ var Paragraph = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-strike@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-strike/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-strike@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-strike/dist/index.js
 var inputRegex3 = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))$/;
 var pasteRegex = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))/g;
 var Strike = Mark2.create({
@@ -22871,7 +23572,7 @@ var Strike = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-text@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-text/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-text@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-text/dist/index.js
 var Text2 = Node3.create({
   name: "text",
   group: "inline",
@@ -22884,7 +23585,7 @@ var Text2 = Node3.create({
   renderMarkdown: (node) => node.text || ""
 });
 
-// node_modules/.pnpm/@tiptap+extension-underline@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-underline/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-underline@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-underline/dist/index.js
 var Underline = Mark2.create({
   name: "underline",
   addOptions() {
@@ -23851,7 +24552,7 @@ var redo = buildCommand(true, true);
 var undoNoScroll = buildCommand(false, false);
 var redoNoScroll = buildCommand(true, false);
 
-// node_modules/.pnpm/@tiptap+extensions@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0/node_modules/@tiptap/extensions/dist/index.js
+// node_modules/.pnpm/@tiptap+extensions@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0__@tiptap+pm@3.30.0/node_modules/@tiptap/extensions/dist/index.js
 var CharacterCount = Extension.create({
   name: "characterCount",
   addOptions() {
@@ -24524,7 +25225,7 @@ var UndoRedo = Extension.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+starter-kit@3.29.0/node_modules/@tiptap/starter-kit/dist/index.js
+// node_modules/.pnpm/@tiptap+starter-kit@3.30.0/node_modules/@tiptap/starter-kit/dist/index.js
 var StarterKit = Extension.create({
   name: "starterKit",
   addExtensions() {
@@ -24601,16 +25302,16 @@ var StarterKit = Extension.create({
 });
 var index_default3 = StarterKit;
 
-// node_modules/.pnpm/@tiptap+extension-placeholder@3.29.0_@tiptap+extensions@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0__@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-placeholder/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-placeholder@3.30.0_@tiptap+extensions@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0__@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-placeholder/dist/index.js
 var index_default4 = Placeholder;
 
-// node_modules/.pnpm/@tiptap+extension-task-list@3.29.0_@tiptap+extension-list@3.29.0_@tiptap+core@3.29.0_@t_c3c75af7ec27d7ca2102583b291c0d4c/node_modules/@tiptap/extension-task-list/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-task-list@3.30.0_@tiptap+extension-list@3.30.0_@tiptap+core@3.30.0_@t_6c922120cf8a9b4e2d118200bebaa581/node_modules/@tiptap/extension-task-list/dist/index.js
 var index_default5 = TaskList;
 
-// node_modules/.pnpm/@tiptap+extension-task-item@3.29.0_@tiptap+extension-list@3.29.0_@tiptap+core@3.29.0_@t_699024d365e2c073dc41913617ff246a/node_modules/@tiptap/extension-task-item/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-task-item@3.30.0_@tiptap+extension-list@3.30.0_@tiptap+core@3.30.0_@t_620319953d55f4a8defe448db62bb148/node_modules/@tiptap/extension-task-item/dist/index.js
 var index_default6 = TaskItem;
 
-// node_modules/.pnpm/@tiptap+extension-image@3.29.0_@tiptap+core@3.29.0_@tiptap+pm@3.29.0_/node_modules/@tiptap/extension-image/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-image@3.30.0_@tiptap+core@3.30.0_@tiptap+pm@3.30.0_/node_modules/@tiptap/extension-image/dist/index.js
 var inputRegex4 = /(?:^|\s)(!\[(.+|:?)]\((\S+)(?:(?:\s+)["'](\S+)["'])?\))$/;
 var Image = Node3.create({
   name: "image",
@@ -24806,164 +25507,124 @@ var Image = Node3.create({
 var index_default7 = Image;
 
 // src/editor/note_editor.js
-var SLASH_COMMANDS = [
-  { label: "Heading 1", icon: "textH1", command: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
-  { label: "Heading 2", icon: "textH2", command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-  { label: "Heading 3", icon: "textH3", command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
-  { label: "Bullet List", icon: "listBullets", command: (editor) => editor.chain().focus().toggleBulletList().run() },
-  { label: "Ordered List", icon: "listNumbers", command: (editor) => editor.chain().focus().toggleOrderedList().run() },
-  { label: "Task List", icon: "checkSquare", command: (editor) => editor.chain().focus().toggleTaskList().run() },
-  { label: "Code Block", icon: "codeBlock", command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
-  { label: "Blockquote", icon: "quote", command: (editor) => editor.chain().focus().toggleBlockquote().run() },
-  { label: "Horizontal Rule", icon: "remove", command: (editor) => editor.chain().focus().setHorizontalRule().run() }
-];
 var editorIcon = (name, extraClasses = "") => window.StreamientIcons?.icon(name, extraClasses) || `<span class="st-icon material-symbols-outlined ${extraClasses}" aria-hidden="true">${name}</span>`;
-function createSlashMenu() {
-  const menu = document.createElement("div");
-  menu.className = "slash-menu";
-  menu.style.cssText = "position:fixed;z-index:9999;background:#fff;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:none;max-height:300px;overflow-y:auto;min-width:200px;";
-  document.body.appendChild(menu);
-  return menu;
-}
-function renderSlashMenu(menu, commands, selectedIndex, onSelect) {
-  menu.innerHTML = "";
-  commands.forEach((cmd, i2) => {
-    const item = document.createElement("div");
-    item.className = "slash-menu-item" + (i2 === selectedIndex ? " active" : "");
-    item.style.cssText = "padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:4px;font-size:14px;" + (i2 === selectedIndex ? "background:#e9ecef;" : "");
-    item.innerHTML = `${editorIcon(cmd.icon, "slash-menu-icon")}<span>${cmd.label}</span>`;
-    item.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      onSelect(i2);
-    });
-    item.addEventListener("mouseenter", () => {
-      menu.querySelectorAll(".slash-menu-item").forEach((el, j) => {
-        el.style.background = j === i2 ? "#e9ecef" : "";
-        el.className = "slash-menu-item" + (j === i2 ? " active" : "");
-      });
-    });
-    menu.appendChild(item);
-  });
-}
-var SlashCommands = Extension.create({
-  name: "slashCommands",
-  addProseMirrorPlugins() {
-    const editor = this.editor;
-    const menu = createSlashMenu();
-    let active = false;
-    let filterText = "";
-    let selectedIndex = 0;
-    let filtered = SLASH_COMMANDS;
-    function hide() {
-      menu.style.display = "none";
-      active = false;
-      filterText = "";
-      selectedIndex = 0;
+var RICH_EDITOR_COMMANDS = {
+  heading1: {
+    isActive: (editor) => editor.isActive("heading", { level: 1 }),
+    run: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run()
+  },
+  heading2: {
+    isActive: (editor) => editor.isActive("heading", { level: 2 }),
+    run: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run()
+  },
+  heading3: {
+    isActive: (editor) => editor.isActive("heading", { level: 3 }),
+    run: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run()
+  },
+  bold: {
+    isActive: (editor) => editor.isActive("bold"),
+    run: (editor) => editor.chain().focus().toggleBold().run()
+  },
+  italic: {
+    isActive: (editor) => editor.isActive("italic"),
+    run: (editor) => editor.chain().focus().toggleItalic().run()
+  },
+  underline: {
+    isActive: (editor) => editor.isActive("underline"),
+    run: (editor) => editor.chain().focus().toggleUnderline().run()
+  },
+  link: {
+    isActive: (editor) => editor.isActive("link"),
+    run: async (editor) => {
+      const previous = editor.getAttributes("link").href || "";
+      const target = editor.view.dom.closest(".modal") || document.body;
+      const result = await window.Swal.fire({ title: previous ? "Edit link" : "Add link", input: "text", inputLabel: "Link URL", inputValue: previous, showCancelButton: true, confirmButtonText: "Apply", target });
+      if (!result.isConfirmed) return;
+      const href = String(result.value || "").trim();
+      if (!href) {
+        editor.chain().focus().extendMarkRange("link").unsetLink().run();
+        return;
+      }
+      editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
     }
-    function show(coords) {
-      menu.style.display = "block";
-      menu.style.left = coords.left + "px";
-      menu.style.top = coords.bottom + 4 + "px";
-      active = true;
-      filterText = "";
-      selectedIndex = 0;
-      filtered = SLASH_COMMANDS;
-      renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-    }
-    function executeCommand(index) {
-      const cmd = filtered[index];
-      if (!cmd) return;
-      const { from: from2 } = editor.state.selection;
-      const textBefore = editor.state.doc.textBetween(Math.max(0, from2 - filterText.length - 1), from2, "");
-      const slashPos = from2 - filterText.length - 1;
-      editor.chain().focus().deleteRange({ from: Math.max(0, slashPos), to: from2 }).run();
-      cmd.command(editor);
-      hide();
-    }
-    return [
-      new Plugin({
-        key: new PluginKey("slashCommands"),
-        props: {
-          handleKeyDown(view, event) {
-            if (!active) {
-              if (event.key === "/" && view.state.selection.empty) {
-                const { from: from2 } = view.state.selection;
-                const textBefore = view.state.doc.textBetween(Math.max(0, from2 - 1), from2, "");
-                if (from2 === 1 || textBefore === "" || textBefore === " " || textBefore === "\n") {
-                  setTimeout(() => {
-                    const coords = view.coordsAtPos(from2);
-                    show(coords);
-                  }, 10);
-                }
-              }
-              return false;
-            }
-            if (event.key === "Escape") {
-              hide();
-              return true;
-            }
-            if (event.key === "ArrowDown") {
-              selectedIndex = (selectedIndex + 1) % filtered.length;
-              renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-              return true;
-            }
-            if (event.key === "ArrowUp") {
-              selectedIndex = (selectedIndex - 1 + filtered.length) % filtered.length;
-              renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-              return true;
-            }
-            if (event.key === "Enter") {
-              event.preventDefault();
-              executeCommand(selectedIndex);
-              return true;
-            }
-            if (event.key === "Backspace") {
-              if (filterText.length === 0) {
-                hide();
-                return false;
-              }
-              filterText = filterText.slice(0, -1);
-              filtered = SLASH_COMMANDS.filter(
-                (c) => c.label.toLowerCase().includes(filterText.toLowerCase())
-              );
-              selectedIndex = 0;
-              renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-              return false;
-            }
-            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-              filterText += event.key;
-              filtered = SLASH_COMMANDS.filter(
-                (c) => c.label.toLowerCase().includes(filterText.toLowerCase())
-              );
-              selectedIndex = 0;
-              if (filtered.length === 0) {
-                hide();
-                return false;
-              }
-              renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-              return false;
-            }
-            return false;
-          },
-          handleClick() {
-            if (active) hide();
-            return false;
-          }
-        }
-      })
-    ];
+  },
+  bulletList: {
+    isActive: (editor) => editor.isActive("bulletList"),
+    run: (editor) => editor.chain().focus().toggleBulletList().run()
+  },
+  orderedList: {
+    isActive: (editor) => editor.isActive("orderedList"),
+    run: (editor) => editor.chain().focus().toggleOrderedList().run()
+  },
+  taskList: {
+    isActive: (editor) => editor.isActive("taskList"),
+    run: (editor) => editor.chain().focus().toggleTaskList().run()
+  },
+  codeBlock: {
+    isActive: (editor) => editor.isActive("codeBlock"),
+    run: (editor) => editor.chain().focus().toggleCodeBlock().run()
+  },
+  blockquote: {
+    isActive: (editor) => editor.isActive("blockquote"),
+    run: (editor) => editor.chain().focus().toggleBlockquote().run()
+  },
+  horizontalRule: {
+    run: (editor) => editor.chain().focus().setHorizontalRule().run()
+  },
+  undo: {
+    isEnabled: (editor) => editor.can().chain().focus().undo().run(),
+    run: (editor) => editor.chain().focus().undo().run()
+  },
+  redo: {
+    isEnabled: (editor) => editor.can().chain().focus().redo().run(),
+    run: (editor) => editor.chain().focus().redo().run()
+  },
+  clear: {
+    run: (editor) => editor.chain().focus().unsetAllMarks().clearNodes().run()
   }
-});
+};
+function bindRichEditorToolbar(toolbar, editor) {
+  const buttons = toolbar.querySelectorAll("button[data-command]");
+  const refresh = () => {
+    const hasFocus = editor.isFocused;
+    buttons.forEach((button) => {
+      const command2 = RICH_EDITOR_COMMANDS[button.dataset.command];
+      if (!command2) return;
+      const active = hasFocus && Boolean(command2.isActive?.(editor));
+      button.classList.toggle("active", active);
+      if (button.hasAttribute("aria-pressed")) button.setAttribute("aria-pressed", String(active));
+      button.disabled = command2.isEnabled ? !command2.isEnabled(editor) : false;
+    });
+  };
+  buttons.forEach((button) => {
+    const command2 = RICH_EDITOR_COMMANDS[button.dataset.command];
+    if (!command2) return;
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await command2.run(editor);
+      refresh();
+    });
+  });
+  editor.on("selectionUpdate", refresh);
+  editor.on("transaction", refresh);
+  editor.on("focus", refresh);
+  editor.on("blur", refresh);
+  refresh();
+}
 function createEditor(element, { content = "", onUpdate = null } = {}) {
+  const template = document.getElementById("st-rich-editor-template");
+  if (!(template instanceof HTMLTemplateElement)) throw new Error("Rich editor template not found");
+  element.replaceChildren(template.content.cloneNode(true));
+  const toolbar = element.querySelector(".st-rich-editor-toolbar");
+  const editorMount = element.querySelector(".st-rich-editor-body");
+  if (!toolbar || !editorMount) throw new Error("Rich editor template is invalid");
   const editorOptions = {
-    element,
+    element: editorMount,
     extensions: [
       index_default3.configure({
         codeBlock: false,
         horizontalRule: false
-      }),
-      index_default4.configure({
-        placeholder: 'Type "/" for commands, or start typing...'
       }),
       index_default,
       index_default2,
@@ -24971,8 +25632,7 @@ function createEditor(element, { content = "", onUpdate = null } = {}) {
       index_default6.configure({
         nested: true
       }),
-      index_default7,
-      SlashCommands
+      index_default7
     ],
     content
   };
@@ -24980,6 +25640,7 @@ function createEditor(element, { content = "", onUpdate = null } = {}) {
     editorOptions.onUpdate = ({ editor: ed }) => onUpdate(ed);
   }
   const editor = new Editor(editorOptions);
+  bindRichEditorToolbar(toolbar, editor);
   return editor;
 }
 var EMAIL_TOOLBAR_BUTTONS = [

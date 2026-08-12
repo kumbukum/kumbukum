@@ -15,7 +15,7 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
-    "vitepress-openapi": "^0.2.3",
+    "vitepress-openapi": "^0.2.4",
     "vitepress-plugin-tabs": "^0.9.1",
     "zod": "^4.4.3"
   },

@@ -23,6 +23,7 @@ const SOCKET_ALLOWED_AUDIENCES = new Set(['streamient-api', 'kumbukum-api', 'str
 
 function createRedisClient() {
 	const connection = buildRedisConnectionOptions(config.redisOptions, { lazyConnect: true });
+	connection.options.protocol = 2;
 	return connection.url
 		? new Redis(connection.url, connection.options)
 		: new Redis(connection.options);

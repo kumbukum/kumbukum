@@ -43,6 +43,7 @@ import config from '../config.js';
 import crypto from 'node:crypto';
 import { createLogger } from '../modules/logger.js';
 import { isSupportedTimezone } from '../modules/timezones.js';
+import mobileApiRouter from './mobile_api.js';
 
 const log = createLogger('api');
 
@@ -63,6 +64,13 @@ router.use(async (req, res, next) => {
 	}
 	next();
 });
+
+router.use((req, res, next) => {
+	if (req.authMethod === 'oauth-api' && !req.path.startsWith('/mobile')) return res.status(403).json({ error: 'Mobile OAuth tokens may access only mobile routes' });
+	next();
+});
+
+router.use('/mobile', mobileApiRouter);
 
 function auditCtx(req) {
 	// old header name still sent by not-yet-updated browser extensions
@@ -731,6 +739,8 @@ router.post('/search/all', async (req, res) => {
 				results.push({ ...hit.document, _type: type });
 			}
 		}
+		const projectNames = await projectService.getProjectNames(req.host_id, results.map((result) => result.project_id));
+		for (const result of results) result.project_name = projectNames.get(String(result.project_id || '')) || '';
 
 		res.json({ results });
 	} catch (err) {

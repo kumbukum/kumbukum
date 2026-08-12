@@ -11,6 +11,8 @@ packageExtensions:
     dependencies:
       "@opentelemetry/sdk-trace-base": 2.7.1
 overrides:
+  # The package ships prebuilt webfonts; its generator is not used by Streamient.
+  "@tabler/icons-webfont>svgtofont": "-"
   bufferutil: ^4.1.0
   utf-8-validate: ^5.0.10
   "@tiptap/core": ^3.22.3

@@ -1,9 +1,12 @@
 import jwt from 'jsonwebtoken';
 import config from '../config.js';
 import { User } from '../model/user.js';
-import { verifyMcpBridgeToken } from '../modules/oauth.js';
+import { buildBearerChallenge, getApiProtectedResourceMetadataUrl, hasRequiredScopes, verifyApiAccessToken, verifyMcpBridgeToken } from '../modules/oauth.js';
 import { applyTenantContextToSession, ensureOwnerMembershipForUser, initializeSessionTenant, resolveActiveTenantContext } from '../modules/tenancy.js';
 import * as OtelRuntime from '../modules/otel_runtime.js';
+
+export const SOCKET_TOKEN_EXPIRES_IN_SECONDS = 900;
+export const SOCKET_TOKEN_REFRESH_AFTER_SECONDS = 600;
 
 async function applyTenantContext(req, userId, preferredTenantId = null, preferredHostId = null, updateSession = false) {
 	const context = updateSession
@@ -61,12 +64,19 @@ export async function requireAuth(req, res, next) {
 				req.mcpClientId = payload.client_id;
 				req.oauthScopes = payload.scope || '';
 			} catch {
-				payload = jwt.verify(token, config.jwtSecret);
-				// 'kumbukum-api' accepted during the rebrand transition so pre-rename tokens keep working
-				if (payload.aud && payload.aud !== 'streamient-api' && payload.aud !== 'kumbukum-api') {
-					return res.status(401).json({ error: 'This bearer token is not valid for the Streamient API' });
+				try {
+					payload = verifyApiAccessToken(token);
+					req.authMethod = 'oauth-api';
+					req.oauthClientId = payload.client_id;
+					req.oauthScopes = payload.scope || '';
+				} catch {
+					payload = jwt.verify(token, config.jwtSecret);
+					// 'kumbukum-api' accepted during the rebrand transition so pre-rename tokens keep working
+					if (payload.aud && payload.aud !== 'streamient-api' && payload.aud !== 'kumbukum-api') {
+						return res.status(401).json({ error: 'This bearer token is not valid for the Streamient API' });
+					}
+					req.authMethod = 'bearer';
 				}
-				req.authMethod = 'bearer';
 			}
 
 			req.userId = payload.userId || payload.sub;
@@ -108,10 +118,24 @@ export async function requireAuth(req, res, next) {
 	return res.status(401).json({ error: 'Authentication required' });
 }
 
+export function requireOAuthScopes(...requiredScopes) {
+	return function oauthScopeMiddleware(req, res, next) {
+		if (req.authMethod !== 'oauth-api') return next();
+		if (hasRequiredScopes(req.oauthScopes, requiredScopes)) return next();
+		res.set('WWW-Authenticate', buildBearerChallenge({
+			resourceMetadataUrl: getApiProtectedResourceMetadataUrl(),
+			scopes: requiredScopes,
+			error: 'insufficient_scope',
+			errorDescription: 'The access token does not include the required scope.',
+		}));
+		return res.status(403).json({ error: 'Insufficient OAuth scope', code: 'insufficient_scope', required_scopes: requiredScopes });
+	};
+}
+
 export function generateToken(userId, host_id, tenantId = null) {
 	return jwt.sign({ userId, host_id, tenantId }, config.jwtSecret, { expiresIn: '7d' });
 }
 
 export function generateSocketToken(userId, host_id, tenantId = null) {
-	return jwt.sign({ userId, host_id, tenantId }, config.jwtSecret, { expiresIn: '15m', audience: 'streamient-socket' });
+	return jwt.sign({ userId, host_id, tenantId }, config.jwtSecret, { expiresIn: SOCKET_TOKEN_EXPIRES_IN_SECONDS, audience: 'streamient-socket' });
 }

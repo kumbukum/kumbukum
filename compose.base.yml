@@ -1,6 +1,7 @@
 services:
   base:
     user: root
+    working_dir: /opt/streamient
     restart: unless-stopped
     image: streamient-dev:local
     volumes:

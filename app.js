@@ -87,6 +87,28 @@ try {
 // Public import routes parse their own raw payloads before the global JSON middleware.
 app.use('/import', importRoutes);
 
+const mobileOrigins = new Set([
+	'capacitor://localhost',
+	'ionic://localhost',
+	'http://localhost',
+	'http://localhost:5176',
+	'http://mobile.streamient.orb.local',
+	...String(process.env.STREAMIENT_MOBILE_WEB_ORIGINS || '').split(',').map((origin) => origin.trim().replace(/\/$/, '')).filter(Boolean),
+]);
+app.use((req, res, next) => {
+	const mobileCorsPath = req.path.startsWith('/api/v1/mobile') || req.path === '/oauth/token' || req.path.startsWith('/.well-known/oauth-');
+	const origin = String(req.headers.origin || '').replace(/\/$/, '');
+	if (!mobileCorsPath || !origin || !mobileOrigins.has(origin)) return next();
+	res.set('Access-Control-Allow-Origin', origin);
+	res.set('Access-Control-Allow-Credentials', 'true');
+	res.set('Access-Control-Allow-Methods', 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS');
+	res.set('Access-Control-Allow-Headers', 'Authorization,Content-Type,Digest,Upload-Checksum,Upload-Length,Upload-Offset,X-Upload-Checksum');
+	res.set('Access-Control-Expose-Headers', 'Location,Upload-Chunk-Size,Upload-Length,Upload-Offset,Upload-State,WWW-Authenticate');
+	res.vary('Origin');
+	if (req.method === 'OPTIONS') return res.status(204).end();
+	next();
+});
+
 // Stripe webhook needs raw body — skip express.json() for that path
 app.use((req, res, next) => {
     if (req.originalUrl === '/billing/webhook') return next();

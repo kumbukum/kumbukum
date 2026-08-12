@@ -1,5 +1,5 @@
 import { Project } from '../model/project.js';
-import { queryForSave } from '../model/mongoose.js';
+import mongoose, { queryForSave } from '../model/mongoose.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
@@ -34,6 +34,13 @@ export async function createProject(userId, host_id, data, ctx = {}) {
 
 export async function listProjects(host_id) {
 	return Project.find({ host_id, is_active: true }).sort({ is_default: -1, name: 1 });
+}
+
+export async function getProjectNames(host_id, projectIds) {
+	const uniqueProjectIds = [...new Set((projectIds || []).filter(Boolean).map(String).filter((projectId) => mongoose.isObjectIdOrHexString(projectId)))];
+	if (!uniqueProjectIds.length) return new Map();
+	const projects = await Project.find({ _id: { $in: uniqueProjectIds }, host_id }).select('_id name').lean();
+	return new Map(projects.map((project) => [project._id.toString(), project.name]));
 }
 
 export async function countActiveProjects(host_id) {

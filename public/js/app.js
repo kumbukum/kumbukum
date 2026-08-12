@@ -843,8 +843,40 @@ function initThemeToggle() {
 	});
 }
 
+function initMobileBetaModal() {
+	var modal = document.getElementById('mobileBetaModal');
+	var body = document.getElementById('mobile-beta-modal-body');
+	if (!modal || !body) return;
+	var loaded = false;
+	var loading = false;
+
+	modal.addEventListener('show.bs.modal', async function () {
+		if (loaded || loading) return;
+		loading = true;
+		var loadingElement = body.querySelector('.st-mobile-beta-loading');
+		var errorElement = body.querySelector('.st-mobile-beta-error');
+		loadingElement?.classList.remove('d-none');
+		errorElement?.classList.add('d-none');
+
+		try {
+			var response = await fetch('/ajax/mobile-apps');
+			if (response.status === 401 || isLoginRedirect(response)) return redirectToLogin();
+			if (!response.ok) throw new Error('Failed to load mobile app details');
+			body.innerHTML = await response.text();
+			loaded = true;
+		} catch (err) {
+			console.error('Mobile app modal error:', err);
+			loadingElement?.classList.add('d-none');
+			errorElement?.classList.remove('d-none');
+		} finally {
+			loading = false;
+		}
+	});
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
 	initThemeToggle();
+	initMobileBetaModal();
 	const params = new URLSearchParams(window.location.search);
 	const g = params.get('g');
 	const hasExplicitProject = !!(g && JSURL.tryParse(g, {}).project_id);

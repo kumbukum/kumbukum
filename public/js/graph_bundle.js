@@ -6419,9 +6419,9 @@ var require_cose_base = __commonJS({
   }
 });
 
-// node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.0/node_modules/cytoscape-fcose/cytoscape-fcose.js
+// node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.1/node_modules/cytoscape-fcose/cytoscape-fcose.js
 var require_cytoscape_fcose = __commonJS({
-  "node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.0/node_modules/cytoscape-fcose/cytoscape-fcose.js"(exports, module) {
+  "node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.1/node_modules/cytoscape-fcose/cytoscape-fcose.js"(exports, module) {
     (function webpackUniversalModuleDefinition(root, factory) {
       if (typeof exports === "object" && typeof module === "object")
         module.exports = factory(require_cose_base());
@@ -7706,7 +7706,7 @@ var require_cytoscape_fcose = __commonJS({
   }
 });
 
-// node_modules/.pnpm/cytoscape@3.34.0/node_modules/cytoscape/dist/cytoscape.esm.mjs
+// node_modules/.pnpm/cytoscape@3.34.1/node_modules/cytoscape/dist/cytoscape.esm.mjs
 function _arrayLikeToArray(r, a) {
   (null == a || a > r.length) && (a = r.length);
   for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -9787,6 +9787,7 @@ var elesfn$s = {
         if (tempScore < gScore[wid]) {
           gScore[wid] = tempScore;
           fScore[wid] = tempScore + heuristic2(w);
+          openSet.updateItem(w);
           cameFrom[wid] = cMin;
           cameFromEdge[wid] = e;
         }
@@ -10314,6 +10315,23 @@ var median = function median2(arr) {
   } else {
     return (arr[mid - 1 + off] + arr[mid + off]) / 2;
   }
+};
+var _gcd = function gcd(a, b) {
+  if (b === 0) {
+    return a;
+  }
+  return _gcd(b, a % b);
+};
+var gcdMultipleZeroIfNonInt = function gcdMultipleZeroIfNonInt2(arr) {
+  var out = arr[0];
+  for (var i2 = 0; i2 < arr.length; i2++) {
+    if (!integer(arr[i2])) {
+      return 0;
+    } else if (i2 > 0) {
+      out = _gcd(out, arr[i2]);
+    }
+  }
+  return out;
 };
 var deg2rad = function deg2rad2(deg) {
   return Math.PI * deg / 180;
@@ -30081,14 +30099,6 @@ BRp$3.load = function() {
   var wheelDeltaN = 4;
   var inaccurateScrollDevice;
   var inaccurateScrollFactor = 1e5;
-  var allAreDivisibleBy = function allAreDivisibleBy2(list, factor) {
-    for (var i2 = 0; i2 < list.length; i2++) {
-      if (list[i2] % factor !== 0) {
-        return false;
-      }
-    }
-    return true;
-  };
   var allAreSameMagnitude = function allAreSameMagnitude2(list) {
     var firstMag = Math.abs(list[0]);
     for (var i2 = 1; i2 < list.length; i2++) {
@@ -30113,19 +30123,22 @@ BRp$3.load = function() {
     }
     if (inaccurateScrollDevice == null) {
       if (wheelDeltas.length >= wheelDeltaN) {
+        inaccurateScrollDevice = false;
         var wds = wheelDeltas;
-        inaccurateScrollDevice = allAreDivisibleBy(wds, 5);
-        if (!inaccurateScrollDevice) {
-          var firstMag = Math.abs(wds[0]);
-          inaccurateScrollDevice = allAreSameMagnitude(wds) && firstMag > 5;
-        }
-        if (inaccurateScrollDevice) {
-          for (var i2 = 0; i2 < wds.length; i2++) {
-            inaccurateScrollFactor = Math.min(Math.abs(wds[i2]), inaccurateScrollFactor);
+        if (wds[0] >= 5) {
+          var factor;
+          if (allAreSameMagnitude(wds)) {
+            factor = wds[0];
+          } else {
+            factor = gcdMultipleZeroIfNonInt(wds);
+          }
+          if (factor > 1) {
+            inaccurateScrollDevice = true;
+            inaccurateScrollFactor = factor;
           }
         }
       } else {
-        wheelDeltas.push(delta);
+        wheelDeltas.push(Math.abs(delta));
         clamp = true;
       }
     } else if (inaccurateScrollDevice) {
@@ -30550,10 +30563,14 @@ BRp$3.load = function() {
           r.redrawHint("drag", true);
           r.redrawHint("eles", true);
           _start.unactivate().emit(makeEvent("freeon"));
-          draggedEles.emit(makeEvent("free"));
+          if (draggedEles) {
+            draggedEles.emit(makeEvent("free"));
+          }
           if (r.dragData.didDrag) {
             _start.emit(makeEvent("dragfreeon"));
-            draggedEles.emit(makeEvent("dragfree"));
+            if (draggedEles) {
+              draggedEles.emit(makeEvent("dragfree"));
+            }
           }
         }
         cy.viewport({
@@ -31033,12 +31050,15 @@ BRp$2.generateRoundPolygon = function(name, points) {
     name,
     points,
     getOrCreateCorners: function getOrCreateCorners(centerX, centerY, width2, height2, cornerRadius, rs, field) {
-      if (rs[field] !== void 0 && rs[field + "-cx"] === centerX && rs[field + "-cy"] === centerY) {
+      if (rs[field] !== void 0 && rs[field + "-cx"] === centerX && rs[field + "-cy"] === centerY && rs[field + "-w"] === width2 && rs[field + "-h"] === height2 && rs[field + "-corner-radius"] === cornerRadius) {
         return rs[field];
       }
       rs[field] = new Array(points.length / 2);
       rs[field + "-cx"] = centerX;
       rs[field + "-cy"] = centerY;
+      rs[field + "-w"] = width2;
+      rs[field + "-h"] = height2;
+      rs[field + "-corner-radius"] = cornerRadius;
       var halfW = width2 / 2;
       var halfH = height2 / 2;
       cornerRadius = cornerRadius === "auto" ? getRoundPolygonRadius(width2, height2) : cornerRadius;
@@ -38035,7 +38055,7 @@ sheetfn.appendToStyle = function(style3) {
   }
   return style3;
 };
-var version = "3.34.0";
+var version = "3.34.1";
 var cytoscape2 = function cytoscape3(options2) {
   if (options2 === void 0) {
     options2 = {};

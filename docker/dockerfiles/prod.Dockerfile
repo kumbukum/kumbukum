@@ -13,7 +13,7 @@ WORKDIR /opt/streamient
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    curl iputils-ping dnsutils git tini vim procps \
+    curl iputils-ping dnsutils git tini vim procps poppler-utils \
     ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 

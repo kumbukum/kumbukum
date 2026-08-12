@@ -1,0 +1,12 @@
+template#rm-link-result-template
+	button.list-group-item.list-group-item-action.py-2.px-2.small.rm-link-result(type="button")
+		.d-flex.align-items-start.gap-2
+			span.rm-link-result-icon.st-icon.ti(aria-hidden="true")
+			.rm-link-result-content.flex-grow-1
+				.d-flex.align-items-center.gap-1
+					span.badge.bg-light.text-dark.rm-link-result-type
+					span.fw-semibold.text-truncate.rm-link-result-title
+				.rm-link-result-meta.text-muted.text-truncate
+					span.rm-link-result-project
+					span.rm-link-result-separator.mx-1 ·
+					time.rm-link-result-updated

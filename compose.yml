@@ -65,7 +65,7 @@ x-env: &env
   PRO_TS_CONVERSATION_MODEL: "gemini-3.5-flash-lite"
   FREE_AI_DAILY_LIMIT: "${FREE_AI_DAILY_LIMIT:-}"
   # URLs
-  APP_URL: http://app.s.lan
+  APP_URL: http://s.lan
   MCP_BASE_URL: http://mcp.s.lan
   WS_URL: ""
   API_BASE_URL: http://streamient-app-1:3000
@@ -184,6 +184,27 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    networks:
+      - hmnet16
+
+  mobile:
+    extends:
+      file: ./compose.base.yml
+      service: base
+    working_dir: /opt/streamient/apps/mobile
+    command: ["pnpm", "exec", "vite", "--host", "0.0.0.0", "--port", "5176", "--strictPort"]
+    ports:
+      - "5176:5176"
+    environment:
+      <<: *env
+      VITE_STREAMIENT_SERVER: "${VITE_STREAMIENT_SERVER:-http://s.lan}"
+      VITE_ENABLE_LOCAL_SERVER: "${VITE_ENABLE_LOCAL_SERVER:-true}"
+      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: mobile.streamient.orb.local
+    labels:
+      - dev.orbstack.http-port=5176
     depends_on:
       init:
         condition: service_completed_successfully
