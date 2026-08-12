@@ -10,7 +10,7 @@ describe('chat assistant avatar', () => {
 		const html = render({ icon: () => '', user: { name: 'Test' } });
 
 		assert.match(html, /id="chat-assistant-avatar-template"/);
-		assert.match(html, /src="\/images\/streamient-icon\.svg"/);
+		assert.match(html, /src="\/static\/images\/streamient-icon\.svg"/);
 		assert.match(html, /alt="Streamient"/);
 	});
 
