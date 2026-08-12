@@ -6,186 +6,132 @@ import HorizontalRule from '@tiptap/extension-horizontal-rule';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Image from '@tiptap/extension-image';
-import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
-
-// ---- Slash Command Menu ----
-
-const SLASH_COMMANDS = [
-	{ label: 'Heading 1', icon: 'textH1', command: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
-	{ label: 'Heading 2', icon: 'textH2', command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-	{ label: 'Heading 3', icon: 'textH3', command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
-	{ label: 'Bullet List', icon: 'listBullets', command: (editor) => editor.chain().focus().toggleBulletList().run() },
-	{ label: 'Ordered List', icon: 'listNumbers', command: (editor) => editor.chain().focus().toggleOrderedList().run() },
-	{ label: 'Task List', icon: 'checkSquare', command: (editor) => editor.chain().focus().toggleTaskList().run() },
-	{ label: 'Code Block', icon: 'codeBlock', command: (editor) => editor.chain().focus().toggleCodeBlock().run() },
-	{ label: 'Blockquote', icon: 'quote', command: (editor) => editor.chain().focus().toggleBlockquote().run() },
-	{ label: 'Horizontal Rule', icon: 'remove', command: (editor) => editor.chain().focus().setHorizontalRule().run() },
-];
 
 const editorIcon = (name, extraClasses = '') => window.StreamientIcons?.icon(name, extraClasses) || `<span class="st-icon material-symbols-outlined ${extraClasses}" aria-hidden="true">${name}</span>`;
 
-function createSlashMenu() {
-	const menu = document.createElement('div');
-	menu.className = 'slash-menu';
-	menu.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:4px;display:none;max-height:300px;overflow-y:auto;min-width:200px;';
-	document.body.appendChild(menu);
-	return menu;
-}
-
-function renderSlashMenu(menu, commands, selectedIndex, onSelect) {
-	menu.innerHTML = '';
-	commands.forEach((cmd, i) => {
-		const item = document.createElement('div');
-		item.className = 'slash-menu-item' + (i === selectedIndex ? ' active' : '');
-		item.style.cssText = 'padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:4px;font-size:14px;' +
-			(i === selectedIndex ? 'background:#e9ecef;' : '');
-		item.innerHTML = `${editorIcon(cmd.icon, 'slash-menu-icon')}<span>${cmd.label}</span>`;
-		item.addEventListener('mousedown', (e) => {
-			e.preventDefault();
-			onSelect(i);
-		});
-		item.addEventListener('mouseenter', () => {
-			menu.querySelectorAll('.slash-menu-item').forEach((el, j) => {
-				el.style.background = j === i ? '#e9ecef' : '';
-				el.className = 'slash-menu-item' + (j === i ? ' active' : '');
-			});
-		});
-		menu.appendChild(item);
-	});
-}
-
-const SlashCommands = Extension.create({
-	name: 'slashCommands',
-
-	addProseMirrorPlugins() {
-		const editor = this.editor;
-		const menu = createSlashMenu();
-		let active = false;
-		let filterText = '';
-		let selectedIndex = 0;
-		let filtered = SLASH_COMMANDS;
-
-		function hide() {
-			menu.style.display = 'none';
-			active = false;
-			filterText = '';
-			selectedIndex = 0;
-		}
-
-		function show(coords) {
-			menu.style.display = 'block';
-			menu.style.left = coords.left + 'px';
-			menu.style.top = (coords.bottom + 4) + 'px';
-			active = true;
-			filterText = '';
-			selectedIndex = 0;
-			filtered = SLASH_COMMANDS;
-			renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-		}
-
-		function executeCommand(index) {
-			const cmd = filtered[index];
-			if (!cmd) return;
-			// Delete the slash and filter text
-			const { from } = editor.state.selection;
-			const textBefore = editor.state.doc.textBetween(Math.max(0, from - filterText.length - 1), from, '');
-			const slashPos = from - filterText.length - 1;
-			editor.chain().focus().deleteRange({ from: Math.max(0, slashPos), to: from }).run();
-			cmd.command(editor);
-			hide();
-		}
-
-		return [
-			new Plugin({
-				key: new PluginKey('slashCommands'),
-				props: {
-					handleKeyDown(view, event) {
-						if (!active) {
-							if (event.key === '/' && view.state.selection.empty) {
-								const { from } = view.state.selection;
-								const textBefore = view.state.doc.textBetween(Math.max(0, from - 1), from, '');
-								// Only show on empty line or after space
-								if (from === 1 || textBefore === '' || textBefore === ' ' || textBefore === '\n') {
-									setTimeout(() => {
-										const coords = view.coordsAtPos(from);
-										show(coords);
-									}, 10);
-								}
-							}
-							return false;
-						}
-
-						if (event.key === 'Escape') {
-							hide();
-							return true;
-						}
-						if (event.key === 'ArrowDown') {
-							selectedIndex = (selectedIndex + 1) % filtered.length;
-							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-							return true;
-						}
-						if (event.key === 'ArrowUp') {
-							selectedIndex = (selectedIndex - 1 + filtered.length) % filtered.length;
-							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-							return true;
-						}
-						if (event.key === 'Enter') {
-							event.preventDefault();
-							executeCommand(selectedIndex);
-							return true;
-						}
-						if (event.key === 'Backspace') {
-							if (filterText.length === 0) {
-								hide();
-								return false;
-							}
-							filterText = filterText.slice(0, -1);
-							filtered = SLASH_COMMANDS.filter((c) =>
-								c.label.toLowerCase().includes(filterText.toLowerCase()),
-							);
-							selectedIndex = 0;
-							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-							return false;
-						}
-						if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-							filterText += event.key;
-							filtered = SLASH_COMMANDS.filter((c) =>
-								c.label.toLowerCase().includes(filterText.toLowerCase()),
-							);
-							selectedIndex = 0;
-							if (filtered.length === 0) {
-								hide();
-								return false;
-							}
-							renderSlashMenu(menu, filtered, selectedIndex, executeCommand);
-							return false;
-						}
-						return false;
-					},
-					handleClick() {
-						if (active) hide();
-						return false;
-					},
-				},
-			}),
-		];
+const RICH_EDITOR_COMMANDS = {
+	heading1: {
+		isActive: (editor) => editor.isActive('heading', { level: 1 }),
+		run: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
 	},
-});
+	heading2: {
+		isActive: (editor) => editor.isActive('heading', { level: 2 }),
+		run: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+	},
+	heading3: {
+		isActive: (editor) => editor.isActive('heading', { level: 3 }),
+		run: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+	},
+	bold: {
+		isActive: (editor) => editor.isActive('bold'),
+		run: (editor) => editor.chain().focus().toggleBold().run(),
+	},
+	italic: {
+		isActive: (editor) => editor.isActive('italic'),
+		run: (editor) => editor.chain().focus().toggleItalic().run(),
+	},
+	underline: {
+		isActive: (editor) => editor.isActive('underline'),
+		run: (editor) => editor.chain().focus().toggleUnderline().run(),
+	},
+	link: {
+		isActive: (editor) => editor.isActive('link'),
+		run: async (editor) => {
+			const previous = editor.getAttributes('link').href || '';
+			const target = editor.view.dom.closest('.modal') || document.body;
+			const result = await window.Swal.fire({ title: previous ? 'Edit link' : 'Add link', input: 'text', inputLabel: 'Link URL', inputValue: previous, showCancelButton: true, confirmButtonText: 'Apply', target });
+			if (!result.isConfirmed) return;
+			const href = String(result.value || '').trim();
+			if (!href) {
+				editor.chain().focus().extendMarkRange('link').unsetLink().run();
+				return;
+			}
+			editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+		},
+	},
+	bulletList: {
+		isActive: (editor) => editor.isActive('bulletList'),
+		run: (editor) => editor.chain().focus().toggleBulletList().run(),
+	},
+	orderedList: {
+		isActive: (editor) => editor.isActive('orderedList'),
+		run: (editor) => editor.chain().focus().toggleOrderedList().run(),
+	},
+	taskList: {
+		isActive: (editor) => editor.isActive('taskList'),
+		run: (editor) => editor.chain().focus().toggleTaskList().run(),
+	},
+	codeBlock: {
+		isActive: (editor) => editor.isActive('codeBlock'),
+		run: (editor) => editor.chain().focus().toggleCodeBlock().run(),
+	},
+	blockquote: {
+		isActive: (editor) => editor.isActive('blockquote'),
+		run: (editor) => editor.chain().focus().toggleBlockquote().run(),
+	},
+	horizontalRule: {
+		run: (editor) => editor.chain().focus().setHorizontalRule().run(),
+	},
+	undo: {
+		isEnabled: (editor) => editor.can().chain().focus().undo().run(),
+		run: (editor) => editor.chain().focus().undo().run(),
+	},
+	redo: {
+		isEnabled: (editor) => editor.can().chain().focus().redo().run(),
+		run: (editor) => editor.chain().focus().redo().run(),
+	},
+	clear: {
+		run: (editor) => editor.chain().focus().unsetAllMarks().clearNodes().run(),
+	},
+};
+
+function bindRichEditorToolbar(toolbar, editor) {
+	const buttons = toolbar.querySelectorAll('button[data-command]');
+	const refresh = () => {
+		const hasFocus = editor.isFocused;
+		buttons.forEach((button) => {
+			const command = RICH_EDITOR_COMMANDS[button.dataset.command];
+			if (!command) return;
+			const active = hasFocus && Boolean(command.isActive?.(editor));
+			button.classList.toggle('active', active);
+			if (button.hasAttribute('aria-pressed')) button.setAttribute('aria-pressed', String(active));
+			button.disabled = command.isEnabled ? !command.isEnabled(editor) : false;
+		});
+	};
+
+	buttons.forEach((button) => {
+		const command = RICH_EDITOR_COMMANDS[button.dataset.command];
+		if (!command) return;
+		button.addEventListener('mousedown', (event) => event.preventDefault());
+		button.addEventListener('click', async (event) => {
+			event.preventDefault();
+			await command.run(editor);
+			refresh();
+		});
+	});
+
+	editor.on('selectionUpdate', refresh);
+	editor.on('transaction', refresh);
+	editor.on('focus', refresh);
+	editor.on('blur', refresh);
+	refresh();
+}
 
 // ---- Editor Factory ----
 
 export function createEditor(element, { content = '', onUpdate = null } = {}) {
+	const template = document.getElementById('st-rich-editor-template');
+	if (!(template instanceof HTMLTemplateElement)) throw new Error('Rich editor template not found');
+	element.replaceChildren(template.content.cloneNode(true));
+	const toolbar = element.querySelector('.st-rich-editor-toolbar');
+	const editorMount = element.querySelector('.st-rich-editor-body');
+	if (!toolbar || !editorMount) throw new Error('Rich editor template is invalid');
 	const editorOptions = {
-		element,
+		element: editorMount,
 		extensions: [
 			StarterKit.configure({
 				codeBlock: false,
 				horizontalRule: false,
-			}),
-			Placeholder.configure({
-				placeholder: 'Type "/" for commands, or start typing...',
 			}),
 			CodeBlock,
 			HorizontalRule,
@@ -194,7 +140,6 @@ export function createEditor(element, { content = '', onUpdate = null } = {}) {
 				nested: true,
 			}),
 			Image,
-			SlashCommands,
 		],
 		content,
 	};
@@ -204,7 +149,7 @@ export function createEditor(element, { content = '', onUpdate = null } = {}) {
 	}
 
 	const editor = new Editor(editorOptions);
-
+	bindRichEditorToolbar(toolbar, editor);
 	return editor;
 }
 
