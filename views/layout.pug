@@ -100,6 +100,8 @@ html(lang="en")
 								span.st-global-search-spacer
 						.ms-auto.d-flex.align-items-center.st-navbar-actions
 							if user
+								button.btn.btn-link.btn-sm.d-none.d-md-inline-flex.align-items-center.text-nowrap.st-mobile-beta-link.st-mobile-beta-header-link(type="button" data-bs-toggle="modal" data-bs-target="#mobileBetaModal" data-track="mobile_beta_open")
+									span Try our mobile apps
 								if is_trialing
 									a.btn.btn-warning.btn-sm.me-3(href="/settings/subscription")
 										!= icon('creditCard', 'me-1')
@@ -361,6 +363,19 @@ html(lang="en")
 						button.btn.btn-primary.btn-sm#rm-save-btn
 							!= icon('check', 'me-1')
 							| Save
+
+		//- Streamient mobile apps
+		.modal.fade#mobileBetaModal(tabindex="-1" aria-labelledby="mobileBetaModalLabel" aria-hidden="true")
+			.modal-dialog.modal-lg.modal-dialog-centered
+				.modal-content
+					.modal-header
+						h5.modal-title#mobileBetaModalLabel Try the Streamient mobile apps
+						button.btn-close(type="button" data-bs-dismiss="modal" aria-label="Close")
+					.modal-body#mobile-beta-modal-body
+						.st-mobile-beta-loading.text-center.py-5.text-muted
+							.spinner-border.spinner-border-sm.me-2
+							span Loading mobile app details...
+						.alert.alert-danger.mb-0.d-none.st-mobile-beta-error Unable to load the mobile app details. Please try again.
 
 		//- Settings modal keeps users anchored in the current app context
 		.modal.fade#settingsModal(tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false")

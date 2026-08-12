@@ -1,0 +1,28 @@
+.text-center.mb-5
+	p.mb-1 Streamient for iOS and Android is available in public beta.
+	p.text-muted.mb-0 Scan a QR code or open the app for your device directly.
+
+.row.g-4
+	.col-12.col-md-6
+		.card.h-100.st-mobile-beta-card
+			.card-body.d-flex.flex-column.align-items-center.text-center.p-4
+				.st-mobile-beta-platform-icon.mb-3
+					!= icon('brand-apple')
+				h3.h5.mb-1 iPhone &amp; iPad
+				p.text-muted.small.mb-4 Available through Apple TestFlight
+				.st-mobile-beta-qr.mb-4(role="img" aria-label="QR code for Apple TestFlight")!= model.ios.qrcode
+				a.btn.btn-primary.btn-sm.w-100(href=model.ios.url target="_blank" rel="noopener noreferrer" data-track="mobile_beta_ios_click")
+					!= icon('openInNew', 'me-1')
+					span Open TestFlight
+
+	.col-12.col-md-6
+		.card.h-100.st-mobile-beta-card
+			.card-body.d-flex.flex-column.align-items-center.text-center.p-4
+				.st-mobile-beta-platform-icon.mb-3
+					!= icon('brand-android')
+				h3.h5.mb-1 Android
+				p.text-muted.small.mb-4 Available through Google Play testing
+				.st-mobile-beta-qr.mb-4(role="img" aria-label="QR code for Google Play testing")!= model.android.qrcode
+				a.btn.btn-primary.btn-sm.w-100(href=model.android.url target="_blank" rel="noopener noreferrer" data-track="mobile_beta_android_click")
+					!= icon('openInNew', 'me-1')
+					span Open Google Play

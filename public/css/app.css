@@ -286,6 +286,66 @@ body.st-no-chat-sidebar #chat-results-panel {
 	gap: 0.35rem;
 }
 
+.st-mobile-beta-link {
+	color: var(--st-muted);
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 0.18rem;
+}
+
+.st-mobile-beta-link:hover,
+.st-mobile-beta-link:focus {
+	color: var(--st-primary);
+}
+
+.st-mobile-beta-header-link {
+	margin-right: 2.5rem;
+}
+
+.st-mobile-beta-card {
+	border-color: var(--st-line);
+	border-radius: 0.75rem;
+	background: var(--st-panel);
+}
+
+.st-mobile-beta-platform-icon {
+	display: grid;
+	width: 3rem;
+	height: 3rem;
+	place-items: center;
+	border-radius: 1rem;
+	background: rgba(var(--st-primary-rgb), 0.12);
+	color: var(--st-primary);
+	font-size: 1.65rem;
+}
+
+.st-mobile-beta-qr {
+	display: grid;
+	width: 11.25rem;
+	height: 11.25rem;
+	place-items: center;
+	padding: 0.45rem;
+	border: 0.0625rem solid var(--st-line);
+	border-radius: 0.75rem;
+	background: #fff;
+}
+
+.st-mobile-beta-qr svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+body.st-template1 #mobileBetaModal .text-muted {
+	color: var(--st-muted) !important;
+}
+
+body.st-template1 #mobileBetaModal a.btn-primary,
+body.st-template1 #mobileBetaModal a.btn-primary:hover,
+body.st-template1 #mobileBetaModal a.btn-primary:focus {
+	color: var(--st-ink);
+}
+
 @media (max-width: 991.98px) {
 	.st-global-search {
 		flex-basis: 180px;
@@ -320,6 +380,7 @@ body.st-no-chat-sidebar #chat-results-panel {
 	}
 }
 
+body.st-template1 #mobileBetaModal,
 body.st-template1 #settingsModal,
 body.st-template1 #projectSettingsModal {
 	--bs-body-color: var(--st-text);

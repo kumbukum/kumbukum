@@ -13,6 +13,7 @@ import config from '../config.js';
 import { createLogger } from '../modules/logger.js';
 import { createDateFormatters } from '../modules/date_format.js';
 import { getTimezoneOptions } from '../modules/timezones.js';
+import { renderMobileAppsModal } from './mobile_apps.js';
 
 const log = createLogger('web');
 
@@ -136,6 +137,7 @@ router.get('/notes', (req, res) => res.render('notes', { title: 'Notes' }));
 router.get('/memories', (req, res) => res.render('memories', { title: 'Memory' }));
 router.get('/urls', (req, res) => res.render('urls', { title: 'URLs' }));
 router.get('/emails', (req, res) => res.render('emails', { title: 'Emails' }));
+router.get('/ajax/mobile-apps', renderMobileAppsModal);
 router.get('/trash', (req, res) => res.render('trash', { title: 'Trash' }));
 router.get('/graph', (req, res) => res.render('graph', { title: 'Knowledge Graph', page: 'graph' }));
 router.get('/settings', (req, res) => res.redirect('/settings/profile'));
