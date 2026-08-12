@@ -32,8 +32,13 @@ function initChat() {
 	const resultsList = document.getElementById('chat-results-list');
 	const closeResultsBtn = document.getElementById('close-chat-results');
 	const pageContent = document.getElementById('page-content');
+	const assistantAvatarTemplate = document.getElementById('chat-assistant-avatar-template');
 
-	if (!input || !sendBtn) return;
+	if (!input || !sendBtn || !messagesEl || !assistantAvatarTemplate) return;
+
+	function createAssistantAvatar() {
+		return assistantAvatarTemplate.content.cloneNode(true);
+	}
 
 	function resizeChatInput() {
 		input.style.height = 'auto';
@@ -74,10 +79,6 @@ function initChat() {
 		const row = document.createElement('div');
 		row.className = `chat-msg-row ${role}`;
 
-		const avatarHtml = role === 'user'
-			? makeAvatar(__user_name, 'xs')
-			: '<span class="avatar avatar-xs" style="background:#253055;color:#7C6AF7;font-weight:700;font-size:0.625rem" title="Streamient">K</span>';
-
 		const bubble = document.createElement('div');
 		bubble.className = `chat-message ${role}`;
 		if (role === 'assistant' && window.marked) {
@@ -86,7 +87,11 @@ function initChat() {
 			bubble.textContent = text;
 		}
 
-		row.innerHTML = avatarHtml;
+		if (role === 'user') {
+			row.innerHTML = makeAvatar(__user_name, 'xs');
+		} else {
+			row.appendChild(createAssistantAvatar());
+		}
 		row.appendChild(bubble);
 		var scrollBefore = messagesEl.scrollTop;
 		messagesEl.appendChild(row);
@@ -101,7 +106,7 @@ function initChat() {
 	function createAssistantRow() {
 		const row = document.createElement('div');
 		row.className = 'chat-msg-row assistant';
-		row.innerHTML = '<span class="avatar avatar-xs" style="background:#253055;color:#7C6AF7;font-weight:700;font-size:0.625rem" title="Streamient">K</span>';
+		row.appendChild(createAssistantAvatar());
 		const bubble = document.createElement('div');
 		bubble.className = 'chat-message assistant';
 		row.appendChild(bubble);
@@ -122,7 +127,7 @@ function initChat() {
 		// Show thinking indicator
 		const thinkingRow = document.createElement('div');
 		thinkingRow.className = 'chat-msg-row assistant';
-		thinkingRow.innerHTML = '<span class="avatar avatar-xs" style="background:#253055;color:#7C6AF7;font-weight:700;font-size:0.625rem" title="Streamient">K</span>';
+		thinkingRow.appendChild(createAssistantAvatar());
 		const thinkingBubble = document.createElement('div');
 		thinkingBubble.className = 'chat-message assistant';
 		thinkingBubble.innerHTML = '<span class="chat-thinking"><span>.</span><span>.</span><span>.</span></span>';
