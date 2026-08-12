@@ -8,6 +8,17 @@ const sidebar = useSidebar({ spec, linkPrefix: '/api/operations/' });
 // Base is build-time configurable: '/docs/' for app.streamient.com/docs/, and '/'
 // for the vanity domain build served at docs.streamient.com (STREAMIENT_DOCS_BASE=/).
 const docsBase = process.env.STREAMIENT_DOCS_BASE || '/docs/';
+const docsHostname = process.env.STREAMIENT_DOCS_HOSTNAME || 'https://docs.streamient.com';
+
+function canonicalUrlForPage(page, pageData) {
+    const generatedPath = page.replace(/\[operationId\]/g, pageData.params?.operationId || '[operationId]');
+    const relativePath = generatedPath
+        .replace(/(?:^|\/)index\.md$/, '')
+        .replace(/\.md$/, '');
+    const routePath = relativePath ? `/${relativePath}` : '/';
+    const normalizedPath = routePath === '/' || routePath.endsWith('/') ? routePath : `${routePath}/`;
+    return new URL(normalizedPath, docsHostname).href;
+}
 
 export default defineConfig({
     title: 'Streamient Docs',
@@ -15,6 +26,15 @@ export default defineConfig({
     base: docsBase,
     cleanUrls: true,
     srcExclude: ['AGENTS.md'],
+    sitemap: {
+        hostname: docsHostname,
+        transformItems(items) {
+            return items.map(item => ({
+                ...item,
+                url: item.url === '/' || item.url.endsWith('/') ? item.url : `${item.url}/`,
+            }));
+        },
+    },
 
     transformPageData(pageData) {
         if (!pageData.params?.seoTitle || !pageData.params?.seoDescription) return;
@@ -26,8 +46,14 @@ export default defineConfig({
         };
     },
 
+    transformHead({ page, pageData }) {
+        return [
+            ['link', { rel: 'canonical', href: canonicalUrlForPage(page, pageData) }],
+        ];
+    },
+
     head: [
-        ['link', { rel: 'icon', type: 'image/x-icon', href: `${docsBase}favicon.ico` }],
+        ['link', { rel: 'icon', type: 'image/svg+xml', href: `${docsBase}favicon.svg` }],
     ],
 
     markdown: {
