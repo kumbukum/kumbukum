@@ -244,6 +244,7 @@ export function createManaganiModule(options = {}) {
 	}
 
 	function middleware(req, res, next) {
+		if (req.managaniSkip === true) return next();
 		refreshIfStale();
 		let continued = false;
 		function continueRequest() {

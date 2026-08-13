@@ -14,12 +14,42 @@ import { createLogger } from '../modules/logger.js';
 import { createDateFormatters } from '../modules/date_format.js';
 import { getTimezoneOptions } from '../modules/timezones.js';
 import { renderMobileAppsModal } from './mobile_apps.js';
+import {
+	buildStreamientDemoFixtures,
+	deactivateStreamientDemoSession,
+	getStreamientDemoScene,
+	getStreamientDemoSession,
+	handleStreamientDemoToggle,
+} from '../services/streamient_demo_service.js';
 
 const log = createLogger('web');
 
 const router = Router();
 
 router.use(requireAuth, requireTenant);
+
+router.use(handleStreamientDemoToggle);
+
+router.use((req, res, next) => {
+	const context = getStreamientDemoSession(req);
+	if (!context && req.streamientDemoExpired) {
+		deactivateStreamientDemoSession(req);
+		if (req.path.startsWith('/ajax/')) return res.status(410).send('<div class="alert alert-warning mb-0">This demo session expired. Reload the app to continue with live data.</div>');
+		return res.redirect('/dashboard');
+	}
+	req.streamientDemoContext = context;
+	req.managaniSkip = Boolean(context);
+	res.locals.streamient_demo_mode = Boolean(context);
+	return next();
+});
+
+router.use((req, res, next) => {
+	if (!req.streamientDemoContext) return next();
+	const blockedAjax = req.path === '/ajax/batch-project-picker' || req.path.startsWith('/ajax/project-settings/') || req.path.startsWith('/ajax/section/settings');
+	if (blockedAjax) return res.status(409).send('<div class="alert alert-info mb-0">Account and project settings are unavailable while demo data is active.</div>');
+	if (req.path === '/settings' || req.path.startsWith('/settings/')) return res.redirect('/dashboard');
+	return next();
+});
 
 function requireRestrictedSettingsAccess(req, res, next) {
 	if (req.memberRole === 'owner' || req.memberRole === 'admin') return next();
@@ -73,6 +103,47 @@ async function renderUsageSettings(req, res, view) {
 // Inject user + sidebar data into all views
 router.use(async (req, res, next) => {
 	const rendersAppLayout = !req.path.startsWith('/ajax/');
+	if (req.streamientDemoContext) {
+		const fixtures = buildStreamientDemoFixtures(req.streamientDemoContext);
+		const scene = getStreamientDemoScene(req.streamientDemoContext, fixtures);
+		const dateFormatters = createDateFormatters(fixtures.user);
+		req.streamientDemoFixtures = fixtures;
+		res.locals.user = fixtures.user;
+		res.locals.billing_user = null;
+		res.locals.projects = fixtures.projects;
+		res.locals.plan = 'pro';
+		res.locals.member_role = 'viewer';
+		res.locals.can_manage_team = false;
+		res.locals.can_manage_restricted_settings = false;
+		res.locals.accessible_tenants = [];
+		res.locals.active_tenant = fixtures.tenant;
+		res.locals.email_feature_enabled = true;
+		res.locals.email_view_enabled = true;
+		res.locals.git_sync_enabled = true;
+		res.locals.white_label = {};
+		res.locals.account_limits = { limit_projects: 0, limit_users: 0, limit_ai_workflows_per_day: 0 };
+		res.locals.can_create_project = false;
+		res.locals.byo_ai_enabled = false;
+		res.locals.timezone_options = [];
+		res.locals.host_id = fixtures.host_id;
+		res.locals.ws_url = '';
+		res.locals.user_id = fixtures.owner_id;
+		res.locals.socket_token = '';
+		res.locals.impersonating = false;
+		res.locals.impersonatingName = '';
+		res.locals.is_hosted = false;
+		res.locals.is_trialing = false;
+		res.locals.trial_ends_text = '';
+		res.locals.trial_available = false;
+		res.locals.can_upgrade = false;
+		res.locals.hide_chat_sidebar = req.path === '/settings' || req.path.startsWith('/settings/');
+		res.locals.custom_footer_code = { js_snippet: '', css_snippet: '' };
+		res.locals.managani_browser = null;
+		res.locals.streamient_demo_scene = scene;
+		res.locals.streamient_demo_scene_json = JSON.stringify(scene).replace(/[<>&]/g, (char) => ({ '<': '\\u003c', '>': '\\u003e', '&': '\\u0026' }[char]));
+		Object.assign(res.locals, dateFormatters);
+		return next();
+	}
 	const [user, projects, tenant, billingUser, customFooterCode] = await Promise.all([
 		User.findById(req.userId),
 		listProjects(req.host_id),
@@ -124,6 +195,8 @@ router.use(async (req, res, next) => {
 	res.locals.hide_chat_sidebar = req.path === '/settings' || req.path.startsWith('/settings/');
 	res.locals.custom_footer_code = customFooterCode;
 	res.locals.managani_browser = rendersAppLayout ? await managani.getBrowserContext(user, { req, res, billingUser }) : null;
+	res.locals.streamient_demo_scene = null;
+	res.locals.streamient_demo_scene_json = 'null';
 	Object.assign(res.locals, dateFormatters);
 	next();
 });
@@ -182,6 +255,16 @@ router.get('/ajax/section/settings/subscription', (req, res) => {
 // ---- Ajax partials ----
 
 router.get('/ajax/project-list', async (req, res) => {
+	if (req.streamientDemoFixtures) {
+		return res.render('ajax/project_list', {
+			projects: req.streamientDemoFixtures.projects,
+			counts: req.streamientDemoFixtures.counts,
+			activeProjectId: req.query.active || '',
+			emailFeatureEnabled: true,
+			emailViewEnabled: true,
+			is_hosted: false,
+		});
+	}
 	const [projects, counts, tenant] = await Promise.all([
 		listProjects(req.host_id),
 		getProjectCounts(req.host_id).catch(() => ({})),
@@ -204,6 +287,22 @@ router.get('/ajax/batch-project-picker', async (req, res) => {
 
 router.get('/ajax/project-overview/:id', async (req, res) => {
 	try {
+		if (req.streamientDemoFixtures) {
+			const project = req.streamientDemoFixtures.projects.find((item) => String(item._id) === String(req.params.id));
+			if (!project) return res.status(404).send('');
+			return res.render('ajax/project_overview', {
+				project,
+				counts: req.streamientDemoFixtures.counts,
+				gitSyncEnabled: true,
+				emailFeatureEnabled: true,
+				emailViewEnabled: true,
+				emailForwardDomain: '',
+				canDelete: false,
+				deleteBlockers: [],
+				canManageProjectSettings: false,
+				is_hosted: false,
+			});
+		}
 		const [project, counts, tenant] = await Promise.all([
 			getProject(req.host_id, req.params.id),
 			getProjectCounts(req.host_id).catch(() => ({})),

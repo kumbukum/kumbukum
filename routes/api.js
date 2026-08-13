@@ -44,12 +44,14 @@ import crypto from 'node:crypto';
 import { createLogger } from '../modules/logger.js';
 import { isSupportedTimezone } from '../modules/timezones.js';
 import mobileApiRouter from './mobile_api.js';
+import { streamientDemoApiMiddleware } from '../services/streamient_demo_service.js';
 
 const log = createLogger('api');
 
 const router = Router();
 
 router.use(requireAuth, requireTenant);
+router.use(streamientDemoApiMiddleware);
 
 // Free is a permanent, fully-usable plan, so the API is not subscription-gated.
 // For hosted requests we resolve the billing user for per-feature gates and quotas.

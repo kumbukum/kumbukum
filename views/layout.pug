@@ -28,7 +28,7 @@ html(lang="en")
 		link(href=`/static/v-${v}/css/app.css` rel="stylesheet")
 		link(href=`/static/v-${v}/css/streamient-tabler.css` rel="stylesheet")
 		block head
-	body.st-template1(class=((hide_chat_sidebar || page === 'graph') ? 'st-no-chat-sidebar ' : ''))
+	body.st-template1(class=(((hide_chat_sidebar || page === 'graph') ? 'st-no-chat-sidebar ' : '') + ((typeof streamient_demo_mode !== 'undefined' && streamient_demo_mode) ? 'st-demo-mode' : '')))
 		block body
 			include includes/avatar
 			if impersonating
@@ -55,9 +55,9 @@ html(lang="en")
 					.collapse.navbar-collapse.flex-column.align-items-stretch.flex-grow-1#sidebar-menu
 						.st-sidebar-body
 							block sidebar
-								if can_create_project
-									.d-flex.justify-content-between.align-items-center.mb-3
-										h6.mb-0 My Projects
+								.d-flex.justify-content-between.align-items-center.mb-3
+									h6.mb-0 My Projects
+									if can_create_project
 										button.btn.btn-sm.btn-outline-primary#new-project-btn(title="New project")
 											!= icon('add')
 								#project-list
@@ -99,8 +99,9 @@ html(lang="en")
 								span.st-global-search-spacer
 						.ms-auto.d-flex.align-items-center.st-navbar-actions
 							if user
-								button.btn.btn-link.btn-sm.d-none.d-md-inline-flex.align-items-center.text-nowrap.st-mobile-beta-link.st-mobile-beta-header-link(type="button" data-bs-toggle="modal" data-bs-target="#mobileBetaModal" data-track="mobile_beta_open")
-									span Try our mobile apps
+								if !streamient_demo_mode
+									button.btn.btn-link.btn-sm.d-none.d-md-inline-flex.align-items-center.text-nowrap.st-mobile-beta-link.st-mobile-beta-header-link(type="button" data-bs-toggle="modal" data-bs-target="#mobileBetaModal" data-track="mobile_beta_open")
+										span Try our mobile apps
 								if is_trialing
 									a.btn.btn-warning.btn-sm.me-3(href="/settings/subscription")
 										!= icon('creditCard', 'me-1')
@@ -132,13 +133,14 @@ html(lang="en")
 										+avatar(user.name, 'xs')
 										span= user.name
 									ul.dropdown-menu.dropdown-menu-end
-										li: a.dropdown-item(href="/settings/profile") Profile & Settings
-										li: hr.dropdown-divider
+										if !streamient_demo_mode
+											li: a.dropdown-item(href="/settings/profile") Profile & Settings
+											li: hr.dropdown-divider
 										li: a.dropdown-item(href="/docs" target="_blank") Guides & Help
 										li: a.dropdown-item(href="/api/doc" target="_blank") API Docs
 										li: hr.dropdown-divider
 										li: a.dropdown-item(href="/docs/guide/browser-extension" target="_blank") Browser Extension
-										if is_hosted
+										if is_hosted && !streamient_demo_mode
 											li: hr.dropdown-divider
 											li: a.dropdown-item(href="/settings/subscription") My Subscription
 										li: hr.dropdown-divider
@@ -403,10 +405,13 @@ html(lang="en")
 							.spinner-border.spinner-border-sm.me-2
 							span Loading project settings...
 
-		script(src="/socket.io/socket.io.js")
+		if !streamient_demo_mode
+			script(src="/socket.io/socket.io.js")
 		script(src=`/static/v-${v}/js/icons.js`)
 		script(src=`/static/v-${v}/js/autofill_guard.js`)
 		script.
+			var __streamient_demo_mode = #{streamient_demo_mode ? 'true' : 'false'};
+			var __streamient_demo_scene = !{streamient_demo_scene_json || 'null'};
 			var __ws_url = "#{ws_url}";
 			var __host_id = "#{host_id}";
 			var __user_id = "#{user_id}";

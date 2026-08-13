@@ -8,6 +8,7 @@ import { Tenant } from '../modules/tenancy.js';
 import config from '../config.js';
 import express from 'express';
 import { createLogger } from '../modules/logger.js';
+import { STREAMIENT_DEMO_READ_ONLY_MESSAGE, getStreamientDemoSession } from '../services/streamient_demo_service.js';
 
 const log = createLogger('billing');
 
@@ -33,7 +34,14 @@ router.post(
 
 // ---- Checkout, success, cancel, portal (authenticated) ----
 
-router.get('/billing/checkout', requireAuth, requireTenant, async (req, res) => {
+router.use('/billing', requireAuth, requireTenant, (req, res, next) => {
+	if (!getStreamientDemoSession(req)) return next();
+	req.managaniSkip = true;
+	if (req.method === 'GET') return res.redirect('/dashboard');
+	return res.status(409).json({ error: STREAMIENT_DEMO_READ_ONLY_MESSAGE, code: 'DEMO_READ_ONLY' });
+});
+
+router.get('/billing/checkout', async (req, res) => {
     try {
         const billingUser = await getBillingUserForHost(req.host_id, req.userId);
         if (!billingUser) return res.redirect('/login');
@@ -62,7 +70,7 @@ router.get('/billing/checkout', requireAuth, requireTenant, async (req, res) => 
 });
 
 // Start the in-app 7-day no-card Pro trial (once per account).
-router.post('/billing/trial', requireAuth, requireTenant, async (req, res) => {
+router.post('/billing/trial', async (req, res) => {
     try {
         if (!req.isHosted) return res.redirect('/settings/subscription');
 
@@ -99,7 +107,7 @@ router.post('/billing/trial', requireAuth, requireTenant, async (req, res) => {
     }
 });
 
-router.get('/billing/success', requireAuth, requireTenant, async (req, res) => {
+router.get('/billing/success', async (req, res) => {
     // Stripe redirects here after successful checkout.
     // First check if webhook already updated the status.
     const billingUser = await getBillingUserForHost(req.host_id, req.userId);
@@ -129,11 +137,11 @@ router.get('/billing/success', requireAuth, requireTenant, async (req, res) => {
     res.redirect('/dashboard');
 });
 
-router.get('/billing/cancel', requireAuth, requireTenant, async (req, res) => {
+router.get('/billing/cancel', async (req, res) => {
     res.redirect(BILLING_SUBSCRIPTION_URL);
 });
 
-router.get('/billing/portal', requireAuth, requireTenant, async (req, res) => {
+router.get('/billing/portal', async (req, res) => {
     try {
         const billingUser = await getBillingUserForHost(req.host_id, req.userId);
         if (!billingUser) return res.redirect('/login');

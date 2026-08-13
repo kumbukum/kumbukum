@@ -63,6 +63,8 @@ function request(options = {}) {
 		headers: options.headers || {},
 		query: options.query || {},
 		ip: options.ip || '203.0.113.10',
+		host_id: options.host_id,
+		session: options.session,
 	};
 }
 
@@ -177,8 +179,21 @@ describe('API rate-limit helpers', () => {
 	});
 
 	it('detects skip, search/read, expensive, and upload APIs', () => {
+		const now = Date.now();
+		const demoRequest = request({
+			method: 'POST',
+			originalUrl: '/api/v1/chat',
+			host_id: 'host-demo',
+			session: {
+				host_id: 'host-demo',
+				streamientDemoAccounts: {
+					'host-demo': { activated_at: new Date(now).toISOString(), expires_at: new Date(now + (12 * 60 * 60 * 1000)).toISOString(), scene: 'overview' },
+				},
+			},
+		});
 		assert.equal(ApiRateLimit.shouldSkipCommon(request({ method: 'OPTIONS', originalUrl: '/api/v1/notes/search' })), true);
 		assert.equal(ApiRateLimit.shouldSkipCommon(request({ method: 'GET', originalUrl: '/api/v1/ping' })), true);
+		assert.equal(ApiRateLimit.shouldSkipCommon(demoRequest), true);
 		assert.equal(ApiRateLimit.isSearchReadApi(request({ method: 'POST', originalUrl: '/api/v1/search/knowledge' })), true);
 		assert.equal(ApiRateLimit.isSearchReadApi(request({ method: 'POST', path: '/notes/search' })), true);
 		assert.equal(ApiRateLimit.isExpensiveApi(request({ method: 'POST', originalUrl: '/api/v1/chat' })), true);

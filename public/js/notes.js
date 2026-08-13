@@ -126,6 +126,7 @@
 	}
 
 	function setupFilePond() {
+		if (typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode) return;
 		var dropZone = document.getElementById('notes-drop-zone');
 		var dropOverlay = document.getElementById('drop-overlay');
 		var filepondInput = document.getElementById('import-filepond');
