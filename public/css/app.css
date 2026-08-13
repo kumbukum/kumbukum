@@ -871,6 +871,45 @@ body.backend-admin .list-group-item-action:not(.active):active {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.st-result-type-badge {
+	border: 0.0625rem solid var(--st-result-emails-border);
+	background: var(--st-result-emails-bg) !important;
+	color: var(--st-result-emails-text) !important;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.st-result-type-notes {
+	border-color: var(--st-result-notes-border);
+	background: var(--st-result-notes-bg) !important;
+	color: var(--st-result-notes-text) !important;
+}
+
+.st-result-type-memory {
+	border-color: var(--st-result-memory-border);
+	background: var(--st-result-memory-bg) !important;
+	color: var(--st-result-memory-text) !important;
+}
+
+.st-result-type-urls {
+	border-color: var(--st-result-urls-border);
+	background: var(--st-result-urls-bg) !important;
+	color: var(--st-result-urls-text) !important;
+}
+
+.st-result-type-emails,
+.st-result-type-default {
+	border-color: var(--st-result-emails-border);
+	background: var(--st-result-emails-bg) !important;
+	color: var(--st-result-emails-text) !important;
+}
+
+.st-result-type-pages {
+	border-color: var(--st-result-pages-border);
+	background: var(--st-result-pages-bg) !important;
+	color: var(--st-result-pages-text) !important;
+}
+
 /* Note list items */
 .note-item {
 	cursor: pointer;

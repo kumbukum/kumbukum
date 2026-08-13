@@ -159,7 +159,7 @@ if (fs.existsSync(_docs_dist_root)) {
     var _serve_docs_root = express.static(_docs_dist_root, { ..._static_cache_control, extensions: ['html'], index: 'index.html' });
     app.use((req, res, next) => {
         if (_docs_vanity_hosts.indexOf((req.hostname || '').toLowerCase()) === -1) return next();
-        _serve_docs_root(req, res, () => res.sendFile(path.join(_docs_dist_root, '404.html')));
+        _serve_docs_root(req, res, () => res.status(404).sendFile(path.join(_docs_dist_root, '404.html')));
     });
 }
 
@@ -168,7 +168,7 @@ var _docs_dist = path.join(__dirname, 'docs-dist');
 if (fs.existsSync(_docs_dist)) {
     app.use('/docs', express.static(_docs_dist, { ..._static_cache_control, extensions: ['html'], index: 'index.html' }));
     app.use('/docs', (req, res) => {
-        res.sendFile(path.join(_docs_dist, '404.html'));
+        res.status(404).sendFile(path.join(_docs_dist, '404.html'));
     });
 }
 

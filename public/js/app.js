@@ -713,6 +713,7 @@ async function navigateTo(path, opts) {
 		return;
 	}
 	if (__isNavigating) return;
+	if (typeof window.dismissChatResults === 'function') window.dismissChatResults();
 	__isNavigating = true;
 	syncLayoutForPath(path);
 

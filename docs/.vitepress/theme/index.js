@@ -1,28 +1,64 @@
 import DefaultTheme from 'vitepress/theme';
-import { theme, useOpenapi, useTheme } from 'vitepress-openapi/client';
+import { useRoute, withBase } from 'vitepress';
 import { enhanceAppWithTabs } from 'vitepress-plugin-tabs/client';
-import 'vitepress-openapi/dist/style.css';
+import { createApp, defineAsyncComponent, defineComponent, h, onBeforeUnmount, onMounted, ref } from 'vue';
 import './custom.css';
-import spec from '../data/openapi.json' with { type: 'json' };
+
+const OpenapiTheme = defineAsyncComponent(async () => {
+    const [openapi, { default: spec }] = await Promise.all([
+        import('vitepress-openapi/client'),
+        import('../data/openapi.json', { with: { type: 'json' } }),
+    ]);
+
+    return defineComponent({
+        setup() {
+            const route = useRoute();
+            const mountPoint = ref(null);
+            let openapiApp;
+
+            onMounted(() => {
+                if (!document.querySelector('link[data-streamient-openapi-style]')) {
+                    const stylesheet = document.createElement('link');
+                    stylesheet.rel = 'stylesheet';
+                    stylesheet.href = withBase('/vitepress-openapi.css');
+                    stylesheet.dataset.streamientOpenapiStyle = '';
+                    document.head.append(stylesheet);
+                }
+                openapi.useOpenapi({ spec });
+                openapi.useTheme({
+                    markdown: {
+                        config: (md) => {
+                            md.set({ breaks: false });
+                            return md;
+                        },
+                    },
+                });
+
+                openapiApp = createApp({
+                    setup() {
+                        return () => {
+                            const operationId = route.data.params?.operationId;
+                            const operationPage = Boolean(operationId);
+                            const component = operationPage ? openapi.OAOperation : openapi.OASpec;
+                            return h(component, operationPage ? { operationId } : {});
+                        };
+                    },
+                });
+                openapi.theme.enhanceApp({ app: openapiApp });
+                openapiApp.mount(mountPoint.value);
+            });
+
+            onBeforeUnmount(() => openapiApp?.unmount());
+
+            return () => h('div', { ref: mountPoint });
+        },
+    });
+});
 
 export default {
     extends: DefaultTheme,
     enhanceApp({ app }) {
-        useOpenapi({ spec });
-        // vitepress-openapi renders operation descriptions with markdown-it
-        // `breaks: true`, so every single newline in a description becomes a
-        // <br>, breaking wrapped sentences onto their own lines. Turn it off so
-        // single newlines collapse to spaces (CommonMark soft break) and text
-        // flows as paragraphs; blank lines still separate paragraphs.
-        useTheme({
-            markdown: {
-                config: (md) => {
-                    md.set({ breaks: false });
-                    return md;
-                },
-            },
-        });
-        theme.enhanceApp({ app });
+        app.component('StreamientOpenapi', OpenapiTheme);
         enhanceAppWithTabs(app);
     },
 };
