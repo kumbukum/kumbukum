@@ -21,6 +21,12 @@ function compactChatResults(results) {
 	return results.map(chatResultRef).filter(Boolean).slice(0, 100);
 }
 
+function dismissChatResults() {
+	currentChatResults = [];
+	document.getElementById('chat-results-panel')?.classList.add('d-none');
+	document.getElementById('page-content')?.classList.remove('d-none');
+}
+
 function initChat() {
 	const input = document.getElementById('chat-input');
 	const sendBtn = document.getElementById('chat-send');
@@ -31,7 +37,6 @@ function initChat() {
 	const resultsPanel = document.getElementById('chat-results-panel');
 	const resultsList = document.getElementById('chat-results-list');
 	const closeResultsBtn = document.getElementById('close-chat-results');
-	const pageContent = document.getElementById('page-content');
 	const assistantAvatarTemplate = document.getElementById('chat-assistant-avatar-template');
 
 	if (!input || !sendBtn || !messagesEl || !assistantAvatarTemplate) return;
@@ -69,11 +74,7 @@ function initChat() {
 	});
 
 	// Close results panel — restore page content
-	closeResultsBtn?.addEventListener('click', () => {
-		currentChatResults = [];
-		resultsPanel.classList.add('d-none');
-		pageContent?.classList.remove('d-none');
-	});
+	closeResultsBtn?.addEventListener('click', dismissChatResults);
 
 	function addMessage(role, text) {
 		const row = document.createElement('div');
@@ -370,7 +371,7 @@ function renderResults(results, listEl, panelEl) {
 		body.className = 'card-body p-3';
 
 		const badge = document.createElement('span');
-		badge.className = `badge bg-${typeBadgeColor(item._type)} me-2`;
+		badge.className = `badge st-result-type-badge ${typeBadgeClass(item._type)} me-2`;
 		badge.textContent = item._type;
 
 		const titleSpan = document.createElement('strong');
@@ -484,7 +485,7 @@ async function openItemModal(type, id, defaults = {}) {
 	const typeLabels = { notes: 'Note', memory: 'Memory', urls: 'URL' };
 	const isCreate = !id;
 	titleEl.textContent = isCreate ? `New ${typeLabels[type] || type}` : (defaults.title || defaults.url || 'Loading...');
-	badgeEl.className = `badge bg-${typeBadgeColor(type)} me-2`;
+	badgeEl.className = `badge st-result-type-badge ${typeBadgeClass(type)} me-2`;
 	badgeEl.textContent = typeLabels[type] || type;
 
 	// Show/hide delete button (only for existing records)
@@ -541,7 +542,7 @@ async function openResultModal(item) {
 	document.getElementById('rm-delete-btn').classList.add('d-none');
 
 	document.getElementById('result-modal-title').textContent = item.title || item.url || 'Untitled';
-	document.getElementById('result-modal-badge').className = `badge bg-${typeBadgeColor(item._type)} me-2`;
+	document.getElementById('result-modal-badge').className = `badge st-result-type-badge ${typeBadgeClass(item._type)} me-2`;
 	document.getElementById('result-modal-badge').textContent = item._type;
 
 	const loadingEl = document.getElementById('result-modal-loading');
@@ -774,7 +775,7 @@ async function openEmailModal(item) {
 	rmResetEmailView();
 
 	titleEl.textContent = item.title || '(No subject)';
-	badgeEl.className = `badge bg-${typeBadgeColor('emails')} me-2`;
+	badgeEl.className = `badge st-result-type-badge ${typeBadgeClass('emails')} me-2`;
 	badgeEl.textContent = 'Email';
 
 	rmShowModal(modalEl);
@@ -1522,6 +1523,7 @@ function initResultModalHandlers() {
 window.openItemModal = openItemModal;
 window.openResultModal = openResultModal;
 window.initResultModalHandlers = initResultModalHandlers;
+window.dismissChatResults = dismissChatResults;
 
 function escapeHtml(str) {
 	const div = document.createElement('div');
@@ -1529,13 +1531,13 @@ function escapeHtml(str) {
 	return div.innerHTML;
 }
 
-function typeBadgeColor(type) {
+function typeBadgeClass(type) {
 	switch (type) {
-		case 'notes': return 'primary';
-		case 'memory': return 'success';
-		case 'urls': return 'warning';
-		case 'emails': return 'secondary';
-		case 'pages': return 'info';
-		default: return 'secondary';
+		case 'notes': return 'st-result-type-notes';
+		case 'memory': return 'st-result-type-memory';
+		case 'urls': return 'st-result-type-urls';
+		case 'emails': return 'st-result-type-emails';
+		case 'pages': return 'st-result-type-pages';
+		default: return 'st-result-type-default';
 	}
 }
