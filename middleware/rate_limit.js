@@ -6,6 +6,7 @@ import { Tenant } from '../modules/tenancy.js';
 import { resolveStoredTenantLimits } from '../modules/tenant_limits.js';
 import config from '../config.js';
 import { createLogger } from '../modules/logger.js';
+import { hasStreamientDemoSessionEntry } from '../services/streamient_demo_service.js';
 
 const log = createLogger('api-rate-limit');
 
@@ -196,7 +197,7 @@ export function isUploadApi(request) {
 }
 
 export function shouldSkipCommon(request) {
-	return request.method === 'OPTIONS' || isApiPing(request);
+	return request.method === 'OPTIONS' || isApiPing(request) || hasStreamientDemoSessionEntry(request);
 }
 
 export function isMobileUploadChunk(request) {

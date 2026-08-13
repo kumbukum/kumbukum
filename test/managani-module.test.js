@@ -270,6 +270,7 @@ describe('reusable Managani module', () => {
 			{ method: 'GET', path: '/admin/settings', userId: 'user-1', session: { userId: 'user-1' } },
 			{ method: 'GET', path: '/dashboard', session: {} },
 			{ method: 'GET', path: '/dashboard', session: { userId: 'stale-session-user' } },
+			{ method: 'GET', path: '/dashboard', userId: 'user-1', session: { userId: 'user-1' }, managaniSkip: true },
 			{ method: 'HEAD', path: '/dashboard', userId: 'user-1', session: { userId: 'user-1' } },
 		];
 

@@ -1735,3 +1735,32 @@ body:not(.swal2-shown) > .swal2-container {
 [data-bs-theme="light"] .st-search-type-memory { color: #b02a6e; }
 [data-bs-theme="light"] .st-search-type-urls,
 [data-bs-theme="light"] .st-search-type-pages { color: #4149c9; }
+
+/* Screenshot demo — keep every knowledge surface inspectable, without mutation controls. */
+.st-demo-mode #new-project-btn,
+.st-demo-mode #new-note-btn,
+.st-demo-mode #new-memory-btn,
+.st-demo-mode #new-url-btn,
+.st-demo-mode #batch-toolbar,
+.st-demo-mode .batch-cb-wrap,
+.st-demo-mode .project-drop-overlay,
+.st-demo-mode #drop-overlay,
+.st-demo-mode .filepond--root,
+.st-demo-mode #empty-trash-btn,
+.st-demo-mode #trash-batch-toolbar,
+.st-demo-mode #rm-save-btn,
+.st-demo-mode #rm-delete-btn,
+.st-demo-mode #rm-note-tab-edit,
+.st-demo-mode #rm-memory-tab-edit,
+.st-demo-mode #rm-url-resync-btn,
+.st-demo-mode #rm-url-delete-pages-btn,
+.st-demo-mode #chat-result-modal .source-search-wrap,
+.st-demo-mode #chat-result-modal .rm-link-tags .btn-close {
+	display: none !important;
+}
+
+.st-demo-mode #chat-result-modal .tagify,
+.st-demo-mode #chat-result-modal input,
+.st-demo-mode #chat-result-modal textarea {
+	pointer-events: none;
+}

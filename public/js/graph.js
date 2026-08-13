@@ -24,7 +24,7 @@
         includeManual: true,
         includeTags: true,
         includeSemantic: false,
-        projectId: '',
+        projectId: typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode && __streamient_demo_scene?.name === 'graph' ? (__streamient_demo_scene.project_id || '') : '',
     };
     let graphReindexRequested = false;
 
@@ -246,18 +246,30 @@
         cy.add(elements);
 
         if (elements.length > 0) {
-            cy.layout({
-                name: 'fcose',
-                animate: true,
-                animationDuration: 500,
-                randomize: true,
-                nodeDimensionsIncludeLabels: true,
-                idealEdgeLength: 120,
-                nodeRepulsion: 8000,
-                edgeElasticity: 0.45,
-                gravity: 0.25,
-                padding: 30,
-            }).run();
+            const demoGraph = typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode && __streamient_demo_scene?.name === 'graph';
+            const layout = demoGraph
+                ? cy.layout({ name: 'circle', animate: false, padding: 30, avoidOverlap: true })
+                : cy.layout({
+                    name: 'fcose',
+                    animate: true,
+                    animationDuration: 500,
+                    randomize: true,
+                    nodeDimensionsIncludeLabels: true,
+                    idealEdgeLength: 120,
+                    nodeRepulsion: 8000,
+                    edgeElasticity: 0.45,
+                    gravity: 0.25,
+                    padding: 30,
+                });
+            layout.run();
+            if (demoGraph && __streamient_demo_scene.graph_focus_id) {
+                window.setTimeout(() => {
+                    const node = cy.getElementById(__streamient_demo_scene.graph_focus_id);
+                    if (!node?.length) return;
+                    node.trigger('tap');
+                    cy.fit(node.neighborhood().add(node), 60);
+                }, 0);
+            }
         }
     }
 
@@ -280,7 +292,9 @@
         toggleBtn(document.getElementById('toggle-tags'), 'includeTags');
         toggleBtn(document.getElementById('toggle-semantic'), 'includeSemantic');
 
-        document.getElementById('graph-project-filter').addEventListener('change', (e) => {
+        const projectFilter = document.getElementById('graph-project-filter');
+        if (state.projectId) projectFilter.value = state.projectId;
+        projectFilter.addEventListener('change', (e) => {
             state.projectId = e.target.value;
             loadGraph();
         });

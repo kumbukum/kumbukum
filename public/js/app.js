@@ -1,5 +1,24 @@
 const API = '/api/v1';
 
+function isStreamientDemoMode() {
+	return typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode;
+}
+
+function demoFetchOptions(options) {
+	var next = { ...(options || {}) };
+	if (!isStreamientDemoMode()) return next;
+	next.headers = { ...(next.headers || {}), 'X-Streamient-Demo': '1' };
+	return next;
+}
+
+function handleDemoExpiredResponse(res) {
+	if (isStreamientDemoMode() && res.status === 410) {
+		window.location.href = '/dashboard?demo=false';
+		return true;
+	}
+	return false;
+}
+
 // Redirect to login when session is expired
 function redirectToLogin() {
 	window.location.href = '/login';
@@ -15,9 +34,11 @@ async function api(method, path, body) {
 		method,
 		headers: { 'Content-Type': 'application/json' },
 	};
+	if (isStreamientDemoMode()) options.headers['X-Streamient-Demo'] = '1';
 	if (body && method !== 'GET') options.body = JSON.stringify(body);
 
 	const res = await fetch(`${API}${path}`, options);
+	if (handleDemoExpiredResponse(res)) throw new Error('Demo session expired');
 	if (res.status === 401) return redirectToLogin();
 	if (isLoginRedirect(res)) return redirectToLogin();
 	if (!res.ok) {
@@ -65,6 +86,20 @@ function setActiveProject(projectId) {
 	});
 }
 
+function applyStreamientDemoItemScene() {
+	if (!isStreamientDemoMode() || window.__streamientDemoItemSceneApplied) return;
+	const scene = typeof __streamient_demo_scene === 'object' ? __streamient_demo_scene : null;
+	if (!scene?.open_id || !scene.open_type || scene.path !== window.location.pathname) return;
+	window.__streamientDemoItemSceneApplied = true;
+	window.setTimeout(() => {
+		if (scene.open_type === 'emails' && typeof window.openResultModal === 'function') {
+			window.openResultModal({ _type: 'emails', id: scene.open_id });
+			return;
+		}
+		if (typeof window.openItemModal === 'function') window.openItemModal(scene.open_type, scene.open_id);
+	}, 0);
+}
+
 // Persistently highlight the row (name/dashboard or Notes/Memories/URLs/Emails)
 // of the active project that matches the current page.
 function setActiveSection(path) {
@@ -86,6 +121,7 @@ function setActiveSection(path) {
 }
 
 async function importFilesToProject(files, projectId) {
+	if (isStreamientDemoMode()) return;
 	if (!files || !files.length || !projectId) return;
 	var ok = 0;
 	var fail = 0;
@@ -116,7 +152,8 @@ async function loadProjects() {
 		const list = document.getElementById('project-list');
 		if (!list) return;
 
-		const res = await fetch(`/ajax/project-list?active=${currentProjectId || ''}`);
+		const res = await fetch(`/ajax/project-list?active=${currentProjectId || ''}`, demoFetchOptions());
+		if (handleDemoExpiredResponse(res)) return;
 		if (isLoginRedirect(res)) return redirectToLogin();
 		const html = await res.text();
 		list.innerHTML = html;
@@ -137,6 +174,8 @@ async function loadProjects() {
 					navigateTo(link.getAttribute('href'));
 				});
 			});
+
+			if (isStreamientDemoMode()) return;
 
 			// Drag-and-drop upload on project card
 			var dragCount = 0;
@@ -181,7 +220,8 @@ async function loadProjectOverview(projectId) {
 	if (!container) return;
 
 	try {
-		const res = await fetch(`/ajax/project-overview/${projectId}`);
+		const res = await fetch(`/ajax/project-overview/${projectId}`, demoFetchOptions());
+		if (handleDemoExpiredResponse(res)) return;
 		if (isLoginRedirect(res)) return redirectToLogin();
 		if (!res.ok) throw new Error('Failed to load');
 		const html = await res.text();
@@ -342,6 +382,7 @@ window.__sections.dashboard = {
 };
 
 function setupOverviewDropZone() {
+	if (isStreamientDemoMode()) return;
 	var zone = document.getElementById('project-overview');
 	if (!zone || zone.__dropBound) return;
 	zone.__dropBound = true;
@@ -658,6 +699,7 @@ function bindProjectSettingsModal(projectId, activeTab) {
 
 
 async function openSettingsModal(path) {
+	if (isStreamientDemoMode()) return navigateTo('/dashboard');
 	var route = ROUTES[path] || ROUTES['/settings/profile'];
 	if (!route || !isSettingsPath(path)) {
 		window.location.href = path;
@@ -703,6 +745,7 @@ window.openSettingsModal = openSettingsModal;
 
 async function navigateTo(path, opts) {
 	opts = opts || {};
+	if (isStreamientDemoMode() && isSettingsPath(path)) path = '/dashboard';
 	if (isSettingsPath(path) && !opts.allowSettingsPage) {
 		await openSettingsModal(path);
 		return;
@@ -723,7 +766,8 @@ async function navigateTo(path, opts) {
 		var pageContent = document.getElementById('page-content');
 		pageContent.style.opacity = '0.5';
 
-		var res = await fetch(route.partial);
+		var res = await fetch(route.partial, demoFetchOptions());
+		if (handleDemoExpiredResponse(res)) return;
 		if (isLoginRedirect(res)) return redirectToLogin();
 		if (!res.ok) throw new Error('Failed to load section');
 
@@ -877,11 +921,13 @@ function initMobileBetaModal() {
 
 document.addEventListener('DOMContentLoaded', async () => {
 	initThemeToggle();
-	initMobileBetaModal();
+	if (!isStreamientDemoMode()) initMobileBetaModal();
 	const params = new URLSearchParams(window.location.search);
 	const g = params.get('g');
 	const hasExplicitProject = !!(g && JSURL.tryParse(g, {}).project_id);
-	if (hasExplicitProject) {
+	if (isStreamientDemoMode() && __streamient_demo_scene?.project_id) {
+		currentProjectId = __streamient_demo_scene.project_id;
+	} else if (hasExplicitProject) {
 		currentProjectId = JSURL.tryParse(g, {}).project_id;
 	}
 	await loadProjects();
@@ -896,10 +942,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 
 	if (typeof initResultModalHandlers === 'function') initResultModalHandlers();
+	applyStreamientDemoItemScene();
 	if (typeof initChat === 'function') initChat();
 
 	// ── Socket.IO: live count updates ──
-	if (typeof io === 'function' && typeof __host_id === 'string' && __host_id && typeof __socket_token === 'string' && __socket_token) {
+	if (!isStreamientDemoMode() && typeof io === 'function' && typeof __host_id === 'string' && __host_id && typeof __socket_token === 'string' && __socket_token) {
 		const socket = io(__ws_url || undefined, { 'transports': ['websocket'], 'reconnection': true, 'autoConnect': true, 'timeout': 40000, 'withCredentials': true, 'auth': { 'token': __socket_token }, 'reconnectionAttempts': 50, 'reconnectionDelay': 1000, 'reconnectionDelayMax': 10000, 'forceNew': false });
 		window.__kkSocket = socket;
 		socket.on('connect', () => {

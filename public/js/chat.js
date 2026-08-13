@@ -54,7 +54,7 @@ function initChat() {
 	}
 
 	// Populate project filter
-	loadProjectFilter();
+	const projectFilterReady = loadProjectFilter();
 
 	// Welcome state — hide on first interaction
 	const chatWelcome = document.getElementById('chat-welcome');
@@ -147,9 +147,13 @@ function initChat() {
 
 			const res = await fetch('/api/v1/chat/stream', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: { 'Content-Type': 'application/json', ...(typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode ? { 'X-Streamient-Demo': '1' } : {}) },
 				body: JSON.stringify(body),
 			});
+			if (typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode && res.status === 410) {
+				window.location.href = '/dashboard?demo=false';
+				return;
+			}
 
 			if (res.status === 401 || (res.redirected && new URL(res.url).pathname.startsWith('/login'))) {
 				window.location.href = '/login';
@@ -327,6 +331,16 @@ function initChat() {
 			addMessage('assistant', 'Could not load conversations.');
 		}
 	});
+
+	if (typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode && __streamient_demo_scene?.name === 'search' && __streamient_demo_scene.path === window.location.pathname && __streamient_demo_scene.chat_query && !window.__streamientDemoChatSceneApplied) {
+		window.__streamientDemoChatSceneApplied = true;
+		Promise.resolve(projectFilterReady).then(() => {
+			if (projectFilter && __streamient_demo_scene.project_id) projectFilter.value = __streamient_demo_scene.project_id;
+			input.value = __streamient_demo_scene.chat_query;
+			resizeChatInput();
+			sendMessage();
+		});
+	}
 }
 
 async function loadProjectFilter() {
@@ -440,6 +454,21 @@ let rmEmailFrom = '';
 let rmEmailRemoteImagesLoaded = false;
 let rmEmailBodyLoaded = false;
 
+function rmIsDemoReadOnly() {
+	return typeof __streamient_demo_mode === 'boolean' && __streamient_demo_mode;
+}
+
+function rmApplyDemoReadOnly() {
+	if (!rmIsDemoReadOnly()) return;
+	for (const id of ['rm-note-title', 'rm-note-tags', 'rm-memory-title', 'rm-memory-tags', 'rm-memory-source', 'rm-url-input', 'rm-url-title', 'rm-url-description']) {
+		const element = document.getElementById(id);
+		if (element) element.readOnly = true;
+	}
+	const crawl = document.getElementById('rm-url-crawl');
+	if (crawl) crawl.disabled = true;
+	document.querySelectorAll('.rm-link-search').forEach((element) => { element.disabled = true; });
+}
+
 function rmShowModal(modalEl) {
 	const modal = BsModal.getOrCreateInstance(modalEl);
 	if (!modalEl.classList.contains('show')) modal.show();
@@ -463,6 +492,7 @@ function rmCleanupModalBackdrops() {
 async function openItemModal(type, id, defaults = {}) {
 	const modalEl = document.getElementById('chat-result-modal');
 	if (!modalEl) return;
+	if (rmIsDemoReadOnly() && !id) return;
 
 	const titleEl = document.getElementById('result-modal-title');
 	const badgeEl = document.getElementById('result-modal-badge');
@@ -477,7 +507,7 @@ async function openItemModal(type, id, defaults = {}) {
 	document.getElementById('result-modal-url').classList.add('d-none');
 	document.getElementById('result-modal-email').classList.add('d-none');
 	loadingEl.classList.add('d-none');
-	saveBtn.classList.remove('d-none');
+	saveBtn.classList.toggle('d-none', rmIsDemoReadOnly());
 
 	rmCurrentType = type;
 	rmCurrentId = id || null;
@@ -489,7 +519,7 @@ async function openItemModal(type, id, defaults = {}) {
 	badgeEl.textContent = typeLabels[type] || type;
 
 	// Show/hide delete button (only for existing records)
-	if (isCreate) {
+	if (isCreate || rmIsDemoReadOnly()) {
 		deleteBtn.classList.add('d-none');
 	} else {
 		deleteBtn.classList.remove('d-none');
@@ -1049,6 +1079,7 @@ function rmPopulate(type, record) {
 			rmSetUrlPagesState({ visible: false, metaText: '', pages: [] });
 		}
 	}
+	rmApplyDemoReadOnly();
 }
 
 // ── Note preview/edit tabs ───────────────────────────────────────

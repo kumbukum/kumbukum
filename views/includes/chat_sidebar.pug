@@ -21,11 +21,17 @@ template#chat-assistant-avatar-template: img.avatar-xs(src="/static/images/strea
         h5.mb-1 Hello #{user.name || 'there'}
         p.mb-3 What would you like to do?
       .chat-welcome-examples.mt-3
-        button.chat-example-btn.mb-1(type="button") What topics or themes are most common
-        button.chat-example-btn.mb-1(type="button") Summarise my most recent notes
-        button.chat-example-btn.mb-1(type="button") Which memories mention a specific decision
-        button.chat-example-btn.mb-1(type="button") Search across all my saved URLs
-        button.chat-example-btn.mb-1(type="button") Show me usage statistics
+        if streamient_demo_mode
+          button.chat-example-btn.mb-1(type="button") What did we decide about the beta launch?
+          button.chat-example-btn.mb-1(type="button") Which customer requests repeat?
+          button.chat-example-btn.mb-1(type="button") Summarize the enterprise pilot
+          button.chat-example-btn.mb-1(type="button") Show the sources behind the pricing decision
+        else
+          button.chat-example-btn.mb-1(type="button") What topics or themes are most common
+          button.chat-example-btn.mb-1(type="button") Summarise my most recent notes
+          button.chat-example-btn.mb-1(type="button") Which memories mention a specific decision
+          button.chat-example-btn.mb-1(type="button") Search across all my saved URLs
+          button.chat-example-btn.mb-1(type="button") Show me usage statistics
 
   .mt-auto.pt-2
     .input-group.chat-input-group

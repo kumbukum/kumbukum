@@ -35,6 +35,7 @@ import { backfillGitSyncMode } from './services/git_sync_service.js';
 import { backfillTypesenseTrashFields } from './services/typesense_backfill_service.js';
 import { getWhiteLabelAssetsDir, resolveWhiteLabelRequest } from './services/white_label_service.js';
 import { getAuthAssetUrl, getRandomAuthBackgroundUrl, preloadAuthAssets, preloadAuthBackgrounds, serveAuthAsset } from './services/auth_asset_service.js';
+import { hasStreamientDemoSessionEntry } from './services/streamient_demo_service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -204,6 +205,11 @@ app.use((req, res, next) => {
 });
 
 app.use(resolveTenant);
+
+app.use((req, res, next) => {
+	if (hasStreamientDemoSessionEntry(req)) req.managaniSkip = true;
+	next();
+});
 
 // HTTP request logging — after tenant resolution so host_id/user_id are available.
 app.use(getPinoMiddleware());
