@@ -164,16 +164,24 @@ export function App() {
 			}
 		};
 		void (async () => {
-			const [storedServer, storedTokens] = await Promise.all([loadSelectedServer(), loadTokens()]);
-			const selectedServer = storedServer || HOSTED_SERVER;
-			setServer(selectedServer);
-			if (window.location.pathname === "/oauth/callback" && !authHandled.current) {
-				authHandled.current = true;
-				setLoginLoading(true);
-				await finishCallback(window.location.href, selectedServer);
-			} else setTokens(storedTokens);
-			removeCallback = listenForOAuthCallbacks((url) => void loadSelectedServer().then((callbackServer) => finishCallback(url, callbackServer || selectedServer)));
-			setAuthReady(true);
+			try {
+				const [storedServer, storedTokens] = await Promise.all([loadSelectedServer(), loadTokens()]);
+				const selectedServer = storedServer || HOSTED_SERVER;
+				setServer(selectedServer);
+				if (window.location.pathname === "/oauth/callback" && !authHandled.current) {
+					authHandled.current = true;
+					setLoginLoading(true);
+					await finishCallback(window.location.href, selectedServer);
+				} else setTokens(storedTokens);
+				removeCallback = listenForOAuthCallbacks((url) => void loadSelectedServer().then((callbackServer) => finishCallback(url, callbackServer || selectedServer)));
+			} catch (restoreError) {
+				console.error("Streamient Mobile authentication restore failed:", restoreError);
+				setServer(HOSTED_SERVER);
+				setTokens(null);
+				setError("Saved sign-in could not be restored. Please sign in again.");
+			} finally {
+				setAuthReady(true);
+			}
 		})();
 		return () => removeCallback();
 	}, []);

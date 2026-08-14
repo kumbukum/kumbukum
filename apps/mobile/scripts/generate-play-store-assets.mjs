@@ -120,8 +120,8 @@ async function writePng(name, svg, width, height, composites = []) {
 	await sharp(Buffer.from(svg)).resize(width, height).composite(composites).png().toFile(resolve(outputDir, name));
 }
 
-const appIconLogo = await sharp(mark).resize(380, 380, { fit: "contain" }).png().toBuffer();
-await writePng("app-icon-512.png", `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="${colors.cream}"/></svg>`, 512, 512, [{ input: appIconLogo, left: 66, top: 66 }]);
+const appIconLogo = await sharp(mark).resize(288, 288, { fit: "contain" }).png().toBuffer();
+await writePng("app-icon-512.png", `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="${colors.cream}"/></svg>`, 512, 512, [{ input: appIconLogo, left: 112, top: 112 }]);
 
 const featureLogo = await sharp(mark).resize(190, 190, { fit: "contain" }).png().toBuffer();
 const featureSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500"><rect width="1024" height="500" fill="${colors.cream}"/><circle cx="975" cy="50" r="220" fill="${colors.accent}" opacity=".14"/><circle cx="930" cy="460" r="170" fill="${colors.ink}" opacity=".08"/>${text(282, 116, "STREAMIENT", 28, 780, colors.accent, "start", 4)}${text(282, 202, "Your team’s memory,", 57, 800, colors.ink)}${text(282, 268, "ready for AI.", 57, 800, colors.ink)}${text(282, 344, "Notes. Memories. URLs. Shared context.", 27, 520, colors.muted)}</svg>`;

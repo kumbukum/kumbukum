@@ -76,6 +76,7 @@ describe('Streamient Mobile source contracts', () => {
 
 	it('shows a cloud-first login with custom servers behind Advanced and working icons', () => {
 		const app = read('apps/mobile/src/App.tsx');
+		const config = read('apps/mobile/src/lib/config.ts');
 		const login = read('apps/mobile/src/components/LoginScreen.tsx');
 		const styles = read('apps/mobile/src/styles.css');
 
@@ -86,8 +87,53 @@ describe('Streamient Mobile source contracts', () => {
 		assert.doesNotMatch(login, /server-options/);
 		assert.match(app, /useState<ServerOption>\(HOSTED_SERVER\)/);
 		assert.match(app, /storedServer \|\| HOSTED_SERVER/);
+		assert.doesNotMatch(config, /export const LOCAL_SERVER/);
+		assert.doesNotMatch(login, /LOCAL_SERVER/);
 		assert.match(styles, /font-family: "Material Symbols Outlined Variable"/);
 		assert.match(styles, /font-feature-settings: "liga"/);
+	});
+
+	it('surfaces module, render, and saved-auth startup failures instead of staying blank', () => {
+		const app = read('apps/mobile/src/App.tsx');
+		const main = read('apps/mobile/src/main.tsx');
+		const restoreBlock = app.slice(app.indexOf('void (async () => {'), app.indexOf('\n\t\t})();', app.indexOf('void (async () => {')));
+
+		assert.match(main, /import\("\.\/App"\)/);
+		assert.match(main, /class StartupBoundary/);
+		assert.match(main, /Streamient couldn’t start/);
+		assert.match(main, /root\.render\(<StartupFailure \/>\)/);
+		assert.match(restoreBlock, /try \{[\s\S]*Promise\.all\(\[loadSelectedServer\(\), loadTokens\(\)\]\)/);
+		assert.match(restoreBlock, /catch \(restoreError\)[\s\S]*setTokens\(null\)/);
+		assert.match(restoreBlock, /finally \{[\s\S]*setAuthReady\(true\)/);
+	});
+
+	it('keeps release icons inside platform mask safe zones and advances native builds', () => {
+		const androidBuild = read('apps/mobile/android/app/build.gradle');
+		const assets = read('apps/mobile/scripts/generate-assets.mjs');
+		const iosProject = read('apps/mobile/ios/App/App.xcodeproj/project.pbxproj');
+		const iosExport = read('apps/mobile/ios/ExportOptions.plist');
+		const iosRelease = read('apps/mobile/scripts/ios-release-archive.sh');
+		const iosUpload = read('apps/mobile/ios/UploadOptions.plist');
+		const playAssets = read('apps/mobile/scripts/generate-play-store-assets.mjs');
+
+		assert.equal((assets.match(/size \* 0\.64/g) || []).length, 2);
+		assert.equal((assets.match(/size \* 0\.48/g) || []).length, 1);
+		assert.doesNotMatch(assets, /size \* 0\.(?:75|58)/);
+		assert.match(playAssets, /resize\(288, 288/);
+		assert.match(playAssets, /left: 112, top: 112/);
+		assert.match(androidBuild, /versionCode 2/);
+		assert.match(androidBuild, /versionName "1\.0"/);
+		assert.equal((iosProject.match(/CURRENT_PROJECT_VERSION = 4;/g) || []).length, 4);
+		assert.equal((iosProject.match(/MARKETING_VERSION = 1\.0;/g) || []).length, 4);
+		assert.equal((iosProject.match(/CODE_SIGN_STYLE = Automatic;/g) || []).length, 4);
+		assert.match(iosExport, /<key>signingStyle<\/key>\s*<string>automatic<\/string>/);
+		assert.match(iosUpload, /<key>signingStyle<\/key>\s*<string>automatic<\/string>/);
+		assert.match(iosRelease, /STREAMIENT_IOS_BUILD_NUMBER:-4/);
+		assert.match(iosRelease, /CODE_SIGNING_ALLOWED=NO/);
+		assert.match(iosRelease, /embedded\.mobileprovision/);
+		assert.match(iosRelease, /plutil -extract Entitlements/);
+		assert.match(iosRelease, /codesign --verify --deep --strict/);
+		assert.equal((iosRelease.match(/-allowProvisioningUpdates/g) || []).length, 3);
 	});
 
 	it('uses the brand as records home and the bottom Projects action as the switcher', () => {
