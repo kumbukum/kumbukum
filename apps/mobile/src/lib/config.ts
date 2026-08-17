@@ -12,7 +12,6 @@ export function serverOption(value: string, hosted = false, name = "Custom serve
 	return { baseUrl, hosted, name, resourceUrl: `${baseUrl}/api/v1` };
 }
 
-export const LOCAL_SERVER = serverOption(import.meta.env.VITE_STREAMIENT_SERVER || "http://s.lan", false, "Local Streamient");
 export const HOSTED_SERVER = serverOption("https://app.streamient.com", true, "Streamient Cloud");
 
 export function normalizeServerUrl(value: string) {

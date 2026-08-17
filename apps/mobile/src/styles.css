@@ -260,6 +260,9 @@ button.record-row:hover { border-color: color-mix(in srgb, var(--accent) 35%, va
 
 .app-loading, .login-screen { min-height: 100dvh; display: flex; align-items: center; justify-content: center; }
 .app-loading { flex-direction: column; gap: 1rem; background: var(--background); color: var(--muted); }
+.startup-failure { padding: 2rem; text-align: center; }
+.startup-failure h1 { margin: .25rem 0 0; color: var(--text); font-size: 1.35rem; }
+.startup-failure p { max-width: 20rem; margin: 0; line-height: 1.5; }
 .brand-mark { width: 3rem; height: 3rem; display: grid; place-items: center; border-radius: .9rem; background: linear-gradient(135deg, var(--accent), #b56cde); color: white; font-size: 1.45rem; font-weight: 850; box-shadow: 0 .7rem 1.5rem rgba(117, 103, 232, .25); }
 .spinner { width: 1rem; height: 1rem; display: inline-block; border: .12rem solid rgba(255, 255, 255, .45); border-top-color: white; border-radius: 50%; animation: spin .75s linear infinite; }
 .spinner.dark { border-color: var(--border); border-top-color: var(--accent); }

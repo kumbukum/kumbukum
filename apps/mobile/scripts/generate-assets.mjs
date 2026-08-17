@@ -21,10 +21,10 @@ for (const name of ["splash-2732x2732.png", "splash-2732x2732-1.png", "splash-27
 const legacyIcons = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
 const adaptiveIcons = { mdpi: 108, hdpi: 162, xhdpi: 216, xxhdpi: 324, xxxhdpi: 432 };
 for (const [density, size] of Object.entries(legacyIcons)) {
-	await render(resolve(root, `android/app/src/main/res/mipmap-${density}/ic_launcher.png`), size, size, Math.round(size * 0.75));
-	await render(resolve(root, `android/app/src/main/res/mipmap-${density}/ic_launcher_round.png`), size, size, Math.round(size * 0.75));
+	await render(resolve(root, `android/app/src/main/res/mipmap-${density}/ic_launcher.png`), size, size, Math.round(size * 0.64));
+	await render(resolve(root, `android/app/src/main/res/mipmap-${density}/ic_launcher_round.png`), size, size, Math.round(size * 0.64));
 }
-for (const [density, size] of Object.entries(adaptiveIcons)) await render(resolve(root, `android/app/src/main/res/mipmap-${density}/ic_launcher_foreground.png`), size, size, Math.round(size * 0.58), true);
+for (const [density, size] of Object.entries(adaptiveIcons)) await render(resolve(root, `android/app/src/main/res/mipmap-${density}/ic_launcher_foreground.png`), size, size, Math.round(size * 0.48), true);
 
 const splashes = {
 	"drawable/splash.png": [480, 320],

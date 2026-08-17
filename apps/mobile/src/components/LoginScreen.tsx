@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
 import type { ServerOption } from "../types";
-import { HOSTED_SERVER, LOCAL_SERVER, serverOption } from "../lib/config";
+import { HOSTED_SERVER, serverOption } from "../lib/config";
 import { Icon } from "./Icon";
 
 export function LoginScreen({ initialServer, loading, error, onLogin }: { initialServer: ServerOption; loading: boolean; error: string; onLogin: (server: ServerOption) => void }) {
-	const rememberedCustomServer = !initialServer.hosted && initialServer.baseUrl !== LOCAL_SERVER.baseUrl;
+	const rememberedCustomServer = !initialServer.hosted;
 	const [advancedOpen, setAdvancedOpen] = useState(rememberedCustomServer);
 	const [customUrl, setCustomUrl] = useState(initialServer.hosted ? "" : initialServer.baseUrl);
 	const [validationError, setValidationError] = useState("");
