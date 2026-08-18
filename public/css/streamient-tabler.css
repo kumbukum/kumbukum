@@ -170,7 +170,7 @@ body.st-template1 .st-white-label-navbar-logo {
 .navbar-vertical.st-app-sidebar .navbar-brand {
 	min-height: var(--st-topbar-height);
 	padding: 0.5rem 1rem;
-	border-bottom: 1px solid var(--st-line);
+	/* border-bottom: 1px solid var(--st-line); */
 }
 
 .st-app-sidebar .nav-link {
@@ -264,6 +264,23 @@ body.st-template1 #main-content {
 	min-height: 2.125rem;
 	padding-top: 0.3rem;
 	padding-bottom: 0.3rem;
+}
+
+.st-support-button {
+	display: none;
+}
+
+body.st-template1:has([data-managani-widget-instance="default"] [data-tab="chat"]) .st-support-button {
+	display: inline-flex;
+}
+
+.st-support-button:hover {
+	background: var(--st-panel-muted);
+	text-decoration: none;
+}
+
+.st-support-button .st-icon {
+	font-size: 1.125rem;
 }
 
 .st-global-search {
