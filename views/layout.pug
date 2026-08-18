@@ -102,6 +102,10 @@ html(lang="en")
 								if !streamient_demo_mode
 									button.btn.btn-link.btn-sm.d-none.d-md-inline-flex.align-items-center.text-nowrap.st-mobile-beta-link.st-mobile-beta-header-link(type="button" data-bs-toggle="modal" data-bs-target="#mobileBetaModal" data-track="mobile_beta_open")
 										span Try our mobile apps
+								if typeof managani_browser !== 'undefined' && managani_browser
+									button.me-2.btn.btn-sm.btn-link.feedback-click.st-support-button(type=`button` data-managani-widget-open="default")
+										!= icon('question', 'me-1')
+										span.fw-semibold Support
 								if is_trialing
 									a.btn.btn-warning.btn-sm.me-3(href="/settings/subscription")
 										!= icon('creditCard', 'me-1')
@@ -450,7 +454,7 @@ html(lang="en")
 			!= custom_footer_code.css_snippet
 		if typeof managani_browser !== 'undefined' && managani_browser
 			- const __managaniScriptUrl = `${managani_browser.base_url}/managani.js`
-			script(async src=__managaniScriptUrl data-site-key=managani_browser.site_key data-user-token=managani_browser.user_token)
+			script(async src=__managaniScriptUrl data-site-key=managani_browser.site_key data-user-token=managani_browser.user_token data-auto-button="false")
 		if typeof custom_footer_code !== 'undefined' && custom_footer_code && custom_footer_code.js_snippet
 			!= custom_footer_code.js_snippet
 		if impersonating

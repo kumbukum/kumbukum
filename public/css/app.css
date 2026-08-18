@@ -678,6 +678,12 @@ body.backend-admin .list-group-item-action:not(.active):active {
 	color: var(--tblr-list-group-action-active-color, var(--bs-list-group-action-active-color, var(--bs-body-color))) !important;
 }
 
+body.backend-admin .navbar-dark .navbar-nav .nav-link:hover,
+body.backend-admin .navbar-dark .navbar-nav .nav-link:focus {
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--tblr-navbar-active-color, #ffffff);
+}
+
 [data-bs-theme="light"] .admin-theme-label-light,
 [data-theme="light"] .admin-theme-label-light,
 [data-bs-theme="dark"] .admin-theme-label-dark,

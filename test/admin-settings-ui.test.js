@@ -43,7 +43,7 @@ describe('backend admin settings UI', () => {
 		const authLayout = fs.readFileSync(new URL('../views/auth_layout.pug', import.meta.url), 'utf8');
 		const adminLayout = fs.readFileSync(new URL('../views/admin/layout.pug', import.meta.url), 'utf8');
 		const cssIndex = appLayout.indexOf('custom_footer_code.css_snippet');
-		const managaniIndex = appLayout.indexOf('managani_browser');
+		const managaniIndex = appLayout.indexOf('const __managaniScriptUrl');
 		const jsIndex = appLayout.indexOf('custom_footer_code.js_snippet');
 
 		assert.ok(cssIndex > -1);
@@ -53,6 +53,23 @@ describe('backend admin settings UI', () => {
 		assert.match(appLayout, /data-user-token=managani_browser\.user_token/);
 		assert.doesNotMatch(authLayout, /managani_browser|custom_footer_code/);
 		assert.doesNotMatch(adminLayout, /managani_browser|custom_footer_code/);
+	});
+
+	it('uses the top navigation Support trigger without the floating Managani launcher', () => {
+		const appLayout = fs.readFileSync(new URL('../views/layout.pug', import.meta.url), 'utf8');
+		const styles = fs.readFileSync(new URL('../public/css/streamient-tabler.css', import.meta.url), 'utf8');
+
+		assert.match(appLayout, /if typeof managani_browser !== 'undefined' && managani_browser\s+button\.me-2\.btn\.btn-sm\.btn-link\.feedback-click\.st-support-button\(type=`button` data-managani-widget-open="default"\)/);
+		assert.match(appLayout, /script\(async src=__managaniScriptUrl data-site-key=managani_browser\.site_key data-user-token=managani_browser\.user_token data-auto-button="false"\)/);
+		assert.match(styles, /\.st-support-button\s*\{\s*display: none;/);
+		assert.match(styles, /body\.st-template1:has\(\[data-managani-widget-instance="default"\] \[data-tab="chat"\]\) \.st-support-button\s*\{\s*display: inline-flex;/);
+		assert.match(styles, /\.st-support-button:hover\s*\{[^}]*background: var\(--st-panel-muted\);[^}]*text-decoration: none;/);
+	});
+
+	it('keeps backend navigation readable on hover', () => {
+		const styles = fs.readFileSync(new URL('../public/css/app.css', import.meta.url), 'utf8');
+
+		assert.match(styles, /body\.backend-admin \.navbar-dark \.navbar-nav \.nav-link:hover,[\s\S]*background: rgba\(255, 255, 255, 0\.08\);[\s\S]*color: var\(--tblr-navbar-active-color, #ffffff\);/);
 	});
 
 	it('documents both backend settings APIs with admin-session security', () => {
