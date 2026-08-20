@@ -11,6 +11,7 @@ import { buildHostedTrialFields } from '../services/billing_service.js';
 import { sendMagicLink, isMagicLinkValid, verifyMagicLink } from '../services/magic_link_service.js';
 import * as passkeyService from '../services/passkey_service.js';
 import { provisionSignupAccount } from '../services/account_provisioning_service.js';
+import { enqueueHelpmonksSignupSequence } from '../services/helpmonks_signup_sequence_service.js';
 import { createLogger } from '../modules/logger.js';
 
 const log = createLogger('auth');
@@ -172,6 +173,11 @@ router.post('/verify', async (req, res) => {
 		await PendingSignup.deleteOne({ _id: pending._id });
 
 		if (req.isHosted) {
+			try {
+				await enqueueHelpmonksSignupSequence(user, tenant);
+			} catch (e) {
+				log.error({ err: e, user_id: user._id.toString(), host_id: tenant.host_id }, 'Helpmonks signup sequence enqueue failed');
+			}
 			try {
 				await sendSignupNotificationEmail({ email: user.email, name: user.name, hostId: tenant.host_id });
 			} catch (e) {

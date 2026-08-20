@@ -104,6 +104,7 @@ export class MongoWorker {
 		this.concurrency = options.concurrency || 1;
 		this.stalledThresholdMs = options.stalledThresholdMs || STALLED_THRESHOLD_MS;
 		this.handlerTimeoutMs = options.handlerTimeoutMs || HANDLER_TIMEOUT_MS;
+		this.retryDelayMs = Number.isFinite(Number(options.retryDelayMs)) && Number(options.retryDelayMs) >= 0 ? Number(options.retryDelayMs) : 0;
 		this.activeCount = 0;
 		this.running = false;
 		this.changeStream = null;
@@ -189,7 +190,10 @@ export class MongoWorker {
 			const error = err?.message || String(err);
 			const willRetry = claimed.attempts < claimed.max_attempts;
 			const nextStatus = willRetry ? STATUS.PENDING : STATUS.FAILED;
-			await col.updateOne(namespaced({ _id: claimed._id }, this.appInstance), { $set: { status: nextStatus, error, updated_at: new Date() } });
+			const failedAt = new Date();
+			const update = { status: nextStatus, error, updated_at: failedAt };
+			if (willRetry) update.scheduled_at = new Date(failedAt.getTime() + this.retryDelayMs);
+			await col.updateOne(namespaced({ _id: claimed._id }, this.appInstance), { $set: update });
 			log[willRetry ? 'warn' : 'error']({ err, queue: this.queueName, job_id: jobId, attempts: claimed.attempts, max_attempts: claimed.max_attempts, will_retry: willRetry, duration_ms: Date.now() - startedAt }, willRetry ? 'Job failed; will retry' : 'Job failed permanently');
 			throw err;
 		} finally {

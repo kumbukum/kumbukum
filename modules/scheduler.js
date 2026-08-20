@@ -12,6 +12,7 @@ import { runScheduledSync } from '../services/git_sync_service.js';
 import { reconcileActiveTrashTenants } from '../services/trash_reconciliation_service.js';
 import { runEmailRetentionCleanup, runTrashRetentionCleanup } from '../services/trash_retention_service.js';
 import { cleanupOrphanedImportFiles, createNoteImportWorker, logImportWorkerError } from '../services/note_import_service.js';
+import { startHelpmonksSignupSequenceWorker } from '../services/helpmonks_signup_sequence_service.js';
 import { createLogger } from './logger.js';
 
 export { runEmailRetentionCleanup };
@@ -108,6 +109,7 @@ export async function runTrialLifecycle({
 export function startScheduler() {
 	const noteImportWorker = createNoteImportWorker();
 	noteImportWorker.start().catch(logImportWorkerError);
+	startHelpmonksSignupSequenceWorker().catch((err) => log.error({ err }, 'Helpmonks signup sequence worker failed to start'));
 
 	let crawlReindexRunning = false;
 	new Cron('*/10 * * * *', async () => {
