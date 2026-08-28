@@ -9,6 +9,8 @@ Streamient Sync is a first-party Obsidian plugin for two-way synchronization bet
 
 ::: info Availability
 Obsidian Sync requires the **Pro** plan or a **self-hosted** installation. The server must enable `OBSIDIAN_SYNC_ENABLED`.
+
+[Streamient Sync is available in the Obsidian Community directory](https://community.obsidian.md/plugins/streamient-sync) for Obsidian 1.13.0 and newer.
 :::
 
 ## What Syncs
@@ -22,16 +24,17 @@ Obsidian Sync requires the **Pro** plan or a **self-hosted** installation. The s
 
 The plugin excludes `.obsidian`, `.git`, `.trash`, other dot-folders, operating-system metadata, and temporary files.
 
-## Beta Installation
+## Install the Plugin
 
-Until Streamient Sync is accepted into the Obsidian Community directory, install it through BRAT:
+Install the stable plugin from Obsidian Community Plugins:
 
-1. Install and enable **BRAT** from Obsidian Community plugins.
-2. Run **BRAT: Add a beta plugin for testing** from the Obsidian command palette.
-3. Enter `https://github.com/streamient/streamient-obsidian`.
-4. Enable **Streamient Sync** under Obsidian Community plugins.
+1. Open **Settings → Community plugins** in Obsidian.
+2. Select **Browse** and search for **Streamient Sync**.
+3. Select **Install**, then **Enable**.
 
-For manual installation, download `main.js`, `manifest.json`, and `styles.css` from the [latest Streamient Sync release](https://github.com/streamient/streamient-obsidian/releases) and place them in `<vault>/.obsidian/plugins/streamient-sync/`.
+You can also open the [Streamient Sync Community listing](https://community.obsidian.md/plugins/streamient-sync) directly.
+
+To test prerelease builds, install [BRAT](https://obsidian.md/plugins?id=obsidian42-brat), add `https://github.com/streamient/streamient-obsidian`, and enable **Streamient Sync**. For manual installation, download `main.js`, `manifest.json`, and `styles.css` from the [latest GitHub release](https://github.com/streamient/streamient-obsidian/releases) and place them in `<vault>/.obsidian/plugins/streamient-sync/`.
 
 ## Connect a Vault
 

@@ -56,13 +56,14 @@ test('matches Git Sync plan access while separating Obsidian server readiness', 
 	assert.doesNotMatch(selfHostedUnconfigured, /Obsidian Sync \(Pro\)|Upgrade to Pro/);
 });
 
-test('links ready accounts to the Obsidian BRAT beta and setup guide', () => {
+test('links ready accounts to the official Obsidian plugin and setup guide', () => {
 	const html = settingsHtml();
-	assert.match(html, /https:\/\/github\.com\/streamient\/streamient-obsidian#beta-installation/);
-	assert.match(html, /Install beta with BRAT/);
-	assert.match(html, /https:\/\/docs\.streamient\.com\/guide\/obsidian-sync/);
+	assert.match(html, /https:\/\/community\.obsidian\.md\/plugins\/streamient-sync/);
+	assert.match(html, /Install from Obsidian/);
+	assert.match(html, /https:\/\/docs\.streamient\.com\/guide\/obsidian-sync\//);
 	assert.match(html, /plugin runs inside Obsidian/);
-	assert.doesNotMatch(html, /Community plugins/);
+	assert.match(html, /Install Streamient Sync from Obsidian Community Plugins/);
+	assert.doesNotMatch(html, /Install beta with BRAT|#beta-installation/);
 });
 
 test('updates Obsidian connection controls incrementally without a project settings reload', () => {
