@@ -189,6 +189,7 @@ router.get('/projects/:id/settings', requireProjectSettingsAccess, async (req, r
 	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
 	const plan = tenant?.plan || 'free';
 	const proOnlyFeatureEnabled = hasProFeatureAccess(req.billingUser, plan, req.isHosted);
+	const obsidianSyncConfigured = config.obsidian.enabled && Boolean(config.obsidian.encryptionKey);
 	const gitRepos = proOnlyFeatureEnabled ? await gitSyncService.listGitRepos(req.host_id, req.params.id).catch(() => []) : [];
 
 	res.json({
@@ -196,6 +197,8 @@ router.get('/projects/:id/settings', requireProjectSettingsAccess, async (req, r
 		features: {
 			git_sync: proOnlyFeatureEnabled,
 			email_ingest: proOnlyFeatureEnabled,
+			obsidian_sync: proOnlyFeatureEnabled,
+			obsidian_sync_configured: obsidianSyncConfigured,
 		},
 		email_forward_domain: String(config.emailForwardDomain || '').trim().replace(/^@+/, ''),
 		git_repos: gitRepos,
@@ -206,7 +209,7 @@ router.get('/features', async (req, res) => {
 	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
 	const plan = tenant?.plan || 'free';
 	const proOnlyFeatureEnabled = hasProFeatureAccess(req.billingUser, plan, req.isHosted);
-	res.json({ features: { email_ingest: proOnlyFeatureEnabled, git_sync: proOnlyFeatureEnabled } });
+	res.json({ features: { email_ingest: proOnlyFeatureEnabled, git_sync: proOnlyFeatureEnabled, obsidian_sync: proOnlyFeatureEnabled, obsidian_sync_configured: config.obsidian.enabled && Boolean(config.obsidian.encryptionKey) } });
 });
 
 router.put('/projects/:id', requireProjectSettingsAccess, async (req, res) => {

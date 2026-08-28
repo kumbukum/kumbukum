@@ -91,6 +91,8 @@ describe('Project settings API', () => {
 	const originalAppUrl = config.appUrl;
 	const originalIsHosted = config.isHosted;
 	const originalEncryptionKey = config.gitEncryptionKey;
+	const originalObsidianEnabled = config.obsidian.enabled;
+	const originalObsidianEncryptionKey = config.obsidian.encryptionKey;
 	const originalEmailForwardDomain = config.emailForwardDomain;
 	const originalUserFindById = User.findById;
 	const originalUserFindByIdAndUpdate = User.findByIdAndUpdate;
@@ -104,6 +106,7 @@ describe('Project settings API', () => {
 	const originalGitRepoFind = GitRepo.find;
 	const originalAuditLogCreate = AuditLog.create;
 	let tenant;
+	let billingUser;
 	let memberRole;
 	let projects;
 
@@ -111,6 +114,8 @@ describe('Project settings API', () => {
 		config.appUrl = 'https://app.streamient.com';
 		config.isHosted = true;
 		config.gitEncryptionKey = '12345678901234567890123456789012';
+		config.obsidian.enabled = true;
+		config.obsidian.encryptionKey = 'a'.repeat(64);
 		config.emailForwardDomain = 'email.example.com';
 		memberRole = 'owner';
 		tenant = {
@@ -130,16 +135,17 @@ describe('Project settings API', () => {
 				email_filter: 'noisy.com',
 			}),
 		];
+		billingUser = {
+			_id: { toString: () => '507f1f77bcf86cd799439011' },
+			tenant: tenant._id,
+			host_id: tenant.host_id,
+			subscription_status: 'active',
+			trial_source: '',
+			trial_ends_at: null,
+		};
 
 		User.findById = () => ({
-			select: async () => ({
-				_id: { toString: () => '507f1f77bcf86cd799439011' },
-				tenant: tenant._id,
-				host_id: tenant.host_id,
-				subscription_status: 'active',
-				trial_source: '',
-				trial_ends_at: null,
-			}),
+			select: async () => billingUser,
 		});
 		User.findByIdAndUpdate = async () => null;
 		TenantMember.findOneAndUpdate = async () => null;
@@ -182,6 +188,8 @@ describe('Project settings API', () => {
 		config.appUrl = originalAppUrl;
 		config.isHosted = originalIsHosted;
 		config.gitEncryptionKey = originalEncryptionKey;
+		config.obsidian.enabled = originalObsidianEnabled;
+		config.obsidian.encryptionKey = originalObsidianEncryptionKey;
 		config.emailForwardDomain = originalEmailForwardDomain;
 		User.findById = originalUserFindById;
 		User.findByIdAndUpdate = originalUserFindByIdAndUpdate;
@@ -225,6 +233,37 @@ describe('Project settings API', () => {
 			assert.equal(json.result.filter_configured, true);
 			assert.equal(json.result.processed, 0);
 			assert.equal(json.result.moved, 0);
+		} finally {
+			await new Promise((resolve) => server.close(resolve));
+		}
+	});
+
+	it('reports Obsidian access with the same hosted and self-hosted matrix as Git Sync', async () => {
+		const server = await createServer();
+		try {
+			const proResponse = await request(server, 'GET', '/projects/project-1/settings');
+			const pro = await proResponse.json();
+			assert.deepEqual(pro.features, { git_sync: true, email_ingest: true, obsidian_sync: true, obsidian_sync_configured: true });
+
+			tenant.plan = 'free';
+			const freeResponse = await request(server, 'GET', '/features');
+			const free = await freeResponse.json();
+			assert.deepEqual(free.features, { email_ingest: false, git_sync: false, obsidian_sync: false, obsidian_sync_configured: true });
+
+			billingUser = { ...billingUser, subscription_status: 'trialing', trial_source: 'no_card', trial_ends_at: new Date('2099-01-01T00:00:00.000Z') };
+			const trialResponse = await request(server, 'GET', '/features');
+			const trial = await trialResponse.json();
+			assert.equal(trial.features.git_sync, true);
+			assert.equal(trial.features.obsidian_sync, true);
+
+			config.isHosted = false;
+			config.obsidian.enabled = false;
+			config.obsidian.encryptionKey = '';
+			const selfHostedResponse = await request(server, 'GET', '/features');
+			const selfHosted = await selfHostedResponse.json();
+			assert.equal(selfHosted.features.git_sync, true);
+			assert.equal(selfHosted.features.obsidian_sync, true);
+			assert.equal(selfHosted.features.obsidian_sync_configured, false);
 		} finally {
 			await new Promise((resolve) => server.close(resolve));
 		}

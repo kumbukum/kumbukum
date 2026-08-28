@@ -1056,6 +1056,31 @@
           }
         }
       },
+      "FeatureAvailability": {
+        "type": "object",
+        "required": [
+          "git_sync",
+          "email_ingest",
+          "obsidian_sync",
+          "obsidian_sync_configured"
+        ],
+        "properties": {
+          "git_sync": {
+            "type": "boolean"
+          },
+          "email_ingest": {
+            "type": "boolean"
+          },
+          "obsidian_sync": {
+            "type": "boolean",
+            "description": "Plan access, matching Git Sync access."
+          },
+          "obsidian_sync_configured": {
+            "type": "boolean",
+            "description": "Whether the server feature flag and vault encryption key are configured."
+          }
+        }
+      },
       "GitRepo": {
         "type": "object",
         "properties": {
@@ -2910,15 +2935,7 @@
                       "$ref": "#/components/schemas/Project"
                     },
                     "features": {
-                      "type": "object",
-                      "properties": {
-                        "git_sync": {
-                          "type": "boolean"
-                        },
-                        "email_ingest": {
-                          "type": "boolean"
-                        }
-                      }
+                      "$ref": "#/components/schemas/FeatureAvailability"
                     },
                     "email_forward_domain": {
                       "type": "string"
@@ -2950,6 +2967,32 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/features": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get account feature availability",
+        "description": "Returns plan access for Git Sync, email ingestion, and Obsidian Sync plus Obsidian server readiness.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "features": {
+                      "$ref": "#/components/schemas/FeatureAvailability"
+                    }
+                  }
                 }
               }
             }
@@ -9793,6 +9836,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -9837,6 +9883,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       },
@@ -9909,6 +9958,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -9975,6 +10027,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       },
@@ -10018,6 +10073,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10063,6 +10121,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10108,6 +10169,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10202,6 +10266,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10270,6 +10337,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10358,6 +10428,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10412,6 +10485,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10476,6 +10552,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10529,6 +10608,9 @@
           },
           "429": {
             "description": "Too many active uploads"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10585,6 +10667,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       },
@@ -10634,6 +10719,9 @@
           "413": {
             "description": "Chunk too large"
           },
+          "503": {
+            "description": "Obsidian encryption is not configured"
+          },
           "507": {
             "description": "Insufficient storage"
           }
@@ -10669,6 +10757,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10704,6 +10795,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10739,6 +10833,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10782,6 +10879,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }
@@ -10825,6 +10925,9 @@
           },
           "409": {
             "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
           }
         }
       }

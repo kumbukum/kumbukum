@@ -13,6 +13,8 @@ import { ObsidianConnection } from '../model/obsidian_connection.js';
 import { ObsidianFile } from '../model/obsidian_file.js';
 import { ObsidianRevision } from '../model/obsidian_revision.js';
 import { AuditLog } from '../model/audit_log.js';
+import { Tenant } from '../modules/tenancy.js';
+import { requireObsidianAccess, requireProjectManager } from '../routes/obsidian_api.js';
 import { readBlob, storeBuffer } from '../services/obsidian_blob_service.js';
 import { normalizeVaultPath, isExcludedVaultPath, vaultFileKind, __test as syncTest } from '../services/obsidian_sync_service.js';
 import { validateAuthorizationRequest } from '../services/oauth_service.js';
@@ -76,6 +78,64 @@ test('accepts Obsidian sync audit events', () => {
 	assert.ok(AuditLog.schema.path('action').enumValues.includes('sync'));
 	assert.ok(AuditLog.schema.path('resource').enumValues.includes('obsidian_connection'));
 	assert.ok(AuditLog.schema.path('channel').enumValues.includes('obsidian'));
+});
+
+test('checks Git-parity plan access before Obsidian deployment readiness', async (t) => {
+	const originalFindOne = Tenant.findOne;
+	const previous = { enabled: config.obsidian.enabled, key: config.obsidian.encryptionKey };
+	let plan = 'free';
+	Tenant.findOne = () => ({ select: () => ({ lean: async () => ({ plan }) }) });
+	t.after(() => {
+		Tenant.findOne = originalFindOne;
+		config.obsidian.enabled = previous.enabled;
+		config.obsidian.encryptionKey = previous.key;
+	});
+
+	function response() {
+		return {
+			statusCode: 200,
+			body: null,
+			status(value) { this.statusCode = value; return this; },
+			json(value) { this.body = value; return this; },
+		};
+	}
+
+	config.obsidian.enabled = false;
+	config.obsidian.encryptionKey = '';
+	const free = response();
+	await requireObsidianAccess({ host_id: 'host-1', isHosted: true, billingUser: { subscription_status: 'active' } }, free, () => {});
+	assert.equal(free.statusCode, 403);
+	assert.equal(free.body.code, 'pro_required');
+
+	plan = 'pro';
+	const disabled = response();
+	await requireObsidianAccess({ host_id: 'host-1', isHosted: true, billingUser: null }, disabled, () => {});
+	assert.equal(disabled.statusCode, 403);
+	assert.equal(disabled.body.code, 'feature_disabled');
+
+	config.obsidian.enabled = true;
+	const unconfigured = response();
+	await requireObsidianAccess({ host_id: 'host-1', isHosted: true, billingUser: null }, unconfigured, () => {});
+	assert.equal(unconfigured.statusCode, 503);
+	assert.equal(unconfigured.body.code, 'encryption_key_missing');
+
+	plan = 'free';
+	config.obsidian.encryptionKey = 'a'.repeat(64);
+	let allowed = false;
+	await requireObsidianAccess({ host_id: 'host-1', isHosted: false, billingUser: null }, response(), () => { allowed = true; });
+	assert.equal(allowed, true);
+});
+
+test('allows only project owners and admins to configure Obsidian connections', () => {
+	for (const role of ['owner', 'admin']) {
+		let allowed = false;
+		requireProjectManager({ memberRole: role }, {}, () => { allowed = true; });
+		assert.equal(allowed, true);
+	}
+	const response = { statusCode: 200, body: null, status(value) { this.statusCode = value; return this; }, json(value) { this.body = value; return this; } };
+	requireProjectManager({ memberRole: 'member' }, response, () => {});
+	assert.equal(response.statusCode, 403);
+	assert.equal(response.body.code, 'admin_required');
 });
 
 test('encrypts stored vault bytes and decrypts them for authorized reads', async (t) => {

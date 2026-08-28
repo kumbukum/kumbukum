@@ -10,6 +10,7 @@ const ENV_KEYS = [
 	'API_RATE_LIMIT_ENABLED',
 	'API_RATE_LIMIT_WINDOW_MS',
 	'API_RATE_LIMIT_GENERAL_PER_MINUTE',
+	'API_RATE_LIMIT_OBSIDIAN_PER_MINUTE',
 	'API_RATE_LIMIT_RAZUNA_FILES_PER_MINUTE',
 	'API_RATE_LIMIT_EXPENSIVE_PER_MINUTE',
 	'API_RATE_LIMIT_UPLOAD_PER_MINUTE',
@@ -28,6 +29,7 @@ const API_RATE_LIMIT_ENV = {
 	API_RATE_LIMIT_ENABLED: 'true',
 	API_RATE_LIMIT_WINDOW_MS: '60000',
 	API_RATE_LIMIT_GENERAL_PER_MINUTE: '120',
+	API_RATE_LIMIT_OBSIDIAN_PER_MINUTE: '3000',
 	API_RATE_LIMIT_RAZUNA_FILES_PER_MINUTE: '300',
 	API_RATE_LIMIT_EXPENSIVE_PER_MINUTE: '60',
 	API_RATE_LIMIT_UPLOAD_PER_MINUTE: '20',
@@ -126,6 +128,7 @@ describe('API rate-limit helpers', () => {
 			enabled: true,
 			windowMs: 60000,
 			generalPerMinute: 120,
+			obsidianPerMinute: 3000,
 			razunaFilesPerMinute: 300,
 			expensivePerMinute: 60,
 			uploadPerMinute: 20,
@@ -135,6 +138,7 @@ describe('API rate-limit helpers', () => {
 			API_RATE_LIMIT_ENABLED: 'false',
 			API_RATE_LIMIT_WINDOW_MS: '5000',
 			API_RATE_LIMIT_GENERAL_PER_MINUTE: '11',
+			API_RATE_LIMIT_OBSIDIAN_PER_MINUTE: '15',
 			API_RATE_LIMIT_RAZUNA_FILES_PER_MINUTE: '12',
 			API_RATE_LIMIT_EXPENSIVE_PER_MINUTE: '13',
 			API_RATE_LIMIT_UPLOAD_PER_MINUTE: '14',
@@ -144,6 +148,7 @@ describe('API rate-limit helpers', () => {
 			enabled: false,
 			windowMs: 5000,
 			generalPerMinute: 11,
+			obsidianPerMinute: 15,
 			razunaFilesPerMinute: 12,
 			expensivePerMinute: 13,
 			uploadPerMinute: 14,
@@ -202,6 +207,33 @@ describe('API rate-limit helpers', () => {
 		assert.equal(ApiRateLimit.isExpensiveApi(request({ method: 'POST', originalUrl: '/api/v1/git-repos/abc/sync' })), true);
 		assert.equal(ApiRateLimit.isUploadApi(request({ method: 'POST', originalUrl: '/api/v1/notes/import' })), true);
 		assert.equal(ApiRateLimit.isUploadApi(request({ method: 'GET', originalUrl: '/api/v1/notes/import' })), false);
+		assert.equal(ApiRateLimit.isObsidianSyncApi(request({ method: 'GET', originalUrl: '/api/v1/obsidian/connections/abc/changes' })), true);
+		assert.equal(ApiRateLimit.isObsidianSyncApi(request({ method: 'GET', originalUrl: '/api/v1/projects' })), false);
+	});
+
+	it('isolates Obsidian sync traffic from general and upload buckets', async () => {
+		setEnv({ ...API_RATE_LIMIT_ENV, API_RATE_LIMIT_GENERAL_PER_MINUTE: '1', API_RATE_LIMIT_OBSIDIAN_PER_MINUTE: '2', API_RATE_LIMIT_UPLOAD_PER_MINUTE: '1' });
+		const app = express();
+		app.use('/api/v1', ...ApiRateLimit.createApiLimiters(), (_req, res) => res.json({ success: true }));
+		const server = await listen(app);
+		try {
+			const { port } = server.address();
+			const base = `http://127.0.0.1:${port}/api/v1`;
+			const obsidianHeaders = { authorization: 'Bearer obsidian-read-token' };
+			assert.equal((await fetch(`${base}/obsidian/files/file-1/content`, { headers: obsidianHeaders })).status, 200);
+			assert.equal((await fetch(`${base}/obsidian/connections/connection-1/changes`, { headers: obsidianHeaders })).status, 200);
+			assert.equal((await fetch(`${base}/obsidian/projects`, { headers: obsidianHeaders })).status, 429);
+
+			const uploadHeaders = { authorization: 'Bearer obsidian-upload-token', 'content-type': 'application/json' };
+			assert.equal((await fetch(`${base}/obsidian/uploads`, { method: 'POST', headers: uploadHeaders, body: '{}' })).status, 200);
+			assert.equal((await fetch(`${base}/obsidian/uploads/upload-1/complete`, { method: 'POST', headers: uploadHeaders, body: '{}' })).status, 200);
+
+			const generalHeaders = { authorization: 'Bearer general-token' };
+			assert.equal((await fetch(`${base}/projects`, { headers: generalHeaders })).status, 200);
+			assert.equal((await fetch(`${base}/notes`, { headers: generalHeaders })).status, 429);
+		} finally {
+			await closeServer(server);
+		}
 	});
 });
 

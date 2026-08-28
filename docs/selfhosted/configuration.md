@@ -57,6 +57,21 @@ docker compose -f compose.prod.yml up -d
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API token for Custom Hostnames | Pro custom domains | — |
 | `CLOUDFLARE_ZONE_ID` | Cloudflare zone ID for Custom Hostnames | Pro custom domains | — |
 
+### Obsidian Sync
+
+Obsidian Sync is available to every self-hosted account. It remains disabled until both the feature flag and encryption key are configured.
+
+| Variable | Description | Required | Default |
+| --- | --- | --- | --- |
+| `OBSIDIAN_SYNC_ENABLED` | Enables Obsidian OAuth, sync APIs, and project controls | No | `false` |
+| `OBSIDIAN_VAULTS_DIR` | Encrypted vault storage on the persistent assets volume | No | `/opt/streamient/assets/obsidian-vaults` |
+| `OBSIDIAN_VAULT_ENCRYPTION_KEY` | Stable 32-byte or 64-character hexadecimal AES key | When enabled | — |
+| `OBSIDIAN_SYNC_MAX_FILE_BYTES` | Maximum synchronized file size | No | `200000000` |
+| `OBSIDIAN_SYNC_MAX_VAULT_BYTES` | Maximum stored bytes per vault connection | No | `10000000000` |
+| `API_RATE_LIMIT_OBSIDIAN_PER_MINUTE` | Credential-scoped request ceiling for manifests, file transfer, and change polling | No | `3000` |
+
+Generate the encryption key once with `openssl rand -hex 32`, store it with the deployment secrets, and retain it for the lifetime of synchronized vault data. Both web and scheduler services must mount the same assets volume.
+
 ### Database
 
 | Variable | Description | Required | Default |

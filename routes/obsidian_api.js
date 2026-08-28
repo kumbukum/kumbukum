@@ -48,11 +48,11 @@ async function streamBlobResponse(res, blob, hostId, mimeType) {
 	res.end();
 }
 
-async function requireObsidianAccess(req, res, next) {
-	if (!config.obsidian.enabled) return res.status(403).json({ error: 'Obsidian Sync is disabled', code: 'feature_disabled' });
-	if (!config.obsidian.encryptionKey) return res.status(503).json({ error: 'Obsidian Sync encryption is not configured', code: 'encryption_key_missing' });
+export async function requireObsidianAccess(req, res, next) {
 	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
 	if (!hasProFeatureAccess(req.billingUser, tenant?.plan || 'free', req.isHosted)) return res.status(403).json({ error: 'Obsidian Sync requires Streamient Pro', code: 'pro_required' });
+	if (!config.obsidian.enabled) return res.status(403).json({ error: 'Obsidian Sync is disabled', code: 'feature_disabled' });
+	if (!config.obsidian.encryptionKey) return res.status(503).json({ error: 'Obsidian Sync encryption is not configured', code: 'encryption_key_missing' });
 	next();
 }
 
@@ -64,7 +64,7 @@ async function requireConnection(req, res, next) {
 	next();
 }
 
-function requireProjectManager(req, res, next) {
+export function requireProjectManager(req, res, next) {
 	if (req.memberRole === 'owner' || req.memberRole === 'admin') return next();
 	return res.status(403).json({ error: 'Project settings admin access is required', code: 'admin_required' });
 }

@@ -406,6 +406,16 @@ const swaggerSpec = {
                     global: { type: 'string', description: 'General AI behavior instructions.' },
                 },
             },
+            FeatureAvailability: {
+                type: 'object',
+                required: ['git_sync', 'email_ingest', 'obsidian_sync', 'obsidian_sync_configured'],
+                properties: {
+                    git_sync: { type: 'boolean' },
+                    email_ingest: { type: 'boolean' },
+                    obsidian_sync: { type: 'boolean', description: 'Plan access, matching Git Sync access.' },
+                    obsidian_sync_configured: { type: 'boolean', description: 'Whether the server feature flag and vault encryption key are configured.' },
+                },
+            },
             GitRepo: {
                 type: 'object',
                 properties: {
@@ -839,13 +849,7 @@ const swaggerSpec = {
 	                                    type: 'object',
 	                                    properties: {
 	                                        project: { $ref: '#/components/schemas/Project' },
-	                                        features: {
-	                                            type: 'object',
-	                                            properties: {
-	                                                git_sync: { type: 'boolean' },
-	                                                email_ingest: { type: 'boolean' },
-	                                            },
-	                                        },
+	                                        features: { $ref: '#/components/schemas/FeatureAvailability' },
 	                                        email_forward_domain: { type: 'string' },
 	                                        git_repos: { type: 'array', items: { $ref: '#/components/schemas/GitRepo' } },
 	                                    },
@@ -855,6 +859,19 @@ const swaggerSpec = {
 	                    },
 	                    403: { description: 'Owner/admin access required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
 	                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+	                },
+	            },
+	        },
+	        '/features': {
+	            get: {
+	                tags: ['Projects'],
+	                summary: 'Get account feature availability',
+	                description: 'Returns plan access for Git Sync, email ingestion, and Obsidian Sync plus Obsidian server readiness.',
+	                responses: {
+	                    200: {
+	                        description: 'OK',
+	                        content: { 'application/json': { schema: { type: 'object', properties: { features: { $ref: '#/components/schemas/FeatureAvailability' } } } } },
+	                    },
 	                },
 	            },
 	        },
@@ -2868,7 +2885,7 @@ Object.assign(swaggerSpec.components.schemas, {
 
 const obsidianReadSecurity = [{ ObsidianOAuth: ['vault:read'] }];
 const obsidianWriteSecurity = [{ ObsidianOAuth: ['vault:write'] }];
-const obsidianErrors = { 400: { description: 'Invalid sync request' }, 401: { description: 'Missing or expired OAuth token' }, 403: { description: 'Feature disabled, Pro required, or insufficient scope' }, 404: { description: 'Connection, upload, or file not found' }, 409: { description: 'Revision, checksum, path, offset, or state conflict' } };
+const obsidianErrors = { 400: { description: 'Invalid sync request' }, 401: { description: 'Missing or expired OAuth token' }, 403: { description: 'Feature disabled, Pro required, or insufficient scope' }, 404: { description: 'Connection, upload, or file not found' }, 409: { description: 'Revision, checksum, path, offset, or state conflict' }, 503: { description: 'Obsidian encryption is not configured' } };
 
 Object.assign(swaggerSpec.paths, {
 	'/obsidian/projects': { get: { tags: ['Obsidian Sync'], summary: 'List projects available to the plugin', security: obsidianReadSecurity, responses: { ...obsidianErrors, 200: { description: 'Active projects' } } } },

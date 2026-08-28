@@ -336,17 +336,19 @@ router.get('/ajax/project-settings/:id', requireRestrictedSettingsAccess, async 
 		const plan = tenant?.plan || 'free';
 		const proOnlyFeatureEnabled = hasProFeatureAccess(res.locals.billing_user, plan, req.isHosted);
 		const emailForwardDomain = String(config.emailForwardDomain || '').trim().replace(/^@+/, '');
-		const obsidianSyncEnabled = proOnlyFeatureEnabled && config.obsidian.enabled && Boolean(config.obsidian.encryptionKey);
+		const obsidianSyncAccessEnabled = proOnlyFeatureEnabled;
+		const obsidianSyncConfigured = config.obsidian.enabled && Boolean(config.obsidian.encryptionKey);
 		const [gitRepos, obsidianConnections] = await Promise.all([
 			proOnlyFeatureEnabled ? listGitRepos(req.host_id, req.params.id).catch(() => []) : [],
-			obsidianSyncEnabled ? listObsidianConnections(req.host_id, req.params.id).catch(() => []) : [],
+			obsidianSyncAccessEnabled && obsidianSyncConfigured ? listObsidianConnections(req.host_id, req.params.id).catch(() => []) : [],
 		]);
 		res.render('ajax/project_settings', {
 			project,
 			gitRepos,
 			gitSyncEnabled: proOnlyFeatureEnabled,
 			obsidianConnections,
-			obsidianSyncEnabled,
+			obsidianSyncAccessEnabled,
+			obsidianSyncConfigured,
 			emailFeatureEnabled: true,
 			emailForwardDomain,
 			is_hosted: req.isHosted,
