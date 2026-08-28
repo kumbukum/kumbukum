@@ -43,6 +43,24 @@ test('keeps canonical Markdown and custom frontmatter intact', () => {
 	assert.match(updated, /> \[!NOTE\]/);
 });
 
+test('exports Markdown bodies beginning with a frontmatter delimiter without reparsing them as YAML', () => {
+	const body = '---\n**ID:** 69c46f92970f3c6c828a6d1b\n**Source:** mcp\n';
+	const raw = syncTest.itemMarkdown('memory', { title: 'Metadata record', tags: ['migration'], content: body });
+	const parsed = syncTest.parsedMarkdown(raw, 'Metadata record.md');
+	assert.equal(parsed.frontmatter.title, 'Metadata record');
+	assert.equal(parsed.frontmatter.streamient_type, 'memory');
+	assert.equal(parsed.body, body);
+});
+
+test('uses primary reads throughout manifest reconciliation', () => {
+	const source = fs.readFileSync(new URL('../services/obsidian_sync_service.js', import.meta.url), 'utf8');
+	assert.match(source, /Note\.find\(query\)\.read\('primary'\)\.lean\(\)/);
+	assert.match(source, /Memory\.find\(query\)\.read\('primary'\)\.lean\(\)/);
+	assert.match(source, /ObsidianManifestBatch\.find\([\s\S]*?\.read\('primary'\)\.lean\(\)/);
+	assert.match(source, /ObsidianFile\.findOne\(\{ connection:[\s\S]*?\.read\('primary'\)\.lean\(\)/);
+	assert.match(source, /const remoteOnly = await ObsidianFile\.find\([\s\S]*?\.read\('primary'\)\.lean\(\)/);
+});
+
 test('sanitizes rendered canonical Markdown without changing stored source', () => {
 	const html = syncTest.renderCanonicalMarkdown('[safe](/notes) <img src="/x.png" onerror="alert(1)"><script>alert(1)</script>');
 	assert.match(html, /href="\/notes"/);

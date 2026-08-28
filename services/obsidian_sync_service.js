@@ -165,12 +165,12 @@ function itemMarkdown(type, item, existingRaw = '') {
 		parsed.data.tags = item.tags || [];
 		parsed.data.streamient_type = type === 'memory' ? 'memory' : 'note';
 		const body = type === 'memory' ? item.content || '' : parsed.content;
-		return matter.stringify(body, parsed.data);
+		return matter.stringify({ content: body, data: {} }, parsed.data);
 	}
 	const body = type === 'memory' ? item.content || '' : turndown.turndown(item.content || '');
 	const frontmatter = { title: item.title, streamient_type: type === 'memory' ? 'memory' : 'note' };
 	if (item.tags?.length) frontmatter.tags = item.tags;
-	return matter.stringify(body, frontmatter);
+	return matter.stringify({ content: body, data: {} }, frontmatter);
 }
 
 function renderCanonicalMarkdown(body) {
@@ -574,7 +574,7 @@ async function uniqueExportPath(connection, desired) {
 	let candidate = desired;
 	const extension = path.posix.extname(desired);
 	const stem = extension ? desired.slice(0, -extension.length) : desired;
-	for (let index = 2; await ObsidianFile.exists({ connection: connection._id, host_id: connection.host_id, path: candidate }); index++) candidate = `${stem}-${index}${extension}`;
+	for (let index = 2; await ObsidianFile.exists({ connection: connection._id, host_id: connection.host_id, path: candidate }).read('primary'); index++) candidate = `${stem}-${index}${extension}`;
 	return candidate;
 }
 
@@ -601,8 +601,8 @@ async function exportProjectItem(connection, type, item) {
 		{ returnDocument: 'after' },
 	);
 	if (!claimed) {
-		const current = await Model.findOne({ _id: item._id, host_id: connection.host_id }).select('obsidian_source').lean();
-		return current?.obsidian_source?.file_id ? ObsidianFile.findOne({ _id: current.obsidian_source.file_id, host_id: connection.host_id }) : null;
+		const current = await Model.findOne({ _id: item._id, host_id: connection.host_id }).select('obsidian_source').read('primary').lean();
+		return current?.obsidian_source?.file_id ? ObsidianFile.findOne({ _id: current.obsidian_source.file_id, host_id: connection.host_id }).read('primary') : null;
 	}
 	try {
 		const raw = itemMarkdown(type, claimed);
@@ -628,8 +628,8 @@ async function pendingProjectItems(connection) {
 		$or: [{ 'obsidian_source.connection_id': { $exists: false } }, { 'obsidian_source.connection_id': null }],
 	};
 	return Promise.all([
-		Note.find(query).lean(),
-		Memory.find(query).lean(),
+		Note.find(query).read('primary').lean(),
+		Memory.find(query).read('primary').lean(),
 	]);
 }
 
@@ -760,7 +760,7 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 		}
 		const batchCount = Number(data.batch_count);
 		if (!Number.isSafeInteger(batchCount) || batchCount < 0 || batchCount > OBSIDIAN_MAX_MANIFEST_BATCHES) throw new ObsidianSyncError(`batch_count must be between 0 and ${OBSIDIAN_MAX_MANIFEST_BATCHES}`, 400, 'invalid_batch_count');
-		const batches = await ObsidianManifestBatch.find({ host_id: hostId, user: userId, connection: connection._id, manifest_id: manifestId }).sort({ batch_index: 1 }).lean();
+		const batches = await ObsidianManifestBatch.find({ host_id: hostId, user: userId, connection: connection._id, manifest_id: manifestId }).sort({ batch_index: 1 }).read('primary').lean();
 		if (batches.length !== batchCount || batches.some((batch, index) => batch.batch_index !== index)) throw new ObsidianSyncError('Manifest batches are incomplete', 409, 'manifest_incomplete');
 		data = { ...data, files: batches.flatMap((batch) => batch.files || []) };
 	}
@@ -790,7 +790,7 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 			continue;
 		}
 		localPaths.add(filePath);
-		const remote = await ObsidianFile.findOne({ connection: connection._id, host_id: hostId, path: filePath }).lean();
+		const remote = await ObsidianFile.findOne({ connection: connection._id, host_id: hostId, path: filePath }).read('primary').lean();
 		if (!remote) {
 			actions.push({ action: 'upload', path: filePath, base_revision: 0 });
 			continue;
@@ -803,7 +803,7 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 		const action = localModifiedAt.getTime() > new Date(remote.modified_at).getTime() ? 'upload' : remote.in_trash ? 'trash' : 'download';
 		actions.push({ action, ...publicFile(remote), base_revision: remote.revision });
 	}
-	const remoteOnly = await ObsidianFile.find({ connection: connection._id, host_id: hostId, path: { $nin: [...localPaths] } }).lean();
+	const remoteOnly = await ObsidianFile.find({ connection: connection._id, host_id: hostId, path: { $nin: [...localPaths] } }).read('primary').lean();
 	for (const file of remoteOnly) actions.push({ action: file.in_trash ? 'noop' : 'download', ...publicFile(file), base_revision: file.revision });
 	if (data.device_id) await registerDevice(hostId, connection._id, data);
 	if (data.preview !== true) {
