@@ -5,12 +5,12 @@ const auditLogSchema = new mongoose.Schema(
         action: {
             type: String,
             required: true,
-            enum: ['create', 'update', 'delete', 'search', 'login', 'export', 'import', 'restore', 'reindex'],
+            enum: ['create', 'update', 'delete', 'search', 'login', 'export', 'import', 'restore', 'reindex', 'sync'],
         },
         resource: {
             type: String,
             required: true,
-	            enum: ['note', 'memory', 'url', 'email', 'project', 'link', 'user', 'passkey', 'conversation', 'trash', 'git_repo', 'team_member', 'team_invite', 'oauth_client', 'oauth_consent'],
+	            enum: ['note', 'memory', 'url', 'email', 'project', 'link', 'user', 'passkey', 'conversation', 'trash', 'git_repo', 'obsidian_connection', 'team_member', 'team_invite', 'oauth_client', 'oauth_consent'],
         },
         resource_id: { type: String },
         user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -18,7 +18,7 @@ const auditLogSchema = new mongoose.Schema(
         channel: {
             type: String,
             required: true,
-            enum: ['web', 'api', 'mcp', 'mobile', 'emailforwarding'],
+            enum: ['web', 'api', 'mcp', 'mobile', 'obsidian', 'emailforwarding'],
         },
         token_label: { type: String },
         mcp_client: { type: String },

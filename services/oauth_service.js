@@ -29,6 +29,9 @@ import {
 	MOBILE_ALL_SCOPES,
 	MOBILE_CLIENT_ID,
 	MOBILE_REDIRECT_URI,
+	OBSIDIAN_ALL_SCOPES,
+	OBSIDIAN_CLIENT_ID,
+	OBSIDIAN_REDIRECT_URI,
 	scopeString,
 	sha256Base64Url,
 	signMcpAccessToken,
@@ -153,7 +156,7 @@ function firstPartyMobileWebOrigins() {
 	return [...new Set(['http://localhost:5176', 'http://mobile.streamient.orb.local', ...configured].map((value) => value.replace(/\/$/, '')))];
 }
 
-function validateRedirectUri(uri, { firstPartyMobile = false } = {}) {
+function validateRedirectUri(uri, { firstPartyMobile = false, firstPartyObsidian = false } = {}) {
 	let parsed;
 	try {
 		parsed = new URL(uri);
@@ -161,13 +164,14 @@ function validateRedirectUri(uri, { firstPartyMobile = false } = {}) {
 		throw new OAuthError('invalid_redirect_uri', 'redirect_uri must be a valid URL', 400);
 	}
 
-	if (!['http:', 'https:'].includes(parsed.protocol) && !isPrivateUseRedirectScheme(parsed.protocol)) {
+	const obsidianRedirect = firstPartyObsidian && parsed.toString() === new URL(OBSIDIAN_REDIRECT_URI).toString();
+	if (!['http:', 'https:'].includes(parsed.protocol) && !isPrivateUseRedirectScheme(parsed.protocol) && !obsidianRedirect) {
 		throw new OAuthError('invalid_redirect_uri', 'redirect_uri must use http, https, or a reverse-domain private-use scheme', 400);
 	}
 
 	const loopback = isLoopbackHost(parsed.hostname);
 	const firstPartyHttp = firstPartyMobile && parsed.protocol === 'http:' && firstPartyMobileWebOrigins().includes(parsed.origin);
-	if (!loopback && !firstPartyHttp && parsed.protocol !== 'https:' && !isPrivateUseRedirectScheme(parsed.protocol)) {
+	if (!loopback && !firstPartyHttp && parsed.protocol !== 'https:' && !isPrivateUseRedirectScheme(parsed.protocol) && !obsidianRedirect) {
 		throw new OAuthError('invalid_redirect_uri', 'redirect_uri must use HTTPS unless it targets localhost or uses a reverse-domain private-use scheme', 400);
 	}
 	if (parsed.hash) {
@@ -454,6 +458,20 @@ function firstPartyMobileClient() {
 	};
 }
 
+function firstPartyObsidianClient() {
+	return {
+		client_id: OBSIDIAN_CLIENT_ID,
+		client_name: 'Streamient for Obsidian',
+		client_uri: 'https://streamient.com',
+		logo_uri: null,
+		redirect_uris: [OBSIDIAN_REDIRECT_URI],
+		grant_types: ['authorization_code', 'refresh_token'],
+		response_types: ['code'],
+		token_endpoint_auth_method: 'none',
+		registration_source: 'first-party',
+	};
+}
+
 export async function resolveClient(clientId, { host_id = null, includeSecret = false } = {}) {
 	if (!clientId) {
 		throw new OAuthError('invalid_client', 'client_id is required', 400);
@@ -463,6 +481,7 @@ export async function resolveClient(clientId, { host_id = null, includeSecret = 
 		return fetchClientMetadataDocument(clientId);
 	}
 	if (clientId === MOBILE_CLIENT_ID) return firstPartyMobileClient();
+	if (clientId === OBSIDIAN_CLIENT_ID) return firstPartyObsidianClient();
 
 	const stored = await findStoredClient(clientId, { host_id, includeSecret });
 	if (!stored) {
@@ -706,7 +725,7 @@ export async function exchangeAuthorizationCode({ code, clientId, redirectUri, c
 	if (authCode.client_id !== clientId) {
 		throw new OAuthError('invalid_grant', 'authorization code was not issued to this client', 400);
 	}
-	if (authCode.redirect_uri !== validateRedirectUri(redirectUri, { firstPartyMobile: clientId === MOBILE_CLIENT_ID })) {
+	if (authCode.redirect_uri !== validateRedirectUri(redirectUri, { firstPartyMobile: clientId === MOBILE_CLIENT_ID, firstPartyObsidian: clientId === OBSIDIAN_CLIENT_ID })) {
 		throw new OAuthError('invalid_grant', 'redirect_uri does not match the authorization request', 400);
 	}
 	if (authCode.code_challenge_method !== 'S256') {
@@ -828,7 +847,7 @@ export function buildAuthorizationServerMetadata() {
 		token_endpoint_auth_signing_alg_values_supported: PRIVATE_KEY_JWT_SIGNING_ALGS,
 		code_challenge_methods_supported: ['S256'],
 		client_id_metadata_document_supported: false,
-		scopes_supported: [...MCP_ALL_SCOPES, ...MOBILE_ALL_SCOPES],
+		scopes_supported: [...MCP_ALL_SCOPES, ...MOBILE_ALL_SCOPES, ...OBSIDIAN_ALL_SCOPES],
 	};
 }
 
@@ -847,7 +866,7 @@ export function buildOauthUiConfig() {
 		mcp_base_url: getAllowedMcpResourceUrls()[0],
 		mcp_endpoint: getAllowedMcpResourceUrls()[1],
 		allowed_resources: getAllowedOauthResourceUrls(),
-		scope_details: listScopeDetails(['mcp:read', 'mcp:write', 'mcp:email', 'mcp:git', ...MOBILE_ALL_SCOPES]),
+		scope_details: listScopeDetails(['mcp:read', 'mcp:write', 'mcp:email', 'mcp:git', ...MOBILE_ALL_SCOPES, ...OBSIDIAN_ALL_SCOPES]),
 		client_registration: {
 			client_id_metadata_document_supported: false,
 			dynamic_registration_supported: true,
@@ -896,7 +915,7 @@ export function parseAuthorizationRequest(input = {}) {
 
 	return {
 		client_id: clientId,
-		redirect_uri: validateRedirectUri(redirectUri, { firstPartyMobile: clientId === MOBILE_CLIENT_ID }),
+		redirect_uri: validateRedirectUri(redirectUri, { firstPartyMobile: clientId === MOBILE_CLIENT_ID, firstPartyObsidian: clientId === OBSIDIAN_CLIENT_ID }),
 		response_type: responseType,
 		scopes: scope,
 		state,
@@ -911,6 +930,9 @@ export async function validateAuthorizationRequest(request, { host_id }) {
 	const client = await resolveClient(parsed.client_id, { host_id });
 	if (parsed.client_id === MOBILE_CLIENT_ID && parsed.scopes.some((scope) => !MOBILE_ALL_SCOPES.includes(scope))) {
 		throw new OAuthError('invalid_scope', 'Streamient Mobile may request only mobile scopes', 400);
+	}
+	if (parsed.client_id === OBSIDIAN_CLIENT_ID && parsed.scopes.some((scope) => !OBSIDIAN_ALL_SCOPES.includes(scope))) {
+		throw new OAuthError('invalid_scope', 'Streamient for Obsidian may request only vault scopes', 400);
 	}
 	const redirectUris = client.redirect_uris || [];
 	if (!redirectUris.includes(parsed.redirect_uri)) {

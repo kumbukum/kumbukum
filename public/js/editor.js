@@ -1,3 +1,15 @@
+// node_modules/.pnpm/@tiptap+core@3.30.5_@tiptap+pm@3.30.5/node_modules/@tiptap/core/dist/rolldown-runtime-D7D4PA-g.js
+var __defProp = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+  let target = {};
+  for (var name in all) __defProp(target, name, {
+    get: all[name],
+    enumerable: true
+  });
+  if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+  return target;
+};
+
 // node_modules/.pnpm/orderedmap@2.1.1/node_modules/orderedmap/dist/index.js
 function OrderedMap(content) {
   this.content = content;
@@ -509,7 +521,7 @@ function compareDeep(a, b) {
   }
   return true;
 }
-var Mark = class _Mark2 {
+var Mark = class _Mark {
   /**
   @internal
   */
@@ -621,8 +633,8 @@ var Mark = class _Mark2 {
   */
   static setFrom(marks) {
     if (!marks || Array.isArray(marks) && marks.length == 0)
-      return _Mark2.none;
-    if (marks instanceof _Mark2)
+      return _Mark.none;
+    if (marks instanceof _Mark)
       return [marks];
     let copy2 = marks.slice();
     copy2.sort((a, b) => a.type.rank - b.type.rank);
@@ -1164,7 +1176,7 @@ var NodeRange = class {
   }
 };
 var emptyAttrs = /* @__PURE__ */ Object.create(null);
-var Node = class _Node2 {
+var Node = class _Node {
   /**
   @internal
   */
@@ -1295,14 +1307,14 @@ var Node = class _Node2 {
   copy(content = null) {
     if (content == this.content)
       return this;
-    return new _Node2(this.type, this.attrs, content, this.marks);
+    return new _Node(this.type, this.attrs, content, this.marks);
   }
   /**
   Create a copy of this node, with the given set of marks instead
   of the node's own marks.
   */
   mark(marks) {
-    return marks == this.marks ? this : new _Node2(this.type, this.attrs, this.content, marks);
+    return marks == this.marks ? this : new _Node(this.type, this.attrs, this.content, marks);
   }
   /**
   Create a copy of this node with only the content between the
@@ -6771,7 +6783,7 @@ function sinkListItem(itemType) {
   };
 }
 
-// node_modules/.pnpm/prosemirror-view@1.42.2/node_modules/prosemirror-view/dist/index.js
+// node_modules/.pnpm/prosemirror-view@1.42.3/node_modules/prosemirror-view/dist/index.js
 var domIndex = function(node) {
   for (var index = 0; ; index++) {
     node = node.previousSibling;
@@ -7808,7 +7820,8 @@ var WidgetViewDesc = class extends ViewDesc {
         wrap2.appendChild(dom);
         dom = wrap2;
       }
-      dom.contentEditable = "false";
+      if (!dom.hasAttribute("contenteditable"))
+        dom.contentEditable = "false";
       dom.classList.add("ProseMirror-widget");
     }
     super(parent, [], dom, null);
@@ -9470,8 +9483,14 @@ function maybeWrapTrusted(html) {
   let trustedTypes = window.trustedTypes;
   if (!trustedTypes)
     return html;
-  if (!_policy)
-    _policy = trustedTypes.defaultPolicy || trustedTypes.createPolicy("ProseMirrorClipboard", { createHTML: (s) => s });
+  if (!_policy) {
+    if (_policy = trustedTypes.defaultPolicy)
+      try {
+        return _policy.createHTML(html);
+      } catch (_a) {
+      }
+    _policy = trustedTypes.createPolicy("ProseMirrorClipboard", { createHTML: (s) => s });
+  }
   return _policy.createHTML(html);
 }
 function readHTML(html) {
@@ -9521,6 +9540,11 @@ function addContext(slice2, context) {
     let type = schema.nodes[array[i2]];
     if (!type || type.hasRequiredAttrs())
       break;
+    try {
+      type.checkAttrs(array[i2 + 1]);
+    } catch (e) {
+      break;
+    }
     content = Fragment.from(type.create(array[i2 + 1], content));
     openStart++;
     openEnd++;
@@ -12250,12 +12274,7 @@ function keydownHandler(bindings) {
   };
 }
 
-// node_modules/.pnpm/@tiptap+core@3.30.1_@tiptap+pm@3.30.1/node_modules/@tiptap/core/dist/index.js
-var __defProp = Object.defineProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
+// node_modules/.pnpm/@tiptap+core@3.30.5_@tiptap+pm@3.30.5/node_modules/@tiptap/core/dist/index.js
 function createChainableState(config) {
   const { state, transaction } = config;
   let { selection } = transaction;
@@ -12286,7 +12305,7 @@ function createChainableState(config) {
     }
   };
 }
-var CommandManager = class {
+var CommandManager = class CommandManager2 {
   constructor(props) {
     this.editor = props.editor;
     this.rawCommands = this.editor.extensionManager.commands;
@@ -12303,18 +12322,14 @@ var CommandManager = class {
     const { view } = editor;
     const { tr: tr2 } = state;
     const props = this.buildProps(tr2);
-    return Object.fromEntries(
-      Object.entries(rawCommands).map(([name, command2]) => {
-        const method = (...args) => {
-          const callback = command2(...args)(props);
-          if (!tr2.getMeta("preventDispatch") && !this.hasCustomState) {
-            view.dispatch(tr2);
-          }
-          return callback;
-        };
-        return [name, method];
-      })
-    );
+    return Object.fromEntries(Object.entries(rawCommands).map(([name, command2]) => {
+      const method = (...args) => {
+        const callback = command2(...args)(props);
+        if (!tr2.getMeta("preventDispatch") && !this.hasCustomState) view.dispatch(tr2);
+        return callback;
+      };
+      return [name, method];
+    }));
   }
   get chain() {
     return () => this.createChain();
@@ -12328,26 +12343,37 @@ var CommandManager = class {
     const callbacks = [];
     const hasStartTransaction = !!startTr;
     const tr2 = startTr || state.tr;
-    const run32 = () => {
-      if (!hasStartTransaction && shouldDispatch && !tr2.getMeta("preventDispatch") && !this.hasCustomState) {
-        view.dispatch(tr2);
-      }
+    const run3 = () => {
+      if (!hasStartTransaction && shouldDispatch && !tr2.getMeta("preventDispatch") && !this.hasCustomState) view.dispatch(tr2);
       return callbacks.every((callback) => callback === true);
     };
     const chain = {
-      ...Object.fromEntries(
-        Object.entries(rawCommands).map(([name, command2]) => {
-          const chainedCommand = (...args) => {
-            const props = this.buildProps(tr2, shouldDispatch);
-            const callback = command2(...args)(props);
-            callbacks.push(callback);
-            return chain;
-          };
-          return [name, chainedCommand];
-        })
-      ),
-      run: run32
+      ...Object.fromEntries(Object.entries(rawCommands).map(([name, command2]) => {
+        const chainedCommand = (...args) => {
+          const props = this.buildProps(tr2, shouldDispatch);
+          const callback = command2(...args)(props);
+          callbacks.push(callback);
+          return chain;
+        };
+        return [name, chainedCommand];
+      })),
+      run: run3
     };
+    return chain;
+  }
+  /**
+  * Creates a chain that safely returns `false` when run.
+  * @returns A non-dispatching command chain.
+  * @example
+  * const chain = CommandManager.createFakeChain()
+  * chain.focus().run() // false
+  */
+  static createFakeChain() {
+    const chain = new Proxy({}, { get: (_target, property) => {
+      if (property === "then") return;
+      if (property === "run") return () => false;
+      return () => chain;
+    } });
     return chain;
   }
   createCan(startTr) {
@@ -12355,15 +12381,30 @@ var CommandManager = class {
     const dispatch = false;
     const tr2 = startTr || state.tr;
     const props = this.buildProps(tr2, dispatch);
-    const formattedCommands = Object.fromEntries(
-      Object.entries(rawCommands).map(([name, command2]) => {
-        return [name, (...args) => command2(...args)({ ...props, dispatch: void 0 })];
-      })
-    );
     return {
-      ...formattedCommands,
+      ...Object.fromEntries(Object.entries(rawCommands).map(([name, command2]) => {
+        return [name, (...args) => command2(...args)({
+          ...props,
+          dispatch: void 0
+        })];
+      })),
       chain: () => this.createChain(tr2, dispatch)
     };
+  }
+  /**
+  * Creates capability checks that safely return `false`.
+  * @returns A non-dispatching capability checker.
+  * @example
+  * const can = CommandManager.createFallbackCan()
+  * can.focus() // false
+  */
+  static createFallbackCan() {
+    const chain = CommandManager2.createFakeChain();
+    return new Proxy({ chain: () => chain }, { get: (target, property) => {
+      if (property === "then") return;
+      if (property === "chain") return target.chain;
+      return () => false;
+    } });
   }
   buildProps(tr2, shouldDispatch = true) {
     const { rawCommands, editor, state } = this;
@@ -12380,88 +12421,20 @@ var CommandManager = class {
       chain: () => this.createChain(tr2, shouldDispatch),
       can: () => this.createCan(tr2),
       get commands() {
-        return Object.fromEntries(
-          Object.entries(rawCommands).map(([name, command2]) => {
-            return [name, (...args) => command2(...args)(props)];
-          })
-        );
+        return Object.fromEntries(Object.entries(rawCommands).map(([name, command2]) => {
+          return [name, (...args) => command2(...args)(props)];
+        }));
       }
     };
     return props;
   }
 };
-var commands_exports = {};
-__export(commands_exports, {
-  blur: () => blur,
-  clearContent: () => clearContent,
-  clearNodes: () => clearNodes,
-  command: () => command,
-  createParagraphNear: () => createParagraphNear2,
-  cut: () => cut,
-  deleteCurrentNode: () => deleteCurrentNode,
-  deleteNode: () => deleteNode,
-  deleteRange: () => deleteRange2,
-  deleteSelection: () => deleteSelection2,
-  enter: () => enter,
-  exitCode: () => exitCode2,
-  extendMarkRange: () => extendMarkRange,
-  first: () => first,
-  focus: () => focus,
-  forEach: () => forEach,
-  insertContent: () => insertContent,
-  insertContentAt: () => insertContentAt,
-  insertDefaultBlock: () => insertDefaultBlock,
-  joinBackward: () => joinBackward2,
-  joinDown: () => joinDown2,
-  joinForward: () => joinForward2,
-  joinItemBackward: () => joinItemBackward,
-  joinItemForward: () => joinItemForward,
-  joinTextblockBackward: () => joinTextblockBackward2,
-  joinTextblockForward: () => joinTextblockForward2,
-  joinUp: () => joinUp2,
-  keyboardShortcut: () => keyboardShortcut,
-  lift: () => lift3,
-  liftEmptyBlock: () => liftEmptyBlock2,
-  liftListItem: () => liftListItem2,
-  newlineInCode: () => newlineInCode2,
-  resetAttributes: () => resetAttributes,
-  scrollIntoView: () => scrollIntoView,
-  selectAll: () => selectAll2,
-  selectNodeBackward: () => selectNodeBackward2,
-  selectNodeForward: () => selectNodeForward2,
-  selectParentNode: () => selectParentNode2,
-  selectTextblockEnd: () => selectTextblockEnd2,
-  selectTextblockStart: () => selectTextblockStart2,
-  setContent: () => setContent,
-  setMark: () => setMark,
-  setMeta: () => setMeta,
-  setNode: () => setNode,
-  setNodeSelection: () => setNodeSelection,
-  setTextDirection: () => setTextDirection,
-  setTextSelection: () => setTextSelection,
-  sinkListItem: () => sinkListItem2,
-  splitBlock: () => splitBlock2,
-  splitListItem: () => splitListItem,
-  toggleList: () => toggleList,
-  toggleMark: () => toggleMark,
-  toggleNode: () => toggleNode,
-  toggleWrap: () => toggleWrap,
-  undoInputRule: () => undoInputRule,
-  unsetAllMarks: () => unsetAllMarks,
-  unsetMark: () => unsetMark,
-  unsetTextDirection: () => unsetTextDirection,
-  updateAttributes: () => updateAttributes,
-  updateDecorations: () => updateDecorations,
-  wrapIn: () => wrapIn2,
-  wrapInList: () => wrapInList2
-});
 var blur = () => ({ editor, view }) => {
   requestAnimationFrame(() => {
-    var _a;
     if (!editor.isDestroyed) {
-      ;
+      var _window;
       view.dom.blur();
-      (_a = window == null ? void 0 : window.getSelection()) == null ? void 0 : _a.removeAllRanges();
+      (_window = window) === null || _window === void 0 || (_window = _window.getSelection()) === null || _window === void 0 || _window.removeAllRanges();
     }
   });
   return true;
@@ -12472,29 +12445,21 @@ var clearContent = (emitUpdate = true) => ({ commands }) => {
 var clearNodes = () => ({ state, tr: tr2, dispatch }) => {
   const { selection } = tr2;
   const { ranges } = selection;
-  if (!dispatch) {
-    return true;
-  }
+  if (!dispatch) return true;
   ranges.forEach(({ $from, $to }) => {
     state.doc.nodesBetween($from.pos, $to.pos, (node, pos) => {
-      if (node.type.isText) {
-        return;
-      }
+      if (node.type.isText) return;
       const { doc: doc3, mapping } = tr2;
       const $mappedFrom = doc3.resolve(mapping.map(pos));
       const $mappedTo = doc3.resolve(mapping.map(pos + node.nodeSize));
       const nodeRange = $mappedFrom.blockRange($mappedTo);
-      if (!nodeRange) {
-        return;
-      }
+      if (!nodeRange) return;
       const targetLiftDepth = liftTarget(nodeRange);
       if (node.type.isTextblock) {
         const { defaultType } = $mappedFrom.parent.contentMatchAt($mappedFrom.index());
         tr2.setNodeMarkup(nodeRange.start, defaultType);
       }
-      if (targetLiftDepth || targetLiftDepth === 0) {
-        tr2.lift(nodeRange, targetLiftDepth);
-      }
+      if (targetLiftDepth || targetLiftDepth === 0) tr2.lift(nodeRange, targetLiftDepth);
     });
   });
   return true;
@@ -12502,7 +12467,7 @@ var clearNodes = () => ({ state, tr: tr2, dispatch }) => {
 var command = (fn) => (props) => {
   return fn(props);
 };
-var createParagraphNear2 = () => ({ state, dispatch }) => {
+var createParagraphNear$1 = () => ({ state, dispatch }) => {
   return createParagraphNear(state, dispatch);
 };
 var cut = (originRange, targetPos) => ({ editor, tr: tr2 }) => {
@@ -12517,30 +12482,21 @@ var cut = (originRange, targetPos) => ({ editor, tr: tr2 }) => {
 var deleteCurrentNode = () => ({ tr: tr2, dispatch }) => {
   const { selection } = tr2;
   const currentNode = selection.$anchor.node();
-  if (currentNode.content.size > 0) {
-    return false;
-  }
+  if (currentNode.content.size > 0) return false;
   const $pos = tr2.selection.$anchor;
-  for (let depth = $pos.depth; depth > 0; depth -= 1) {
-    const node = $pos.node(depth);
-    if (node.type === currentNode.type) {
-      if (dispatch) {
-        const from2 = $pos.before(depth);
-        const to = $pos.after(depth);
-        tr2.delete(from2, to).scrollIntoView();
-      }
-      return true;
+  for (let depth = $pos.depth; depth > 0; depth -= 1) if ($pos.node(depth).type === currentNode.type) {
+    if (dispatch) {
+      const from2 = $pos.before(depth);
+      const to = $pos.after(depth);
+      tr2.delete(from2, to).scrollIntoView();
     }
+    return true;
   }
   return false;
 };
 function getNodeType(nameOrType, schema) {
   if (typeof nameOrType === "string") {
-    if (!schema.nodes[nameOrType]) {
-      throw Error(
-        `There is no node type named '${nameOrType}'. Maybe you forgot to add the extension?`
-      );
-    }
+    if (!schema.nodes[nameOrType]) throw Error(`There is no node type named '${nameOrType}'. Maybe you forgot to add the extension?`);
     return schema.nodes[nameOrType];
   }
   return nameOrType;
@@ -12548,55 +12504,40 @@ function getNodeType(nameOrType, schema) {
 var deleteNode = (typeOrName) => ({ tr: tr2, state, dispatch }) => {
   const type = getNodeType(typeOrName, state.schema);
   const $pos = tr2.selection.$anchor;
-  for (let depth = $pos.depth; depth > 0; depth -= 1) {
-    const node = $pos.node(depth);
-    if (node.type === type) {
-      if (dispatch) {
-        const from2 = $pos.before(depth);
-        const to = $pos.after(depth);
-        tr2.delete(from2, to).scrollIntoView();
-      }
-      return true;
+  for (let depth = $pos.depth; depth > 0; depth -= 1) if ($pos.node(depth).type === type) {
+    if (dispatch) {
+      const from2 = $pos.before(depth);
+      const to = $pos.after(depth);
+      tr2.delete(from2, to).scrollIntoView();
     }
+    return true;
   }
   return false;
 };
 var deleteRange2 = (range) => ({ tr: tr2, dispatch }) => {
   const { from: from2, to } = range;
-  if (dispatch) {
-    tr2.delete(from2, to);
-  }
+  if (dispatch) tr2.delete(from2, to);
   return true;
 };
 var hasTextContent = (nodeSpec) => {
-  if (!nodeSpec.content) {
-    return false;
-  }
-  const textRegex = /^text(\*|\+)/;
-  return textRegex.test(nodeSpec.content);
+  if (!nodeSpec.content) return false;
+  return /^text(\*|\+)/.test(nodeSpec.content);
 };
 var expandSelectionForSide = ($pos, schema, side) => {
-  if (!$pos.parent.isInline) {
-    return $pos.pos;
-  }
-  if (side === "left" && $pos.pos > $pos.start() || side === "right" && $pos.pos < $pos.end()) {
-    return $pos.pos;
-  }
+  if (!$pos.parent.isInline) return $pos.pos;
+  if (side === "left" && $pos.pos > $pos.start() || side === "right" && $pos.pos < $pos.end()) return $pos.pos;
   const parentContent = schema.nodes[$pos.parent.type.name].spec;
-  if (!hasTextContent(parentContent)) {
-    return $pos.pos;
-  }
+  if (!hasTextContent(parentContent)) return $pos.pos;
   return side === "left" ? $pos.start() - 1 : $pos.end() + 1;
 };
 var expandSelectionForInlineText = ($from, $to, schema) => {
-  const from2 = expandSelectionForSide($from, schema, "left");
-  const to = expandSelectionForSide($to, schema, "right");
-  return { from: from2, to };
+  return {
+    from: expandSelectionForSide($from, schema, "left"),
+    to: expandSelectionForSide($to, schema, "right")
+  };
 };
 var deleteSelection2 = () => ({ state, dispatch }) => {
-  if (state.selection.empty) {
-    return false;
-  }
+  if (state.selection.empty) return false;
   if (dispatch) {
     const tr2 = state.tr;
     const { ranges } = state.selection;
@@ -12608,9 +12549,7 @@ var deleteSelection2 = () => ({ state, dispatch }) => {
       const { from: from2, to } = expandSelectionForInlineText($from, $to, state.schema);
       tr2.deleteRange(from2, to);
     });
-    if (!tr2.selection.empty) {
-      tr2.setSelection(TextSelection.near(tr2.doc.resolve(tr2.selection.from)));
-    }
+    if (!tr2.selection.empty) tr2.setSelection(TextSelection.near(tr2.doc.resolve(tr2.selection.from)));
     tr2.scrollIntoView();
     dispatch(tr2);
   }
@@ -12619,7 +12558,7 @@ var deleteSelection2 = () => ({ state, dispatch }) => {
 var enter = () => ({ commands }) => {
   return commands.keyboardShortcut("Enter");
 };
-var exitCode2 = () => ({ state, dispatch }) => {
+var exitCode$1 = () => ({ state, dispatch }) => {
   return exitCode(state, dispatch);
 };
 function isRegExp(value) {
@@ -12627,52 +12566,31 @@ function isRegExp(value) {
 }
 function objectIncludes(object1, object2, options = { strict: true }) {
   const keys2 = Object.keys(object2);
-  if (!keys2.length) {
-    return true;
-  }
+  if (!keys2.length) return true;
   return keys2.every((key) => {
-    if (options.strict) {
-      return object2[key] === object1[key];
-    }
-    if (isRegExp(object2[key])) {
-      return object2[key].test(object1[key]);
-    }
+    if (options.strict) return object2[key] === object1[key];
+    if (isRegExp(object2[key])) return object2[key].test(object1[key]);
     return object2[key] === object1[key];
   });
 }
 function findMarkInSet(marks, type, attributes = {}) {
   return marks.find((item) => {
-    return item.type === type && objectIncludes(
-      // Only check equality for the attributes that are provided
-      Object.fromEntries(Object.keys(attributes).map((k) => [k, item.attrs[k]])),
-      attributes
-    );
+    return item.type === type && objectIncludes(Object.fromEntries(Object.keys(attributes).map((k) => [k, item.attrs[k]])), attributes);
   });
 }
 function isMarkInSet(marks, type, attributes = {}) {
   return !!findMarkInSet(marks, type, attributes);
 }
 function getMarkRange($pos, type, attributes) {
-  if (!$pos || !type) {
-    return;
-  }
+  if (!$pos || !type) return;
   let start = $pos.parent.childAfter($pos.parentOffset);
-  if (!start.node || !start.node.marks.some((mark2) => mark2.type === type)) {
-    start = $pos.parent.childBefore($pos.parentOffset);
-  }
-  if (!start.node || !start.node.marks.some((mark2) => mark2.type === type)) {
-    return;
-  }
+  if (!start.node || !start.node.marks.some((mark) => mark.type === type)) start = $pos.parent.childBefore($pos.parentOffset);
+  if (!start.node || !start.node.marks.some((mark) => mark.type === type)) return;
   if (!attributes) {
-    const firstMark = start.node.marks.find((mark2) => mark2.type === type);
-    if (firstMark) {
-      attributes = firstMark.attrs;
-    }
+    const firstMark = start.node.marks.find((mark) => mark.type === type);
+    if (firstMark) attributes = firstMark.attrs;
   }
-  const mark = findMarkInSet([...start.node.marks], type, attributes);
-  if (!mark) {
-    return;
-  }
+  if (!findMarkInSet([...start.node.marks], type, attributes)) return;
   let startIndex = start.index;
   let startPos = $pos.start() + start.offset;
   let endIndex = startIndex + 1;
@@ -12692,11 +12610,7 @@ function getMarkRange($pos, type, attributes) {
 }
 function getMarkType(nameOrType, schema) {
   if (typeof nameOrType === "string") {
-    if (!schema.marks[nameOrType]) {
-      throw Error(
-        `There is no mark type named '${nameOrType}'. Maybe you forgot to add the extension?`
-      );
-    }
+    if (!schema.marks[nameOrType]) throw Error(`There is no mark type named '${nameOrType}'. Maybe you forgot to add the extension?`);
     return schema.marks[nameOrType];
   }
   return nameOrType;
@@ -12716,11 +12630,7 @@ var extendMarkRange = (typeOrName, attributes) => ({ tr: tr2, state, dispatch })
 };
 var first = (commands) => (props) => {
   const items = typeof commands === "function" ? commands(props) : commands;
-  for (let i2 = 0; i2 < items.length; i2 += 1) {
-    if (items[i2](props)) {
-      return true;
-    }
-  }
+  for (let i2 = 0; i2 < items.length; i2 += 1) if (items[i2](props)) return true;
   return false;
 };
 function isTextSelection(value) {
@@ -12730,40 +12640,28 @@ function minMax(value = 0, min = 0, max = 0) {
   return Math.min(Math.max(value, min), max);
 }
 function resolveFocusPosition(doc3, position = null) {
-  if (!position) {
-    return null;
-  }
+  if (!position) return null;
   const selectionAtStart = Selection.atStart(doc3);
   const selectionAtEnd = Selection.atEnd(doc3);
-  if (position === "start" || position === true) {
-    return selectionAtStart;
-  }
-  if (position === "end") {
-    return selectionAtEnd;
-  }
+  if (position === "start" || position === true) return selectionAtStart;
+  if (position === "end") return selectionAtEnd;
   const minPos = selectionAtStart.from;
   const maxPos = selectionAtEnd.to;
-  if (position === "all") {
-    return TextSelection.create(
-      doc3,
-      minMax(0, minPos, maxPos),
-      minMax(doc3.content.size, minPos, maxPos)
-    );
-  }
-  return TextSelection.create(
-    doc3,
-    minMax(position, minPos, maxPos),
-    minMax(position, minPos, maxPos)
-  );
+  if (position === "all") return TextSelection.create(doc3, minMax(0, minPos, maxPos), minMax(doc3.content.size, minPos, maxPos));
+  return TextSelection.create(doc3, minMax(position, minPos, maxPos), minMax(position, minPos, maxPos));
 }
 function isAndroid() {
   return ["Android"].includes(navigator.platform) || /android/i.test(navigator.userAgent);
 }
 function isiOS() {
-  return ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(
-    navigator.platform
-  ) || // iPad on iOS 13 detection
-  navigator.userAgent.includes("Mac") && "ontouchend" in document;
+  return [
+    "iPad Simulator",
+    "iPhone Simulator",
+    "iPod Simulator",
+    "iPad",
+    "iPhone",
+    "iPod"
+  ].includes(navigator.platform) || navigator.userAgent.includes("Mac") && "ontouchend" in document;
 }
 function isSafari() {
   return typeof navigator !== "undefined" ? /^((?!chrome|android).)*safari/i.test(navigator.userAgent) : false;
@@ -12774,27 +12672,17 @@ var focus = (position = null, options = {}) => ({ editor, view, tr: tr2, dispatc
     ...options
   };
   const delayedFocus = () => {
-    if (isiOS() || isAndroid()) {
-      ;
-      view.dom.focus();
-    }
-    if (isSafari() && !isiOS() && !isAndroid()) {
-      ;
-      view.dom.focus({ preventScroll: true });
-    }
+    if (isiOS() || isAndroid()) view.dom.focus();
+    if (isSafari() && !isiOS() && !isAndroid()) view.dom.focus({ preventScroll: true });
     requestAnimationFrame(() => {
       if (!editor.isDestroyed) {
         view.focus();
-        if (options == null ? void 0 : options.scrollIntoView) {
-          editor.commands.scrollIntoView();
-        }
+        if (options === null || options === void 0 ? void 0 : options.scrollIntoView) editor.commands.scrollIntoView();
       }
     });
   };
   try {
-    if (view.hasFocus() && position === null || position === false) {
-      return true;
-    }
+    if (view.hasFocus() && position === null || position === false) return true;
   } catch {
     return false;
   }
@@ -12805,55 +12693,44 @@ var focus = (position = null, options = {}) => ({ editor, view, tr: tr2, dispatc
   const selection = resolveFocusPosition(tr2.doc, position) || editor.state.selection;
   const isSameSelection = editor.state.selection.eq(selection);
   if (dispatch) {
-    if (!isSameSelection) {
-      tr2.setSelection(selection);
-    }
-    if (isSameSelection && tr2.storedMarks) {
-      tr2.setStoredMarks(tr2.storedMarks);
-    }
+    if (!isSameSelection) tr2.setSelection(selection);
+    if (isSameSelection && tr2.storedMarks) tr2.setStoredMarks(tr2.storedMarks);
     delayedFocus();
   }
   return true;
 };
 var forEach = (items, fn) => (props) => {
-  return items.every((item, index) => fn(item, { ...props, index }));
+  return items.every((item, index) => fn(item, {
+    ...props,
+    index
+  }));
 };
 var insertContent = (value, options) => ({ tr: tr2, commands }) => {
-  return commands.insertContentAt(
-    { from: tr2.selection.from, to: tr2.selection.to },
-    value,
-    options
-  );
+  return commands.insertContentAt({
+    from: tr2.selection.from,
+    to: tr2.selection.to
+  }, value, options);
 };
 var removeWhitespaces = (node) => {
   const children = node.childNodes;
   for (let i2 = children.length - 1; i2 >= 0; i2 -= 1) {
     const child = children[i2];
-    if (child.nodeType === 3 && child.nodeValue && /^(\n\s\s|\n)$/.test(child.nodeValue)) {
-      node.removeChild(child);
-    } else if (child.nodeType === 1) {
-      removeWhitespaces(child);
-    }
+    if (child.nodeType === 3 && child.nodeValue && /^(\n\s\s|\n)$/.test(child.nodeValue)) node.removeChild(child);
+    else if (child.nodeType === 1) removeWhitespaces(child);
   }
   return node;
 };
 function elementFromString(value) {
-  if (typeof window === "undefined") {
-    throw new Error(
-      "[tiptap error]: there is no window object available, so this function cannot be used"
-    );
-  }
+  if (typeof window === "undefined") throw new Error("[tiptap error]: there is no window object available, so this function cannot be used");
   const wrappedValue = `<body>${value}</body>`;
   const html = new window.DOMParser().parseFromString(wrappedValue, "text/html").body;
   return removeWhitespaces(html);
 }
 function isProseMirrorContent(value) {
-  return typeof (value == null ? void 0 : value.nodesBetween) === "function";
+  return typeof (value === null || value === void 0 ? void 0 : value.nodesBetween) === "function";
 }
 function createNodeFromContent(content, schema, options) {
-  if (isProseMirrorContent(content)) {
-    return content;
-  }
+  if (isProseMirrorContent(content)) return content;
   const isJSONContent = typeof content === "object" && content !== null;
   options = {
     slice: true,
@@ -12861,24 +12738,15 @@ function createNodeFromContent(content, schema, options) {
     ...options
   };
   const isTextContent = typeof content === "string";
-  if (isJSONContent) {
-    try {
-      const isArrayContent = Array.isArray(content) && content.length > 0;
-      if (isArrayContent) {
-        return Fragment.fromArray(content.map((item) => schema.nodeFromJSON(item)));
-      }
-      const node = schema.nodeFromJSON(content);
-      if (options.errorOnInvalidContent) {
-        node.check();
-      }
-      return node;
-    } catch (error) {
-      if (options.errorOnInvalidContent) {
-        throw new Error("[tiptap error]: Invalid JSON content", { cause: error });
-      }
-      console.warn("[tiptap warn]: Invalid content.", "Passed value:", content, "Error:", error);
-      return createNodeFromContent("", schema, options);
-    }
+  if (isJSONContent) try {
+    if (Array.isArray(content) && content.length > 0) return Fragment.fromArray(content.map((item) => schema.nodeFromJSON(item)));
+    const node = schema.nodeFromJSON(content);
+    if (options.errorOnInvalidContent) node.check();
+    return node;
+  } catch (error) {
+    if (options.errorOnInvalidContent) throw new Error("[tiptap error]: Invalid JSON content", { cause: error });
+    console.warn("[tiptap warn]: Invalid content.", "Passed value:", content, "Error:", error);
+    return createNodeFromContent("", schema, options);
   }
   if (isTextContent) {
     if (options.errorOnInvalidContent) {
@@ -12887,46 +12755,25 @@ function createNodeFromContent(content, schema, options) {
       const contentCheckSchema = new Schema({
         topNode: schema.spec.topNode,
         marks: schema.spec.marks,
-        // Prosemirror's schemas are executed such that: the last to execute, matches last
-        // This means that we can add a catch-all node at the end of the schema to catch any content that we don't know how to handle
-        nodes: schema.spec.nodes.append({
-          __tiptap__private__unknown__catch__all__node: {
-            content: "inline*",
-            group: "block",
-            parseDOM: [
-              {
-                tag: "*",
-                getAttrs: (e) => {
-                  hasInvalidContent = true;
-                  invalidContent = typeof e === "string" ? e : e.outerHTML;
-                  return null;
-                }
-              }
-            ]
-          }
-        })
+        nodes: schema.spec.nodes.append({ __tiptap__private__unknown__catch__all__node: {
+          content: "inline*",
+          group: "block",
+          parseDOM: [{
+            tag: "*",
+            getAttrs: (e) => {
+              hasInvalidContent = true;
+              invalidContent = typeof e === "string" ? e : e.outerHTML;
+              return null;
+            }
+          }]
+        } })
       });
-      if (options.slice) {
-        DOMParser.fromSchema(contentCheckSchema).parseSlice(
-          elementFromString(content),
-          options.parseOptions
-        );
-      } else {
-        DOMParser.fromSchema(contentCheckSchema).parse(
-          elementFromString(content),
-          options.parseOptions
-        );
-      }
-      if (options.errorOnInvalidContent && hasInvalidContent) {
-        throw new Error("[tiptap error]: Invalid HTML content", {
-          cause: new Error(`Invalid element found: ${invalidContent}`)
-        });
-      }
+      if (options.slice) DOMParser.fromSchema(contentCheckSchema).parseSlice(elementFromString(content), options.parseOptions);
+      else DOMParser.fromSchema(contentCheckSchema).parse(elementFromString(content), options.parseOptions);
+      if (options.errorOnInvalidContent && hasInvalidContent) throw new Error("[tiptap error]: Invalid HTML content", { cause: /* @__PURE__ */ new Error(`Invalid element found: ${invalidContent}`) });
     }
     const parser = DOMParser.fromSchema(schema);
-    if (options.slice) {
-      return parser.parseSlice(elementFromString(content), options.parseOptions).content;
-    }
+    if (options.slice) return parser.parseSlice(elementFromString(content), options.parseOptions).content;
     return parser.parse(elementFromString(content), options.parseOptions);
   }
   return createNodeFromContent("", schema, options);
@@ -12936,24 +12783,17 @@ function isFragment(nodeOrFragment) {
 }
 function selectionToInsertionEnd2(tr2, startLen, bias) {
   const last = tr2.steps.length - 1;
-  if (last < startLen) {
-    return;
-  }
+  if (last < startLen) return;
   const step = tr2.steps[last];
-  if (!(step instanceof ReplaceStep || step instanceof ReplaceAroundStep)) {
-    return;
-  }
+  if (!(step instanceof ReplaceStep || step instanceof ReplaceAroundStep)) return;
   const map2 = tr2.mapping.maps[last];
   let end = 0;
   map2.forEach((_from, _to, _newFrom, newTo) => {
-    if (end === 0) {
-      end = newTo;
-    }
+    if (end === 0) end = newTo;
   });
   tr2.setSelection(Selection.near(tr2.doc.resolve(end), bias));
 }
 var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor }) => {
-  var _a;
   if (dispatch) {
     options = {
       parseOptions: editor.options.parseOptions,
@@ -12968,10 +12808,7 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
         editor,
         error,
         disableCollaboration: () => {
-          if ("collaboration" in editor.storage && typeof editor.storage.collaboration === "object" && editor.storage.collaboration) {
-            ;
-            editor.storage.collaboration.isDisabled = true;
-          }
+          if ("collaboration" in editor.storage && typeof editor.storage.collaboration === "object" && editor.storage.collaboration) editor.storage.collaboration.isDisabled = true;
         }
       });
     };
@@ -12979,26 +12816,31 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
       preserveWhitespace: "full",
       ...options.parseOptions
     };
-    if (!options.errorOnInvalidContent && !editor.options.enableContentCheck && editor.options.emitContentError) {
-      try {
-        createNodeFromContent(value, editor.schema, {
-          parseOptions,
-          errorOnInvalidContent: true
-        });
-      } catch (e) {
-        emitContentError(e);
-      }
+    if (!options.errorOnInvalidContent && !editor.options.enableContentCheck && editor.options.emitContentError) try {
+      createNodeFromContent(value, editor.schema, {
+        parseOptions,
+        errorOnInvalidContent: true
+      });
+    } catch (e) {
+      emitContentError(e);
     }
     try {
+      var _options$errorOnInval;
       content = createNodeFromContent(value, editor.schema, {
         parseOptions,
-        errorOnInvalidContent: (_a = options.errorOnInvalidContent) != null ? _a : editor.options.enableContentCheck
+        errorOnInvalidContent: (_options$errorOnInval = options.errorOnInvalidContent) !== null && _options$errorOnInval !== void 0 ? _options$errorOnInval : editor.options.enableContentCheck
       });
     } catch (e) {
       emitContentError(e);
       return false;
     }
-    let { from: from2, to } = typeof position === "number" ? { from: position, to: position } : { from: position.from, to: position.to };
+    let { from: from2, to } = typeof position === "number" ? {
+      from: position,
+      to: position
+    } : {
+      from: position.from,
+      to: position.to
+    };
     let isOnlyTextContent = true;
     let isOnlyBlockContent = true;
     const nodes = isFragment(content) ? content.content : [content];
@@ -13009,26 +12851,20 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
     });
     if (from2 === to && isOnlyBlockContent) {
       const { parent } = tr2.doc.resolve(from2);
-      const isEmptyTextBlock = parent.isTextblock && !parent.type.spec.code && !parent.childCount;
-      if (isEmptyTextBlock) {
+      if (parent.isTextblock && !parent.type.spec.code && !parent.childCount) {
         from2 -= 1;
         to += 1;
       }
     }
     let newContent;
     if (isOnlyTextContent) {
-      if (Array.isArray(value)) {
-        newContent = value.map((item) => item.text || "").join("");
-      } else if (isProseMirrorContent(value)) {
-        newContent = nodes.map((node) => {
-          var _a2;
-          return (_a2 = node.text) != null ? _a2 : "";
-        }).join("");
-      } else if (typeof value === "object" && !!value && !!value.text) {
-        newContent = value.text;
-      } else {
-        newContent = value;
-      }
+      if (Array.isArray(value)) newContent = value.map((item) => item.text || "").join("");
+      else if (isProseMirrorContent(value)) newContent = nodes.map((node) => {
+        var _node$text;
+        return (_node$text = node.text) !== null && _node$text !== void 0 ? _node$text : "";
+      }).join("");
+      else if (typeof value === "object" && !!value && !!value.text) newContent = value.text;
+      else newContent = value;
       tr2.insertText(newContent, from2, to);
     } else {
       newContent = Fragment.from(nodes);
@@ -13037,88 +12873,68 @@ var insertContentAt = (position, value, options) => ({ tr: tr2, dispatch, editor
       const fromSelectionAtStart = $from.parentOffset === 0;
       const isTextSelection2 = $fromNode.isText || $fromNode.isTextblock;
       const hasContent = $fromNode.content.size > 0;
-      if (fromSelectionAtStart && isTextSelection2 && hasContent && isOnlyBlockContent) {
-        from2 = Math.max(0, from2 - 1);
-      }
+      if (fromSelectionAtStart && isTextSelection2 && hasContent && isOnlyBlockContent) from2 = Math.max(0, from2 - 1);
       tr2.replaceWith(from2, to, nodes);
     }
-    if (options.updateSelection) {
-      selectionToInsertionEnd2(tr2, tr2.steps.length - 1, -1);
-    }
-    if (options.applyInputRules) {
-      tr2.setMeta("applyInputRules", { from: from2, text: newContent });
-    }
-    if (options.applyPasteRules) {
-      tr2.setMeta("applyPasteRules", { from: from2, text: newContent });
-    }
+    if (options.updateSelection) selectionToInsertionEnd2(tr2, tr2.steps.length - 1, -1);
+    if (options.applyInputRules) tr2.setMeta("applyInputRules", {
+      from: from2,
+      text: newContent
+    });
+    if (options.applyPasteRules) tr2.setMeta("applyPasteRules", {
+      from: from2,
+      text: newContent
+    });
   }
   return true;
 };
 function defaultBlockAt2(match) {
   for (let i2 = 0; i2 < match.edgeCount; i2 += 1) {
     const { type } = match.edge(i2);
-    if (type.isTextblock && !type.hasRequiredAttrs()) {
-      return type;
-    }
+    if (type.isTextblock && !type.hasRequiredAttrs()) return type;
   }
   return null;
 }
 var insertDefaultBlock = (options = {}) => ({ tr: tr2, dispatch, editor }) => {
   const { pos, attrs, content, updateSelection: updateSelection2 = true } = options;
   let $pos;
-  if (typeof pos === "number") {
-    $pos = tr2.doc.resolve(pos);
-  } else if (pos) {
-    $pos = pos;
-  } else {
-    $pos = tr2.selection.$from;
-  }
+  if (typeof pos === "number") $pos = tr2.doc.resolve(pos);
+  else if (pos) $pos = pos;
+  else $pos = tr2.selection.$from;
   const defaultType = defaultBlockAt2($pos.parent.contentMatchAt($pos.index()));
-  if (!defaultType) {
-    return false;
-  }
+  if (!defaultType) return false;
   const validAttrKeys = Object.keys(defaultType.spec.attrs || {});
   const filteredAttrs = attrs ? Object.fromEntries(Object.entries(attrs).filter(([key]) => validAttrKeys.includes(key))) : {};
   let node;
   if (content) {
     const parsed = createNodeFromContent(content, editor.schema);
     node = defaultType.createAndFill(filteredAttrs, parsed);
-  } else {
-    node = defaultType.createAndFill(filteredAttrs);
-  }
-  if (!node) {
-    return false;
-  }
+  } else node = defaultType.createAndFill(filteredAttrs);
+  if (!node) return false;
   if (dispatch) {
     tr2.insert($pos.pos, node);
-    if (updateSelection2) {
-      selectionToInsertionEnd2(tr2, tr2.steps.length - 1, -1);
-    }
+    if (updateSelection2) selectionToInsertionEnd2(tr2, tr2.steps.length - 1, -1);
   }
   return true;
 };
-var joinUp2 = () => ({ state, dispatch }) => {
+var joinUp$1 = () => ({ state, dispatch }) => {
   return joinUp(state, dispatch);
 };
-var joinDown2 = () => ({ state, dispatch }) => {
+var joinDown$1 = () => ({ state, dispatch }) => {
   return joinDown(state, dispatch);
 };
-var joinBackward2 = () => ({ state, dispatch }) => {
+var joinBackward$1 = () => ({ state, dispatch }) => {
   return joinBackward(state, dispatch);
 };
-var joinForward2 = () => ({ state, dispatch }) => {
+var joinForward$1 = () => ({ state, dispatch }) => {
   return joinForward(state, dispatch);
 };
 var joinItemBackward = () => ({ state, dispatch, tr: tr2 }) => {
   try {
     const point = joinPoint(state.doc, state.selection.$from.pos, -1);
-    if (point === null || point === void 0) {
-      return false;
-    }
+    if (point === null || point === void 0) return false;
     tr2.join(point, 2);
-    if (dispatch) {
-      dispatch(tr2);
-    }
+    if (dispatch) dispatch(tr2);
     return true;
   } catch {
     return false;
@@ -13127,22 +12943,18 @@ var joinItemBackward = () => ({ state, dispatch, tr: tr2 }) => {
 var joinItemForward = () => ({ state, dispatch, tr: tr2 }) => {
   try {
     const point = joinPoint(state.doc, state.selection.$from.pos, 1);
-    if (point === null || point === void 0) {
-      return false;
-    }
+    if (point === null || point === void 0) return false;
     tr2.join(point, 2);
-    if (dispatch) {
-      dispatch(tr2);
-    }
+    if (dispatch) dispatch(tr2);
     return true;
   } catch {
     return false;
   }
 };
-var joinTextblockBackward2 = () => ({ state, dispatch }) => {
+var joinTextblockBackward$1 = () => ({ state, dispatch }) => {
   return joinTextblockBackward(state, dispatch);
 };
-var joinTextblockForward2 = () => ({ state, dispatch }) => {
+var joinTextblockForward$1 = () => ({ state, dispatch }) => {
   return joinTextblockForward(state, dispatch);
 };
 function isMacOS() {
@@ -13151,50 +12963,36 @@ function isMacOS() {
 function normalizeKeyName2(name) {
   const parts = name.split(/-(?!$)/);
   let result = parts[parts.length - 1];
-  if (result === "Space") {
-    result = " ";
-  }
+  if (result === "Space") result = " ";
   let alt;
   let ctrl;
   let shift2;
   let meta;
   for (let i2 = 0; i2 < parts.length - 1; i2 += 1) {
     const mod = parts[i2];
-    if (/^(cmd|meta|m)$/i.test(mod)) {
-      meta = true;
-    } else if (/^a(lt)?$/i.test(mod)) {
-      alt = true;
-    } else if (/^(c|ctrl|control)$/i.test(mod)) {
-      ctrl = true;
-    } else if (/^s(hift)?$/i.test(mod)) {
-      shift2 = true;
-    } else if (/^mod$/i.test(mod)) {
-      if (isiOS() || isMacOS()) {
-        meta = true;
-      } else {
-        ctrl = true;
-      }
-    } else {
-      throw new Error(`Unrecognized modifier name: ${mod}`);
-    }
+    if (/^(cmd|meta|m)$/i.test(mod)) meta = true;
+    else if (/^a(lt)?$/i.test(mod)) alt = true;
+    else if (/^(c|ctrl|control)$/i.test(mod)) ctrl = true;
+    else if (/^s(hift)?$/i.test(mod)) shift2 = true;
+    else if (/^mod$/i.test(mod)) {
+      if (isiOS() || isMacOS()) meta = true;
+      else ctrl = true;
+    } else throw new Error(`Unrecognized modifier name: ${mod}`);
   }
-  if (alt) {
-    result = `Alt-${result}`;
-  }
-  if (ctrl) {
-    result = `Ctrl-${result}`;
-  }
-  if (meta) {
-    result = `Meta-${result}`;
-  }
-  if (shift2) {
-    result = `Shift-${result}`;
-  }
+  if (alt) result = `Alt-${result}`;
+  if (ctrl) result = `Ctrl-${result}`;
+  if (meta) result = `Meta-${result}`;
+  if (shift2) result = `Shift-${result}`;
   return result;
 }
 var keyboardShortcut = (name) => ({ editor, view, tr: tr2, dispatch }) => {
   const keys2 = normalizeKeyName2(name).split(/-(?!$)/);
-  const key = keys2.find((item) => !["Alt", "Ctrl", "Meta", "Shift"].includes(item));
+  const key = keys2.find((item) => ![
+    "Alt",
+    "Ctrl",
+    "Meta",
+    "Shift"
+  ].includes(item));
   const event = new KeyboardEvent("keydown", {
     key: key === "Space" ? " " : key,
     altKey: keys2.includes("Alt"),
@@ -13207,11 +13005,9 @@ var keyboardShortcut = (name) => ({ editor, view, tr: tr2, dispatch }) => {
   const capturedTransaction = editor.captureTransaction(() => {
     view.someProp("handleKeyDown", (f) => f(view, event));
   });
-  capturedTransaction == null ? void 0 : capturedTransaction.steps.forEach((step) => {
+  capturedTransaction === null || capturedTransaction === void 0 || capturedTransaction.steps.forEach((step) => {
     const newStep = step.map(tr2.mapping);
-    if (newStep && dispatch) {
-      tr2.maybeStep(newStep);
-    }
+    if (newStep && dispatch) tr2.maybeStep(newStep);
   });
   return true;
 };
@@ -13220,9 +13016,7 @@ function isNodeActive(state, typeOrName, attributes = {}) {
   const type = typeOrName ? getNodeType(typeOrName, state.schema) : null;
   const nodeRanges = [];
   state.doc.nodesBetween(from2, to, (node, pos) => {
-    if (node.isText) {
-      return;
-    }
+    if (node.isText) return;
     const relativeFrom = Math.max(from2, pos);
     const relativeTo = Math.min(to, pos + node.nodeSize);
     nodeRanges.push({
@@ -13233,100 +13027,64 @@ function isNodeActive(state, typeOrName, attributes = {}) {
   });
   const selectionRange = to - from2;
   const matchedNodeRanges = nodeRanges.filter((nodeRange) => {
-    if (!type) {
-      return true;
-    }
+    if (!type) return true;
     return type.name === nodeRange.node.type.name;
   }).filter((nodeRange) => objectIncludes(nodeRange.node.attrs, attributes, { strict: false }));
-  if (empty2) {
-    return !!matchedNodeRanges.length;
-  }
-  const range = matchedNodeRanges.reduce((sum, nodeRange) => sum + nodeRange.to - nodeRange.from, 0);
-  return range >= selectionRange;
+  if (empty2) return !!matchedNodeRanges.length;
+  return matchedNodeRanges.reduce((sum, nodeRange) => sum + nodeRange.to - nodeRange.from, 0) >= selectionRange;
 }
-var lift3 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
-  const type = getNodeType(typeOrName, state.schema);
-  const isActive2 = isNodeActive(state, type, attributes);
-  if (!isActive2) {
-    return false;
-  }
+var lift$1 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
+  if (!isNodeActive(state, getNodeType(typeOrName, state.schema), attributes)) return false;
   return lift2(state, dispatch);
 };
-var liftEmptyBlock2 = () => ({ state, dispatch }) => {
+var liftEmptyBlock$1 = () => ({ state, dispatch }) => {
   return liftEmptyBlock(state, dispatch);
 };
-var liftListItem2 = (typeOrName) => ({ state, dispatch }) => {
+var liftListItem$1 = (typeOrName) => ({ state, dispatch }) => {
   const type = getNodeType(typeOrName, state.schema);
   return liftListItem(type)(state, dispatch);
 };
-var newlineInCode2 = () => ({ state, dispatch }) => {
+var newlineInCode$1 = () => ({ state, dispatch }) => {
   return newlineInCode(state, dispatch);
 };
 function getSchemaTypeNameByName(name, schema) {
-  if (schema.nodes[name]) {
-    return "node";
-  }
-  if (schema.marks[name]) {
-    return "mark";
-  }
+  if (schema.nodes[name]) return "node";
+  if (schema.marks[name]) return "mark";
   return null;
 }
 function deleteProps(obj, propOrProps) {
   const props = typeof propOrProps === "string" ? [propOrProps] : propOrProps;
   return Object.keys(obj).reduce((newObj, prop) => {
-    if (!props.includes(prop)) {
-      newObj[prop] = obj[prop];
-    }
+    if (!props.includes(prop)) newObj[prop] = obj[prop];
     return newObj;
   }, {});
 }
 var resetAttributes = (typeOrName, attributes) => ({ tr: tr2, state, dispatch }) => {
   let nodeType = null;
   let markType = null;
-  const schemaType = getSchemaTypeNameByName(
-    typeof typeOrName === "string" ? typeOrName : typeOrName.name,
-    state.schema
-  );
-  if (!schemaType) {
-    return false;
-  }
-  if (schemaType === "node") {
-    nodeType = getNodeType(typeOrName, state.schema);
-  }
-  if (schemaType === "mark") {
-    markType = getMarkType(typeOrName, state.schema);
-  }
+  const schemaType = getSchemaTypeNameByName(typeof typeOrName === "string" ? typeOrName : typeOrName.name, state.schema);
+  if (!schemaType) return false;
+  if (schemaType === "node") nodeType = getNodeType(typeOrName, state.schema);
+  if (schemaType === "mark") markType = getMarkType(typeOrName, state.schema);
   let canReset = false;
   tr2.selection.ranges.forEach((range) => {
     state.doc.nodesBetween(range.$from.pos, range.$to.pos, (node, pos) => {
       if (nodeType && nodeType === node.type) {
         canReset = true;
-        if (dispatch) {
-          tr2.setNodeMarkup(pos, void 0, deleteProps(node.attrs, attributes));
+        if (dispatch) tr2.setNodeMarkup(pos, void 0, deleteProps(node.attrs, attributes));
+      }
+      if (markType && node.marks.length) node.marks.forEach((mark) => {
+        if (markType === mark.type) {
+          canReset = true;
+          if (dispatch) tr2.addMark(pos, pos + node.nodeSize, markType.create(deleteProps(mark.attrs, attributes)));
         }
-      }
-      if (markType && node.marks.length) {
-        node.marks.forEach((mark) => {
-          if (markType === mark.type) {
-            canReset = true;
-            if (dispatch) {
-              tr2.addMark(
-                pos,
-                pos + node.nodeSize,
-                markType.create(deleteProps(mark.attrs, attributes))
-              );
-            }
-          }
-        });
-      }
+      });
     });
   });
   return canReset;
 };
 var scrollIntoView = () => ({ tr: tr2, dispatch }) => {
-  if (dispatch) {
-    tr2.scrollIntoView();
-  }
+  if (dispatch) tr2.scrollIntoView();
   return true;
 };
 var selectAll2 = () => ({ tr: tr2, dispatch }) => {
@@ -13336,19 +13094,19 @@ var selectAll2 = () => ({ tr: tr2, dispatch }) => {
   }
   return true;
 };
-var selectNodeBackward2 = () => ({ state, dispatch }) => {
+var selectNodeBackward$1 = () => ({ state, dispatch }) => {
   return selectNodeBackward(state, dispatch);
 };
-var selectNodeForward2 = () => ({ state, dispatch }) => {
+var selectNodeForward$1 = () => ({ state, dispatch }) => {
   return selectNodeForward(state, dispatch);
 };
-var selectParentNode2 = () => ({ state, dispatch }) => {
+var selectParentNode$1 = () => ({ state, dispatch }) => {
   return selectParentNode(state, dispatch);
 };
-var selectTextblockEnd2 = () => ({ state, dispatch }) => {
+var selectTextblockEnd$1 = () => ({ state, dispatch }) => {
   return selectTextblockEnd(state, dispatch);
 };
-var selectTextblockStart2 = () => ({ state, dispatch }) => {
+var selectTextblockStart$1 = () => ({ state, dispatch }) => {
   return selectTextblockStart(state, dispatch);
 };
 function createDocument(content, schema, parseOptions = {}, options = {}) {
@@ -13361,21 +13119,20 @@ function createDocument(content, schema, parseOptions = {}, options = {}) {
 var setContent = (content, { errorOnInvalidContent, emitUpdate = true, parseOptions = {} } = {}) => ({ editor, tr: tr2, dispatch, commands }) => {
   const { doc: doc3 } = tr2;
   if (parseOptions.preserveWhitespace !== "full") {
-    const document2 = createDocument(content, editor.schema, parseOptions, {
-      errorOnInvalidContent: errorOnInvalidContent != null ? errorOnInvalidContent : editor.options.enableContentCheck
-    });
+    const document2 = createDocument(content, editor.schema, parseOptions, { errorOnInvalidContent: errorOnInvalidContent !== null && errorOnInvalidContent !== void 0 ? errorOnInvalidContent : editor.options.enableContentCheck });
     if (dispatch) {
       const nodes = isFragment(document2) ? document2.content : [document2];
       tr2.replaceWith(0, doc3.content.size, nodes).setMeta("preventUpdate", !emitUpdate);
     }
     return true;
   }
-  if (dispatch) {
-    tr2.setMeta("preventUpdate", !emitUpdate);
-  }
-  return commands.insertContentAt({ from: 0, to: doc3.content.size }, content, {
+  if (dispatch) tr2.setMeta("preventUpdate", !emitUpdate);
+  return commands.insertContentAt({
+    from: 0,
+    to: doc3.content.size
+  }, content, {
     parseOptions,
-    errorOnInvalidContent: errorOnInvalidContent != null ? errorOnInvalidContent : editor.options.enableContentCheck
+    errorOnInvalidContent: errorOnInvalidContent !== null && errorOnInvalidContent !== void 0 ? errorOnInvalidContent : editor.options.enableContentCheck
   });
 };
 function getMarkAttributes(state, typeOrName) {
@@ -13383,19 +13140,13 @@ function getMarkAttributes(state, typeOrName) {
   const { from: from2, to, empty: empty2 } = state.selection;
   const marks = [];
   if (empty2) {
-    if (state.storedMarks) {
-      marks.push(...state.storedMarks);
-    }
+    if (state.storedMarks) marks.push(...state.storedMarks);
     marks.push(...state.selection.$head.marks());
-  } else {
-    state.doc.nodesBetween(from2, to, (node) => {
-      marks.push(...node.marks);
-    });
-  }
+  } else state.doc.nodesBetween(from2, to, (node) => {
+    marks.push(...node.marks);
+  });
   const mark = marks.find((markItem) => markItem.type.name === type.name);
-  if (!mark) {
-    return {};
-  }
+  if (!mark) return {};
   return { ...mark.attrs };
 }
 function combineTransactionSteps(oldDoc, transactions) {
@@ -13410,66 +13161,49 @@ function combineTransactionSteps(oldDoc, transactions) {
 function findChildrenInRange(node, range, predicate) {
   const nodesWithPos = [];
   node.nodesBetween(range.from, range.to, (child, pos) => {
-    if (predicate(child)) {
-      nodesWithPos.push({
-        node: child,
-        pos
-      });
-    }
+    if (predicate(child)) nodesWithPos.push({
+      node: child,
+      pos
+    });
   });
   return nodesWithPos;
 }
 function findParentNodeClosestToPos($pos, predicate) {
   for (let i2 = $pos.depth; i2 > 0; i2 -= 1) {
     const node = $pos.node(i2);
-    if (predicate(node)) {
-      return {
-        pos: i2 > 0 ? $pos.before(i2) : 0,
-        start: $pos.start(i2),
-        depth: i2,
-        node
-      };
-    }
+    if (predicate(node)) return {
+      pos: i2 > 0 ? $pos.before(i2) : 0,
+      start: $pos.start(i2),
+      depth: i2,
+      node
+    };
   }
 }
 function findParentNode(predicate) {
   return (selection) => findParentNodeClosestToPos(selection.$from, predicate);
 }
 function getExtensionField(extension, field, context) {
-  if (extension.config[field] === void 0 && extension.parent) {
-    return getExtensionField(extension.parent, field, context);
-  }
-  if (typeof extension.config[field] === "function") {
-    const value = extension.config[field].bind({
-      ...context,
-      parent: extension.parent ? getExtensionField(extension.parent, field, context) : null
-    });
-    return value;
-  }
+  if (extension.config[field] === void 0 && extension.parent) return getExtensionField(extension.parent, field, context);
+  if (typeof extension.config[field] === "function") return extension.config[field].bind({
+    ...context,
+    parent: extension.parent ? getExtensionField(extension.parent, field, context) : null
+  });
   return extension.config[field];
 }
 function flattenExtensions(extensions) {
   return extensions.map((extension) => {
-    const context = {
+    const addExtensions = getExtensionField(extension, "addExtensions", {
       name: extension.name,
       options: extension.options,
       storage: extension.storage
-    };
-    const addExtensions = getExtensionField(
-      extension,
-      "addExtensions",
-      context
-    );
-    if (addExtensions) {
-      return [extension, ...flattenExtensions(addExtensions())];
-    }
+    });
+    if (addExtensions) return [extension, ...flattenExtensions(addExtensions())];
     return extension;
   }).flat(10);
 }
 function getHTMLFromFragment(fragment, schema) {
   const documentFragment = DOMSerializer.fromSchema(schema).serializeFragment(fragment);
-  const temporaryDocument = document.implementation.createHTMLDocument();
-  const container = temporaryDocument.createElement("div");
+  const container = document.implementation.createHTMLDocument().createElement("div");
   container.appendChild(documentFragment);
   return container.innerHTML;
 }
@@ -13478,9 +13212,7 @@ function isFunction(value) {
 }
 function callOrReturn(value, context = void 0, ...props) {
   if (isFunction(value)) {
-    if (context) {
-      return value.bind(context)(...props);
-    }
+    if (context) return value.bind(context)(...props);
     return value(...props);
   }
   return value;
@@ -13489,15 +13221,10 @@ function isEmptyObject(value = {}) {
   return Object.keys(value).length === 0 && value.constructor === Object;
 }
 function splitExtensions(extensions) {
-  const baseExtensions = extensions.filter(
-    (extension) => extension.type === "extension"
-  );
-  const nodeExtensions = extensions.filter((extension) => extension.type === "node");
-  const markExtensions = extensions.filter((extension) => extension.type === "mark");
   return {
-    baseExtensions,
-    nodeExtensions,
-    markExtensions
+    baseExtensions: extensions.filter((extension) => extension.type === "extension"),
+    nodeExtensions: extensions.filter((extension) => extension.type === "node"),
+    markExtensions: extensions.filter((extension) => extension.type === "mark")
   };
 }
 function getAttributesFromExtensions(extensions) {
@@ -13517,34 +13244,20 @@ function getAttributesFromExtensions(extensions) {
   const markExtensionTypes = markExtensions.map((ext) => ext.name);
   const allExtensionTypes = [...nodeExtensionTypes, ...markExtensionTypes];
   extensions.forEach((extension) => {
-    const context = {
+    const addGlobalAttributes = getExtensionField(extension, "addGlobalAttributes", {
       name: extension.name,
       options: extension.options,
       storage: extension.storage,
       extensions: nodeAndMarkExtensions
-    };
-    const addGlobalAttributes = getExtensionField(
-      extension,
-      "addGlobalAttributes",
-      context
-    );
-    if (!addGlobalAttributes) {
-      return;
-    }
-    const globalAttributes = addGlobalAttributes();
-    globalAttributes.forEach((globalAttribute) => {
+    });
+    if (!addGlobalAttributes) return;
+    addGlobalAttributes().forEach((globalAttribute) => {
       let resolvedTypes;
-      if (Array.isArray(globalAttribute.types)) {
-        resolvedTypes = globalAttribute.types;
-      } else if (globalAttribute.types === "*") {
-        resolvedTypes = allExtensionTypes;
-      } else if (globalAttribute.types === "nodes") {
-        resolvedTypes = nodeExtensionTypes;
-      } else if (globalAttribute.types === "marks") {
-        resolvedTypes = markExtensionTypes;
-      } else {
-        resolvedTypes = [];
-      }
+      if (Array.isArray(globalAttribute.types)) resolvedTypes = globalAttribute.types;
+      else if (globalAttribute.types === "*") resolvedTypes = allExtensionTypes;
+      else if (globalAttribute.types === "nodes") resolvedTypes = nodeExtensionTypes;
+      else if (globalAttribute.types === "marks") resolvedTypes = markExtensionTypes;
+      else resolvedTypes = [];
       resolvedTypes.forEach((type) => {
         Object.entries(globalAttribute.attributes).forEach(([name, attribute]) => {
           extensionAttributes.push({
@@ -13560,27 +13273,20 @@ function getAttributesFromExtensions(extensions) {
     });
   });
   nodeAndMarkExtensions.forEach((extension) => {
-    const context = {
+    const addAttributes = getExtensionField(extension, "addAttributes", {
       name: extension.name,
       options: extension.options,
       storage: extension.storage
-    };
-    const addAttributes = getExtensionField(extension, "addAttributes", context);
-    if (!addAttributes) {
-      return;
-    }
+    });
+    if (!addAttributes) return;
     const attributes = addAttributes();
     Object.entries(attributes).forEach(([name, attribute]) => {
       const mergedAttr = {
         ...defaultAttribute,
         ...attribute
       };
-      if (typeof (mergedAttr == null ? void 0 : mergedAttr.default) === "function") {
-        mergedAttr.default = mergedAttr.default();
-      }
-      if ((mergedAttr == null ? void 0 : mergedAttr.isRequired) && (mergedAttr == null ? void 0 : mergedAttr.default) === void 0) {
-        delete mergedAttr.default;
-      }
+      if (typeof (mergedAttr === null || mergedAttr === void 0 ? void 0 : mergedAttr.default) === "function") mergedAttr.default = mergedAttr.default();
+      if ((mergedAttr === null || mergedAttr === void 0 ? void 0 : mergedAttr.isRequired) && (mergedAttr === null || mergedAttr === void 0 ? void 0 : mergedAttr.default) === void 0) delete mergedAttr.default;
       extensionAttributes.push({
         type: extension.name,
         name,
@@ -13628,9 +13334,7 @@ function splitStyleDeclarations(styles) {
     }
     current += char;
   }
-  if (current) {
-    result.push(current);
-  }
+  if (current) result.push(current);
   return result;
 }
 function parseStyleEntries(styles) {
@@ -13640,14 +13344,10 @@ function parseStyleEntries(styles) {
   for (let i2 = 0; i2 < numDeclarations; i2 += 1) {
     const declaration = declarations[i2];
     const firstColonIndex = declaration.indexOf(":");
-    if (firstColonIndex === -1) {
-      continue;
-    }
+    if (firstColonIndex === -1) continue;
     const property = declaration.slice(0, firstColonIndex).trim();
     const value = declaration.slice(firstColonIndex + 1).trim();
-    if (property && value) {
-      pairs.push([property, value]);
-    }
+    if (property && value) pairs.push([property, value]);
   }
   return pairs;
 }
@@ -13655,253 +13355,158 @@ function mergeAttributes(...objects) {
   return objects.filter((item) => !!item).reduce((items, item) => {
     const mergedAttributes = { ...items };
     Object.entries(item).forEach(([key, value]) => {
-      const exists = mergedAttributes[key];
-      if (!exists) {
+      if (key === "__proto__") {
+        Object.defineProperty(mergedAttributes, key, {
+          configurable: true,
+          enumerable: true,
+          value,
+          writable: true
+        });
+        return;
+      }
+      if (!mergedAttributes[key]) {
         mergedAttributes[key] = value;
         return;
       }
       if (key === "class") {
         const valueClasses = value ? String(value).split(" ") : [];
         const existingClasses = mergedAttributes[key] ? mergedAttributes[key].split(" ") : [];
-        const insertClasses = valueClasses.filter(
-          (valueClass) => !existingClasses.includes(valueClass)
-        );
+        const insertClasses = valueClasses.filter((valueClass) => !existingClasses.includes(valueClass));
         mergedAttributes[key] = [...existingClasses, ...insertClasses].join(" ");
       } else if (key === "style") {
-        const styleMap = new Map([
-          ...parseStyleEntries(mergedAttributes[key]),
-          ...parseStyleEntries(value)
-        ]);
+        const styleMap = new Map([...parseStyleEntries(mergedAttributes[key]), ...parseStyleEntries(value)]);
         mergedAttributes[key] = Array.from(styleMap.entries()).map(([property, val]) => `${property}: ${val}`).join("; ");
-      } else {
-        mergedAttributes[key] = value;
-      }
+      } else mergedAttributes[key] = value;
     });
     return mergedAttributes;
   }, {});
 }
 function getRenderedAttributes(nodeOrMark, extensionAttributes) {
   return extensionAttributes.filter((attribute) => attribute.type === nodeOrMark.type.name).filter((item) => item.attribute.rendered).map((item) => {
-    if (!item.attribute.renderHTML) {
-      return {
-        [item.name]: nodeOrMark.attrs[item.name]
-      };
-    }
+    if (!item.attribute.renderHTML) return { [item.name]: nodeOrMark.attrs[item.name] };
     return item.attribute.renderHTML(nodeOrMark.attrs) || {};
   }).reduce((attributes, attribute) => mergeAttributes(attributes, attribute), {});
 }
 function fromString(value) {
-  if (typeof value !== "string") {
-    return value;
-  }
-  if (value.match(/^[+-]?(?:\d*\.)?\d+$/)) {
-    return Number(value);
-  }
-  if (value === "true") {
-    return true;
-  }
-  if (value === "false") {
-    return false;
-  }
+  if (typeof value !== "string") return value;
+  if (value.match(/^[+-]?(?:\d*\.)?\d+$/)) return Number(value);
+  if (value === "true") return true;
+  if (value === "false") return false;
   return value;
 }
 function injectExtensionAttributesToParseRule(parseRule, extensionAttributes) {
-  if ("style" in parseRule) {
-    return parseRule;
-  }
+  if ("style" in parseRule) return parseRule;
   return {
     ...parseRule,
     getAttrs: (node) => {
       const oldAttributes = parseRule.getAttrs ? parseRule.getAttrs(node) : parseRule.attrs;
-      if (oldAttributes === false) {
-        return false;
-      }
+      if (oldAttributes === false) return false;
       const newAttributes = extensionAttributes.reduce((items, item) => {
         const value = item.attribute.parseHTML ? item.attribute.parseHTML(node) : fromString(node.getAttribute(item.name));
-        if (value === null || value === void 0) {
-          return items;
-        }
+        if (value === null || value === void 0) return items;
         return {
           ...items,
           [item.name]: value
         };
       }, {});
-      return { ...oldAttributes, ...newAttributes };
+      return {
+        ...oldAttributes,
+        ...newAttributes
+      };
     }
   };
 }
 function cleanUpSchemaItem(data) {
-  return Object.fromEntries(
-    // @ts-ignore
-    Object.entries(data).filter(([key, value]) => {
-      if (key === "attrs" && isEmptyObject(value)) {
-        return false;
-      }
-      return value !== null && value !== void 0;
-    })
-  );
+  return Object.fromEntries(Object.entries(data).filter(([key, value]) => {
+    if (key === "attrs" && isEmptyObject(value)) return false;
+    return value !== null && value !== void 0;
+  }));
 }
 function buildAttributeSpec(extensionAttribute) {
-  var _a, _b;
+  var _extensionAttribute$a, _extensionAttribute$a2;
   const spec = {};
-  if (!((_a = extensionAttribute == null ? void 0 : extensionAttribute.attribute) == null ? void 0 : _a.isRequired) && "default" in ((extensionAttribute == null ? void 0 : extensionAttribute.attribute) || {})) {
-    spec.default = extensionAttribute.attribute.default;
-  }
-  if (((_b = extensionAttribute == null ? void 0 : extensionAttribute.attribute) == null ? void 0 : _b.validate) !== void 0) {
-    spec.validate = extensionAttribute.attribute.validate;
-  }
+  if (!(extensionAttribute === null || extensionAttribute === void 0 || (_extensionAttribute$a = extensionAttribute.attribute) === null || _extensionAttribute$a === void 0 ? void 0 : _extensionAttribute$a.isRequired) && "default" in ((extensionAttribute === null || extensionAttribute === void 0 ? void 0 : extensionAttribute.attribute) || {})) spec.default = extensionAttribute.attribute.default;
+  if ((extensionAttribute === null || extensionAttribute === void 0 || (_extensionAttribute$a2 = extensionAttribute.attribute) === null || _extensionAttribute$a2 === void 0 ? void 0 : _extensionAttribute$a2.validate) !== void 0) spec.validate = extensionAttribute.attribute.validate;
   return [extensionAttribute.name, spec];
 }
 function getSchemaByResolvedExtensions(extensions, editor) {
-  var _a;
+  var _nodeExtensions$find;
   const allAttributes = getAttributesFromExtensions(extensions);
   const { nodeExtensions, markExtensions } = splitExtensions(extensions);
-  const topNode = (_a = nodeExtensions.find((extension) => getExtensionField(extension, "topNode"))) == null ? void 0 : _a.name;
-  const nodes = Object.fromEntries(
-    nodeExtensions.map((extension) => {
-      const extensionAttributes = allAttributes.filter(
-        (attribute) => attribute.type === extension.name
-      );
-      const context = {
-        name: extension.name,
-        options: extension.options,
-        storage: extension.storage,
-        editor
-      };
-      const extraNodeFields = extensions.reduce((fields, e) => {
-        const extendNodeSchema = getExtensionField(
-          e,
-          "extendNodeSchema",
-          context
-        );
+  const topNode = (_nodeExtensions$find = nodeExtensions.find((extension) => getExtensionField(extension, "topNode"))) === null || _nodeExtensions$find === void 0 ? void 0 : _nodeExtensions$find.name;
+  const nodes = Object.fromEntries(nodeExtensions.map((extension) => {
+    const extensionAttributes = allAttributes.filter((attribute) => attribute.type === extension.name);
+    const context = {
+      name: extension.name,
+      options: extension.options,
+      storage: extension.storage,
+      editor
+    };
+    const schema = cleanUpSchemaItem({
+      ...extensions.reduce((fields, e) => {
+        const extendNodeSchema = getExtensionField(e, "extendNodeSchema", context);
         return {
           ...fields,
           ...extendNodeSchema ? extendNodeSchema(extension) : {}
         };
-      }, {});
-      const schema = cleanUpSchemaItem({
-        ...extraNodeFields,
-        content: callOrReturn(
-          getExtensionField(extension, "content", context)
-        ),
-        marks: callOrReturn(getExtensionField(extension, "marks", context)),
-        group: callOrReturn(getExtensionField(extension, "group", context)),
-        inline: callOrReturn(getExtensionField(extension, "inline", context)),
-        atom: callOrReturn(getExtensionField(extension, "atom", context)),
-        selectable: callOrReturn(
-          getExtensionField(extension, "selectable", context)
-        ),
-        draggable: callOrReturn(
-          getExtensionField(extension, "draggable", context)
-        ),
-        code: callOrReturn(getExtensionField(extension, "code", context)),
-        whitespace: callOrReturn(
-          getExtensionField(extension, "whitespace", context)
-        ),
-        linebreakReplacement: callOrReturn(
-          getExtensionField(
-            extension,
-            "linebreakReplacement",
-            context
-          )
-        ),
-        defining: callOrReturn(
-          getExtensionField(extension, "defining", context)
-        ),
-        isolating: callOrReturn(
-          getExtensionField(extension, "isolating", context)
-        ),
-        attrs: Object.fromEntries(extensionAttributes.map(buildAttributeSpec))
-      });
-      const parseHTML = callOrReturn(
-        getExtensionField(extension, "parseHTML", context)
-      );
-      if (parseHTML) {
-        schema.parseDOM = parseHTML.map(
-          (parseRule) => injectExtensionAttributesToParseRule(parseRule, extensionAttributes)
-        );
-      }
-      const renderHTML = getExtensionField(
-        extension,
-        "renderHTML",
-        context
-      );
-      if (renderHTML) {
-        schema.toDOM = (node) => renderHTML({
-          node,
-          HTMLAttributes: getRenderedAttributes(node, extensionAttributes)
-        });
-      }
-      const renderText = getExtensionField(
-        extension,
-        "renderText",
-        context
-      );
-      if (renderText) {
-        schema.toText = renderText;
-      }
-      return [extension.name, schema];
-    })
-  );
-  const marks = Object.fromEntries(
-    markExtensions.map((extension) => {
-      const extensionAttributes = allAttributes.filter(
-        (attribute) => attribute.type === extension.name
-      );
-      const context = {
-        name: extension.name,
-        options: extension.options,
-        storage: extension.storage,
-        editor
-      };
-      const extraMarkFields = extensions.reduce((fields, e) => {
-        const extendMarkSchema = getExtensionField(
-          e,
-          "extendMarkSchema",
-          context
-        );
+      }, {}),
+      content: callOrReturn(getExtensionField(extension, "content", context)),
+      marks: callOrReturn(getExtensionField(extension, "marks", context)),
+      group: callOrReturn(getExtensionField(extension, "group", context)),
+      inline: callOrReturn(getExtensionField(extension, "inline", context)),
+      atom: callOrReturn(getExtensionField(extension, "atom", context)),
+      selectable: callOrReturn(getExtensionField(extension, "selectable", context)),
+      draggable: callOrReturn(getExtensionField(extension, "draggable", context)),
+      code: callOrReturn(getExtensionField(extension, "code", context)),
+      whitespace: callOrReturn(getExtensionField(extension, "whitespace", context)),
+      linebreakReplacement: callOrReturn(getExtensionField(extension, "linebreakReplacement", context)),
+      defining: callOrReturn(getExtensionField(extension, "defining", context)),
+      isolating: callOrReturn(getExtensionField(extension, "isolating", context)),
+      attrs: Object.fromEntries(extensionAttributes.map(buildAttributeSpec))
+    });
+    const parseHTML = callOrReturn(getExtensionField(extension, "parseHTML", context));
+    if (parseHTML) schema.parseDOM = parseHTML.map((parseRule) => injectExtensionAttributesToParseRule(parseRule, extensionAttributes));
+    const renderHTML = getExtensionField(extension, "renderHTML", context);
+    if (renderHTML) schema.toDOM = (node) => renderHTML({
+      node,
+      HTMLAttributes: getRenderedAttributes(node, extensionAttributes)
+    });
+    const renderText = getExtensionField(extension, "renderText", context);
+    if (renderText) schema.toText = renderText;
+    return [extension.name, schema];
+  }));
+  const marks = Object.fromEntries(markExtensions.map((extension) => {
+    const extensionAttributes = allAttributes.filter((attribute) => attribute.type === extension.name);
+    const context = {
+      name: extension.name,
+      options: extension.options,
+      storage: extension.storage,
+      editor
+    };
+    const schema = cleanUpSchemaItem({
+      ...extensions.reduce((fields, e) => {
+        const extendMarkSchema = getExtensionField(e, "extendMarkSchema", context);
         return {
           ...fields,
           ...extendMarkSchema ? extendMarkSchema(extension) : {}
         };
-      }, {});
-      const schema = cleanUpSchemaItem({
-        ...extraMarkFields,
-        inclusive: callOrReturn(
-          getExtensionField(extension, "inclusive", context)
-        ),
-        excludes: callOrReturn(
-          getExtensionField(extension, "excludes", context)
-        ),
-        group: callOrReturn(getExtensionField(extension, "group", context)),
-        spanning: callOrReturn(
-          getExtensionField(extension, "spanning", context)
-        ),
-        code: callOrReturn(getExtensionField(extension, "code", context)),
-        attrs: Object.fromEntries(extensionAttributes.map(buildAttributeSpec))
-      });
-      const parseHTML = callOrReturn(
-        getExtensionField(extension, "parseHTML", context)
-      );
-      if (parseHTML) {
-        schema.parseDOM = parseHTML.map(
-          (parseRule) => injectExtensionAttributesToParseRule(parseRule, extensionAttributes)
-        );
-      }
-      const renderHTML = getExtensionField(
-        extension,
-        "renderHTML",
-        context
-      );
-      if (renderHTML) {
-        schema.toDOM = (mark) => renderHTML({
-          mark,
-          HTMLAttributes: getRenderedAttributes(mark, extensionAttributes)
-        });
-      }
-      return [extension.name, schema];
-    })
-  );
+      }, {}),
+      inclusive: callOrReturn(getExtensionField(extension, "inclusive", context)),
+      excludes: callOrReturn(getExtensionField(extension, "excludes", context)),
+      group: callOrReturn(getExtensionField(extension, "group", context)),
+      spanning: callOrReturn(getExtensionField(extension, "spanning", context)),
+      code: callOrReturn(getExtensionField(extension, "code", context)),
+      attrs: Object.fromEntries(extensionAttributes.map(buildAttributeSpec))
+    });
+    const parseHTML = callOrReturn(getExtensionField(extension, "parseHTML", context));
+    if (parseHTML) schema.parseDOM = parseHTML.map((parseRule) => injectExtensionAttributesToParseRule(parseRule, extensionAttributes));
+    const renderHTML = getExtensionField(extension, "renderHTML", context);
+    if (renderHTML) schema.toDOM = (mark) => renderHTML({
+      mark,
+      HTMLAttributes: getRenderedAttributes(mark, extensionAttributes)
+    });
+    return [extension.name, schema];
+  }));
   return new Schema({
     topNode,
     nodes,
@@ -13917,23 +13522,15 @@ function sortExtensions(extensions) {
   return extensions.sort((a, b) => {
     const priorityA = getExtensionField(a, "priority") || defaultPriority;
     const priorityB = getExtensionField(b, "priority") || defaultPriority;
-    if (priorityA > priorityB) {
-      return -1;
-    }
-    if (priorityA < priorityB) {
-      return 1;
-    }
+    if (priorityA > priorityB) return -1;
+    if (priorityA < priorityB) return 1;
     return 0;
   });
 }
 function resolveExtensions(extensions) {
   const resolvedExtensions = sortExtensions(flattenExtensions(extensions));
   const duplicatedNames = findDuplicates(resolvedExtensions.map((extension) => extension.name));
-  if (duplicatedNames.length) {
-    console.warn(
-      `[tiptap warn]: Duplicate extension names found: [${duplicatedNames.map((item) => `'${item}'`).join(", ")}]. This can lead to issues.`
-    );
-  }
+  if (duplicatedNames.length) console.warn(`[tiptap warn]: Duplicate extension names found: [${duplicatedNames.map((item) => `'${item}'`).join(", ")}]. This can lead to issues.`);
   return resolvedExtensions;
 }
 function getTextBetween(startNode, range, options) {
@@ -13941,40 +13538,33 @@ function getTextBetween(startNode, range, options) {
   const { blockSeparator = "\n\n", textSerializers = {} } = options || {};
   let text = "";
   startNode.nodesBetween(from2, to, (node, pos, parent, index) => {
-    var _a;
-    if (node.isBlock && pos > from2) {
-      text += blockSeparator;
-    }
-    const textSerializer = textSerializers == null ? void 0 : textSerializers[node.type.name];
+    if (node.isBlock && pos > from2) text += blockSeparator;
+    const textSerializer = textSerializers === null || textSerializers === void 0 ? void 0 : textSerializers[node.type.name];
     if (textSerializer) {
-      if (parent) {
-        text += textSerializer({
-          node,
-          pos,
-          parent,
-          index,
-          range
-        });
-      }
+      if (parent) text += textSerializer({
+        node,
+        pos,
+        parent,
+        index,
+        range
+      });
       return false;
     }
     if (node.isText) {
-      text += (_a = node == null ? void 0 : node.text) == null ? void 0 : _a.slice(Math.max(from2, pos) - pos, to - pos);
+      var _node$text;
+      text += node === null || node === void 0 || (_node$text = node.text) === null || _node$text === void 0 ? void 0 : _node$text.slice(Math.max(from2, pos) - pos, to - pos);
     }
   });
   return text;
 }
 function getText2(node, options) {
-  const range = {
+  return getTextBetween(node, {
     from: 0,
     to: node.content.size
-  };
-  return getTextBetween(node, range, options);
+  }, options);
 }
 function getTextSerializersFromSchema(schema) {
-  return Object.fromEntries(
-    Object.entries(schema.nodes).filter(([, node]) => node.spec.toText).map(([name, node]) => [name, node.spec.toText])
-  );
+  return Object.fromEntries(Object.entries(schema.nodes).filter(([, node]) => node.spec.toText).map(([name, node]) => [name, node.spec.toText]));
 }
 function getNodeAttributes(state, typeOrName) {
   const type = getNodeType(typeOrName, state.schema);
@@ -13984,22 +13574,13 @@ function getNodeAttributes(state, typeOrName) {
     nodes.push(node2);
   });
   const node = nodes.reverse().find((nodeItem) => nodeItem.type.name === type.name);
-  if (!node) {
-    return {};
-  }
+  if (!node) return {};
   return { ...node.attrs };
 }
 function getAttributes(state, typeOrName) {
-  const schemaType = getSchemaTypeNameByName(
-    typeof typeOrName === "string" ? typeOrName : typeOrName.name,
-    state.schema
-  );
-  if (schemaType === "node") {
-    return getNodeAttributes(state, typeOrName);
-  }
-  if (schemaType === "mark") {
-    return getMarkAttributes(state, typeOrName);
-  }
+  const schemaType = getSchemaTypeNameByName(typeof typeOrName === "string" ? typeOrName : typeOrName.name, state.schema);
+  if (schemaType === "node") return getNodeAttributes(state, typeOrName);
+  if (schemaType === "mark") return getMarkAttributes(state, typeOrName);
   return {};
 }
 function removeDuplicates(array, by = JSON.stringify) {
@@ -14012,8 +13593,7 @@ function removeDuplicates(array, by = JSON.stringify) {
 function simplifyChangedRanges(changes) {
   const uniqueChanges = removeDuplicates(changes);
   return uniqueChanges.length === 1 ? uniqueChanges : uniqueChanges.filter((change, index) => {
-    const rest = uniqueChanges.filter((_, i2) => i2 !== index);
-    return !rest.some((otherChange) => {
+    return !uniqueChanges.filter((_, i2) => i2 !== index).some((otherChange) => {
       return change.oldRange.from >= otherChange.oldRange.from && change.oldRange.to <= otherChange.oldRange.to && change.newRange.from >= otherChange.newRange.from && change.newRange.to <= otherChange.newRange.to;
     });
   });
@@ -14025,15 +13605,17 @@ function getChangedRanges(transform) {
     const ranges = [];
     if (!stepMap.ranges.length) {
       const { from: from2, to } = steps[index];
-      if (from2 === void 0 || to === void 0) {
-        return;
-      }
-      ranges.push({ from: from2, to });
-    } else {
-      stepMap.forEach((from2, to) => {
-        ranges.push({ from: from2, to });
+      if (from2 === void 0 || to === void 0) return;
+      ranges.push({
+        from: from2,
+        to
       });
-    }
+    } else stepMap.forEach((from2, to) => {
+      ranges.push({
+        from: from2,
+        to
+      });
+    });
     ranges.forEach(({ from: from2, to }) => {
       const newStart = mapping.slice(index).map(from2, -1);
       const newEnd = mapping.slice(index).map(to);
@@ -14055,32 +13637,22 @@ function getChangedRanges(transform) {
 }
 function getMarksBetween(from2, to, doc3) {
   const marks = [];
-  if (from2 === to) {
-    doc3.resolve(from2).marks().forEach((mark) => {
-      const $pos = doc3.resolve(from2);
-      const range = getMarkRange($pos, mark.type);
-      if (!range) {
-        return;
-      }
-      marks.push({
-        mark,
-        ...range
-      });
+  if (from2 === to) doc3.resolve(from2).marks().forEach((mark) => {
+    const range = getMarkRange(doc3.resolve(from2), mark.type);
+    if (!range) return;
+    marks.push({
+      mark,
+      ...range
     });
-  } else {
-    doc3.nodesBetween(from2, to, (node, pos) => {
-      if (!node || (node == null ? void 0 : node.nodeSize) === void 0) {
-        return;
-      }
-      marks.push(
-        ...node.marks.map((mark) => ({
-          from: pos,
-          to: pos + node.nodeSize,
-          mark
-        }))
-      );
-    });
-  }
+  });
+  else doc3.nodesBetween(from2, to, (node, pos) => {
+    if (!node || (node === null || node === void 0 ? void 0 : node.nodeSize) === void 0) return;
+    marks.push(...node.marks.map((mark) => ({
+      from: pos,
+      to: pos + node.nodeSize,
+      mark
+    })));
+  });
   return marks;
 }
 var getNodeAtPosition = (state, typeOrName, pos, maxDepth = 20) => {
@@ -14089,11 +13661,8 @@ var getNodeAtPosition = (state, typeOrName, pos, maxDepth = 20) => {
   let node = null;
   while (currentDepth > 0 && node === null) {
     const currentNode = $pos.node(currentDepth);
-    if ((currentNode == null ? void 0 : currentNode.type.name) === typeOrName) {
-      node = currentNode;
-    } else {
-      currentDepth -= 1;
-    }
+    if ((currentNode === null || currentNode === void 0 ? void 0 : currentNode.type.name) === typeOrName) node = currentNode;
+    else currentDepth -= 1;
   }
   return [node, currentDepth];
 };
@@ -14108,186 +13677,127 @@ function getSchemaTypeByName(name, schema) {
   return schema.nodes[name] || schema.marks[name] || null;
 }
 function getSplittedAttributes(extensionAttributes, typeName, attributes) {
-  return Object.fromEntries(
-    Object.entries(attributes).filter(([name]) => {
-      const extensionAttribute = extensionAttributes.find((item) => {
-        return item.type === typeName && item.name === name;
-      });
-      if (!extensionAttribute) {
-        return false;
-      }
-      return extensionAttribute.attribute.keepOnSplit;
-    })
-  );
+  return Object.fromEntries(Object.entries(attributes).filter(([name]) => {
+    const extensionAttribute = extensionAttributes.find((item) => {
+      return item.type === typeName && item.name === name;
+    });
+    if (!extensionAttribute) return false;
+    return extensionAttribute.attribute.keepOnSplit;
+  }));
 }
 var getTextContentFromNodes = ($from, maxMatch = 500) => {
   let textBefore = "";
   const sliceEndPos = $from.parentOffset;
-  $from.parent.nodesBetween(
-    Math.max(0, sliceEndPos - maxMatch),
-    sliceEndPos,
-    (node, pos, parent, index) => {
-      var _a, _b;
-      const chunk = ((_b = (_a = node.type.spec).toText) == null ? void 0 : _b.call(_a, {
-        node,
-        pos,
-        parent,
-        index
-      })) || node.textContent || "%leaf%";
-      textBefore += node.isAtom && !node.isText ? chunk : chunk.slice(0, Math.max(0, sliceEndPos - pos));
-    }
-  );
+  $from.parent.nodesBetween(Math.max(0, sliceEndPos - maxMatch), sliceEndPos, (node, pos, parent, index) => {
+    var _node$type$spec$toTex, _node$type$spec;
+    const chunk = ((_node$type$spec$toTex = (_node$type$spec = node.type.spec).toText) === null || _node$type$spec$toTex === void 0 ? void 0 : _node$type$spec$toTex.call(_node$type$spec, {
+      node,
+      pos,
+      parent,
+      index
+    })) || node.textContent || "%leaf%";
+    textBefore += node.isAtom && !node.isText ? chunk : chunk.slice(0, Math.max(0, sliceEndPos - pos));
+  });
   return textBefore;
 };
 function isMarkActive(state, typeOrName, attributes = {}) {
   const { empty: empty2, ranges } = state.selection;
   const type = typeOrName ? getMarkType(typeOrName, state.schema) : null;
-  if (empty2) {
-    return !!(state.storedMarks || state.selection.$from.marks()).filter((mark) => {
-      if (!type) {
-        return true;
-      }
-      return type.name === mark.type.name;
-    }).find((mark) => objectIncludes(mark.attrs, attributes, { strict: false }));
-  }
+  if (empty2) return !!(state.storedMarks || state.selection.$from.marks()).filter((mark) => {
+    if (!type) return true;
+    return type.name === mark.type.name;
+  }).find((mark) => objectIncludes(mark.attrs, attributes, { strict: false }));
   let selectionRange = 0;
   const markRanges = [];
   ranges.forEach(({ $from, $to }) => {
     const from2 = $from.pos;
     const to = $to.pos;
     state.doc.nodesBetween(from2, to, (node, pos) => {
-      if (type && node.inlineContent && !node.type.allowsMarkType(type)) {
-        return false;
-      }
-      if (!node.isText && !node.marks.length) {
-        return;
-      }
+      if (type && node.inlineContent && !node.type.allowsMarkType(type)) return false;
+      if (!node.isText && !node.marks.length) return;
       const relativeFrom = Math.max(from2, pos);
       const relativeTo = Math.min(to, pos + node.nodeSize);
-      const range2 = relativeTo - relativeFrom;
-      selectionRange += range2;
-      markRanges.push(
-        ...node.marks.map((mark) => ({
-          mark,
-          from: relativeFrom,
-          to: relativeTo
-        }))
-      );
+      const range = relativeTo - relativeFrom;
+      selectionRange += range;
+      markRanges.push(...node.marks.map((mark) => ({
+        mark,
+        from: relativeFrom,
+        to: relativeTo
+      })));
     });
   });
-  if (selectionRange === 0) {
-    return false;
-  }
+  if (selectionRange === 0) return false;
   const matchedRange = markRanges.filter((markRange) => {
-    if (!type) {
-      return true;
-    }
+    if (!type) return true;
     return type.name === markRange.mark.type.name;
   }).filter((markRange) => objectIncludes(markRange.mark.attrs, attributes, { strict: false })).reduce((sum, markRange) => sum + markRange.to - markRange.from, 0);
   const excludedRange = markRanges.filter((markRange) => {
-    if (!type) {
-      return true;
-    }
+    if (!type) return true;
     return markRange.mark.type !== type && markRange.mark.type.excludes(type);
   }).reduce((sum, markRange) => sum + markRange.to - markRange.from, 0);
-  const range = matchedRange > 0 ? matchedRange + excludedRange : matchedRange;
-  return range >= selectionRange;
+  return (matchedRange > 0 ? matchedRange + excludedRange : matchedRange) >= selectionRange;
 }
 function isActive(state, name, attributes = {}) {
-  if (!name) {
-    return isNodeActive(state, null, attributes) || isMarkActive(state, null, attributes);
-  }
+  if (!name) return isNodeActive(state, null, attributes) || isMarkActive(state, null, attributes);
   const schemaType = getSchemaTypeNameByName(name, state.schema);
-  if (schemaType === "node") {
-    return isNodeActive(state, name, attributes);
-  }
-  if (schemaType === "mark") {
-    return isMarkActive(state, name, attributes);
-  }
+  if (schemaType === "node") return isNodeActive(state, name, attributes);
+  if (schemaType === "mark") return isMarkActive(state, name, attributes);
   return false;
 }
 var isAtEndOfNode = (state, nodeType) => {
   const { $from, $to, $anchor } = state.selection;
   if (nodeType) {
     const parentNode2 = findParentNode((node) => node.type.name === nodeType)(state.selection);
-    if (!parentNode2) {
-      return false;
-    }
+    if (!parentNode2) return false;
     const $parentPos = state.doc.resolve(parentNode2.pos + 1);
-    if ($anchor.pos + 1 === $parentPos.end()) {
-      return true;
-    }
+    if ($anchor.pos + 1 === $parentPos.end()) return true;
     return false;
   }
-  if ($to.parentOffset < $to.parent.nodeSize - 2 || $from.pos !== $to.pos) {
-    return false;
-  }
+  if ($to.parentOffset < $to.parent.nodeSize - 2 || $from.pos !== $to.pos) return false;
   return true;
 };
 var isAtStartOfNode = (state) => {
   const { $from, $to } = state.selection;
-  if ($from.parentOffset > 0 || $from.pos !== $to.pos) {
-    return false;
-  }
+  if ($from.parentOffset > 0 || $from.pos !== $to.pos) return false;
   return true;
 };
 function isExtensionRulesEnabled(extension, enabled) {
-  if (Array.isArray(enabled)) {
-    return enabled.some((enabledExtension) => {
-      const name = typeof enabledExtension === "string" ? enabledExtension : enabledExtension.name;
-      return name === extension.name;
-    });
-  }
+  if (Array.isArray(enabled)) return enabled.some((enabledExtension) => {
+    return (typeof enabledExtension === "string" ? enabledExtension : enabledExtension.name) === extension.name;
+  });
   return enabled;
 }
 function isList(name, extensions) {
   const { nodeExtensions } = splitExtensions(extensions);
   const extension = nodeExtensions.find((item) => item.name === name);
-  if (!extension) {
-    return false;
-  }
-  const context = {
+  if (!extension) return false;
+  const group = callOrReturn(getExtensionField(extension, "group", {
     name: extension.name,
     options: extension.options,
     storage: extension.storage
-  };
-  const group = callOrReturn(getExtensionField(extension, "group", context));
-  if (typeof group !== "string") {
-    return false;
-  }
+  }));
+  if (typeof group !== "string") return false;
   return group.split(" ").includes("list");
 }
-function isNodeEmpty(node, {
-  checkChildren = true,
-  ignoreWhitespace = false
-} = {}) {
-  var _a;
+function isNodeEmpty(node, { checkChildren = true, ignoreWhitespace = false } = {}) {
   if (ignoreWhitespace) {
-    if (node.type.name === "hardBreak") {
-      return true;
-    }
+    if (node.type.name === "hardBreak") return true;
     if (node.isText) {
-      return !/\S/.test((_a = node.text) != null ? _a : "");
+      var _node$text;
+      return !/\S/.test((_node$text = node.text) !== null && _node$text !== void 0 ? _node$text : "");
     }
   }
-  if (node.isText) {
-    return !node.text;
-  }
-  if (node.isAtom || node.isLeaf) {
-    return false;
-  }
-  if (node.content.childCount === 0) {
-    return true;
-  }
+  if (node.isText) return !node.text;
+  if (node.isAtom || node.isLeaf) return false;
+  if (node.content.childCount === 0) return true;
   if (checkChildren) {
     let isContentEmpty = true;
     node.content.forEach((childNode) => {
-      if (isContentEmpty === false) {
-        return;
-      }
-      if (!isNodeEmpty(childNode, { ignoreWhitespace, checkChildren })) {
-        isContentEmpty = false;
-      }
+      if (isContentEmpty === false) return;
+      if (!isNodeEmpty(childNode, {
+        ignoreWhitespace,
+        checkChildren
+      })) isContentEmpty = false;
     });
     return isContentEmpty;
   }
@@ -14296,23 +13806,21 @@ function isNodeEmpty(node, {
 function isNodeSelection(value) {
   return value instanceof NodeSelection;
 }
-var MappablePosition = class _MappablePosition {
+var MappablePosition = class MappablePosition2 {
   constructor(position) {
     this.position = position;
   }
   /**
-   * Creates a MappablePosition from a JSON object.
-   */
+  * Creates a MappablePosition from a JSON object.
+  */
   static fromJSON(json) {
-    return new _MappablePosition(json.position);
+    return new MappablePosition2(json.position);
   }
   /**
-   * Converts the MappablePosition to a JSON object.
-   */
+  * Converts the MappablePosition to a JSON object.
+  */
   toJSON() {
-    return {
-      position: this.position
-    };
+    return { position: this.position };
   }
 };
 function getUpdatedPosition(position, transaction) {
@@ -14326,24 +13834,19 @@ function createMappablePosition(position) {
   return new MappablePosition(position);
 }
 function canSetMark(state, tr2, newMarkType) {
-  var _a;
   const { selection } = tr2;
   let cursor = null;
-  if (isTextSelection(selection)) {
-    cursor = selection.$cursor;
-  }
+  if (isTextSelection(selection)) cursor = selection.$cursor;
   if (cursor) {
-    const currentMarks = (_a = state.storedMarks) != null ? _a : cursor.marks();
-    const parentAllowsMarkType = cursor.parent.type.allowsMarkType(newMarkType);
-    return parentAllowsMarkType && (!!newMarkType.isInSet(currentMarks) || !currentMarks.some((mark) => mark.type.excludes(newMarkType)));
+    var _state$storedMarks;
+    const currentMarks = (_state$storedMarks = state.storedMarks) !== null && _state$storedMarks !== void 0 ? _state$storedMarks : cursor.marks();
+    return cursor.parent.type.allowsMarkType(newMarkType) && (!!newMarkType.isInSet(currentMarks) || !currentMarks.some((mark) => mark.type.excludes(newMarkType)));
   }
   const { ranges } = selection;
   return ranges.some(({ $from, $to }) => {
     let someNodeSupportsMark = $from.depth === 0 ? state.doc.inlineContent && state.doc.type.allowsMarkType(newMarkType) : false;
     state.doc.nodesBetween($from.pos, $to.pos, (node, _pos, parent) => {
-      if (someNodeSupportsMark) {
-        return false;
-      }
+      if (someNodeSupportsMark) return false;
       if (node.isInline) {
         const parentAllowsMarkType = !parent || parent.type.allowsMarkType(newMarkType);
         const currentMarksAllowMarkType = !!newMarkType.isInSet(node.marks) || !node.marks.some((otherMark) => otherMark.type.excludes(newMarkType));
@@ -14361,39 +13864,25 @@ var setMark = (typeOrName, attributes = {}) => ({ tr: tr2, state, dispatch }) =>
   if (dispatch) {
     if (empty2) {
       const oldAttributes = getMarkAttributes(state, type);
-      tr2.addStoredMark(
-        type.create({
-          ...oldAttributes,
-          ...attributes
-        })
-      );
-    } else {
-      ranges.forEach((range) => {
-        const from2 = range.$from.pos;
-        const to = range.$to.pos;
-        state.doc.nodesBetween(from2, to, (node, pos) => {
-          const trimmedFrom = Math.max(pos, from2);
-          const trimmedTo = Math.min(pos + node.nodeSize, to);
-          const someHasMark = node.marks.find((mark) => mark.type === type);
-          if (someHasMark) {
-            node.marks.forEach((mark) => {
-              if (type === mark.type) {
-                tr2.addMark(
-                  trimmedFrom,
-                  trimmedTo,
-                  type.create({
-                    ...mark.attrs,
-                    ...attributes
-                  })
-                );
-              }
-            });
-          } else {
-            tr2.addMark(trimmedFrom, trimmedTo, type.create(attributes));
-          }
+      tr2.addStoredMark(type.create({
+        ...oldAttributes,
+        ...attributes
+      }));
+    } else ranges.forEach((range) => {
+      const from2 = range.$from.pos;
+      const to = range.$to.pos;
+      state.doc.nodesBetween(from2, to, (node, pos) => {
+        const trimmedFrom = Math.max(pos, from2);
+        const trimmedTo = Math.min(pos + node.nodeSize, to);
+        if (node.marks.find((mark) => mark.type === type)) node.marks.forEach((mark) => {
+          if (type === mark.type) tr2.addMark(trimmedFrom, trimmedTo, type.create({
+            ...mark.attrs,
+            ...attributes
+          }));
         });
+        else tr2.addMark(trimmedFrom, trimmedTo, type.create(attributes));
       });
-    }
+    });
   }
   return canSetMark(state, tr2, type);
 };
@@ -14404,21 +13893,22 @@ var setMeta = (key, value) => ({ tr: tr2 }) => {
 var setNode = (typeOrName, attributes = {}) => ({ state, dispatch, chain }) => {
   const type = getNodeType(typeOrName, state.schema);
   let attributesToCopy;
-  if (state.selection.$anchor.sameParent(state.selection.$head)) {
-    attributesToCopy = state.selection.$anchor.parent.attrs;
-  }
+  if (state.selection.$anchor.sameParent(state.selection.$head)) attributesToCopy = state.selection.$anchor.parent.attrs;
   if (!type.isTextblock) {
     console.warn('[tiptap warn]: Currently "setNode()" only supports text block nodes.');
     return false;
   }
   return chain().command(({ commands }) => {
-    const canSetBlock = setBlockType2(type, { ...attributesToCopy, ...attributes })(state);
-    if (canSetBlock) {
-      return true;
-    }
+    if (setBlockType2(type, {
+      ...attributesToCopy,
+      ...attributes
+    })(state)) return true;
     return commands.clearNodes();
   }).command(({ state: updatedState }) => {
-    return setBlockType2(type, { ...attributesToCopy, ...attributes })(updatedState, dispatch);
+    return setBlockType2(type, {
+      ...attributesToCopy,
+      ...attributes
+    })(updatedState, dispatch);
   }).run();
 };
 var setNodeSelection = (position) => ({ tr: tr2, dispatch }) => {
@@ -14444,23 +13934,22 @@ var setTextDirection = (direction, position) => ({ tr: tr2, state, dispatch }) =
     from2 = selection.from;
     to = selection.to;
   }
-  if (dispatch) {
-    tr2.doc.nodesBetween(from2, to, (node, pos) => {
-      if (node.isText) {
-        return;
-      }
-      tr2.setNodeMarkup(pos, void 0, {
-        ...node.attrs,
-        dir: direction
-      });
+  if (dispatch) tr2.doc.nodesBetween(from2, to, (node, pos) => {
+    if (node.isText) return;
+    tr2.setNodeMarkup(pos, void 0, {
+      ...node.attrs,
+      dir: direction
     });
-  }
+  });
   return true;
 };
 var setTextSelection = (position) => ({ tr: tr2, dispatch }) => {
   if (dispatch) {
     const { doc: doc3 } = tr2;
-    const { from: from2, to } = typeof position === "number" ? { from: position, to: position } : position;
+    const { from: from2, to } = typeof position === "number" ? {
+      from: position,
+      to: position
+    } : position;
     const minPos = TextSelection.atStart(doc3).from;
     const maxPos = TextSelection.atEnd(doc3).to;
     const resolvedFrom = minMax(from2, minPos, maxPos);
@@ -14470,14 +13959,14 @@ var setTextSelection = (position) => ({ tr: tr2, dispatch }) => {
   }
   return true;
 };
-var sinkListItem2 = (typeOrName) => ({ state, dispatch }) => {
+var sinkListItem$1 = (typeOrName) => ({ state, dispatch }) => {
   const type = getNodeType(typeOrName, state.schema);
   return sinkListItem(type)(state, dispatch);
 };
 function ensureMarks(state, splittableMarks) {
   const marks = state.storedMarks || state.selection.$to.parentOffset && state.selection.$from.marks();
   if (marks) {
-    const filteredMarks = marks.filter((mark) => splittableMarks == null ? void 0 : splittableMarks.includes(mark.type.name));
+    const filteredMarks = marks.filter((mark) => splittableMarks === null || splittableMarks === void 0 ? void 0 : splittableMarks.includes(mark.type.name));
     state.tr.ensureMarks(filteredMarks);
   }
 }
@@ -14485,112 +13974,75 @@ var splitBlock2 = ({ keepMarks = true } = {}) => ({ tr: tr2, state, dispatch, ed
   const { selection, doc: doc3 } = tr2;
   const { $from, $to } = selection;
   const extensionAttributes = editor.extensionManager.attributes;
-  const newAttributes = getSplittedAttributes(
-    extensionAttributes,
-    $from.node().type.name,
-    $from.node().attrs
-  );
+  const newAttributes = getSplittedAttributes(extensionAttributes, $from.node().type.name, $from.node().attrs);
   if (selection instanceof NodeSelection && selection.node.isBlock) {
-    if (!$from.parentOffset || !canSplit(doc3, $from.pos)) {
-      return false;
-    }
+    if (!$from.parentOffset || !canSplit(doc3, $from.pos)) return false;
     if (dispatch) {
-      if (keepMarks) {
-        ensureMarks(state, editor.extensionManager.splittableMarks);
-      }
+      if (keepMarks) ensureMarks(state, editor.extensionManager.splittableMarks);
       tr2.split($from.pos).scrollIntoView();
     }
     return true;
   }
-  if (!$from.parent.isBlock) {
-    return false;
-  }
+  if (!$from.parent.isBlock) return false;
   const atEnd = $to.parentOffset === $to.parent.content.size;
   const deflt = $from.depth === 0 ? void 0 : defaultBlockAt2($from.node(-1).contentMatchAt($from.indexAfter(-1)));
-  let types = atEnd && deflt ? [
-    {
-      type: deflt,
-      attrs: newAttributes
-    }
-  ] : void 0;
+  let types = atEnd && deflt ? [{
+    type: deflt,
+    attrs: newAttributes
+  }] : void 0;
   let can = canSplit(tr2.doc, tr2.mapping.map($from.pos), 1, types);
   if (!types && !can && canSplit(tr2.doc, tr2.mapping.map($from.pos), 1, deflt ? [{ type: deflt }] : void 0)) {
     can = true;
-    types = deflt ? [
-      {
-        type: deflt,
-        attrs: newAttributes
-      }
-    ] : void 0;
+    types = deflt ? [{
+      type: deflt,
+      attrs: newAttributes
+    }] : void 0;
   }
   if (dispatch) {
     if (can) {
-      if (selection instanceof TextSelection) {
-        tr2.deleteSelection();
-      }
+      if (selection instanceof TextSelection) tr2.deleteSelection();
       tr2.split(tr2.mapping.map($from.pos), 1, types);
       if (deflt && !atEnd && !$from.parentOffset && $from.parent.type !== deflt) {
         const first2 = tr2.mapping.map($from.before());
         const $first = tr2.doc.resolve(first2);
-        if ($from.node(-1).canReplaceWith($first.index(), $first.index() + 1, deflt)) {
-          tr2.setNodeMarkup(tr2.mapping.map($from.before()), deflt);
-        }
+        if ($from.node(-1).canReplaceWith($first.index(), $first.index() + 1, deflt)) tr2.setNodeMarkup(tr2.mapping.map($from.before()), deflt);
       }
     }
-    if (keepMarks) {
-      ensureMarks(state, editor.extensionManager.splittableMarks);
-    }
+    if (keepMarks) ensureMarks(state, editor.extensionManager.splittableMarks);
     tr2.scrollIntoView();
   }
   return can;
 };
 var splitListItem = (typeOrName, overrideAttrs = {}) => ({ tr: tr2, state, dispatch, editor }) => {
-  var _a;
   const type = getNodeType(typeOrName, state.schema);
   const { $from, $to } = state.selection;
   const node = state.selection.node;
-  if (node && node.isBlock || $from.depth < 2 || !$from.sameParent($to)) {
-    return false;
-  }
+  if (node && node.isBlock || $from.depth < 2 || !$from.sameParent($to)) return false;
   const grandParent = $from.node(-1);
-  if (grandParent.type !== type) {
-    return false;
-  }
+  if (grandParent.type !== type) return false;
   const extensionAttributes = editor.extensionManager.attributes;
   if ($from.parent.content.size === 0 && $from.node(-1).childCount === $from.indexAfter(-1)) {
-    if ($from.depth === 2 || $from.node(-3).type !== type || $from.index(-2) !== $from.node(-2).childCount - 1) {
-      return false;
-    }
+    if ($from.depth === 2 || $from.node(-3).type !== type || $from.index(-2) !== $from.node(-2).childCount - 1) return false;
     if (dispatch) {
+      var _type$contentMatch$de;
       let wrap2 = Fragment.empty;
       const depthBefore = $from.index(-1) ? 1 : $from.index(-2) ? 2 : 3;
-      for (let d = $from.depth - depthBefore; d >= $from.depth - 3; d -= 1) {
-        wrap2 = Fragment.from($from.node(d).copy(wrap2));
-      }
-      const depthAfter = (
-        // oxlint-disable-next-line no-nested-ternary
-        $from.indexAfter(-1) < $from.node(-2).childCount ? 1 : $from.indexAfter(-2) < $from.node(-3).childCount ? 2 : 3
-      );
+      for (let d = $from.depth - depthBefore; d >= $from.depth - 3; d -= 1) wrap2 = Fragment.from($from.node(d).copy(wrap2));
+      const depthAfter = $from.indexAfter(-1) < $from.node(-2).childCount ? 1 : $from.indexAfter(-2) < $from.node(-3).childCount ? 2 : 3;
       const newNextTypeAttributes2 = {
         ...getSplittedAttributes(extensionAttributes, $from.node().type.name, $from.node().attrs),
         ...overrideAttrs
       };
-      const nextType2 = ((_a = type.contentMatch.defaultType) == null ? void 0 : _a.createAndFill(newNextTypeAttributes2)) || void 0;
+      const nextType2 = ((_type$contentMatch$de = type.contentMatch.defaultType) === null || _type$contentMatch$de === void 0 ? void 0 : _type$contentMatch$de.createAndFill(newNextTypeAttributes2)) || void 0;
       wrap2 = wrap2.append(Fragment.from(type.createAndFill(null, nextType2) || void 0));
       const start = $from.before($from.depth - (depthBefore - 1));
       tr2.replace(start, $from.after(-depthAfter), new Slice(wrap2, 4 - depthBefore, 0));
       let sel = -1;
       tr2.doc.nodesBetween(start, tr2.doc.content.size, (n, pos) => {
-        if (sel > -1) {
-          return false;
-        }
-        if (n.isTextblock && n.content.size === 0) {
-          sel = pos + 1;
-        }
+        if (sel > -1) return false;
+        if (n.isTextblock && n.content.size === 0) sel = pos + 1;
       });
-      if (sel > -1) {
-        tr2.setSelection(TextSelection.near(tr2.doc.resolve(sel)));
-      }
+      if (sel > -1) tr2.setSelection(TextSelection.near(tr2.doc.resolve(sel)));
       tr2.scrollIntoView();
     }
     return true;
@@ -14605,21 +14057,23 @@ var splitListItem = (typeOrName, overrideAttrs = {}) => ({ tr: tr2, state, dispa
     ...overrideAttrs
   };
   tr2.delete($from.pos, $to.pos);
-  const types = nextType ? [
-    { type, attrs: newTypeAttributes },
-    { type: nextType, attrs: newNextTypeAttributes }
-  ] : [{ type, attrs: newTypeAttributes }];
-  if (!canSplit(tr2.doc, $from.pos, 2)) {
-    return false;
-  }
+  const types = nextType ? [{
+    type,
+    attrs: newTypeAttributes
+  }, {
+    type: nextType,
+    attrs: newNextTypeAttributes
+  }] : [{
+    type,
+    attrs: newTypeAttributes
+  }];
+  if (!canSplit(tr2.doc, $from.pos, 2)) return false;
   if (dispatch) {
     const { selection, storedMarks } = state;
     const { splittableMarks } = editor.extensionManager;
     const marks = storedMarks || selection.$to.parentOffset && selection.$from.marks();
     tr2.split($from.pos, 2, types).scrollIntoView();
-    if (!marks || !dispatch) {
-      return true;
-    }
+    if (!marks || !dispatch) return true;
     const filteredMarks = marks.filter((mark) => splittableMarks.includes(mark.type.name));
     tr2.ensureMarks(filteredMarks);
   }
@@ -14633,50 +14087,30 @@ function areListTypesCompatible(typeA, typeB) {
 }
 var joinListBackwards = (tr2, listType) => {
   const list = findParentNode((node) => node.type === listType)(tr2.selection);
-  if (!list) {
-    return true;
-  }
+  if (!list) return true;
   const before = tr2.doc.resolve(Math.max(0, list.pos - 1)).before(list.depth);
-  if (before === void 0) {
-    return true;
-  }
+  if (before === void 0) return true;
   const nodeBefore = tr2.doc.nodeAt(before);
-  const canJoinBackwards = list.node.type === (nodeBefore == null ? void 0 : nodeBefore.type) && canJoin(tr2.doc, list.pos);
-  if (!canJoinBackwards) {
-    return true;
-  }
-  if (!areListTypesCompatible(list.node.attrs.type, nodeBefore == null ? void 0 : nodeBefore.attrs.type)) {
-    return true;
-  }
+  if (!(list.node.type === (nodeBefore === null || nodeBefore === void 0 ? void 0 : nodeBefore.type) && canJoin(tr2.doc, list.pos))) return true;
+  if (!areListTypesCompatible(list.node.attrs.type, nodeBefore === null || nodeBefore === void 0 ? void 0 : nodeBefore.attrs.type)) return true;
   tr2.join(list.pos);
   return true;
 };
 var joinListForwards = (tr2, listType) => {
   const list = findParentNode((node) => node.type === listType)(tr2.selection);
-  if (!list) {
-    return true;
-  }
+  if (!list) return true;
   const after = tr2.doc.resolve(list.start).after(list.depth);
-  if (after === void 0) {
-    return true;
-  }
+  if (after === void 0) return true;
   const nodeAfter = tr2.doc.nodeAt(after);
-  const canJoinForwards = list.node.type === (nodeAfter == null ? void 0 : nodeAfter.type) && canJoin(tr2.doc, after);
-  if (!canJoinForwards) {
-    return true;
-  }
-  if (!areListTypesCompatible(list.node.attrs.type, nodeAfter == null ? void 0 : nodeAfter.attrs.type)) {
-    return true;
-  }
+  if (!(list.node.type === (nodeAfter === null || nodeAfter === void 0 ? void 0 : nodeAfter.type) && canJoin(tr2.doc, after))) return true;
+  if (!areListTypesCompatible(list.node.attrs.type, nodeAfter === null || nodeAfter === void 0 ? void 0 : nodeAfter.attrs.type)) return true;
   tr2.join(after);
   return true;
 };
 function createInnerSelectionForWholeDocList(tr2) {
   const doc3 = tr2.doc;
   const list = doc3.firstChild;
-  if (!list) {
-    return null;
-  }
+  if (!list) return null;
   const $start = doc3.resolve(1);
   const $end = doc3.resolve(list.nodeSize - 1);
   return TextSelection.between($start, $end);
@@ -14689,9 +14123,7 @@ var toggleList = (listTypeOrName, itemTypeOrName, keepMarks, attributes = {}) =>
   const { $from, $to } = selection;
   const range = $from.blockRange($to);
   const marks = storedMarks || selection.$to.parentOffset && selection.$from.marks();
-  if (!range) {
-    return false;
-  }
+  if (!range) return false;
   const parentList = findParentNode((node) => isList(node.type.name, extensions))(selection);
   const isAllSelection = selection.from === 0 && selection.to === state.doc.content.size;
   const topLevelNodes = state.doc.content.content;
@@ -14701,59 +14133,41 @@ var toggleList = (listTypeOrName, itemTypeOrName, keepMarks, attributes = {}) =>
     pos: 0,
     depth: 0
   } : null;
-  const currentList = parentList != null ? parentList : allSelectionList;
+  const currentList = parentList !== null && parentList !== void 0 ? parentList : allSelectionList;
   const isInsideExistingList = !!parentList && range.depth >= 1 && range.depth - parentList.depth <= 1;
   const hasWholeDocSelectedList = !!allSelectionList;
   if ((isInsideExistingList || hasWholeDocSelectedList) && currentList) {
     if (currentList.node.type === listType) {
-      if (isAllSelection && hasWholeDocSelectedList) {
-        return chain().command(({ tr: trx, dispatch: disp }) => {
-          const nextSelection = createInnerSelectionForWholeDocList(trx);
-          if (!nextSelection) {
-            return false;
-          }
-          trx.setSelection(nextSelection);
-          if (disp) {
-            disp(trx);
-          }
-          return true;
-        }).liftListItem(itemType).run();
-      }
+      if (isAllSelection && hasWholeDocSelectedList) return chain().command(({ tr: trx, dispatch: disp }) => {
+        const nextSelection = createInnerSelectionForWholeDocList(trx);
+        if (!nextSelection) return false;
+        trx.setSelection(nextSelection);
+        if (disp) disp(trx);
+        return true;
+      }).liftListItem(itemType).run();
       return commands.liftListItem(itemType);
     }
-    if (isList(currentList.node.type.name, extensions) && listType.validContent(currentList.node.content)) {
-      return chain().command(() => {
-        tr2.setNodeMarkup(currentList.pos, listType);
-        return true;
-      }).command(() => joinListBackwards(tr2, listType)).command(() => joinListForwards(tr2, listType)).run();
-    }
+    if (isList(currentList.node.type.name, extensions) && listType.validContent(currentList.node.content)) return chain().command(() => {
+      tr2.setNodeMarkup(currentList.pos, listType);
+      return true;
+    }).command(() => joinListBackwards(tr2, listType)).command(() => joinListForwards(tr2, listType)).run();
   }
-  if (!keepMarks || !marks || !dispatch) {
-    return chain().command(() => {
-      const canWrapInList = can().wrapInList(listType, attributes);
-      if (canWrapInList) {
-        return true;
-      }
-      return commands.clearNodes();
-    }).wrapInList(listType, attributes).command(() => joinListBackwards(tr2, listType)).command(() => joinListForwards(tr2, listType)).run();
-  }
+  if (!keepMarks || !marks || !dispatch) return chain().command(() => {
+    if (can().wrapInList(listType, attributes)) return true;
+    return commands.clearNodes();
+  }).wrapInList(listType, attributes).command(() => joinListBackwards(tr2, listType)).command(() => joinListForwards(tr2, listType)).run();
   return chain().command(() => {
     const canWrapInList = can().wrapInList(listType, attributes);
     const filteredMarks = marks.filter((mark) => splittableMarks.includes(mark.type.name));
     tr2.ensureMarks(filteredMarks);
-    if (canWrapInList) {
-      return true;
-    }
+    if (canWrapInList) return true;
     return commands.clearNodes();
   }).wrapInList(listType, attributes).command(() => joinListBackwards(tr2, listType)).command(() => joinListForwards(tr2, listType)).run();
 };
 var toggleMark = (typeOrName, attributes = {}, options = {}) => ({ state, commands }) => {
   const { extendEmptyMarkRange = false } = options;
   const type = getMarkType(typeOrName, state.schema);
-  const isActive2 = isMarkActive(state, type, attributes);
-  if (isActive2) {
-    return commands.unsetMark(type, { extendEmptyMarkRange });
-  }
+  if (isMarkActive(state, type, attributes)) return commands.unsetMark(type, { extendEmptyMarkRange });
   return commands.setMark(type, attributes);
 };
 var toggleNode = (typeOrName, toggleTypeOrName, attributes = {}) => ({ state, commands }) => {
@@ -14761,20 +14175,16 @@ var toggleNode = (typeOrName, toggleTypeOrName, attributes = {}) => ({ state, co
   const toggleType = getNodeType(toggleTypeOrName, state.schema);
   const isActive2 = isNodeActive(state, type, attributes);
   let attributesToCopy;
-  if (state.selection.$anchor.sameParent(state.selection.$head)) {
-    attributesToCopy = state.selection.$anchor.parent.attrs;
-  }
-  if (isActive2) {
-    return commands.setNode(toggleType, attributesToCopy);
-  }
-  return commands.setNode(type, { ...attributesToCopy, ...attributes });
+  if (state.selection.$anchor.sameParent(state.selection.$head)) attributesToCopy = state.selection.$anchor.parent.attrs;
+  if (isActive2) return commands.setNode(toggleType, attributesToCopy);
+  return commands.setNode(type, {
+    ...attributesToCopy,
+    ...attributes
+  });
 };
 var toggleWrap = (typeOrName, attributes = {}) => ({ state, commands }) => {
   const type = getNodeType(typeOrName, state.schema);
-  const isActive2 = isNodeActive(state, type, attributes);
-  if (isActive2) {
-    return commands.lift(type);
-  }
+  if (isNodeActive(state, type, attributes)) return commands.lift(type);
   return commands.wrapIn(type, attributes);
 };
 var undoInputRule = () => ({ state, dispatch }) => {
@@ -14786,15 +14196,11 @@ var undoInputRule = () => ({ state, dispatch }) => {
       if (dispatch) {
         const tr2 = state.tr;
         const toUndo = undoable.transform;
-        for (let j = toUndo.steps.length - 1; j >= 0; j -= 1) {
-          tr2.step(toUndo.steps[j].invert(toUndo.docs[j]));
-        }
+        for (let j = toUndo.steps.length - 1; j >= 0; j -= 1) tr2.step(toUndo.steps[j].invert(toUndo.docs[j]));
         if (undoable.text) {
           const marks = tr2.doc.resolve(undoable.from).marks();
           tr2.replaceWith(undoable.from, undoable.to, state.schema.text(undoable.text, marks));
-        } else {
-          tr2.delete(undoable.from, undoable.to);
-        }
+        } else tr2.delete(undoable.from, undoable.to);
       }
       return true;
     }
@@ -14805,45 +14211,34 @@ var unsetAllMarks = (options = {}) => ({ tr: tr2, dispatch, editor }) => {
   const { ignoreClearable = false } = options;
   const { selection } = tr2;
   const { empty: empty2, ranges } = selection;
-  if (empty2) {
-    return true;
-  }
+  if (empty2) return true;
   const { nonClearableMarks } = editor.extensionManager;
   if (dispatch) {
-    const clearableMarkTypes = Object.values(editor.schema.marks).filter(
-      (markType) => ignoreClearable || !nonClearableMarks.includes(markType.name)
-    );
+    const clearableMarkTypes = Object.values(editor.schema.marks).filter((markType) => ignoreClearable || !nonClearableMarks.includes(markType.name));
     ranges.forEach((range) => {
-      for (const markType of clearableMarkTypes) {
-        tr2.removeMark(range.$from.pos, range.$to.pos, markType);
-      }
+      for (const markType of clearableMarkTypes) tr2.removeMark(range.$from.pos, range.$to.pos, markType);
     });
   }
   return true;
 };
 var unsetMark = (typeOrName, options = {}) => ({ tr: tr2, state, dispatch }) => {
-  var _a;
   const { extendEmptyMarkRange = false } = options;
   const { selection } = tr2;
   const type = getMarkType(typeOrName, state.schema);
   const { $from, empty: empty2, ranges } = selection;
-  if (!dispatch) {
-    return true;
-  }
+  if (!dispatch) return true;
   if (empty2 && extendEmptyMarkRange) {
+    var _$from$marks$find;
     let { from: from2, to } = selection;
-    const attrs = (_a = $from.marks().find((mark) => mark.type === type)) == null ? void 0 : _a.attrs;
-    const range = getMarkRange($from, type, attrs);
+    const range = getMarkRange($from, type, (_$from$marks$find = $from.marks().find((mark) => mark.type === type)) === null || _$from$marks$find === void 0 ? void 0 : _$from$marks$find.attrs);
     if (range) {
       from2 = range.from;
       to = range.to;
     }
     tr2.removeMark(from2, to, type);
-  } else {
-    ranges.forEach((range) => {
-      tr2.removeMark(range.$from.pos, range.$to.pos, type);
-    });
-  }
+  } else ranges.forEach((range) => {
+    tr2.removeMark(range.$from.pos, range.$to.pos, type);
+  });
   tr2.removeStoredMark(type);
   return true;
 };
@@ -14861,34 +14256,21 @@ var unsetTextDirection = (position) => ({ tr: tr2, state, dispatch }) => {
     from2 = selection.from;
     to = selection.to;
   }
-  if (dispatch) {
-    tr2.doc.nodesBetween(from2, to, (node, pos) => {
-      if (node.isText) {
-        return;
-      }
-      const newAttrs = { ...node.attrs };
-      delete newAttrs.dir;
-      tr2.setNodeMarkup(pos, void 0, newAttrs);
-    });
-  }
+  if (dispatch) tr2.doc.nodesBetween(from2, to, (node, pos) => {
+    if (node.isText) return;
+    const newAttrs = { ...node.attrs };
+    delete newAttrs.dir;
+    tr2.setNodeMarkup(pos, void 0, newAttrs);
+  });
   return true;
 };
 var updateAttributes = (typeOrName, attributes = {}) => ({ tr: tr2, state, dispatch }) => {
   let nodeType = null;
   let markType = null;
-  const schemaType = getSchemaTypeNameByName(
-    typeof typeOrName === "string" ? typeOrName : typeOrName.name,
-    state.schema
-  );
-  if (!schemaType) {
-    return false;
-  }
-  if (schemaType === "node") {
-    nodeType = getNodeType(typeOrName, state.schema);
-  }
-  if (schemaType === "mark") {
-    markType = getMarkType(typeOrName, state.schema);
-  }
+  const schemaType = getSchemaTypeNameByName(typeof typeOrName === "string" ? typeOrName : typeOrName.name, state.schema);
+  if (!schemaType) return false;
+  if (schemaType === "node") nodeType = getNodeType(typeOrName, state.schema);
+  if (schemaType === "mark") markType = getMarkType(typeOrName, state.schema);
   let canUpdate = false;
   tr2.selection.ranges.forEach((range) => {
     const from2 = range.$from.pos;
@@ -14897,113 +14279,152 @@ var updateAttributes = (typeOrName, attributes = {}) => ({ tr: tr2, state, dispa
     let lastNode;
     let trimmedFrom;
     let trimmedTo;
-    if (tr2.selection.empty) {
-      state.doc.nodesBetween(from2, to, (node, pos) => {
+    if (tr2.selection.empty) state.doc.nodesBetween(from2, to, (node, pos) => {
+      if (nodeType && nodeType === node.type) {
+        canUpdate = true;
+        trimmedFrom = Math.max(pos, from2);
+        trimmedTo = Math.min(pos + node.nodeSize, to);
+        lastPos = pos;
+        lastNode = node;
+      }
+    });
+    else state.doc.nodesBetween(from2, to, (node, pos) => {
+      if (pos < from2 && nodeType && nodeType === node.type) {
+        canUpdate = true;
+        trimmedFrom = Math.max(pos, from2);
+        trimmedTo = Math.min(pos + node.nodeSize, to);
+        lastPos = pos;
+        lastNode = node;
+      }
+      if (pos >= from2 && pos <= to) {
         if (nodeType && nodeType === node.type) {
           canUpdate = true;
-          trimmedFrom = Math.max(pos, from2);
-          trimmedTo = Math.min(pos + node.nodeSize, to);
-          lastPos = pos;
-          lastNode = node;
+          if (dispatch) tr2.setNodeMarkup(pos, void 0, {
+            ...node.attrs,
+            ...attributes
+          });
         }
-      });
-    } else {
-      state.doc.nodesBetween(from2, to, (node, pos) => {
-        if (pos < from2 && nodeType && nodeType === node.type) {
-          canUpdate = true;
-          trimmedFrom = Math.max(pos, from2);
-          trimmedTo = Math.min(pos + node.nodeSize, to);
-          lastPos = pos;
-          lastNode = node;
-        }
-        if (pos >= from2 && pos <= to) {
-          if (nodeType && nodeType === node.type) {
+        if (markType && node.marks.length) node.marks.forEach((mark) => {
+          if (markType === mark.type) {
             canUpdate = true;
             if (dispatch) {
-              tr2.setNodeMarkup(pos, void 0, {
-                ...node.attrs,
-                ...attributes
-              });
-            }
-          }
-          if (markType && node.marks.length) {
-            node.marks.forEach((mark) => {
-              if (markType === mark.type) {
-                canUpdate = true;
-                if (dispatch) {
-                  const trimmedFrom2 = Math.max(pos, from2);
-                  const trimmedTo2 = Math.min(pos + node.nodeSize, to);
-                  tr2.addMark(
-                    trimmedFrom2,
-                    trimmedTo2,
-                    markType.create({
-                      ...mark.attrs,
-                      ...attributes
-                    })
-                  );
-                }
-              }
-            });
-          }
-        }
-      });
-    }
-    if (lastNode) {
-      if (lastPos !== void 0 && dispatch) {
-        tr2.setNodeMarkup(lastPos, void 0, {
-          ...lastNode.attrs,
-          ...attributes
-        });
-      }
-      if (markType && lastNode.marks.length) {
-        lastNode.marks.forEach((mark) => {
-          if (markType === mark.type && dispatch) {
-            tr2.addMark(
-              trimmedFrom,
-              trimmedTo,
-              markType.create({
+              const trimmedFrom2 = Math.max(pos, from2);
+              const trimmedTo2 = Math.min(pos + node.nodeSize, to);
+              tr2.addMark(trimmedFrom2, trimmedTo2, markType.create({
                 ...mark.attrs,
                 ...attributes
-              })
-            );
+              }));
+            }
           }
         });
       }
+    });
+    if (lastNode) {
+      if (lastPos !== void 0 && dispatch) tr2.setNodeMarkup(lastPos, void 0, {
+        ...lastNode.attrs,
+        ...attributes
+      });
+      if (markType && lastNode.marks.length) lastNode.marks.forEach((mark) => {
+        if (markType === mark.type && dispatch) tr2.addMark(trimmedFrom, trimmedTo, markType.create({
+          ...mark.attrs,
+          ...attributes
+        }));
+      });
     }
   });
   return canUpdate;
 };
-var DECORATION_MANAGER_PLUGIN_KEY_NAME = "__tiptap_decorations__";
-var DECORATION_MANAGER_PLUGIN_KEY = new PluginKey(
-  DECORATION_MANAGER_PLUGIN_KEY_NAME
-);
+var DECORATION_MANAGER_PLUGIN_KEY = new PluginKey("__tiptap_decorations__");
 var updateDecorations = (extensionName) => ({ tr: tr2, dispatch }) => {
-  if (dispatch) {
-    tr2.setMeta(DECORATION_MANAGER_PLUGIN_KEY, { type: "force", name: extensionName });
-  }
+  if (dispatch) tr2.setMeta(DECORATION_MANAGER_PLUGIN_KEY, {
+    type: "force",
+    name: extensionName
+  });
   return true;
 };
-var wrapIn2 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
+var wrapIn$1 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
   const type = getNodeType(typeOrName, state.schema);
   return wrapIn(type, attributes)(state, dispatch);
 };
-var wrapInList2 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
+var wrapInList$1 = (typeOrName, attributes = {}) => ({ state, dispatch }) => {
   const type = getNodeType(typeOrName, state.schema);
   return wrapInList(type, attributes)(state, dispatch);
 };
+var commands_exports = /* @__PURE__ */ __exportAll({
+  blur: () => blur,
+  clearContent: () => clearContent,
+  clearNodes: () => clearNodes,
+  command: () => command,
+  createParagraphNear: () => createParagraphNear$1,
+  cut: () => cut,
+  deleteCurrentNode: () => deleteCurrentNode,
+  deleteNode: () => deleteNode,
+  deleteRange: () => deleteRange2,
+  deleteSelection: () => deleteSelection2,
+  enter: () => enter,
+  exitCode: () => exitCode$1,
+  extendMarkRange: () => extendMarkRange,
+  first: () => first,
+  focus: () => focus,
+  forEach: () => forEach,
+  insertContent: () => insertContent,
+  insertContentAt: () => insertContentAt,
+  insertDefaultBlock: () => insertDefaultBlock,
+  joinBackward: () => joinBackward$1,
+  joinDown: () => joinDown$1,
+  joinForward: () => joinForward$1,
+  joinItemBackward: () => joinItemBackward,
+  joinItemForward: () => joinItemForward,
+  joinTextblockBackward: () => joinTextblockBackward$1,
+  joinTextblockForward: () => joinTextblockForward$1,
+  joinUp: () => joinUp$1,
+  keyboardShortcut: () => keyboardShortcut,
+  lift: () => lift$1,
+  liftEmptyBlock: () => liftEmptyBlock$1,
+  liftListItem: () => liftListItem$1,
+  newlineInCode: () => newlineInCode$1,
+  resetAttributes: () => resetAttributes,
+  scrollIntoView: () => scrollIntoView,
+  selectAll: () => selectAll2,
+  selectNodeBackward: () => selectNodeBackward$1,
+  selectNodeForward: () => selectNodeForward$1,
+  selectParentNode: () => selectParentNode$1,
+  selectTextblockEnd: () => selectTextblockEnd$1,
+  selectTextblockStart: () => selectTextblockStart$1,
+  setContent: () => setContent,
+  setMark: () => setMark,
+  setMeta: () => setMeta,
+  setNode: () => setNode,
+  setNodeSelection: () => setNodeSelection,
+  setTextDirection: () => setTextDirection,
+  setTextSelection: () => setTextSelection,
+  sinkListItem: () => sinkListItem$1,
+  splitBlock: () => splitBlock2,
+  splitListItem: () => splitListItem,
+  toggleList: () => toggleList,
+  toggleMark: () => toggleMark,
+  toggleNode: () => toggleNode,
+  toggleWrap: () => toggleWrap,
+  undoInputRule: () => undoInputRule,
+  unsetAllMarks: () => unsetAllMarks,
+  unsetMark: () => unsetMark,
+  unsetTextDirection: () => unsetTextDirection,
+  updateAttributes: () => updateAttributes,
+  updateDecorations: () => updateDecorations,
+  wrapIn: () => wrapIn$1,
+  wrapInList: () => wrapInList$1
+});
 var depthByEditor = /* @__PURE__ */ new WeakMap();
 function runInDecorationApplyScope(editor, callback) {
-  var _a, _b;
-  depthByEditor.set(editor, ((_a = depthByEditor.get(editor)) != null ? _a : 0) + 1);
+  var _depthByEditor$get;
+  depthByEditor.set(editor, ((_depthByEditor$get = depthByEditor.get(editor)) !== null && _depthByEditor$get !== void 0 ? _depthByEditor$get : 0) + 1);
   try {
     return callback();
   } finally {
-    const remaining = ((_b = depthByEditor.get(editor)) != null ? _b : 1) - 1;
-    if (remaining > 0) {
-      depthByEditor.set(editor, remaining);
-    } else {
-      depthByEditor.delete(editor);
-    }
+    var _depthByEditor$get2;
+    const remaining = ((_depthByEditor$get2 = depthByEditor.get(editor)) !== null && _depthByEditor$get2 !== void 0 ? _depthByEditor$get2 : 1) - 1;
+    if (remaining > 0) depthByEditor.set(editor, remaining);
+    else depthByEditor.delete(editor);
   }
 }
 function isInDecorationApplyScope(editor) {
@@ -15014,27 +14435,20 @@ var EventEmitter = class {
     this.callbacks = {};
   }
   on(event, fn) {
-    if (!this.callbacks[event]) {
-      this.callbacks[event] = [];
-    }
+    if (!this.callbacks[event]) this.callbacks[event] = [];
     this.callbacks[event].push(fn);
     return this;
   }
   emit(event, ...args) {
     const callbacks = this.callbacks[event];
-    if (callbacks) {
-      callbacks.forEach((callback) => callback.apply(this, args));
-    }
+    if (callbacks) callbacks.forEach((callback) => callback.apply(this, args));
     return this;
   }
   off(event, fn) {
     const callbacks = this.callbacks[event];
     if (callbacks) {
-      if (fn) {
-        this.callbacks[event] = callbacks.filter((callback) => callback !== fn);
-      } else {
-        delete this.callbacks[event];
-      }
+      if (fn) this.callbacks[event] = callbacks.filter((callback) => callback !== fn);
+      else delete this.callbacks[event];
     }
     return this;
   }
@@ -15058,85 +14472,68 @@ function decorationsToPMDecorations(decorations, extensionName) {
   const widgetKeys = /* @__PURE__ */ new Set();
   for (const decoration of decorations) {
     if (decoration.kind === "widget") {
-      if (isWidgetDecoration(decoration)) {
-        widgetKeys.add(decoration.key);
-      }
+      if (isWidgetDecoration(decoration)) widgetKeys.add(decoration.key);
     }
     pmDecorations.push(decoration.toPMDecoration(extensionName));
   }
-  return { decorations: pmDecorations, widgetKeys };
+  return {
+    decorations: pmDecorations,
+    widgetKeys
+  };
 }
 function buildDecorationSet(doc3, decorations, extensionName) {
-  const { decorations: pmDecorations, widgetKeys } = decorationsToPMDecorations(
-    decorations,
-    extensionName
-  );
-  return { set: DecorationSet.create(doc3, pmDecorations), widgetKeys };
+  const { decorations: pmDecorations, widgetKeys } = decorationsToPMDecorations(decorations, extensionName);
+  return {
+    set: DecorationSet.create(doc3, pmDecorations),
+    widgetKeys
+  };
 }
-function rangeOwnsPosition({
-  position,
-  from: from2,
-  to,
-  docSize
-}) {
-  if (position < from2) {
-    return false;
-  }
-  if (position < to) {
-    return true;
-  }
+function rangeOwnsPosition({ position, from: from2, to, docSize }) {
+  if (position < from2) return false;
+  if (position < to) return true;
   return position === to && to === docSize;
 }
-function filterOutOfRangeDecorations({
-  decorations,
-  from: from2,
-  to,
-  docSize,
-  extensionName,
-  warnedExtensions
-}) {
+function filterOutOfRangeDecorations({ decorations, from: from2, to, docSize, extensionName, warnedExtensions }) {
   return decorations.filter((decoration) => {
-    if (rangeOwnsPosition({ position: decoration.anchor, from: from2, to, docSize })) {
-      return true;
-    }
-    if (decoration.anchor === to) {
-      return false;
-    }
+    if (rangeOwnsPosition({
+      position: decoration.anchor,
+      from: from2,
+      to,
+      docSize
+    })) return true;
+    if (decoration.anchor === to) return false;
     if (!warnedExtensions.has(extensionName)) {
       warnedExtensions.add(extensionName);
-      console.warn(
-        `[tiptap warn]: Extension "${extensionName}" returned a decoration outside the requested range [${from2}, ${to}). It was ignored.`
-      );
+      console.warn(`[tiptap warn]: Extension "${extensionName}" returned a decoration outside the requested range [${from2}, ${to}). It was ignored.`);
     }
     return false;
   });
 }
 function widgetKeyOf(decoration) {
-  var _a;
-  const key = (_a = decoration.spec) == null ? void 0 : _a.key;
+  var _decoration$spec;
+  const key = (_decoration$spec = decoration.spec) === null || _decoration$spec === void 0 ? void 0 : _decoration$spec.key;
   return typeof key === "string" ? key : void 0;
 }
 function findDuplicateWidgetKeys(decorationSet) {
-  var _a, _b, _c;
   const extensionsByKey = /* @__PURE__ */ new Map();
   const counts = /* @__PURE__ */ new Map();
   for (const decoration of decorationSet.find()) {
+    var _extensionName, _extensionsByKey$get, _counts$get;
     const key = widgetKeyOf(decoration);
-    if (!key) {
-      continue;
-    }
-    const extension = (_a = decoration.spec.extensionName) != null ? _a : "unknown";
-    const extensions = (_b = extensionsByKey.get(key)) != null ? _b : /* @__PURE__ */ new Set();
+    if (!key) continue;
+    const extension = (_extensionName = decoration.spec.extensionName) !== null && _extensionName !== void 0 ? _extensionName : "unknown";
+    const extensions = (_extensionsByKey$get = extensionsByKey.get(key)) !== null && _extensionsByKey$get !== void 0 ? _extensionsByKey$get : /* @__PURE__ */ new Set();
     extensions.add(extension);
     extensionsByKey.set(key, extensions);
-    counts.set(key, ((_c = counts.get(key)) != null ? _c : 0) + 1);
+    counts.set(key, ((_counts$get = counts.get(key)) !== null && _counts$get !== void 0 ? _counts$get : 0) + 1);
   }
-  return Array.from(extensionsByKey, ([key, extensions]) => ({ key, extensions })).filter(
-    ({ key }) => {
-      var _a2;
-      return ((_a2 = counts.get(key)) != null ? _a2 : 0) > 1;
-    }
-  );
+  return Array.from(extensionsByKey, ([key, extensions]) => ({
+    key,
+    extensions
+  })).filter(({ key }) => {
+    var _counts$get2;
+    return ((_counts$get2 = counts.get(key)) !== null && _counts$get2 !== void 0 ? _counts$get2 : 0) > 1;
+  });
 }
 function isAttrStep(step) {
   return step.jsonID === "attr";
@@ -15146,9 +14543,7 @@ function hasResolvableChangedRange(step) {
   step.getMap().forEach(() => {
     hasMappedRange = true;
   });
-  if (hasMappedRange || isAttrStep(step)) {
-    return true;
-  }
+  if (hasMappedRange || isAttrStep(step)) return true;
   const positionalStep = step;
   return typeof positionalStep.from === "number" && typeof positionalStep.to === "number";
 }
@@ -15157,67 +14552,61 @@ function blockRangeFor(doc3, changed) {
   let to = 0;
   let nodeStart = 0;
   for (let index = 0; index < doc3.childCount; index += 1) {
-    if (nodeStart > changed.to) {
-      break;
-    }
+    if (nodeStart > changed.to) break;
     const nodeEnd = nodeStart + doc3.child(index).nodeSize;
     if (nodeEnd >= changed.from) {
-      if (from2 === null) {
-        from2 = nodeStart;
-      }
+      if (from2 === null) from2 = nodeStart;
       to = nodeEnd;
     }
     nodeStart = nodeEnd;
   }
-  return from2 === null ? null : { from: from2, to };
+  return from2 === null ? null : {
+    from: from2,
+    to
+  };
 }
 function getRebuildRanges(tr2, doc3) {
-  if (tr2.steps.some((step) => !hasResolvableChangedRange(step))) {
-    return { type: "full" };
-  }
+  if (tr2.steps.some((step) => !hasResolvableChangedRange(step))) return { type: "full" };
   const newRanges = getChangedRanges(tr2).map(({ newRange }) => newRange);
   tr2.steps.forEach((step, index) => {
-    if (!isAttrStep(step)) {
-      return;
-    }
+    if (!isAttrStep(step)) return;
     const mapping = tr2.mapping.slice(index);
-    newRanges.push({ from: mapping.map(step.pos, -1), to: mapping.map(step.pos + 1) });
+    newRanges.push({
+      from: mapping.map(step.pos, -1),
+      to: mapping.map(step.pos + 1)
+    });
   });
   const ranges = [];
   for (const newRange of newRanges) {
     const blockRange = blockRangeFor(doc3, newRange);
-    if (blockRange) {
-      ranges.push(blockRange);
-    }
+    if (blockRange) ranges.push(blockRange);
   }
   ranges.sort((a, b) => a.from - b.from);
   const merged = [];
   for (const range of ranges) {
     const last = merged[merged.length - 1];
-    if (last && range.from <= last.to) {
-      last.to = Math.max(last.to, range.to);
-    } else {
-      merged.push({ ...range });
-    }
+    if (last && range.from <= last.to) last.to = Math.max(last.to, range.to);
+    else merged.push({ ...range });
   }
-  return { type: "ranges", ranges: merged };
+  return {
+    type: "ranges",
+    ranges: merged
+  };
 }
 function mapDecorationSet(set, mapping, doc3, widgetKeys) {
-  return set.map(mapping, doc3, {
-    onRemove: (removedSpec) => {
-      const key = removedSpec == null ? void 0 : removedSpec.key;
-      if (typeof key === "string") {
-        widgetKeys.delete(key);
-      }
-    }
-  });
+  return set.map(mapping, doc3, { onRemove: (removedSpec) => {
+    const key = removedSpec === null || removedSpec === void 0 ? void 0 : removedSpec.key;
+    if (typeof key === "string") widgetKeys.delete(key);
+  } });
 }
 function mapDecorations(name, previous, tr2) {
-  var _a, _b;
-  const previousSet = (_a = previous.decorationSetsByExtension[name]) != null ? _a : DecorationSet.empty;
-  const widgetKeys = new Set((_b = previous.widgetKeysByExtension[name]) != null ? _b : []);
-  const set = mapDecorationSet(previousSet, tr2.mapping, tr2.doc, widgetKeys);
-  return { set, widgetKeys };
+  var _previous$decorationS, _previous$widgetKeysB;
+  const previousSet = (_previous$decorationS = previous.decorationSetsByExtension[name]) !== null && _previous$decorationS !== void 0 ? _previous$decorationS : DecorationSet.empty;
+  const widgetKeys = new Set((_previous$widgetKeysB = previous.widgetKeysByExtension[name]) !== null && _previous$widgetKeysB !== void 0 ? _previous$widgetKeysB : []);
+  return {
+    set: mapDecorationSet(previousSet, tr2.mapping, tr2.doc, widgetKeys),
+    widgetKeys
+  };
 }
 function mergeDecorationSets(doc3, decorationSetsByExtension) {
   const allDecorations = Object.values(decorationSetsByExtension).flatMap((set) => set.find());
@@ -15225,56 +14614,29 @@ function mergeDecorationSets(doc3, decorationSetsByExtension) {
 }
 function unionWidgetKeys(widgetKeysByExtension) {
   const merged = /* @__PURE__ */ new Set();
-  for (const keys2 of Object.values(widgetKeysByExtension)) {
-    for (const key of keys2) {
-      merged.add(key);
-    }
-  }
+  for (const keys2 of Object.values(widgetKeysByExtension)) for (const key of keys2) merged.add(key);
   return merged;
 }
 function validateDecorationSpec(name, spec) {
-  var _a;
-  const strategy = (_a = spec.update) != null ? _a : "document";
-  switch (strategy) {
+  var _update;
+  switch ((_update = spec.update) !== null && _update !== void 0 ? _update : "document") {
     case "document":
-      if (spec.createInRange) {
-        throw new Error(
-          `[tiptap error]: Extension "${name}" provides createInRange() but does not use the "changedRanges" decoration update strategy.`
-        );
-      }
+      if (spec.createInRange) throw new Error(`[tiptap error]: Extension "${name}" provides createInRange() but does not use the "changedRanges" decoration update strategy.`);
       return;
     case "changedRanges":
-      if (!spec.createInRange) {
-        throw new Error(
-          `[tiptap error]: Extension "${name}" uses the "changedRanges" decoration update strategy but does not provide createInRange().`
-        );
-      }
+      if (!spec.createInRange) throw new Error(`[tiptap error]: Extension "${name}" uses the "changedRanges" decoration update strategy but does not provide createInRange().`);
       return;
     case "manual":
-      if (spec.createInRange) {
-        throw new Error(
-          `[tiptap error]: Extension "${name}" uses the "manual" decoration update strategy, which is not compatible with createInRange(). createInRange() requires the "changedRanges" strategy.`
-        );
-      }
-      if (spec.shouldUpdate) {
-        throw new Error(
-          `[tiptap error]: Extension "${name}" cannot combine the "manual" decoration update strategy with shouldUpdate().`
-        );
-      }
+      if (spec.createInRange) throw new Error(`[tiptap error]: Extension "${name}" uses the "manual" decoration update strategy, which is not compatible with createInRange(). createInRange() requires the "changedRanges" strategy.`);
+      if (spec.shouldUpdate) throw new Error(`[tiptap error]: Extension "${name}" cannot combine the "manual" decoration update strategy with shouldUpdate().`);
       return;
     default:
-      throw new Error(
-        `[tiptap error]: Extension "${name}" uses an unknown decoration update strategy. Expected "document", "changedRanges", or "manual".`
-      );
+      throw new Error(`[tiptap error]: Extension "${name}" uses an unknown decoration update strategy. Expected "document", "changedRanges", or "manual".`);
   }
 }
 function shouldRecomputeDecoration(spec, props, forced) {
-  if (forced) {
-    return true;
-  }
-  if (spec.update === "manual") {
-    return false;
-  }
+  if (forced) return true;
+  if (spec.update === "manual") return false;
   return spec.shouldUpdate ? spec.shouldUpdate(props) : props.tr.docChanged;
 }
 var EMPTY_KEYS = /* @__PURE__ */ new Set();
@@ -15284,9 +14646,7 @@ var DecorationManager = class {
     this.warnedOutOfRangeExtensions = /* @__PURE__ */ new Set();
     this.handleBeforeTransaction = ({ nextState }) => {
       const state = DECORATION_MANAGER_PLUGIN_KEY.getState(nextState);
-      if (state) {
-        this.warnDuplicateWidgetKeys(state);
-      }
+      if (state) this.warnDuplicateWidgetKeys(state);
     };
     this.editor = options.editor;
     this.entries = this.resolveEntries(options.entries);
@@ -15298,40 +14658,41 @@ var DecorationManager = class {
     this.editor.off("beforeTransaction", this.handleBeforeTransaction);
   }
   /**
-   * Returns the set of live widget keys from all decoration extensions.
-   * @returns A readonly set of widget keys
-   */
+  * Returns the set of live widget keys from all decoration extensions.
+  * @returns A readonly set of widget keys
+  */
   liveWidgetKeys() {
-    var _a, _b;
-    return (_b = (_a = DECORATION_MANAGER_PLUGIN_KEY.getState(this.editor.state)) == null ? void 0 : _a.widgetKeys) != null ? _b : EMPTY_KEYS;
+    var _DECORATION_MANAGER_P, _DECORATION_MANAGER_P2;
+    return (_DECORATION_MANAGER_P = (_DECORATION_MANAGER_P2 = DECORATION_MANAGER_PLUGIN_KEY.getState(this.editor.state)) === null || _DECORATION_MANAGER_P2 === void 0 ? void 0 : _DECORATION_MANAGER_P2.widgetKeys) !== null && _DECORATION_MANAGER_P !== void 0 ? _DECORATION_MANAGER_P : EMPTY_KEYS;
   }
   /**
-   * The mounted editor view, or `null` when destroyed. Decoration callbacks
-   * must never receive the placeholder view `editor.view` falls back to.
-   * @returns The mounted editor view, or `null`
-   */
+  * The mounted editor view, or `null` when destroyed. Decoration callbacks
+  * must never receive the placeholder view `editor.view` falls back to.
+  * @returns The mounted editor view, or `null`
+  */
   get mountedView() {
     return this.editor.isDestroyed ? null : this.editor.view;
   }
   /**
-   * Resolves decoration entries by calling the addDecorations function for each extension entry.
-   * @param entries The decoration manager entries to resolve
-   * @returns An array of resolved decoration entries
-   */
+  * Resolves decoration entries by calling the addDecorations function for each extension entry.
+  * @param entries The decoration manager entries to resolve
+  * @returns An array of resolved decoration entries
+  */
   resolveEntries(entries) {
     const resolved = [];
     for (const { name, addDecorations } of entries) {
       const spec = addDecorations();
-      if (spec) {
-        resolved.push({ name, spec });
-      }
+      if (spec) resolved.push({
+        name,
+        spec
+      });
     }
     return resolved;
   }
   /**
-   * Creates the ProseMirror plugin for managing decorations.
-   * @returns A ProseMirror plugin with state management
-   */
+  * Creates the ProseMirror plugin for managing decorations.
+  * @returns A ProseMirror plugin with state management
+  */
   createPlugin() {
     const { editor, entries } = this;
     return new Plugin({
@@ -15356,20 +14717,20 @@ var DecorationManager = class {
         },
         apply: (tr2, previous, oldState, newState) => {
           const meta = tr2.getMeta(DECORATION_MANAGER_PLUGIN_KEY);
-          const forceAll = (meta == null ? void 0 : meta.type) === "force" && !meta.name;
-          const forceName = (meta == null ? void 0 : meta.type) === "force" ? meta.name : void 0;
+          const forceAll = (meta === null || meta === void 0 ? void 0 : meta.type) === "force" && !meta.name;
+          const forceName = (meta === null || meta === void 0 ? void 0 : meta.type) === "force" ? meta.name : void 0;
           const decorationSetsByExtension = {};
           const widgetKeysByExtension = {};
           const recomputedNames = /* @__PURE__ */ new Set();
           runInDecorationApplyScope(editor, () => {
             for (const { name, spec } of entries) {
               const forced = forceAll || forceName === name;
-              const shouldRecompute = shouldRecomputeDecoration(
-                spec,
-                { editor, tr: tr2, oldState, newState },
-                forced
-              );
-              if (!shouldRecompute) {
+              if (!shouldRecomputeDecoration(spec, {
+                editor,
+                tr: tr2,
+                oldState,
+                newState
+              }, forced)) {
                 const result = mapDecorations(name, previous, tr2);
                 decorationSetsByExtension[name] = result.set;
                 widgetKeysByExtension[name] = result.widgetKeys;
@@ -15386,146 +14747,126 @@ var DecorationManager = class {
               }
             }
           });
-          if (recomputedNames.size === 0 && !tr2.docChanged) {
-            return previous;
-          }
-          const mergedDecorationSet = this.mergeAfterApply({
-            entries,
-            previous,
-            tr: tr2,
-            decorationSetsByExtension,
-            recomputedNames
-          });
+          if (recomputedNames.size === 0 && !tr2.docChanged) return previous;
           return {
             decorationSetsByExtension,
             widgetKeysByExtension,
-            mergedDecorationSet,
+            mergedDecorationSet: this.mergeAfterApply({
+              entries,
+              previous,
+              tr: tr2,
+              decorationSetsByExtension,
+              recomputedNames
+            }),
             widgetKeys: unionWidgetKeys(widgetKeysByExtension)
           };
         }
       },
-      props: {
-        decorations(state) {
-          var _a, _b;
-          return (_b = (_a = DECORATION_MANAGER_PLUGIN_KEY.getState(state)) == null ? void 0 : _a.mergedDecorationSet) != null ? _b : DecorationSet.empty;
-        }
-      }
+      props: { decorations(state) {
+        var _DECORATION_MANAGER_P3, _DECORATION_MANAGER_P4;
+        return (_DECORATION_MANAGER_P3 = (_DECORATION_MANAGER_P4 = DECORATION_MANAGER_PLUGIN_KEY.getState(state)) === null || _DECORATION_MANAGER_P4 === void 0 ? void 0 : _DECORATION_MANAGER_P4.mergedDecorationSet) !== null && _DECORATION_MANAGER_P3 !== void 0 ? _DECORATION_MANAGER_P3 : DecorationSet.empty;
+      } }
     });
   }
   /**
-   * Applies changed ranges recomputation to a decoration set, dropping stale decorations and rebuilding only the touched blocks.
-   * @param name The name of the decoration extension
-   * @param spec The decoration spec
-   * @param previous The previous decoration manager state
-   * @param tr The transaction to apply
-   * @param newState The new editor state
-   * @returns The updated decoration set and widget keys
-   */
+  * Applies changed ranges recomputation to a decoration set, dropping stale decorations and rebuilding only the touched blocks.
+  * @param name The name of the decoration extension
+  * @param spec The decoration spec
+  * @param previous The previous decoration manager state
+  * @param tr The transaction to apply
+  * @param newState The new editor state
+  * @returns The updated decoration set and widget keys
+  */
   applyChangedRangesRecompute(name, spec, previous, tr2, newState) {
     const resolution = getRebuildRanges(tr2, newState.doc);
-    if (resolution.type === "full") {
-      return this.buildFullSet(name, spec, newState);
-    }
+    if (resolution.type === "full") return this.buildFullSet(name, spec, newState);
     return this.rebuildRanges(name, spec, previous, tr2, newState, resolution.ranges);
   }
   /**
-   * Rebuilds decorations for the changed block ranges: maps the previous set
-   * forward, then for each range removes stale decorations, calls
-   * `createInRange`, and adds the new ones while syncing widget keys.
-   * @param name The extension name.
-   * @param spec The decoration spec.
-   * @param previous The previous decoration manager state.
-   * @param tr The transaction to apply.
-   * @param newState The new editor state.
-   * @param ranges The block ranges to rebuild.
-   * @returns The updated decoration set and widget keys.
-   */
+  * Rebuilds decorations for the changed block ranges: maps the previous set
+  * forward, then for each range removes stale decorations, calls
+  * `createInRange`, and adds the new ones while syncing widget keys.
+  * @param name The extension name.
+  * @param spec The decoration spec.
+  * @param previous The previous decoration manager state.
+  * @param tr The transaction to apply.
+  * @param newState The new editor state.
+  * @param ranges The block ranges to rebuild.
+  * @returns The updated decoration set and widget keys.
+  */
   rebuildRanges(name, spec, previous, tr2, newState, ranges) {
-    var _a, _b;
-    const previousSet = (_a = previous.decorationSetsByExtension[name]) != null ? _a : DecorationSet.empty;
-    const widgetKeys = new Set((_b = previous.widgetKeysByExtension[name]) != null ? _b : []);
+    var _previous$decorationS, _previous$widgetKeysB;
+    const previousSet = (_previous$decorationS = previous.decorationSetsByExtension[name]) !== null && _previous$decorationS !== void 0 ? _previous$decorationS : DecorationSet.empty;
+    const widgetKeys = new Set((_previous$widgetKeysB = previous.widgetKeysByExtension[name]) !== null && _previous$widgetKeysB !== void 0 ? _previous$widgetKeysB : []);
     let set = mapDecorationSet(previousSet, tr2.mapping, tr2.doc, widgetKeys);
     const docSize = newState.doc.content.size;
     for (const { from: from2, to } of ranges) {
-      const stale = set.find(from2, to).filter((decoration) => rangeOwnsPosition({ position: decoration.from, from: from2, to, docSize }));
+      const stale = set.find(from2, to).filter((decoration) => rangeOwnsPosition({
+        position: decoration.from,
+        from: from2,
+        to,
+        docSize
+      }));
       for (const decoration of stale) {
         const key = widgetKeyOf(decoration);
-        if (key) {
-          widgetKeys.delete(key);
-        }
+        if (key) widgetKeys.delete(key);
       }
       set = set.remove(stale);
-      const rangeDecorations = filterOutOfRangeDecorations({
-        decorations: this.runCreate(
-          name,
-          "createInRange",
-          () => spec.createInRange({
-            editor: this.editor,
-            state: newState,
-            view: this.mountedView,
-            from: from2,
-            to
-          })
-        ),
+      const { decorations: pmDecorations, widgetKeys: addedKeys } = decorationsToPMDecorations(filterOutOfRangeDecorations({
+        decorations: this.runCreate(name, "createInRange", () => spec.createInRange({
+          editor: this.editor,
+          state: newState,
+          view: this.mountedView,
+          from: from2,
+          to
+        })),
         from: from2,
         to,
         docSize,
         extensionName: name,
         warnedExtensions: this.warnedOutOfRangeExtensions
-      });
-      const { decorations: pmDecorations, widgetKeys: addedKeys } = decorationsToPMDecorations(
-        rangeDecorations,
-        name
-      );
+      }), name);
       set = set.add(newState.doc, pmDecorations);
-      for (const key of addedKeys) {
-        widgetKeys.add(key);
-      }
+      for (const key of addedKeys) widgetKeys.add(key);
     }
-    return { set, widgetKeys };
+    return {
+      set,
+      widgetKeys
+    };
   }
   /**
-   * Builds a full decoration set for the entire document.
-   * @param name The name of the decoration extension
-   * @param spec The decoration spec
-   * @param state The editor state
-   * @returns The decoration set and widget keys
-   */
+  * Builds a full decoration set for the entire document.
+  * @param name The name of the decoration extension
+  * @param spec The decoration spec
+  * @param state The editor state
+  * @returns The decoration set and widget keys
+  */
   buildFullSet(name, spec, state) {
-    const decorations = this.runCreate(
-      name,
-      "create",
-      () => spec.create({
-        editor: this.editor,
-        state,
-        view: this.mountedView
-      })
-    );
+    const decorations = this.runCreate(name, "create", () => spec.create({
+      editor: this.editor,
+      state,
+      view: this.mountedView
+    }));
     return buildDecorationSet(state.doc, decorations, name);
   }
   /**
-   * Runs a decoration callback and swallows anything it throws. These run inside
-   * `state.apply`, where an uncaught error would abort the whole transaction.
-   * @param name The extension name.
-   * @param method The callback name, used in the error message.
-   * @param create The callback to run.
-   * @returns The decorations, or an empty array if the callback threw.
-   */
+  * Runs a decoration callback and swallows anything it throws. These run inside
+  * `state.apply`, where an uncaught error would abort the whole transaction.
+  * @param name The extension name.
+  * @param method The callback name, used in the error message.
+  * @param create The callback to run.
+  * @returns The decorations, or an empty array if the callback threw.
+  */
   runCreate(name, method, create) {
     try {
       return create();
     } catch (error) {
-      console.error(
-        `[tiptap error]: Extension "${name}" threw in \`addDecorations().${method}()\`. Its decorations were dropped for this update.`,
-        error
-      );
+      console.error(`[tiptap error]: Extension "${name}" threw in \`addDecorations().${method}()\`. Its decorations were dropped for this update.`, error);
       return [];
     }
   }
   warnDuplicateWidgetKeys(state) {
-    if (!isDev) {
-      return;
-    }
+    if (!isDev) return;
     if (state.widgetKeys.size === 0) {
       this.warnedWidgetKeys.clear();
       return;
@@ -15533,48 +14874,32 @@ var DecorationManager = class {
     const duplicateKeys = findDuplicateWidgetKeys(state.mergedDecorationSet);
     const nextWarningKeys = new Set(duplicateKeys.map(({ key }) => key));
     for (const { key, extensions } of duplicateKeys) {
-      if (this.warnedWidgetKeys.has(key)) {
-        continue;
-      }
+      if (this.warnedWidgetKeys.has(key)) continue;
       const names = Array.from(extensions).map((name) => `"${name}"`).join(", ");
-      console.warn(
-        `[tiptap warn]: Duplicate widget decoration key "${key}" in extension${extensions.size === 1 ? "" : "s"} ${names}. Widget decoration keys must be globally unique, otherwise ProseMirror misplaces the widget DOM. Use a stable, unique key (e.g. \`comment-\${id}\`).`
-      );
+      console.warn(`[tiptap warn]: Duplicate widget decoration key "${key}" in extension${extensions.size === 1 ? "" : "s"} ${names}. Widget decoration keys must be globally unique, otherwise ProseMirror misplaces the widget DOM. Use a stable, unique key (e.g. \`comment-\${id}\`).`);
     }
     this.warnedWidgetKeys = nextWarningKeys;
   }
   /**
-   * Builds the merged DecorationSet during init. Skips the merge for a
-   * single extension since its per-extension set is already correct.
-   * @param doc The document to build the merged set for.
-   * @param decorationSetsByExtension The per-extension decoration sets.
-   * @returns The merged decoration set.
-   */
+  * Builds the merged DecorationSet during init. Skips the merge for a
+  * single extension since its per-extension set is already correct.
+  * @param doc The document to build the merged set for.
+  * @param decorationSetsByExtension The per-extension decoration sets.
+  * @returns The merged decoration set.
+  */
   buildMergedSet(doc3, decorationSetsByExtension) {
     const names = Object.keys(decorationSetsByExtension);
-    if (names.length === 1) {
-      return decorationSetsByExtension[names[0]];
-    }
+    if (names.length === 1) return decorationSetsByExtension[names[0]];
     return mergeDecorationSets(doc3, decorationSetsByExtension);
   }
   /**
-   * Computes the merged DecorationSet after apply. Single extension skips the
-   * merge; nothing recomputed maps the previous merged set forward; otherwise
-   * the merge is rebuilt from the per-extension sets.
-   */
-  mergeAfterApply({
-    entries,
-    previous,
-    tr: tr2,
-    decorationSetsByExtension,
-    recomputedNames
-  }) {
-    if (entries.length === 1) {
-      return decorationSetsByExtension[entries[0].name];
-    }
-    if (recomputedNames.size === 0) {
-      return previous.mergedDecorationSet.map(tr2.mapping, tr2.doc);
-    }
+  * Computes the merged DecorationSet after apply. Single extension skips the
+  * merge; nothing recomputed maps the previous merged set forward; otherwise
+  * the merge is rebuilt from the per-extension sets.
+  */
+  mergeAfterApply({ entries, previous, tr: tr2, decorationSetsByExtension, recomputedNames }) {
+    if (entries.length === 1) return decorationSetsByExtension[entries[0].name];
+    if (recomputedNames.size === 0) return previous.mergedDecorationSet.map(tr2.mapping, tr2.doc);
     return mergeDecorationSets(tr2.doc, decorationSetsByExtension);
   }
 };
@@ -15583,30 +14908,21 @@ function canInsertNode(state, nodeType) {
   const { $from } = selection;
   if (selection instanceof NodeSelection) {
     const index = $from.index();
-    const parent = $from.parent;
-    return parent.canReplaceWith(index, index + 1, nodeType);
+    return $from.parent.canReplaceWith(index, index + 1, nodeType);
   }
   let depth = $from.depth;
   while (depth >= 0) {
     const index = $from.index(depth);
-    const parent = $from.node(depth);
-    const match = parent.contentMatchAt(index);
-    if (match.matchType(nodeType)) {
-      return true;
-    }
+    if ($from.node(depth).contentMatchAt(index).matchType(nodeType)) return true;
     depth -= 1;
   }
   return false;
 }
 function createStyleTag(style2, nonce, suffix) {
   const tiptapStyleTag = document.querySelector(`style[data-tiptap-style${suffix ? `-${suffix}` : ""}]`);
-  if (tiptapStyleTag !== null) {
-    return tiptapStyleTag;
-  }
+  if (tiptapStyleTag !== null) return tiptapStyleTag;
   const styleNode = document.createElement("style");
-  if (nonce) {
-    styleNode.setAttribute("nonce", nonce);
-  }
+  if (nonce) styleNode.setAttribute("nonce", nonce);
   styleNode.setAttribute(`data-tiptap-style${suffix ? `-${suffix}` : ""}`, "");
   styleNode.innerHTML = style2;
   document.getElementsByTagName("head")[0].appendChild(styleNode);
@@ -15619,391 +14935,10 @@ function getType(value) {
   return Object.prototype.toString.call(value).slice(8, -1);
 }
 function isPlainObject(value) {
-  if (getType(value) !== "Object") {
-    return false;
-  }
+  if (getType(value) !== "Object") return false;
   return value.constructor === Object && Object.getPrototypeOf(value) === Object.prototype;
 }
-var markdown_exports = {};
-__export(markdown_exports, {
-  createAtomBlockMarkdownSpec: () => createAtomBlockMarkdownSpec,
-  createBlockMarkdownSpec: () => createBlockMarkdownSpec,
-  createInlineMarkdownSpec: () => createInlineMarkdownSpec,
-  parseAttributes: () => parseAttributes,
-  parseIndentedBlocks: () => parseIndentedBlocks,
-  renderNestedMarkdownContent: () => renderNestedMarkdownContent,
-  serializeAttributes: () => serializeAttributes
-});
-function parseAttributes(attrString) {
-  if (!(attrString == null ? void 0 : attrString.trim())) {
-    return {};
-  }
-  const attributes = {};
-  const quotedStrings = [];
-  const tempString = attrString.replace(/["']([^"']*)["']/g, (match) => {
-    quotedStrings.push(match);
-    return `__QUOTED_${quotedStrings.length - 1}__`;
-  });
-  const classMatches = tempString.match(/(?:^|\s)\.([\w-]+)/g);
-  if (classMatches) {
-    const classes = classMatches.map((match) => match.trim().slice(1));
-    attributes.class = classes.join(" ");
-  }
-  const idMatch = tempString.match(/(?:^|\s)#([\w-]+)/);
-  if (idMatch) {
-    attributes.id = idMatch[1];
-  }
-  const kvRegex = /([a-zA-Z][\w-]*)\s*=\s*(__QUOTED_\d+__)/g;
-  const kvMatches = Array.from(tempString.matchAll(kvRegex));
-  kvMatches.forEach(([, key, quotedRef]) => {
-    var _a;
-    const quotedIndex = parseInt(((_a = quotedRef.match(/__QUOTED_(\d+)__/)) == null ? void 0 : _a[1]) || "0", 10);
-    const quotedValue = quotedStrings[quotedIndex];
-    if (quotedValue) {
-      attributes[key] = quotedValue.slice(1, -1);
-    }
-  });
-  const cleanString = tempString.replace(/(?:^|\s)\.([\w-]+)/g, "").replace(/(?:^|\s)#([\w-]+)/g, "").replace(/([a-zA-Z][\w-]*)\s*=\s*__QUOTED_\d+__/g, "").trim();
-  if (cleanString) {
-    const booleanAttrs = cleanString.split(/\s+/).filter(Boolean);
-    booleanAttrs.forEach((attr) => {
-      if (attr.match(/^[a-zA-Z][\w-]*$/)) {
-        attributes[attr] = true;
-      }
-    });
-  }
-  return attributes;
-}
-function serializeAttributes(attributes) {
-  if (!attributes || Object.keys(attributes).length === 0) {
-    return "";
-  }
-  const parts = [];
-  if (attributes.class) {
-    const classes = String(attributes.class).split(/\s+/).filter(Boolean);
-    classes.forEach((cls) => parts.push(`.${cls}`));
-  }
-  if (attributes.id) {
-    parts.push(`#${attributes.id}`);
-  }
-  Object.entries(attributes).forEach(([key, value]) => {
-    if (key === "class" || key === "id") {
-      return;
-    }
-    if (value === true) {
-      parts.push(key);
-    } else if (value !== false && value != null) {
-      parts.push(`${key}="${String(value)}"`);
-    }
-  });
-  return parts.join(" ");
-}
-function createAtomBlockMarkdownSpec(options) {
-  const {
-    nodeName,
-    name: markdownName,
-    parseAttributes: parseAttributes2 = parseAttributes,
-    serializeAttributes: serializeAttributes2 = serializeAttributes,
-    defaultAttributes = {},
-    requiredAttributes = [],
-    allowedAttributes
-  } = options;
-  const blockName = markdownName || nodeName;
-  const filterAttributes = (attrs) => {
-    if (!allowedAttributes) {
-      return attrs;
-    }
-    const filtered = {};
-    allowedAttributes.forEach((key) => {
-      if (key in attrs) {
-        filtered[key] = attrs[key];
-      }
-    });
-    return filtered;
-  };
-  return {
-    parseMarkdown: (token, h2) => {
-      const attrs = { ...defaultAttributes, ...token.attributes };
-      return h2.createNode(nodeName, attrs, []);
-    },
-    markdownTokenizer: {
-      name: nodeName,
-      level: "block",
-      start(src) {
-        var _a;
-        const regex = new RegExp(`^:::${blockName}(?:\\s|$)`, "m");
-        const index = (_a = src.match(regex)) == null ? void 0 : _a.index;
-        return index !== void 0 ? index : -1;
-      },
-      tokenize(src, _tokens, _lexer) {
-        const regex = new RegExp(`^:::${blockName}(?:\\s+\\{([^}]*)\\})?\\s*:::(?:\\n|$)`);
-        const match = src.match(regex);
-        if (!match) {
-          return void 0;
-        }
-        const attrString = match[1] || "";
-        const attributes = parseAttributes2(attrString);
-        const missingRequired = requiredAttributes.find((required) => !(required in attributes));
-        if (missingRequired) {
-          return void 0;
-        }
-        return {
-          type: nodeName,
-          raw: match[0],
-          attributes
-        };
-      }
-    },
-    renderMarkdown: (node) => {
-      const filteredAttrs = filterAttributes(node.attrs || {});
-      const attrs = serializeAttributes2(filteredAttrs);
-      const attrString = attrs ? ` {${attrs}}` : "";
-      return `:::${blockName}${attrString} :::`;
-    }
-  };
-}
-function createBlockMarkdownSpec(options) {
-  const {
-    nodeName,
-    name: markdownName,
-    getContent,
-    parseAttributes: parseAttributes2 = parseAttributes,
-    serializeAttributes: serializeAttributes2 = serializeAttributes,
-    defaultAttributes = {},
-    content = "block",
-    allowedAttributes
-  } = options;
-  const blockName = markdownName || nodeName;
-  const filterAttributes = (attrs) => {
-    if (!allowedAttributes) {
-      return attrs;
-    }
-    const filtered = {};
-    allowedAttributes.forEach((key) => {
-      if (key in attrs) {
-        filtered[key] = attrs[key];
-      }
-    });
-    return filtered;
-  };
-  return {
-    parseMarkdown: (token, h2) => {
-      let nodeContent;
-      if (getContent) {
-        const contentResult = getContent(token);
-        nodeContent = typeof contentResult === "string" ? [{ type: "text", text: contentResult }] : contentResult;
-      } else if (content === "block") {
-        nodeContent = h2.parseChildren(token.tokens || []);
-      } else {
-        nodeContent = h2.parseInline(token.tokens || []);
-      }
-      const attrs = { ...defaultAttributes, ...token.attributes };
-      return h2.createNode(nodeName, attrs, nodeContent);
-    },
-    markdownTokenizer: {
-      name: nodeName,
-      level: "block",
-      start(src) {
-        var _a;
-        const regex = new RegExp(`^:::${blockName}`, "m");
-        const index = (_a = src.match(regex)) == null ? void 0 : _a.index;
-        return index !== void 0 ? index : -1;
-      },
-      tokenize(src, _tokens, lexer) {
-        var _a;
-        const openingRegex = new RegExp(`^:::${blockName}(?:\\s+\\{([^}]*)\\})?\\s*\\n`);
-        const openingMatch = src.match(openingRegex);
-        if (!openingMatch) {
-          return void 0;
-        }
-        const [openingTag, attrString = ""] = openingMatch;
-        const attributes = parseAttributes2(attrString);
-        let level = 1;
-        const position = openingTag.length;
-        let matchedContent = "";
-        const blockPattern = /^:::([\w-]*)(\s.*)?/gm;
-        const remaining = src.slice(position);
-        blockPattern.lastIndex = 0;
-        for (; ; ) {
-          const match = blockPattern.exec(remaining);
-          if (match === null) {
-            break;
-          }
-          const matchPos = match.index;
-          const blockType = match[1];
-          if ((_a = match[2]) == null ? void 0 : _a.endsWith(":::")) {
-            continue;
-          }
-          if (blockType) {
-            level += 1;
-          } else {
-            level -= 1;
-            if (level === 0) {
-              const rawContent = remaining.slice(0, matchPos);
-              matchedContent = rawContent.trim();
-              const fullMatch = src.slice(0, position + matchPos + match[0].length);
-              let contentTokens = [];
-              if (matchedContent) {
-                if (content === "block") {
-                  contentTokens = lexer.blockTokens(rawContent);
-                  contentTokens.forEach((token) => {
-                    if (token.text && (!token.tokens || token.tokens.length === 0)) {
-                      token.tokens = lexer.inlineTokens(token.text);
-                    }
-                  });
-                  while (contentTokens.length > 0) {
-                    const lastToken = contentTokens[contentTokens.length - 1];
-                    if (lastToken.type === "paragraph" && (!lastToken.text || lastToken.text.trim() === "")) {
-                      contentTokens.pop();
-                    } else {
-                      break;
-                    }
-                  }
-                } else {
-                  contentTokens = lexer.inlineTokens(matchedContent);
-                }
-              }
-              return {
-                type: nodeName,
-                raw: fullMatch,
-                attributes,
-                content: matchedContent,
-                tokens: contentTokens
-              };
-            }
-          }
-        }
-        return void 0;
-      }
-    },
-    renderMarkdown: (node, h2) => {
-      const filteredAttrs = filterAttributes(node.attrs || {});
-      const attrs = serializeAttributes2(filteredAttrs);
-      const attrString = attrs ? ` {${attrs}}` : "";
-      const renderedContent = h2.renderChildren(node.content || [], "\n\n");
-      return `:::${blockName}${attrString}
-
-${renderedContent}
-
-:::`;
-    }
-  };
-}
-function parseShortcodeAttributes(attrString) {
-  if (!attrString.trim()) {
-    return {};
-  }
-  const attributes = {};
-  const regex = /(\w+)=(?:"([^"]*)"|'([^']*)')/g;
-  let match = regex.exec(attrString);
-  while (match !== null) {
-    const [, key, doubleQuoted, singleQuoted] = match;
-    attributes[key] = doubleQuoted || singleQuoted;
-    match = regex.exec(attrString);
-  }
-  return attributes;
-}
-function serializeShortcodeAttributes(attrs) {
-  return Object.entries(attrs).filter(([, value]) => value !== void 0 && value !== null).map(([key, value]) => `${key}="${value}"`).join(" ");
-}
-function createInlineMarkdownSpec(options) {
-  const {
-    nodeName,
-    name: shortcodeName,
-    getContent,
-    parseAttributes: parseAttributes2 = parseShortcodeAttributes,
-    serializeAttributes: serializeAttributes2 = serializeShortcodeAttributes,
-    defaultAttributes = {},
-    selfClosing = false,
-    allowedAttributes
-  } = options;
-  const shortcode = shortcodeName || nodeName;
-  const filterAttributes = (attrs) => {
-    if (!allowedAttributes) {
-      return attrs;
-    }
-    const filtered = {};
-    allowedAttributes.forEach((attr) => {
-      const attrName = typeof attr === "string" ? attr : attr.name;
-      const skipIfDefault = typeof attr === "string" ? void 0 : attr.skipIfDefault;
-      if (attrName in attrs) {
-        const value = attrs[attrName];
-        if (skipIfDefault !== void 0 && value === skipIfDefault) {
-          return;
-        }
-        filtered[attrName] = value;
-      }
-    });
-    return filtered;
-  };
-  const escapedShortcode = shortcode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return {
-    parseMarkdown: (token, h2) => {
-      const attrs = { ...defaultAttributes, ...token.attributes };
-      if (selfClosing) {
-        return h2.createNode(nodeName, attrs);
-      }
-      const content = getContent ? getContent(token) : token.content || "";
-      if (content) {
-        return h2.createNode(nodeName, attrs, [h2.createTextNode(content)]);
-      }
-      return h2.createNode(nodeName, attrs, []);
-    },
-    markdownTokenizer: {
-      name: nodeName,
-      level: "inline",
-      start(src) {
-        const startPattern = selfClosing ? new RegExp(`\\[${escapedShortcode}\\s*[^\\]]*\\]`) : new RegExp(`\\[${escapedShortcode}\\s*[^\\]]*\\][\\s\\S]*?\\[\\/${escapedShortcode}\\]`);
-        const match = src.match(startPattern);
-        const index = match == null ? void 0 : match.index;
-        return index !== void 0 ? index : -1;
-      },
-      tokenize(src, _tokens, _lexer) {
-        const tokenPattern = selfClosing ? new RegExp(`^\\[${escapedShortcode}\\s*([^\\]]*)\\]`) : new RegExp(
-          `^\\[${escapedShortcode}\\s*([^\\]]*)\\]([\\s\\S]*?)\\[\\/${escapedShortcode}\\]`
-        );
-        const match = src.match(tokenPattern);
-        if (!match) {
-          return void 0;
-        }
-        let content = "";
-        let attrString = "";
-        if (selfClosing) {
-          const [, attrs] = match;
-          attrString = attrs;
-        } else {
-          const [, attrs, contentMatch] = match;
-          attrString = attrs;
-          content = contentMatch || "";
-        }
-        const attributes = parseAttributes2(attrString.trim());
-        return {
-          type: nodeName,
-          raw: match[0],
-          content: content.trim(),
-          attributes
-        };
-      }
-    },
-    renderMarkdown: (node) => {
-      let content = "";
-      if (getContent) {
-        content = getContent(node);
-      } else if (node.content && node.content.length > 0) {
-        content = node.content.filter((child) => child.type === "text").map((child) => child.text).join("");
-      }
-      const filteredAttrs = filterAttributes(node.attrs || {});
-      const attrs = serializeAttributes2(filteredAttrs);
-      const attrString = attrs ? ` ${attrs}` : "";
-      if (selfClosing) {
-        return `[${shortcode}${attrString}]`;
-      }
-      return `[${shortcode}${attrString}]${content}[/${shortcode}]`;
-    }
-  };
-}
 function parseIndentedBlocks(src, config, lexer) {
-  var _a, _b, _c, _d;
   const lines = src.split("\n");
   const items = [];
   let totalRaw = "";
@@ -16013,16 +14948,13 @@ function parseIndentedBlocks(src, config, lexer) {
     const currentLine = lines[i2];
     const itemMatch = currentLine.match(config.itemPattern);
     if (!itemMatch) {
-      if (items.length > 0) {
-        break;
-      } else if (currentLine.trim() === "") {
+      if (items.length > 0) break;
+      else if (currentLine.trim() === "") {
         i2 += 1;
         totalRaw = `${totalRaw}${currentLine}
 `;
         continue;
-      } else {
-        return void 0;
-      }
+      } else return;
     }
     const itemData = config.extractItemData(itemMatch);
     const { indentLevel, mainContent } = itemData;
@@ -16031,91 +14963,69 @@ function parseIndentedBlocks(src, config, lexer) {
     const itemContent = [mainContent];
     i2 += 1;
     while (i2 < lines.length) {
+      var _nextLine$match;
       const nextLine = lines[i2];
       if (nextLine.trim() === "") {
+        var _nextNonEmpty$match;
         const nextNonEmptyIndex = lines.slice(i2 + 1).findIndex((l) => l.trim() !== "");
-        if (nextNonEmptyIndex === -1) {
-          break;
-        }
-        const nextNonEmpty = lines[i2 + 1 + nextNonEmptyIndex];
-        const nextIndent2 = ((_b = (_a = nextNonEmpty.match(/^(\s*)/)) == null ? void 0 : _a[1]) == null ? void 0 : _b.length) || 0;
-        if (nextIndent2 > indentLevel) {
+        if (nextNonEmptyIndex === -1) break;
+        if ((((_nextNonEmpty$match = lines[i2 + 1 + nextNonEmptyIndex].match(/^(\s*)/)) === null || _nextNonEmpty$match === void 0 || (_nextNonEmpty$match = _nextNonEmpty$match[1]) === null || _nextNonEmpty$match === void 0 ? void 0 : _nextNonEmpty$match.length) || 0) > indentLevel) {
           itemContent.push(nextLine);
           totalRaw = `${totalRaw}${nextLine}
 `;
           i2 += 1;
           continue;
-        } else {
-          break;
-        }
+        } else break;
       }
-      const nextIndent = ((_d = (_c = nextLine.match(/^(\s*)/)) == null ? void 0 : _c[1]) == null ? void 0 : _d.length) || 0;
-      if (nextIndent > indentLevel) {
+      if ((((_nextLine$match = nextLine.match(/^(\s*)/)) === null || _nextLine$match === void 0 || (_nextLine$match = _nextLine$match[1]) === null || _nextLine$match === void 0 ? void 0 : _nextLine$match.length) || 0) > indentLevel) {
         itemContent.push(nextLine);
         totalRaw = `${totalRaw}${nextLine}
 `;
         i2 += 1;
-      } else {
-        break;
-      }
+      } else break;
     }
     let nestedTokens;
     const nestedContent = itemContent.slice(1);
     if (nestedContent.length > 0) {
       const dedentedNested = nestedContent.map((nestedLine) => nestedLine.slice(indentLevel + baseIndentSize)).join("\n");
       if (dedentedNested.trim()) {
-        if (config.customNestedParser) {
-          nestedTokens = config.customNestedParser(dedentedNested);
-        } else {
-          nestedTokens = lexer.blockTokens(dedentedNested);
-        }
+        if (config.customNestedParser) nestedTokens = config.customNestedParser(dedentedNested);
+        else nestedTokens = lexer.blockTokens(dedentedNested);
       }
     }
     const token = config.createToken(itemData, nestedTokens);
     items.push(token);
   }
-  if (items.length === 0) {
-    return void 0;
-  }
+  if (items.length === 0) return;
   return {
     items,
     raw: totalRaw
   };
 }
 function renderNestedMarkdownContent(node, h2, prefixOrGenerator, ctx) {
-  if (!node || !Array.isArray(node.content)) {
-    return "";
-  }
+  if (!node || !Array.isArray(node.content)) return "";
   const prefix = typeof prefixOrGenerator === "function" ? prefixOrGenerator(ctx) : prefixOrGenerator;
   const [content, ...children] = node.content;
-  const mainContent = h2.renderChildren([content]);
-  let output = `${prefix}${mainContent}`;
-  if (children && children.length > 0) {
-    children.forEach((child, index) => {
-      var _a, _b;
-      const childContent = (_b = (_a = h2.renderChild) == null ? void 0 : _a.call(h2, child, index + 1)) != null ? _b : h2.renderChildren([child]);
-      if (childContent !== void 0 && childContent !== null) {
-        const indentedChild = childContent.split("\n").map((line) => line ? h2.indent(line) : h2.indent("")).join("\n");
-        output += child.type === "paragraph" ? `
+  let output = `${prefix}${h2.renderChildren([content])}`;
+  if (children && children.length > 0) children.forEach((child, index) => {
+    var _h$renderChild, _h$renderChild2;
+    const childContent = (_h$renderChild = (_h$renderChild2 = h2.renderChild) === null || _h$renderChild2 === void 0 ? void 0 : _h$renderChild2.call(h2, child, index + 1)) !== null && _h$renderChild !== void 0 ? _h$renderChild : h2.renderChildren([child]);
+    if (childContent !== void 0 && childContent !== null) {
+      const indentedChild = childContent.split("\n").map((line) => line ? h2.indent(line) : h2.indent("")).join("\n");
+      output += child.type === "paragraph" ? `
 
 ${indentedChild}` : `
 ${indentedChild}`;
-      }
-    });
-  }
+    }
+  });
   return output;
 }
 function mergeDeep(target, source) {
   const output = { ...target };
-  if (isPlainObject(target) && isPlainObject(source)) {
-    Object.keys(source).forEach((key) => {
-      if (isPlainObject(source[key]) && isPlainObject(target[key])) {
-        output[key] = mergeDeep(target[key], source[key]);
-      } else {
-        output[key] = source[key];
-      }
-    });
-  }
+  if (isPlainObject(target) && isPlainObject(source)) Object.keys(source).forEach((key) => {
+    if (isPlainObject(source[key]) && isPlainObject(target[key])) output[key] = mergeDeep(target[key], source[key]);
+    else output[key] = source[key];
+  });
   return output;
 }
 function updateMarkViewAttributes(checkMark, editor, attrs = {}) {
@@ -16127,19 +15037,13 @@ function updateMarkViewAttributes(checkMark, editor, attrs = {}) {
     const to = tr2.mapping.map(pos) + node.nodeSize;
     let foundMark = null;
     node.marks.forEach((mark) => {
-      if (mark !== thisMark) {
-        return false;
-      }
+      if (mark !== thisMark) return false;
       foundMark = mark;
     });
-    if (!foundMark) {
-      return;
-    }
+    if (!foundMark) return;
     let needsUpdate = false;
     Object.keys(attrs).forEach((k) => {
-      if (attrs[k] !== foundMark.attrs[k]) {
-        needsUpdate = true;
-      }
+      if (attrs[k] !== foundMark.attrs[k]) needsUpdate = true;
     });
     if (needsUpdate) {
       const updatedMark = checkMark.type.create({
@@ -16150,71 +15054,47 @@ function updateMarkViewAttributes(checkMark, editor, attrs = {}) {
       tr2.addMark(from2, to, updatedMark);
     }
   });
-  if (tr2.docChanged) {
-    editor.view.dispatch(tr2);
-  }
+  if (tr2.docChanged) editor.view.dispatch(tr2);
 }
 var InputRule = class {
   constructor(config) {
-    var _a;
+    var _config$undoable;
     this.find = config.find;
     this.handler = config.handler;
-    this.undoable = (_a = config.undoable) != null ? _a : true;
+    this.undoable = (_config$undoable = config.undoable) !== null && _config$undoable !== void 0 ? _config$undoable : true;
   }
 };
 var inputRuleMatcherHandler = (text, find2) => {
-  if (isRegExp(find2)) {
-    return find2.exec(text);
-  }
+  if (isRegExp(find2)) return find2.exec(text);
   const inputRuleMatch = find2(text);
-  if (!inputRuleMatch) {
-    return null;
-  }
+  if (!inputRuleMatch) return null;
   const result = [inputRuleMatch.text];
   result.index = inputRuleMatch.index;
   result.input = text;
   result.data = inputRuleMatch.data;
   if (inputRuleMatch.replaceWith) {
-    if (!inputRuleMatch.text.includes(inputRuleMatch.replaceWith)) {
-      console.warn(
-        '[tiptap warn]: "inputRuleMatch.replaceWith" must be part of "inputRuleMatch.text".'
-      );
-    }
+    if (!inputRuleMatch.text.includes(inputRuleMatch.replaceWith)) console.warn('[tiptap warn]: "inputRuleMatch.replaceWith" must be part of "inputRuleMatch.text".');
     result.push(inputRuleMatch.replaceWith);
   }
   return result;
 };
-function run(config) {
-  var _a;
+function run$1(config) {
+  var _ref;
   const { editor, from: from2, to, text, rules, plugin } = config;
   const { view } = editor;
-  if (view.composing) {
-    return false;
-  }
+  if (view.composing) return false;
   const $from = view.state.doc.resolve(from2);
-  if (
-    // check for code node
-    $from.parent.type.spec.code || // check for code mark
-    !!((_a = $from.nodeBefore || $from.nodeAfter) == null ? void 0 : _a.marks.find((mark) => mark.type.spec.code))
-  ) {
-    return false;
-  }
+  if ($from.parent.type.spec.code || !!((_ref = $from.nodeBefore || $from.nodeAfter) === null || _ref === void 0 ? void 0 : _ref.marks.find((mark) => mark.type.spec.code))) return false;
   let matched = false;
   const textBefore = getTextContentFromNodes($from) + text;
   rules.forEach((rule) => {
-    if (matched) {
-      return;
-    }
+    if (matched) return;
     const match = inputRuleMatcherHandler(textBefore, rule.find);
-    if (!match) {
-      return;
-    }
+    if (!match) return;
     const matchedDocLength = match[0].length - text.length;
     if (matchedDocLength > 0) {
       const matchStartOffset = $from.parentOffset - matchedDocLength;
-      if (matchStartOffset < 0 || $from.parent.textBetween(matchStartOffset, $from.parentOffset) !== match[0].slice(0, matchedDocLength)) {
-        return;
-      }
+      if (matchStartOffset < 0 || $from.parent.textBetween(matchStartOffset, $from.parentOffset) !== match[0].slice(0, matchedDocLength)) return;
     }
     const tr2 = view.state.tr;
     const state = createChainableState({
@@ -16229,25 +15109,20 @@ function run(config) {
       editor,
       state
     });
-    const handler = rule.handler({
+    if (rule.handler({
       state,
       range,
       match,
       commands,
       chain,
       can
+    }) === null || !tr2.steps.length) return;
+    if (rule.undoable) tr2.setMeta(plugin, {
+      transform: tr2,
+      from: from2,
+      to,
+      text
     });
-    if (handler === null || !tr2.steps.length) {
-      return;
-    }
-    if (rule.undoable) {
-      tr2.setMeta(plugin, {
-        transform: tr2,
-        from: from2,
-        to,
-        text
-      });
-    }
     view.dispatch(tr2);
     matched = true;
   });
@@ -16262,37 +15137,29 @@ function inputRulesPlugin(props) {
       },
       apply(tr2, prev, state) {
         const stored = tr2.getMeta(plugin);
-        if (stored) {
-          return stored;
-        }
+        if (stored) return stored;
         const simulatedInputMeta = tr2.getMeta("applyInputRules");
-        const isSimulatedInput = !!simulatedInputMeta;
-        if (isSimulatedInput) {
-          setTimeout(() => {
-            let { text } = simulatedInputMeta;
-            if (typeof text === "string") {
-              text = text;
-            } else {
-              text = getHTMLFromFragment(Fragment.from(text), state.schema);
-            }
-            const { from: from2 } = simulatedInputMeta;
-            const to = from2 + text.length;
-            run({
-              editor,
-              from: from2,
-              to,
-              text,
-              rules,
-              plugin
-            });
+        if (!!simulatedInputMeta) setTimeout(() => {
+          let { text } = simulatedInputMeta;
+          if (typeof text === "string") text = text;
+          else text = getHTMLFromFragment(Fragment.from(text), state.schema);
+          const { from: from2 } = simulatedInputMeta;
+          const to = from2 + text.length;
+          run$1({
+            editor,
+            from: from2,
+            to,
+            text,
+            rules,
+            plugin
           });
-        }
+        });
         return tr2.selectionSet || tr2.docChanged ? null : prev;
       }
     },
     props: {
       handleTextInput(view, from2, to, text) {
-        return run({
+        return run$1({
           editor,
           from: from2,
           to,
@@ -16301,45 +15168,34 @@ function inputRulesPlugin(props) {
           plugin
         });
       },
-      handleDOMEvents: {
-        compositionend: (view) => {
-          setTimeout(() => {
-            const { $cursor } = view.state.selection;
-            if ($cursor) {
-              run({
-                editor,
-                from: $cursor.pos,
-                to: $cursor.pos,
-                text: "",
-                rules,
-                plugin
-              });
-            }
-          });
-          return false;
-        }
-      },
-      // add support for input rules to trigger on enter
-      // this is useful for example for code blocks
-      handleKeyDown(view, event) {
-        if (event.key !== "Enter") {
-          return false;
-        }
-        const { $cursor } = view.state.selection;
-        if ($cursor) {
-          return run({
+      handleDOMEvents: { compositionend: (view) => {
+        setTimeout(() => {
+          const { $cursor } = view.state.selection;
+          if ($cursor) run$1({
             editor,
             from: $cursor.pos,
             to: $cursor.pos,
-            text: "\n",
+            text: "",
             rules,
             plugin
           });
-        }
+        });
+        return false;
+      } },
+      handleKeyDown(view, event) {
+        if (event.key !== "Enter") return false;
+        const { $cursor } = view.state.selection;
+        if ($cursor) return run$1({
+          editor,
+          from: $cursor.pos,
+          to: $cursor.pos,
+          text: "\n",
+          rules,
+          plugin
+        });
         return false;
       }
     },
-    // @ts-ignore
     isInputRules: true
   });
   return plugin;
@@ -16350,9 +15206,7 @@ var Extendable = class {
     this.parent = null;
     this.child = null;
     this.name = "";
-    this.config = {
-      name: this.name
-    };
+    this.config = { name: this.name };
     this.config = {
       ...this.config,
       ...config
@@ -16360,23 +15214,13 @@ var Extendable = class {
     this.name = this.config.name;
   }
   get options() {
-    return {
-      ...callOrReturn(
-        getExtensionField(this, "addOptions", {
-          name: this.name
-        })
-      )
-    };
+    return { ...callOrReturn(getExtensionField(this, "addOptions", { name: this.name })) };
   }
   get storage() {
-    return {
-      ...callOrReturn(
-        getExtensionField(this, "addStorage", {
-          name: this.name,
-          options: this.options
-        })
-      )
-    };
+    return { ...callOrReturn(getExtensionField(this, "addStorage", {
+      name: this.name,
+      options: this.options
+    })) };
   }
   configure(options = {}) {
     const extension = this.extend({
@@ -16391,40 +15235,37 @@ var Extendable = class {
     return extension;
   }
   extend(extendedConfig = {}) {
-    const extension = new this.constructor({ ...this.config, ...extendedConfig });
+    const extension = new this.constructor({
+      ...this.config,
+      ...extendedConfig
+    });
     extension.parent = this;
     this.child = extension;
     extension.name = "name" in extendedConfig ? extendedConfig.name : extension.parent.name;
     return extension;
   }
 };
-var Mark2 = class _Mark extends Extendable {
-  constructor() {
-    super(...arguments);
+var Mark2 = class Mark3 extends Extendable {
+  constructor(..._args) {
+    super(..._args);
     this.type = "mark";
   }
   /**
-   * Create a new Mark instance
-   * @param config - Mark configuration object or a function that returns a configuration object
-   */
+  * Create a new Mark instance
+  * @param config - Mark configuration object or a function that returns a configuration object
+  */
   static create(config = {}) {
     const resolvedConfig = typeof config === "function" ? config() : config;
-    return new _Mark(resolvedConfig);
+    return new Mark3(resolvedConfig);
   }
   static handleExit({ editor, mark }) {
     const { tr: tr2 } = editor.state;
     const currentPos = editor.state.selection.$from;
-    const isAtEnd = currentPos.pos === currentPos.end();
-    if (isAtEnd) {
+    if (currentPos.pos === currentPos.end()) {
       const currentMarks = currentPos.marks();
-      const isInMark = !!currentMarks.find((m) => (m == null ? void 0 : m.type.name) === mark.name);
-      if (!isInMark) {
-        return false;
-      }
-      const removeMark2 = currentMarks.find((m) => (m == null ? void 0 : m.type.name) === mark.name);
-      if (removeMark2) {
-        tr2.removeStoredMark(removeMark2);
-      }
+      if (!!!currentMarks.find((m) => (m === null || m === void 0 ? void 0 : m.type.name) === mark.name)) return false;
+      const removeMark2 = currentMarks.find((m) => (m === null || m === void 0 ? void 0 : m.type.name) === mark.name);
+      if (removeMark2) tr2.removeStoredMark(removeMark2);
       tr2.insertText(" ", currentPos.pos);
       editor.view.dispatch(tr2);
       return true;
@@ -16446,30 +15287,22 @@ var PasteRule = class {
   }
 };
 var pasteRuleMatcherHandler = (text, find2, event) => {
-  if (isRegExp(find2)) {
-    return [...text.matchAll(find2)];
-  }
+  if (isRegExp(find2)) return [...text.matchAll(find2)];
   const matches2 = find2(text, event);
-  if (!matches2) {
-    return [];
-  }
+  if (!matches2) return [];
   return matches2.map((pasteRuleMatch) => {
     const result = [pasteRuleMatch.text];
     result.index = pasteRuleMatch.index;
     result.input = text;
     result.data = pasteRuleMatch.data;
     if (pasteRuleMatch.replaceWith) {
-      if (!pasteRuleMatch.text.includes(pasteRuleMatch.replaceWith)) {
-        console.warn(
-          '[tiptap warn]: "pasteRuleMatch.replaceWith" must be part of "pasteRuleMatch.text".'
-        );
-      }
+      if (!pasteRuleMatch.text.includes(pasteRuleMatch.replaceWith)) console.warn('[tiptap warn]: "pasteRuleMatch.replaceWith" must be part of "pasteRuleMatch.text".');
       result.push(pasteRuleMatch.replaceWith);
     }
     return result;
   });
 };
-function run2(config) {
+function run(config) {
   const { editor, state, from: from2, to, rule, pasteEvent, dropEvent } = config;
   const { commands, chain, can } = new CommandManager({
     editor,
@@ -16477,22 +15310,15 @@ function run2(config) {
   });
   const handlers2 = [];
   state.doc.nodesBetween(from2, to, (node, pos) => {
-    var _a, _b, _c, _d, _e;
-    if (((_b = (_a = node.type) == null ? void 0 : _a.spec) == null ? void 0 : _b.code) || !(node.isText || node.isTextblock || node.isInline)) {
-      return;
-    }
-    const contentSize = (_e = (_d = (_c = node.content) == null ? void 0 : _c.size) != null ? _d : node.nodeSize) != null ? _e : 0;
+    var _node$type, _ref, _node$content$size, _node$content;
+    if (((_node$type = node.type) === null || _node$type === void 0 || (_node$type = _node$type.spec) === null || _node$type === void 0 ? void 0 : _node$type.code) || !(node.isText || node.isTextblock || node.isInline)) return;
+    const contentSize = (_ref = (_node$content$size = (_node$content = node.content) === null || _node$content === void 0 ? void 0 : _node$content.size) !== null && _node$content$size !== void 0 ? _node$content$size : node.nodeSize) !== null && _ref !== void 0 ? _ref : 0;
     const resolvedFrom = Math.max(from2, pos);
     const resolvedTo = Math.min(to, pos + contentSize);
-    if (resolvedFrom >= resolvedTo) {
-      return;
-    }
+    if (resolvedFrom >= resolvedTo) return;
     const textToMatch = node.isText ? node.text || "" : node.textBetween(resolvedFrom - pos, resolvedTo - pos, void 0, "\uFFFC");
-    const matches2 = pasteRuleMatcherHandler(textToMatch, rule.find, pasteEvent);
-    matches2.forEach((match) => {
-      if (match.index === void 0) {
-        return;
-      }
+    pasteRuleMatcherHandler(textToMatch, rule.find, pasteEvent).forEach((match) => {
+      if (match.index === void 0) return;
       const start = resolvedFrom + match.index + 1;
       const end = start + match[0].length;
       const range = {
@@ -16512,16 +15338,13 @@ function run2(config) {
       handlers2.push(handler);
     });
   });
-  const success = handlers2.every((handler) => handler !== null);
-  return success;
+  return handlers2.every((handler) => handler !== null);
 }
 var tiptapDragFromOtherEditor = null;
 var createClipboardPasteEvent = (text) => {
-  var _a;
-  const event = new ClipboardEvent("paste", {
-    clipboardData: new DataTransfer()
-  });
-  (_a = event.clipboardData) == null ? void 0 : _a.setData("text/html", text);
+  var _event$clipboardData;
+  const event = new ClipboardEvent("paste", { clipboardData: new DataTransfer() });
+  (_event$clipboardData = event.clipboardData) === null || _event$clipboardData === void 0 || _event$clipboardData.setData("text/html", text);
   return event;
 };
 function pasteRulesPlugin(props) {
@@ -16536,19 +15359,13 @@ function pasteRulesPlugin(props) {
   } catch {
     dropEvent = null;
   }
-  const processEvent = ({
-    state,
-    from: from2,
-    to,
-    rule,
-    pasteEvt
-  }) => {
+  const processEvent = ({ state, from: from2, to, rule, pasteEvt }) => {
     const tr2 = state.tr;
     const chainableState = createChainableState({
       state,
       transaction: tr2
     });
-    const handler = run2({
+    if (!run({
       editor,
       state: chainableState,
       from: Math.max(from2 - 1, 0),
@@ -16556,10 +15373,7 @@ function pasteRulesPlugin(props) {
       rule,
       pasteEvent: pasteEvt,
       dropEvent
-    });
-    if (!handler || !tr2.steps.length) {
-      return;
-    }
+    }) || !tr2.steps.length) return;
     try {
       dropEvent = typeof DragEvent !== "undefined" ? new DragEvent("drop") : null;
     } catch {
@@ -16568,93 +15382,73 @@ function pasteRulesPlugin(props) {
     pasteEvent = typeof ClipboardEvent !== "undefined" ? new ClipboardEvent("paste") : null;
     return tr2;
   };
-  const plugins = rules.map((rule) => {
+  return rules.map((rule) => {
     return new Plugin({
-      // we register a global drag handler to track the current drag source element
       view(view) {
         const handleDragstart = (event) => {
-          var _a;
-          dragSourceElement = ((_a = view.dom.parentElement) == null ? void 0 : _a.contains(event.target)) ? view.dom.parentElement : null;
-          if (dragSourceElement) {
-            tiptapDragFromOtherEditor = editor;
-          }
+          var _view$dom$parentEleme;
+          dragSourceElement = ((_view$dom$parentEleme = view.dom.parentElement) === null || _view$dom$parentEleme === void 0 ? void 0 : _view$dom$parentEleme.contains(event.target)) ? view.dom.parentElement : null;
+          if (dragSourceElement) tiptapDragFromOtherEditor = editor;
         };
         const handleDragend = () => {
-          if (tiptapDragFromOtherEditor) {
-            tiptapDragFromOtherEditor = null;
-          }
+          if (tiptapDragFromOtherEditor) tiptapDragFromOtherEditor = null;
         };
         window.addEventListener("dragstart", handleDragstart);
         window.addEventListener("dragend", handleDragend);
-        return {
-          destroy() {
-            window.removeEventListener("dragstart", handleDragstart);
-            window.removeEventListener("dragend", handleDragend);
-          }
-        };
+        return { destroy() {
+          window.removeEventListener("dragstart", handleDragstart);
+          window.removeEventListener("dragend", handleDragend);
+        } };
       },
-      props: {
-        handleDOMEvents: {
-          drop: (view, event) => {
-            isDroppedFromProseMirror = dragSourceElement === view.dom.parentElement;
-            dropEvent = event;
-            if (!isDroppedFromProseMirror) {
-              const dragFromOtherEditor = tiptapDragFromOtherEditor;
-              if (dragFromOtherEditor == null ? void 0 : dragFromOtherEditor.isEditable) {
-                setTimeout(() => {
-                  const selection = dragFromOtherEditor.state.selection;
-                  if (selection) {
-                    dragFromOtherEditor.commands.deleteRange({
-                      from: selection.from,
-                      to: selection.to
-                    });
-                  }
-                }, 10);
-              }
-            }
-            return false;
-          },
-          paste: (_view, event) => {
-            var _a;
-            const html = (_a = event.clipboardData) == null ? void 0 : _a.getData("text/html");
-            pasteEvent = event;
-            isPastedFromProseMirror = !!(html == null ? void 0 : html.includes("data-pm-slice"));
-            return false;
+      props: { handleDOMEvents: {
+        drop: (view, event) => {
+          isDroppedFromProseMirror = dragSourceElement === view.dom.parentElement;
+          dropEvent = event;
+          if (!isDroppedFromProseMirror) {
+            const dragFromOtherEditor = tiptapDragFromOtherEditor;
+            if (dragFromOtherEditor === null || dragFromOtherEditor === void 0 ? void 0 : dragFromOtherEditor.isEditable) setTimeout(() => {
+              const selection = dragFromOtherEditor.state.selection;
+              if (selection) dragFromOtherEditor.commands.deleteRange({
+                from: selection.from,
+                to: selection.to
+              });
+            }, 10);
           }
+          return false;
+        },
+        paste: (_view, event) => {
+          var _clipboardData;
+          const html = (_clipboardData = event.clipboardData) === null || _clipboardData === void 0 ? void 0 : _clipboardData.getData("text/html");
+          pasteEvent = event;
+          isPastedFromProseMirror = !!(html === null || html === void 0 ? void 0 : html.includes("data-pm-slice"));
+          return false;
         }
-      },
+      } },
       appendTransaction: (transactions, oldState, state) => {
         const transaction = transactions[0];
         const isPaste = transaction.getMeta("uiEvent") === "paste" && !isPastedFromProseMirror;
         const isDrop = transaction.getMeta("uiEvent") === "drop" && !isDroppedFromProseMirror;
         const simulatedPasteMeta = transaction.getMeta("applyPasteRules");
         const isSimulatedPaste = !!simulatedPasteMeta;
-        if (!isPaste && !isDrop && !isSimulatedPaste) {
-          return;
-        }
+        if (!isPaste && !isDrop && !isSimulatedPaste) return;
         if (isSimulatedPaste) {
           let { text } = simulatedPasteMeta;
-          if (typeof text === "string") {
-            text = text;
-          } else {
-            text = getHTMLFromFragment(Fragment.from(text), state.schema);
-          }
-          const { from: from22 } = simulatedPasteMeta;
-          const to2 = from22 + text.length;
+          if (typeof text === "string") text = text;
+          else text = getHTMLFromFragment(Fragment.from(text), state.schema);
+          const { from: from3 } = simulatedPasteMeta;
+          const to2 = from3 + text.length;
           const pasteEvt = createClipboardPasteEvent(text);
           return processEvent({
             rule,
             state,
-            from: from22,
+            from: from3,
             to: { b: to2 },
             pasteEvt
           });
         }
         const from2 = oldState.doc.content.findDiffStart(state.doc.content);
         const to = oldState.doc.content.findDiffEnd(state.doc.content);
-        if (!isNumber(from2) || !to || from2 === to.b) {
-          return;
-        }
+        if (!isNumber(from2) || !to || from2 === to.b) return;
         return processEvent({
           rule,
           state,
@@ -16665,7 +15459,6 @@ function pasteRulesPlugin(props) {
       }
     });
   });
-  return plugins;
 }
 var ExtensionManager = class {
   constructor(extensions, editor) {
@@ -16679,26 +15472,19 @@ var ExtensionManager = class {
     this.setupExtensions();
   }
   /**
-   * Get all commands from the extensions.
-   * @returns An object with all commands where the key is the command name and the value is the command function
-   */
+  * Get all commands from the extensions.
+  * @returns An object with all commands where the key is the command name and the value is the command function
+  */
   get commands() {
     return this.extensions.reduce((commands, extension) => {
-      const context = {
+      const addCommands = getExtensionField(extension, "addCommands", {
         name: extension.name,
         options: extension.options,
         storage: this.editor.extensionStorage[extension.name],
         editor: this.editor,
         type: getSchemaTypeByName(extension.name, this.schema)
-      };
-      const addCommands = getExtensionField(
-        extension,
-        "addCommands",
-        context
-      );
-      if (!addCommands) {
-        return commands;
-      }
+      });
+      if (!addCommands) return commands;
       return {
         ...commands,
         ...addCommands()
@@ -16706,13 +15492,12 @@ var ExtensionManager = class {
     }, {});
   }
   /**
-   * Get all registered Prosemirror plugins from the extensions.
-   * @returns An array of Prosemirror plugins
-   */
+  * Get all registered Prosemirror plugins from the extensions.
+  * @returns An array of Prosemirror plugins
+  */
   get plugins() {
     const { editor } = this;
-    const extensions = sortExtensions([...this.extensions].reverse());
-    const allPlugins = extensions.flatMap((extension) => {
+    const allPlugins = sortExtensions([...this.extensions].reverse()).flatMap((extension) => {
       const context = {
         name: extension.name,
         options: extension.options,
@@ -16721,30 +15506,24 @@ var ExtensionManager = class {
         type: getSchemaTypeByName(extension.name, this.schema)
       };
       const plugins = [];
-      const addKeyboardShortcuts = getExtensionField(
-        extension,
-        "addKeyboardShortcuts",
-        context
-      );
+      const addKeyboardShortcuts = getExtensionField(extension, "addKeyboardShortcuts", context);
       let defaultBindings = {};
-      if (extension.type === "mark" && getExtensionField(extension, "exitable", context)) {
-        defaultBindings.ArrowRight = () => Mark2.handleExit({ editor, mark: extension });
-      }
+      if (extension.type === "mark" && getExtensionField(extension, "exitable", context)) defaultBindings.ArrowRight = () => Mark2.handleExit({
+        editor,
+        mark: extension
+      });
       if (addKeyboardShortcuts) {
-        const bindings = Object.fromEntries(
-          Object.entries(addKeyboardShortcuts()).map(([shortcut, method]) => {
-            return [shortcut, () => method({ editor })];
-          })
-        );
-        defaultBindings = { ...defaultBindings, ...bindings };
+        const bindings = Object.fromEntries(Object.entries(addKeyboardShortcuts()).map(([shortcut, method]) => {
+          return [shortcut, () => method({ editor })];
+        }));
+        defaultBindings = {
+          ...defaultBindings,
+          ...bindings
+        };
       }
       const keyMapPlugin = keymap(defaultBindings);
       plugins.push(keyMapPlugin);
-      const addInputRules = getExtensionField(
-        extension,
-        "addInputRules",
-        context
-      );
+      const addInputRules = getExtensionField(extension, "addInputRules", context);
       if (isExtensionRulesEnabled(extension, editor.options.enableInputRules) && addInputRules) {
         const rules = addInputRules();
         if (rules && rules.length) {
@@ -16756,23 +15535,18 @@ var ExtensionManager = class {
           plugins.push(...inputPlugins);
         }
       }
-      const addPasteRules = getExtensionField(
-        extension,
-        "addPasteRules",
-        context
-      );
+      const addPasteRules = getExtensionField(extension, "addPasteRules", context);
       if (isExtensionRulesEnabled(extension, editor.options.enablePasteRules) && addPasteRules) {
         const rules = addPasteRules();
         if (rules && rules.length) {
-          const pasteRules = pasteRulesPlugin({ editor, rules });
+          const pasteRules = pasteRulesPlugin({
+            editor,
+            rules
+          });
           plugins.push(...pasteRules);
         }
       }
-      const addProseMirrorPlugins = getExtensionField(
-        extension,
-        "addProseMirrorPlugins",
-        context
-      );
+      const addProseMirrorPlugins = getExtensionField(extension, "addProseMirrorPlugins", context);
       if (addProseMirrorPlugins) {
         const proseMirrorPlugins = addProseMirrorPlugins();
         plugins.push(...proseMirrorPlugins);
@@ -16780,110 +15554,91 @@ var ExtensionManager = class {
       return plugins;
     });
     const decorationPlugin = this.createDecorationPlugin();
-    if (decorationPlugin) {
-      allPlugins.push(decorationPlugin);
-    }
+    if (decorationPlugin) allPlugins.push(decorationPlugin);
     return allPlugins;
   }
   /**
-   * Aggregates decorations from extensions into a single plugin, or returns null
-   * if none exist. Destroys the previous manager to avoid orphaned listeners.
-   * @returns A ProseMirror plugin or `null`
-   * @example
-   * const plugin = editor.extensionManager.createDecorationPlugin()
-   */
+  * Aggregates decorations from extensions into a single plugin, or returns null
+  * if none exist. Destroys the previous manager to avoid orphaned listeners.
+  * @returns A ProseMirror plugin or `null`
+  * @example
+  * const plugin = editor.extensionManager.createDecorationPlugin()
+  */
   createDecorationPlugin() {
-    var _a;
+    var _this$decorationManag;
     const { editor } = this;
-    (_a = this.decorationManager) == null ? void 0 : _a.destroy();
+    (_this$decorationManag = this.decorationManager) === null || _this$decorationManag === void 0 || _this$decorationManag.destroy();
     const entries = [];
     this.extensions.forEach((extension) => {
-      const context = {
+      const addDecorations = getExtensionField(extension, "addDecorations", {
         name: extension.name,
         options: extension.options,
         storage: this.editor.extensionStorage[extension.name],
         editor,
         type: getSchemaTypeByName(extension.name, this.schema)
-      };
-      const addDecorations = getExtensionField(
-        extension,
-        "addDecorations",
-        context
-      );
-      if (!addDecorations) {
-        return;
-      }
-      entries.push({ name: extension.name, addDecorations });
+      });
+      if (!addDecorations) return;
+      entries.push({
+        name: extension.name,
+        addDecorations
+      });
     });
-    this.decorationManager = new DecorationManager({ editor, entries });
+    this.decorationManager = new DecorationManager({
+      editor,
+      entries
+    });
     return this.decorationManager.plugin;
   }
   /**
-   * Get all attributes from the extensions.
-   * @returns An array of attributes
-   */
+  * Get all attributes from the extensions.
+  * @returns An array of attributes
+  */
   get attributes() {
     return getAttributesFromExtensions(this.extensions);
   }
   /**
-   * Get all node views from the extensions.
-   * @returns An object with all node views where the key is the node name and the value is the node view function
-   */
+  * Get all node views from the extensions.
+  * @returns An object with all node views where the key is the node name and the value is the node view function
+  */
   get nodeViews() {
     const { editor } = this;
     const { nodeExtensions } = splitExtensions(this.extensions);
-    return Object.fromEntries(
-      nodeExtensions.filter((extension) => !!getExtensionField(extension, "addNodeView")).map((extension) => {
-        const extensionAttributes = this.attributes.filter(
-          (attribute) => attribute.type === extension.name
-        );
-        const context = {
-          name: extension.name,
-          options: extension.options,
-          storage: this.editor.extensionStorage[extension.name],
+    return Object.fromEntries(nodeExtensions.filter((extension) => !!getExtensionField(extension, "addNodeView")).map((extension) => {
+      const extensionAttributes = this.attributes.filter((attribute) => attribute.type === extension.name);
+      const addNodeView = getExtensionField(extension, "addNodeView", {
+        name: extension.name,
+        options: extension.options,
+        storage: this.editor.extensionStorage[extension.name],
+        editor,
+        type: getNodeType(extension.name, this.schema)
+      });
+      if (!addNodeView) return [];
+      const nodeViewResult = addNodeView();
+      if (!nodeViewResult) return [];
+      const nodeview = (node, view, getPos, decorations, innerDecorations) => {
+        const HTMLAttributes = getRenderedAttributes(node, extensionAttributes);
+        return nodeViewResult({
+          node,
+          view,
+          getPos,
+          decorations,
+          innerDecorations,
           editor,
-          type: getNodeType(extension.name, this.schema)
-        };
-        const addNodeView = getExtensionField(
           extension,
-          "addNodeView",
-          context
-        );
-        if (!addNodeView) {
-          return [];
-        }
-        const nodeViewResult = addNodeView();
-        if (!nodeViewResult) {
-          return [];
-        }
-        const nodeview = (node, view, getPos, decorations, innerDecorations) => {
-          const HTMLAttributes = getRenderedAttributes(node, extensionAttributes);
-          return nodeViewResult({
-            // pass-through
-            node,
-            view,
-            getPos,
-            decorations,
-            innerDecorations,
-            // tiptap-specific
-            editor,
-            extension,
-            HTMLAttributes
-          });
-        };
-        return [extension.name, nodeview];
-      })
-    );
+          HTMLAttributes
+        });
+      };
+      return [extension.name, nodeview];
+    }));
   }
   /**
-   * Get the composed dispatchTransaction function from all extensions.
-   * @param baseDispatch The base dispatch function (e.g. from the editor or user props)
-   * @returns A composed dispatch function
-   */
+  * Get the composed dispatchTransaction function from all extensions.
+  * @param baseDispatch The base dispatch function (e.g. from the editor or user props)
+  * @returns A composed dispatch function
+  */
   dispatchTransaction(baseDispatch) {
     const { editor } = this;
-    const extensions = sortExtensions([...this.extensions].reverse());
-    return extensions.reduceRight((next, extension) => {
+    return sortExtensions([...this.extensions].reverse()).reduceRight((next, extension) => {
       const context = {
         name: extension.name,
         options: extension.options,
@@ -16891,119 +15646,91 @@ var ExtensionManager = class {
         editor,
         type: getSchemaTypeByName(extension.name, this.schema)
       };
-      const dispatchTransaction = getExtensionField(
-        extension,
-        "dispatchTransaction",
-        context
-      );
-      if (!dispatchTransaction) {
-        return next;
-      }
+      const dispatchTransaction = getExtensionField(extension, "dispatchTransaction", context);
+      if (!dispatchTransaction) return next;
       return (transaction) => {
-        dispatchTransaction.call(context, { transaction, next });
+        dispatchTransaction.call(context, {
+          transaction,
+          next
+        });
       };
     }, baseDispatch);
   }
   /**
-   * Get the composed transformPastedHTML function from all extensions.
-   * @param baseTransform The base transform function (e.g. from the editor props)
-   * @returns A composed transform function that chains all extension transforms
-   */
+  * Get the composed transformPastedHTML function from all extensions.
+  * @param baseTransform The base transform function (e.g. from the editor props)
+  * @returns A composed transform function that chains all extension transforms
+  */
   transformPastedHTML(baseTransform) {
     const { editor } = this;
-    const extensions = sortExtensions([...this.extensions]);
-    return extensions.reduce(
-      (transform, extension) => {
-        const context = {
-          name: extension.name,
-          options: extension.options,
-          storage: this.editor.extensionStorage[extension.name],
-          editor,
-          type: getSchemaTypeByName(extension.name, this.schema)
-        };
-        const extensionTransform = getExtensionField(
-          extension,
-          "transformPastedHTML",
-          context
-        );
-        if (!extensionTransform) {
-          return transform;
-        }
-        return (html, view) => {
-          const transformedHtml = transform(html, view);
-          return extensionTransform.call(context, transformedHtml);
-        };
-      },
-      baseTransform || ((html) => html)
-    );
+    return sortExtensions([...this.extensions]).reduce((transform, extension) => {
+      const context = {
+        name: extension.name,
+        options: extension.options,
+        storage: this.editor.extensionStorage[extension.name],
+        editor,
+        type: getSchemaTypeByName(extension.name, this.schema)
+      };
+      const extensionTransform = getExtensionField(extension, "transformPastedHTML", context);
+      if (!extensionTransform) return transform;
+      return (html, view) => {
+        const transformedHtml = transform(html, view);
+        return extensionTransform.call(context, transformedHtml);
+      };
+    }, baseTransform || ((html) => html));
   }
   get markViews() {
     const { editor } = this;
     const { markExtensions } = splitExtensions(this.extensions);
-    return Object.fromEntries(
-      markExtensions.filter((extension) => !!getExtensionField(extension, "addMarkView")).map((extension) => {
-        const extensionAttributes = this.attributes.filter(
-          (attribute) => attribute.type === extension.name
-        );
-        const context = {
-          name: extension.name,
-          options: extension.options,
-          storage: this.editor.extensionStorage[extension.name],
+    return Object.fromEntries(markExtensions.filter((extension) => !!getExtensionField(extension, "addMarkView")).map((extension) => {
+      const extensionAttributes = this.attributes.filter((attribute) => attribute.type === extension.name);
+      const addMarkView = getExtensionField(extension, "addMarkView", {
+        name: extension.name,
+        options: extension.options,
+        storage: this.editor.extensionStorage[extension.name],
+        editor,
+        type: getMarkType(extension.name, this.schema)
+      });
+      if (!addMarkView) return [];
+      const markView = (mark, view, inline) => {
+        const HTMLAttributes = getRenderedAttributes(mark, extensionAttributes);
+        return addMarkView()({
+          mark,
+          view,
+          inline,
           editor,
-          type: getMarkType(extension.name, this.schema)
-        };
-        const addMarkView = getExtensionField(
           extension,
-          "addMarkView",
-          context
-        );
-        if (!addMarkView) {
-          return [];
-        }
-        const markView = (mark, view, inline) => {
-          const HTMLAttributes = getRenderedAttributes(mark, extensionAttributes);
-          return addMarkView()({
-            // pass-through
-            mark,
-            view,
-            inline,
-            // tiptap-specific
-            editor,
-            extension,
-            HTMLAttributes,
-            updateAttributes: (attrs) => {
-              updateMarkViewAttributes(mark, editor, attrs);
-            }
-          });
-        };
-        return [extension.name, markView];
-      })
-    );
+          HTMLAttributes,
+          updateAttributes: (attrs) => {
+            updateMarkViewAttributes(mark, editor, attrs);
+          }
+        });
+      };
+      return [extension.name, markView];
+    }));
   }
   /**
-   * Destroy the extension manager and clean up all extension references
-   * to prevent memory leaks through parent/child extension chains.
-   *
-   * Walks each extension's full parent chain and nulls every forward
-   * `parent.child → current` link where the parent still points to the
-   * current node. This breaks the retention path from module-scope
-   * singleton roots through deep extend() chains.
-   *
-   * Only ancestor `.child` links matching the current chain are cleared.
-   * The `.parent` pointer on ancestors is never touched — extensions
-   * may be shared across live editors, so their own backward references
-   * and non-matching forward links must remain intact.
-   */
+  * Destroy the extension manager and clean up all extension references
+  * to prevent memory leaks through parent/child extension chains.
+  *
+  * Walks each extension's full parent chain and nulls every forward
+  * `parent.child → current` link where the parent still points to the
+  * current node. This breaks the retention path from module-scope
+  * singleton roots through deep extend() chains.
+  *
+  * Only ancestor `.child` links matching the current chain are cleared.
+  * The `.parent` pointer on ancestors is never touched — extensions
+  * may be shared across live editors, so their own backward references
+  * and non-matching forward links must remain intact.
+  */
   destroy() {
-    var _a;
-    (_a = this.decorationManager) == null ? void 0 : _a.destroy();
+    var _this$decorationManag2;
+    (_this$decorationManag2 = this.decorationManager) === null || _this$decorationManag2 === void 0 || _this$decorationManag2.destroy();
     this.extensions.forEach((extension) => {
       let current = extension;
       while (current.parent) {
         const parent = current.parent;
-        if (parent.child === current) {
-          parent.child = null;
-        }
+        if (parent.child === current) parent.child = null;
         current = parent;
       }
     });
@@ -17014,16 +15741,13 @@ var ExtensionManager = class {
     this.editor = null;
   }
   /**
-   * Go through all extensions, create extension storages & setup marks
-   * & bind editor event listener.
-   */
+  * Go through all extensions, create extension storages & setup marks
+  * & bind editor event listener.
+  */
   setupExtensions() {
     const extensions = this.extensions;
-    this.editor.extensionStorage = Object.fromEntries(
-      extensions.map((extension) => [extension.name, extension.storage])
-    );
+    this.editor.extensionStorage = Object.fromEntries(extensions.map((extension) => [extension.name, extension.storage]));
     extensions.forEach((extension) => {
-      var _a, _b;
       const context = {
         name: extension.name,
         options: extension.options,
@@ -17032,93 +15756,44 @@ var ExtensionManager = class {
         type: getSchemaTypeByName(extension.name, this.schema)
       };
       if (extension.type === "mark") {
-        const keepOnSplit = (_a = callOrReturn(getExtensionField(extension, "keepOnSplit", context))) != null ? _a : true;
-        if (keepOnSplit) {
-          this.splittableMarks.push(extension.name);
-        }
-        const clearable = (_b = callOrReturn(
-          getExtensionField(extension, "clearable", context)
-        )) != null ? _b : true;
-        if (!clearable) {
-          this.nonClearableMarks.push(extension.name);
-        }
+        var _callOrReturn, _callOrReturn2;
+        if ((_callOrReturn = callOrReturn(getExtensionField(extension, "keepOnSplit", context))) !== null && _callOrReturn !== void 0 ? _callOrReturn : true) this.splittableMarks.push(extension.name);
+        if (!((_callOrReturn2 = callOrReturn(getExtensionField(extension, "clearable", context))) !== null && _callOrReturn2 !== void 0 ? _callOrReturn2 : true)) this.nonClearableMarks.push(extension.name);
       }
-      const onBeforeCreate = getExtensionField(
-        extension,
-        "onBeforeCreate",
-        context
-      );
+      const onBeforeCreate = getExtensionField(extension, "onBeforeCreate", context);
       const onCreate = getExtensionField(extension, "onCreate", context);
       const onUpdate = getExtensionField(extension, "onUpdate", context);
-      const onSelectionUpdate = getExtensionField(
-        extension,
-        "onSelectionUpdate",
-        context
-      );
-      const onTransaction = getExtensionField(
-        extension,
-        "onTransaction",
-        context
-      );
+      const onSelectionUpdate = getExtensionField(extension, "onSelectionUpdate", context);
+      const onTransaction = getExtensionField(extension, "onTransaction", context);
       const onFocus = getExtensionField(extension, "onFocus", context);
       const onBlur = getExtensionField(extension, "onBlur", context);
       const onDestroy = getExtensionField(extension, "onDestroy", context);
-      if (onBeforeCreate) {
-        this.editor.on("beforeCreate", onBeforeCreate);
-      }
-      if (onCreate) {
-        this.editor.on("create", onCreate);
-      }
-      if (onUpdate) {
-        this.editor.on("update", onUpdate);
-      }
-      if (onSelectionUpdate) {
-        this.editor.on("selectionUpdate", onSelectionUpdate);
-      }
-      if (onTransaction) {
-        this.editor.on("transaction", onTransaction);
-      }
-      if (onFocus) {
-        this.editor.on("focus", onFocus);
-      }
-      if (onBlur) {
-        this.editor.on("blur", onBlur);
-      }
-      if (onDestroy) {
-        this.editor.on("destroy", onDestroy);
-      }
+      if (onBeforeCreate) this.editor.on("beforeCreate", onBeforeCreate);
+      if (onCreate) this.editor.on("create", onCreate);
+      if (onUpdate) this.editor.on("update", onUpdate);
+      if (onSelectionUpdate) this.editor.on("selectionUpdate", onSelectionUpdate);
+      if (onTransaction) this.editor.on("transaction", onTransaction);
+      if (onFocus) this.editor.on("focus", onFocus);
+      if (onBlur) this.editor.on("blur", onBlur);
+      if (onDestroy) this.editor.on("destroy", onDestroy);
     });
   }
 };
 ExtensionManager.resolve = resolveExtensions;
 ExtensionManager.sort = sortExtensions;
 ExtensionManager.flatten = flattenExtensions;
-var extensions_exports = {};
-__export(extensions_exports, {
-  ClipboardTextSerializer: () => ClipboardTextSerializer,
-  Commands: () => Commands,
-  Delete: () => Delete,
-  Drop: () => Drop,
-  Editable: () => Editable,
-  FocusEvents: () => FocusEvents,
-  Keymap: () => Keymap,
-  Paste: () => Paste,
-  Tabindex: () => Tabindex,
-  TextDirection: () => TextDirection,
-  focusEventsPluginKey: () => focusEventsPluginKey
-});
-var Extension = class _Extension extends Extendable {
-  constructor() {
-    super(...arguments);
+var Extension = class Extension2 extends Extendable {
+  constructor(..._args) {
+    super(..._args);
     this.type = "extension";
   }
   /**
-   * Create a new Extension instance
-   * @param config - Extension configuration object or a function that returns a configuration object
-   */
+  * Create a new Extension instance
+  * @param config - Extension configuration object or a function that returns a configuration object
+  */
   static create(config = {}) {
     const resolvedConfig = typeof config === "function" ? config() : config;
-    return new _Extension(resolvedConfig);
+    return new Extension2(resolvedConfig);
   }
   configure(options) {
     return super.configure(options);
@@ -17131,93 +15806,73 @@ var Extension = class _Extension extends Extendable {
 var ClipboardTextSerializer = Extension.create({
   name: "clipboardTextSerializer",
   addOptions() {
-    return {
-      blockSeparator: void 0
-    };
+    return { blockSeparator: void 0 };
   },
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey("clipboardTextSerializer"),
-        props: {
-          clipboardTextSerializer: () => {
-            const { editor } = this;
-            const { state, schema } = editor;
-            const { doc: doc3, selection } = state;
-            const textSerializers = getTextSerializersFromSchema(schema);
-            const { blockSeparator } = this.options;
-            const options = {
-              ...blockSeparator !== void 0 ? { blockSeparator } : {},
-              textSerializers
-            };
-            const sortedRanges = [...selection.ranges].sort((a, b) => a.$from.pos - b.$from.pos);
-            return sortedRanges.map(
-              ({ $from, $to }) => getTextBetween(doc3, { from: $from.pos, to: $to.pos }, options)
-            ).join(blockSeparator != null ? blockSeparator : "\n\n");
-          }
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("clipboardTextSerializer"),
+      props: { clipboardTextSerializer: () => {
+        const { editor } = this;
+        const { state, schema } = editor;
+        const { doc: doc3, selection } = state;
+        const textSerializers = getTextSerializersFromSchema(schema);
+        const { blockSeparator } = this.options;
+        const options = {
+          ...blockSeparator !== void 0 ? { blockSeparator } : {},
+          textSerializers
+        };
+        return [...selection.ranges].sort((a, b) => a.$from.pos - b.$from.pos).map(({ $from, $to }) => getTextBetween(doc3, {
+          from: $from.pos,
+          to: $to.pos
+        }, options)).join(blockSeparator !== null && blockSeparator !== void 0 ? blockSeparator : "\n\n");
+      } }
+    })];
   }
 });
 var Commands = Extension.create({
   name: "commands",
   addCommands() {
-    return {
-      ...commands_exports
-    };
+    return { ...commands_exports };
   }
 });
 var Delete = Extension.create({
   name: "delete",
   onUpdate({ transaction, appendedTransactions }) {
-    var _a, _b, _c;
+    var _this$editor$options$4, _this$editor$options$5;
     const callback = () => {
-      var _a2, _b2, _c2, _d;
-      if ((_d = (_c2 = (_b2 = (_a2 = this.editor.options.coreExtensionOptions) == null ? void 0 : _a2.delete) == null ? void 0 : _b2.filterTransaction) == null ? void 0 : _c2.call(_b2, transaction)) != null ? _d : transaction.getMeta("y-sync$")) {
-        return;
-      }
-      const nextTransaction = combineTransactionSteps(transaction.before, [
-        transaction,
-        ...appendedTransactions
-      ]);
-      const changes = getChangedRanges(nextTransaction);
-      changes.forEach((change) => {
-        if (nextTransaction.mapping.mapResult(change.oldRange.from).deletedAfter && nextTransaction.mapping.mapResult(change.oldRange.to).deletedBefore) {
-          nextTransaction.before.nodesBetween(
-            change.oldRange.from,
-            change.oldRange.to,
-            (node, from2) => {
-              const to = from2 + node.nodeSize - 2;
-              const isFullyWithinRange = change.oldRange.from <= from2 && to <= change.oldRange.to;
-              this.editor.emit("delete", {
-                type: "node",
-                node,
-                from: from2,
-                to,
-                newFrom: nextTransaction.mapping.map(from2),
-                newTo: nextTransaction.mapping.map(to),
-                deletedRange: change.oldRange,
-                newRange: change.newRange,
-                partial: !isFullyWithinRange,
-                editor: this.editor,
-                transaction,
-                combinedTransform: nextTransaction
-              });
-            }
-          );
-        }
+      var _this$editor$options$, _this$editor$options$2, _this$editor$options$3;
+      if ((_this$editor$options$ = (_this$editor$options$2 = this.editor.options.coreExtensionOptions) === null || _this$editor$options$2 === void 0 || (_this$editor$options$2 = _this$editor$options$2.delete) === null || _this$editor$options$2 === void 0 || (_this$editor$options$3 = _this$editor$options$2.filterTransaction) === null || _this$editor$options$3 === void 0 ? void 0 : _this$editor$options$3.call(_this$editor$options$2, transaction)) !== null && _this$editor$options$ !== void 0 ? _this$editor$options$ : transaction.getMeta("y-sync$")) return;
+      const nextTransaction = combineTransactionSteps(transaction.before, [transaction, ...appendedTransactions]);
+      getChangedRanges(nextTransaction).forEach((change) => {
+        if (nextTransaction.mapping.mapResult(change.oldRange.from).deletedAfter && nextTransaction.mapping.mapResult(change.oldRange.to).deletedBefore) nextTransaction.before.nodesBetween(change.oldRange.from, change.oldRange.to, (node, from2) => {
+          const to = from2 + node.nodeSize - 2;
+          const isFullyWithinRange = change.oldRange.from <= from2 && to <= change.oldRange.to;
+          this.editor.emit("delete", {
+            type: "node",
+            node,
+            from: from2,
+            to,
+            newFrom: nextTransaction.mapping.map(from2),
+            newTo: nextTransaction.mapping.map(to),
+            deletedRange: change.oldRange,
+            newRange: change.newRange,
+            partial: !isFullyWithinRange,
+            editor: this.editor,
+            transaction,
+            combinedTransform: nextTransaction
+          });
+        });
       });
       const mapping = nextTransaction.mapping;
       nextTransaction.steps.forEach((step, index) => {
-        var _a3, _b3;
         if (step instanceof RemoveMarkStep) {
+          var _nextTransaction$doc$, _nextTransaction$doc$2;
           const newStart = mapping.slice(index).map(step.from, -1);
           const newEnd = mapping.slice(index).map(step.to);
           const oldStart = mapping.invert().map(newStart, -1);
           const oldEnd = mapping.invert().map(newEnd);
-          const foundBeforeMark = newStart > 0 ? (_a3 = nextTransaction.doc.nodeAt(newStart - 1)) == null ? void 0 : _a3.marks.some((mark) => mark.eq(step.mark)) : false;
-          const foundAfterMark = (_b3 = nextTransaction.doc.nodeAt(newEnd)) == null ? void 0 : _b3.marks.some((mark) => mark.eq(step.mark));
+          const foundBeforeMark = newStart > 0 ? (_nextTransaction$doc$ = nextTransaction.doc.nodeAt(newStart - 1)) === null || _nextTransaction$doc$ === void 0 ? void 0 : _nextTransaction$doc$.marks.some((mark) => mark.eq(step.mark)) : false;
+          const foundAfterMark = (_nextTransaction$doc$2 = nextTransaction.doc.nodeAt(newEnd)) === null || _nextTransaction$doc$2 === void 0 ? void 0 : _nextTransaction$doc$2.marks.some((mark) => mark.eq(step.mark));
           this.editor.emit("delete", {
             type: "mark",
             mark: step.mark,
@@ -17239,44 +15894,33 @@ var Delete = Extension.create({
         }
       });
     };
-    if ((_c = (_b = (_a = this.editor.options.coreExtensionOptions) == null ? void 0 : _a.delete) == null ? void 0 : _b.async) != null ? _c : true) {
-      setTimeout(callback, 0);
-    } else {
-      callback();
-    }
+    if ((_this$editor$options$4 = (_this$editor$options$5 = this.editor.options.coreExtensionOptions) === null || _this$editor$options$5 === void 0 || (_this$editor$options$5 = _this$editor$options$5.delete) === null || _this$editor$options$5 === void 0 ? void 0 : _this$editor$options$5.async) !== null && _this$editor$options$4 !== void 0 ? _this$editor$options$4 : true) setTimeout(callback, 0);
+    else callback();
   }
 });
 var Drop = Extension.create({
   name: "drop",
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey("tiptapDrop"),
-        props: {
-          handleDrop: (_, e, slice2, moved) => {
-            this.editor.emit("drop", {
-              editor: this.editor,
-              event: e,
-              slice: slice2,
-              moved
-            });
-          }
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("tiptapDrop"),
+      props: { handleDrop: (_, e, slice2, moved) => {
+        this.editor.emit("drop", {
+          editor: this.editor,
+          event: e,
+          slice: slice2,
+          moved
+        });
+      } }
+    })];
   }
 });
 var Editable = Extension.create({
   name: "editable",
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey("editable"),
-        props: {
-          editable: () => this.editor.options.editable
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("editable"),
+      props: { editable: () => this.editor.options.editable }
+    })];
   }
 });
 var focusEventsPluginKey = new PluginKey("focusEvents");
@@ -17284,27 +15928,23 @@ var FocusEvents = Extension.create({
   name: "focusEvents",
   addProseMirrorPlugins() {
     const { editor } = this;
-    return [
-      new Plugin({
-        key: focusEventsPluginKey,
-        props: {
-          handleDOMEvents: {
-            focus: (view, event) => {
-              editor.isFocused = true;
-              const transaction = editor.state.tr.setMeta("focus", { event }).setMeta("addToHistory", false);
-              view.dispatch(transaction);
-              return false;
-            },
-            blur: (view, event) => {
-              editor.isFocused = false;
-              const transaction = editor.state.tr.setMeta("blur", { event }).setMeta("addToHistory", false);
-              view.dispatch(transaction);
-              return false;
-            }
-          }
+    return [new Plugin({
+      key: focusEventsPluginKey,
+      props: { handleDOMEvents: {
+        focus: (view, event) => {
+          editor.isFocused = true;
+          const transaction = editor.state.tr.setMeta("focus", { event }).setMeta("addToHistory", false);
+          view.dispatch(transaction);
+          return false;
+        },
+        blur: (view, event) => {
+          editor.isFocused = false;
+          const transaction = editor.state.tr.setMeta("blur", { event }).setMeta("addToHistory", false);
+          view.dispatch(transaction);
+          return false;
         }
-      })
-    ];
+      } }
+    })];
   }
 });
 var Keymap = Extension.create({
@@ -17312,7 +15952,6 @@ var Keymap = Extension.create({
   addKeyboardShortcuts() {
     const handleBackspace3 = () => this.editor.commands.first(({ commands }) => [
       () => commands.undoInputRule(),
-      // maybe convert first text block node to default node
       () => commands.command(({ tr: tr2 }) => {
         const { selection, doc: doc3 } = tr2;
         const { empty: empty2, $anchor } = selection;
@@ -17321,9 +15960,7 @@ var Keymap = Extension.create({
         const parentIsIsolating = $parentPos.parent.type.spec.isolating;
         const parentPos = $anchor.pos - $anchor.parentOffset;
         const isAtStart = parentIsIsolating && $parentPos.parent.childCount === 1 ? parentPos === $anchor.pos : Selection.atStart(doc3).from === pos;
-        if (!empty2 || !parent.type.isTextblock || parent.textContent.length || !isAtStart || isAtStart && $anchor.parent.type.name === "paragraph") {
-          return false;
-        }
+        if (!empty2 || !parent.type.isTextblock || parent.textContent.length || !isAtStart || isAtStart && $anchor.parent.type.name === "paragraph") return false;
         return commands.clearNodes();
       }),
       () => commands.deleteSelection(),
@@ -17352,9 +15989,7 @@ var Keymap = Extension.create({
       "Mod-Delete": handleDelete2,
       "Mod-a": () => this.editor.commands.selectAll()
     };
-    const pcKeymap = {
-      ...baseKeymap
-    };
+    const pcKeymap = { ...baseKeymap };
     const macKeymap = {
       ...baseKeymap,
       "Ctrl-h": handleBackspace3,
@@ -17366,181 +16001,124 @@ var Keymap = Extension.create({
       "Ctrl-a": () => this.editor.commands.selectTextblockStart(),
       "Ctrl-e": () => this.editor.commands.selectTextblockEnd()
     };
-    if (isiOS() || isMacOS()) {
-      return macKeymap;
-    }
+    if (isiOS() || isMacOS()) return macKeymap;
     return pcKeymap;
   },
   addProseMirrorPlugins() {
-    return [
-      // With this plugin we check if the whole document was selected and deleted.
-      // In this case we will additionally call `clearNodes()` to convert e.g. a heading
-      // to a paragraph if necessary.
-      // This is an alternative to ProseMirror's `AllSelection`, which doesn’t work well
-      // with many other commands.
-      new Plugin({
-        key: new PluginKey("clearDocument"),
-        appendTransaction: (transactions, oldState, newState) => {
-          if (transactions.some((tr22) => tr22.getMeta("composition"))) {
-            return;
-          }
-          const docChanges = transactions.some((transaction) => transaction.docChanged) && !oldState.doc.eq(newState.doc);
-          const ignoreTr = transactions.some(
-            (transaction) => transaction.getMeta("preventClearDocument")
-          );
-          if (!docChanges || ignoreTr) {
-            return;
-          }
-          const { empty: empty2, from: from2, to } = oldState.selection;
-          const allFrom = Selection.atStart(oldState.doc).from;
-          const allEnd = Selection.atEnd(oldState.doc).to;
-          const allWasSelected = from2 === allFrom && to === allEnd;
-          if (empty2 || !allWasSelected) {
-            return;
-          }
-          const isEmpty = isNodeEmpty(newState.doc);
-          if (!isEmpty) {
-            return;
-          }
-          const tr2 = newState.tr;
-          const state = createChainableState({
-            state: newState,
-            transaction: tr2
-          });
-          const { commands } = new CommandManager({
-            editor: this.editor,
-            state
-          });
-          commands.clearNodes();
-          if (!tr2.steps.length) {
-            return;
-          }
-          return tr2;
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("clearDocument"),
+      appendTransaction: (transactions, oldState, newState) => {
+        if (transactions.some((tr3) => tr3.getMeta("composition"))) return;
+        const docChanges = transactions.some((transaction) => transaction.docChanged) && !oldState.doc.eq(newState.doc);
+        const ignoreTr = transactions.some((transaction) => transaction.getMeta("preventClearDocument"));
+        if (!docChanges || ignoreTr) return;
+        const { empty: empty2, from: from2, to } = oldState.selection;
+        const allFrom = Selection.atStart(oldState.doc).from;
+        const allEnd = Selection.atEnd(oldState.doc).to;
+        if (empty2 || !(from2 === allFrom && to === allEnd)) return;
+        if (!isNodeEmpty(newState.doc)) return;
+        const tr2 = newState.tr;
+        const state = createChainableState({
+          state: newState,
+          transaction: tr2
+        });
+        const { commands } = new CommandManager({
+          editor: this.editor,
+          state
+        });
+        commands.clearNodes();
+        if (!tr2.steps.length) return;
+        return tr2;
+      }
+    })];
   }
 });
 var Paste = Extension.create({
   name: "paste",
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey("tiptapPaste"),
-        props: {
-          handlePaste: (_view, e, slice2) => {
-            this.editor.emit("paste", {
-              editor: this.editor,
-              event: e,
-              slice: slice2
-            });
-          }
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("tiptapPaste"),
+      props: { handlePaste: (_view, e, slice2) => {
+        this.editor.emit("paste", {
+          editor: this.editor,
+          event: e,
+          slice: slice2
+        });
+      } }
+    })];
   }
 });
 var Tabindex = Extension.create({
   name: "tabindex",
   addOptions() {
-    return {
-      value: void 0
-    };
+    return { value: void 0 };
   },
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey("tabindex"),
-        props: {
-          attributes: () => {
-            var _a;
-            if (!this.editor.isEditable && this.options.value === void 0) {
-              return {};
-            }
-            return { tabindex: (_a = this.options.value) != null ? _a : "0" };
-          }
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("tabindex"),
+      props: { attributes: () => {
+        var _this$options$value;
+        if (!this.editor.isEditable && this.options.value === void 0) return {};
+        return { tabindex: (_this$options$value = this.options.value) !== null && _this$options$value !== void 0 ? _this$options$value : "0" };
+      } }
+    })];
   }
 });
 var TextDirection = Extension.create({
   name: "textDirection",
   addOptions() {
-    return {
-      direction: void 0
-    };
+    return { direction: void 0 };
   },
   addGlobalAttributes() {
-    if (!this.options.direction) {
-      return [];
-    }
+    if (!this.options.direction) return [];
     const { nodeExtensions } = splitExtensions(this.extensions);
-    return [
-      {
-        types: nodeExtensions.filter((extension) => extension.name !== "text").map((extension) => extension.name),
-        attributes: {
-          dir: {
-            default: this.options.direction,
-            parseHTML: (element) => {
-              const dir = element.getAttribute("dir");
-              if (dir && (dir === "ltr" || dir === "rtl" || dir === "auto")) {
-                return dir;
-              }
-              return this.options.direction;
-            },
-            renderHTML: (attributes) => {
-              if (!attributes.dir) {
-                return {};
-              }
-              return {
-                dir: attributes.dir
-              };
-            }
-          }
+    return [{
+      types: nodeExtensions.filter((extension) => extension.name !== "text").map((extension) => extension.name),
+      attributes: { dir: {
+        default: this.options.direction,
+        parseHTML: (element) => {
+          const dir = element.getAttribute("dir");
+          if (dir && (dir === "ltr" || dir === "rtl" || dir === "auto")) return dir;
+          return this.options.direction;
+        },
+        renderHTML: (attributes) => {
+          if (!attributes.dir) return {};
+          return { dir: attributes.dir };
         }
-      }
-    ];
+      } }
+    }];
   },
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey("textDirection"),
-        props: {
-          attributes: () => {
-            const direction = this.options.direction;
-            if (!direction) {
-              return {};
-            }
-            return {
-              dir: direction
-            };
-          }
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("textDirection"),
+      props: { attributes: () => {
+        const direction = this.options.direction;
+        if (!direction) return {};
+        return { dir: direction };
+      } }
+    })];
   }
 });
 var hasChecked = false;
 function warnOnDuplicatedProseMirrorModel(schema) {
-  if (hasChecked) {
-    return;
-  }
+  if (hasChecked) return;
   hasChecked = true;
   let content;
   try {
-    content = ReplaceStep.fromJSON(schema, { from: 0, to: 0 }).slice.content;
+    content = ReplaceStep.fromJSON(schema, {
+      from: 0,
+      to: 0
+    }).slice.content;
   } catch {
     return;
   }
-  if (content instanceof Fragment) {
-    return;
-  }
-  console.warn(
-    "[tiptap warn]: prosemirror-model is loaded more than once. Wrapping and splitting nodes will fail. Deduplicate it in your lock file, or alias it to a single copy in your bundler."
-  );
+  if (content instanceof Fragment) return;
+  console.warn("[tiptap warn]: prosemirror-model is loaded more than once. Wrapping and splitting nodes will fail. Deduplicate it in your lock file, or alias it to a single copy in your bundler.");
 }
-var NodePos = class _NodePos {
+var NodePos = class NodePos2 {
+  get name() {
+    return this.node.type.name;
+  }
   constructor(pos, editor, isBlock = false, node = null) {
     this.currentNode = null;
     this.actualDepth = null;
@@ -17549,9 +16127,6 @@ var NodePos = class _NodePos {
     this.editor = editor;
     this.currentNode = node;
   }
-  get name() {
-    return this.node.type.name;
-  }
   get node() {
     return this.currentNode || this.resolvedPos.node();
   }
@@ -17559,8 +16134,8 @@ var NodePos = class _NodePos {
     return this.editor.view.domAtPos(this.pos).node;
   }
   get depth() {
-    var _a;
-    return (_a = this.actualDepth) != null ? _a : this.resolvedPos.depth;
+    var _this$actualDepth;
+    return (_this$actualDepth = this.actualDepth) !== null && _this$actualDepth !== void 0 ? _this$actualDepth : this.resolvedPos.depth;
   }
   get pos() {
     return this.resolvedPos.pos;
@@ -17573,15 +16148,16 @@ var NodePos = class _NodePos {
     let to = this.to;
     if (this.isBlock) {
       if (this.content.size === 0) {
-        console.error(
-          `You can\u2019t set content on a block node. Tried to set content on ${this.name} at ${this.pos}`
-        );
+        console.error(`You can\u2019t set content on a block node. Tried to set content on ${this.name} at ${this.pos}`);
         return;
       }
       from2 = this.from + 1;
       to = this.to - 1;
     }
-    this.editor.commands.insertContentAt({ from: from2, to }, content);
+    this.editor.commands.insertContentAt({
+      from: from2,
+      to
+    }, content);
   }
   get attributes() {
     return this.node.attrs;
@@ -17593,9 +16169,7 @@ var NodePos = class _NodePos {
     return this.node.nodeSize;
   }
   get from() {
-    if (this.isBlock) {
-      return this.pos;
-    }
+    if (this.isBlock) return this.pos;
     return this.resolvedPos.start(this.resolvedPos.depth);
   }
   get range() {
@@ -17605,32 +16179,24 @@ var NodePos = class _NodePos {
     };
   }
   get to() {
-    if (this.isBlock) {
-      return this.pos + this.size;
-    }
+    if (this.isBlock) return this.pos + this.size;
     return this.resolvedPos.end(this.resolvedPos.depth) + (this.node.isText ? 0 : 1);
   }
   get parent() {
-    if (this.depth === 0) {
-      return null;
-    }
+    if (this.depth === 0) return null;
     const parentPos = this.resolvedPos.start(this.resolvedPos.depth - 1);
     const $pos = this.resolvedPos.doc.resolve(parentPos);
-    return new _NodePos($pos, this.editor);
+    return new NodePos2($pos, this.editor);
   }
   get before() {
     let $pos = this.resolvedPos.doc.resolve(this.from - (this.isBlock ? 1 : 2));
-    if ($pos.depth !== this.depth) {
-      $pos = this.resolvedPos.doc.resolve(this.from - 3);
-    }
-    return new _NodePos($pos, this.editor);
+    if ($pos.depth !== this.depth) $pos = this.resolvedPos.doc.resolve(this.from - 3);
+    return new NodePos2($pos, this.editor);
   }
   get after() {
     let $pos = this.resolvedPos.doc.resolve(this.to + (this.isBlock ? 2 : 1));
-    if ($pos.depth !== this.depth) {
-      $pos = this.resolvedPos.doc.resolve(this.to + 3);
-    }
-    return new _NodePos($pos, this.editor);
+    if ($pos.depth !== this.depth) $pos = this.resolvedPos.doc.resolve(this.to + 3);
+    return new NodePos2($pos, this.editor);
   }
   get children() {
     const children = [];
@@ -17639,22 +16205,11 @@ var NodePos = class _NodePos {
       const isNonTextAtom = node.isAtom && !node.isText;
       const isInline2 = node.isInline;
       const targetPos = this.pos + offset + (isNonTextAtom ? 0 : 1);
-      if (targetPos < 0 || targetPos > this.resolvedPos.doc.nodeSize - 2) {
-        return;
-      }
+      if (targetPos < 0 || targetPos > this.resolvedPos.doc.nodeSize - 2) return;
       const $pos = this.resolvedPos.doc.resolve(targetPos);
-      if (!isBlock && !isInline2 && $pos.depth <= this.depth) {
-        return;
-      }
-      const childNodePos = new _NodePos(
-        $pos,
-        this.editor,
-        isBlock,
-        isBlock || isInline2 ? node : null
-      );
-      if (isBlock) {
-        childNodePos.actualDepth = this.depth + 1;
-      }
+      if (!isBlock && !isInline2 && $pos.depth <= this.depth) return;
+      const childNodePos = new NodePos2($pos, this.editor, isBlock, isBlock || isInline2 ? node : null);
+      if (isBlock) childNodePos.actualDepth = this.depth + 1;
       children.push(childNodePos);
     });
     return children;
@@ -17676,13 +16231,9 @@ var NodePos = class _NodePos {
           const attrKeys = Object.keys(attributes);
           for (let index = 0; index < attrKeys.length; index += 1) {
             const key = attrKeys[index];
-            if (nodeAttributes[key] !== attributes[key]) {
-              break;
-            }
+            if (nodeAttributes[key] !== attributes[key]) break;
           }
-        } else {
-          node = currentNode;
-        }
+        } else node = currentNode;
       }
       currentNode = currentNode.parent;
     }
@@ -17693,25 +16244,14 @@ var NodePos = class _NodePos {
   }
   querySelectorAll(selector, attributes = {}, firstItemOnly = false) {
     let nodes = [];
-    if (!this.children || this.children.length === 0) {
-      return nodes;
-    }
+    if (!this.children || this.children.length === 0) return nodes;
     const attrKeys = Object.keys(attributes);
     this.children.forEach((childPos) => {
-      if (firstItemOnly && nodes.length > 0) {
-        return;
-      }
+      if (firstItemOnly && nodes.length > 0) return;
       if (childPos.node.type.name === selector) {
-        const doesAllAttributesMatch = attrKeys.every(
-          (key) => attributes[key] === childPos.node.attrs[key]
-        );
-        if (doesAllAttributesMatch) {
-          nodes.push(childPos);
-        }
+        if (attrKeys.every((key) => attributes[key] === childPos.node.attrs[key])) nodes.push(childPos);
       }
-      if (firstItemOnly && nodes.length > 0) {
-        return;
-      }
+      if (firstItemOnly && nodes.length > 0) return;
       nodes = nodes.concat(childPos.querySelectorAll(selector, attributes, firstItemOnly));
     });
     return nodes;
@@ -17878,190 +16418,149 @@ var Editor = class extends EventEmitter {
       });
     }
     warnOnDuplicatedProseMirrorModel(this.schema);
-    if (this.options.element) {
-      this.mount(this.options.element);
-    }
+    if (this.options.element) this.mount(this.options.element);
   }
   /**
-   * Attach the editor to the DOM, creating a new editor view.
-   */
+  * Attach the editor to the DOM, creating a new editor view.
+  */
   mount(el) {
-    if (typeof document === "undefined") {
-      throw new Error(
-        `[tiptap error]: The editor cannot be mounted because there is no 'document' defined in this environment.`
-      );
-    }
+    if (typeof document === "undefined") throw new Error(`[tiptap error]: The editor cannot be mounted because there is no 'document' defined in this environment.`);
     this.createView(el);
     this.emit("mount", { editor: this });
-    if (this.css && !document.head.contains(this.css)) {
-      document.head.appendChild(this.css);
-    }
+    if (this.css && !document.head.contains(this.css)) document.head.appendChild(this.css);
     window.setTimeout(() => {
-      if (this.isDestroyed) {
-        return;
-      }
-      if (this.options.autofocus !== false && this.options.autofocus !== null) {
-        this.commands.focus(this.options.autofocus);
-      }
+      if (this.isDestroyed) return;
+      if (this.options.autofocus !== false && this.options.autofocus !== null) this.commands.focus(this.options.autofocus);
       this.emit("create", { editor: this });
       this.isInitialized = true;
     }, 0);
   }
   /**
-   * Remove the editor from the DOM, but still allow remounting at a different point in time
-   */
+  * Remove the editor from the DOM, but still allow remounting at a different point in time
+  */
   unmount() {
     if (this.editorView) {
       this.editorState = this.editorView.state;
       const dom = this.editorView.dom;
-      if (dom == null ? void 0 : dom.editor) {
-        delete dom.editor;
-      }
+      if (dom === null || dom === void 0 ? void 0 : dom.editor) delete dom.editor;
       this.editorView.destroy();
     }
     this.editorView = null;
     this.isInitialized = false;
-    if (this.css && !document.querySelectorAll(`.${this.className}`).length) {
-      try {
-        if (typeof this.css.remove === "function") {
-          this.css.remove();
-        } else if (this.css.parentNode) {
-          this.css.parentNode.removeChild(this.css);
-        }
-      } catch (error) {
-        console.warn("Failed to remove CSS element:", error);
-      }
+    if (this.css && !document.querySelectorAll(`.${this.className}`).length) try {
+      if (typeof this.css.remove === "function") this.css.remove();
+      else if (this.css.parentNode) this.css.parentNode.removeChild(this.css);
+    } catch (error) {
+      console.warn("Failed to remove CSS element:", error);
     }
     this.css = null;
     this.emit("unmount", { editor: this });
   }
   /**
-   * Returns the editor storage.
-   */
+  * Returns the editor storage.
+  */
   get storage() {
     return this.extensionStorage;
   }
   /**
-   * An object of all registered commands.
-   */
+  * An object of all registered commands.
+  */
   get commands() {
     return this.commandManager.commands;
   }
   /**
-   * Create a command chain to call multiple commands at once.
-   */
+  * Create a command chain to call multiple commands at once.
+  */
   chain() {
+    if (!this.commandManager) return CommandManager.createFakeChain();
     return this.commandManager.chain();
   }
   /**
-   * Check if a command or a command chain can be executed. Without executing it.
-   */
+  * Check if a command or a command chain can be executed. Without executing it.
+  */
   can() {
+    if (!this.commandManager) return CommandManager.createFallbackCan();
     return this.commandManager.can();
   }
   /**
-   * Inject CSS styles.
-   */
+  * Inject CSS styles.
+  */
   injectCSS() {
-    if (this.options.injectCSS && typeof document !== "undefined") {
-      this.css = createStyleTag(style, this.options.injectNonce);
-    }
+    if (this.options.injectCSS && typeof document !== "undefined") this.css = createStyleTag(style, this.options.injectNonce);
   }
   /**
-   * Update editor options.
-   *
-   * @param options A list of options
-   */
+  * Update editor options.
+  *
+  * @param options A list of options
+  */
   setOptions(options = {}) {
     this.options = {
       ...this.options,
       ...options
     };
-    if (!this.editorView || !this.state || this.isDestroyed) {
-      return;
-    }
-    if (this.options.editorProps) {
-      this.view.setProps(this.options.editorProps);
-    }
+    if (!this.editorView || !this.state || this.isDestroyed) return;
+    if (this.options.editorProps) this.view.setProps(this.options.editorProps);
     this.view.updateState(this.state);
   }
   /**
-   * Update editable state of the editor.
-   */
+  * Update editable state of the editor.
+  */
   setEditable(editable, emitUpdate = true) {
     this.setOptions({ editable });
-    if (emitUpdate) {
-      this.emit("update", { editor: this, transaction: this.state.tr, appendedTransactions: [] });
-    }
+    if (emitUpdate) this.emit("update", {
+      editor: this,
+      transaction: this.state.tr,
+      appendedTransactions: []
+    });
   }
   /**
-   * Returns whether the editor is editable.
-   */
+  * Returns whether the editor is editable.
+  */
   get isEditable() {
     return this.options.editable && this.view && this.view.editable;
   }
   /**
-   * Returns the editor view.
-   */
+  * Returns the editor view.
+  */
   get view() {
-    if (this.editorView) {
-      return this.editorView;
-    }
-    return new Proxy(
-      {
-        state: this.editorState,
-        updateState: (state) => {
-          this.editorState = state;
-        },
-        dispatch: (tr2) => {
-          this.dispatchTransaction(tr2);
-        },
-        // Stub some commonly accessed properties to prevent errors
-        composing: false,
-        dragging: null,
-        editable: true,
-        isDestroyed: false
+    if (this.editorView) return this.editorView;
+    return new Proxy({
+      state: this.editorState,
+      updateState: (state) => {
+        this.editorState = state;
       },
-      {
-        get: (obj, key) => {
-          if (this.editorView) {
-            return this.editorView[key];
-          }
-          if (key === "state") {
-            return this.editorState;
-          }
-          if (key in obj) {
-            return Reflect.get(obj, key);
-          }
-          throw new Error(
-            `[tiptap error]: The editor view is not available. Cannot access view['${key}']. The editor may not be mounted yet.`
-          );
-        }
-      }
-    );
+      dispatch: (tr2) => {
+        this.dispatchTransaction(tr2);
+      },
+      composing: false,
+      dragging: null,
+      editable: true,
+      isDestroyed: false
+    }, { get: (obj, key) => {
+      if (this.editorView) return this.editorView[key];
+      if (key === "state") return this.editorState;
+      if (key in obj) return Reflect.get(obj, key);
+      throw new Error(`[tiptap error]: The editor view is not available. Cannot access view['${key}']. The editor may not be mounted yet.`);
+    } });
   }
   /**
-   * Returns the editor state.
-   */
+  * Returns the editor state.
+  */
   get state() {
     if (isDev && !this.hasWarnedStaleDecorationRead && isInDecorationApplyScope(this)) {
       this.hasWarnedStaleDecorationRead = true;
-      console.warn(
-        "[tiptap warn]: `editor.state` was read while decoration `create()` was running. It returns the pre-transaction document. Use the `state` argument passed to `create()` instead. Helpers like `editor.isActive()` read `editor.state` too, so pass `state` to their standalone versions instead of calling them on the editor."
-      );
+      console.warn("[tiptap warn]: `editor.state` was read while decoration `create()` was running. It returns the pre-transaction document. Use the `state` argument passed to `create()` instead. Helpers like `editor.isActive()` read `editor.state` too, so pass `state` to their standalone versions instead of calling them on the editor.");
     }
-    if (this.editorView) {
-      this.editorState = this.view.state;
-    }
+    if (this.editorView) this.editorState = this.view.state;
     return this.editorState;
   }
   /**
-   * Register a ProseMirror plugin.
-   *
-   * @param plugin A ProseMirror plugin
-   * @param handlePlugins Control how to merge the plugin into the existing plugins.
-   * @returns The new editor state
-   */
+  * Register a ProseMirror plugin.
+  *
+  * @param plugin A ProseMirror plugin
+  * @param handlePlugins Control how to merge the plugin into the existing plugins.
+  * @returns The new editor state
+  */
   registerPlugin(plugin, handlePlugins) {
     const plugins = isFunction(handlePlugins) ? handlePlugins(plugin, [...this.state.plugins]) : [...this.state.plugins, plugin];
     const state = this.state.reconfigure({ plugins });
@@ -18069,100 +16568,74 @@ var Editor = class extends EventEmitter {
     return state;
   }
   /**
-   * Unregister a ProseMirror plugin.
-   *
-   * @param nameOrPluginKeyToRemove The plugins name
-   * @returns The new editor state or undefined if the editor is destroyed
-   */
+  * Unregister a ProseMirror plugin.
+  *
+  * @param nameOrPluginKeyToRemove The plugins name
+  * @returns The new editor state or undefined if the editor is destroyed
+  */
   unregisterPlugin(nameOrPluginKeyToRemove) {
-    if (this.isDestroyed) {
-      return void 0;
-    }
+    if (this.isDestroyed) return;
     const prevPlugins = this.state.plugins;
     let plugins = prevPlugins;
     [].concat(nameOrPluginKeyToRemove).forEach((nameOrPluginKey) => {
       const name = typeof nameOrPluginKey === "string" ? `${nameOrPluginKey}$` : nameOrPluginKey.key;
       plugins = plugins.filter((plugin) => !plugin.key.startsWith(name));
     });
-    if (prevPlugins.length === plugins.length) {
-      return void 0;
-    }
-    const state = this.state.reconfigure({
-      plugins
-    });
+    if (prevPlugins.length === plugins.length) return;
+    const state = this.state.reconfigure({ plugins });
     this.view.updateState(state);
     return state;
   }
   /**
-   * Creates an extension manager.
-   */
+  * Creates an extension manager.
+  */
   createExtensionManager() {
-    var _a, _b, _c, _d;
-    const coreExtensions = this.options.enableCoreExtensions ? [
+    var _this$options$coreExt, _this$options$coreExt2;
+    const allExtensions = [...this.options.enableCoreExtensions ? [
       Editable,
-      ClipboardTextSerializer.configure({
-        blockSeparator: (_b = (_a = this.options.coreExtensionOptions) == null ? void 0 : _a.clipboardTextSerializer) == null ? void 0 : _b.blockSeparator
-      }),
+      ClipboardTextSerializer.configure({ blockSeparator: (_this$options$coreExt = this.options.coreExtensionOptions) === null || _this$options$coreExt === void 0 || (_this$options$coreExt = _this$options$coreExt.clipboardTextSerializer) === null || _this$options$coreExt === void 0 ? void 0 : _this$options$coreExt.blockSeparator }),
       Commands,
       FocusEvents,
       Keymap,
-      Tabindex.configure({
-        value: (_d = (_c = this.options.coreExtensionOptions) == null ? void 0 : _c.tabindex) == null ? void 0 : _d.value
-      }),
+      Tabindex.configure({ value: (_this$options$coreExt2 = this.options.coreExtensionOptions) === null || _this$options$coreExt2 === void 0 || (_this$options$coreExt2 = _this$options$coreExt2.tabindex) === null || _this$options$coreExt2 === void 0 ? void 0 : _this$options$coreExt2.value }),
       Drop,
       Paste,
       Delete,
-      TextDirection.configure({
-        direction: this.options.textDirection
-      })
+      TextDirection.configure({ direction: this.options.textDirection })
     ].filter((ext) => {
-      if (typeof this.options.enableCoreExtensions === "object") {
-        return this.options.enableCoreExtensions[ext.name] !== false;
-      }
+      if (typeof this.options.enableCoreExtensions === "object") return this.options.enableCoreExtensions[ext.name] !== false;
       return true;
-    }) : [];
-    const allExtensions = [...coreExtensions, ...this.options.extensions].filter((extension) => {
-      return ["extension", "node", "mark"].includes(extension == null ? void 0 : extension.type);
+    }) : [], ...this.options.extensions].filter((extension) => {
+      return [
+        "extension",
+        "node",
+        "mark"
+      ].includes(extension === null || extension === void 0 ? void 0 : extension.type);
     });
     this.extensionManager = new ExtensionManager(allExtensions, this);
   }
   /**
-   * Creates an command manager.
-   */
+  * Creates an command manager.
+  */
   createCommandManager() {
-    this.commandManager = new CommandManager({
-      editor: this
-    });
+    this.commandManager = new CommandManager({ editor: this });
   }
   /**
-   * Creates a ProseMirror schema.
-   */
+  * Creates a ProseMirror schema.
+  */
   createSchema() {
     this.schema = this.extensionManager.schema;
   }
   /**
-   * Creates the initial document.
-   */
+  * Creates the initial document.
+  */
   createDoc() {
     let doc3;
     try {
-      doc3 = createDocument(this.options.content, this.schema, this.options.parseOptions, {
-        errorOnInvalidContent: this.options.enableContentCheck
-      });
+      doc3 = createDocument(this.options.content, this.schema, this.options.parseOptions, { errorOnInvalidContent: this.options.enableContentCheck });
     } catch (e) {
-      if (!(e instanceof Error) || !["[tiptap error]: Invalid JSON content", "[tiptap error]: Invalid HTML content"].includes(
-        e.message
-      )) {
-        throw e;
-      }
-      const fallbackDoc = createDocument(
-        this.options.content,
-        this.schema,
-        this.options.parseOptions,
-        {
-          errorOnInvalidContent: false
-        }
-      );
+      if (!(e instanceof Error) || !["[tiptap error]: Invalid JSON content", "[tiptap error]: Invalid HTML content"].includes(e.message)) throw e;
+      const fallbackDoc = createDocument(this.options.content, this.schema, this.options.parseOptions, { errorOnInvalidContent: false });
       this.editorState = EditorState.create({
         doc: fallbackDoc,
         schema: this.schema,
@@ -18172,13 +16645,8 @@ var Editor = class extends EventEmitter {
         editor: this,
         error: e,
         disableCollaboration: () => {
-          if ("collaboration" in this.storage && typeof this.storage.collaboration === "object" && this.storage.collaboration) {
-            ;
-            this.storage.collaboration.isDisabled = true;
-          }
-          this.options.extensions = this.options.extensions.filter(
-            (extension) => extension.name !== "collaboration"
-          );
+          if ("collaboration" in this.storage && typeof this.storage.collaboration === "object" && this.storage.collaboration) this.storage.collaboration.isDisabled = true;
+          this.options.extensions = this.options.extensions.filter((extension) => extension.name !== "collaboration");
           this.createExtensionManager();
         }
       });
@@ -18187,8 +16655,8 @@ var Editor = class extends EventEmitter {
     return doc3;
   }
   /**
-   * Creates a ProseMirror view.
-   */
+  * Creates a ProseMirror view.
+  */
   createView(element) {
     const { editorProps, enableExtensionDispatchTransaction } = this.options;
     const baseDispatch = editorProps.dispatchTransaction || this.dispatchTransaction.bind(this);
@@ -18198,9 +16666,8 @@ var Editor = class extends EventEmitter {
     this.editorView = new EditorView(element, {
       ...editorProps,
       attributes: {
-        // add `role="textbox"` to the editor element
         role: "textbox",
-        ...editorProps == null ? void 0 : editorProps.attributes
+        ...editorProps === null || editorProps === void 0 ? void 0 : editorProps.attributes
       },
       dispatchTransaction: dispatch,
       transformPastedHTML,
@@ -18208,9 +16675,7 @@ var Editor = class extends EventEmitter {
       markViews: this.extensionManager.markViews,
       nodeViews: this.extensionManager.nodeViews
     });
-    const newState = this.state.reconfigure({
-      plugins: this.extensionManager.plugins
-    });
+    const newState = this.state.reconfigure({ plugins: this.extensionManager.plugins });
     this.view.updateState(newState);
     this.prependClass();
     this.injectCSS();
@@ -18218,20 +16683,18 @@ var Editor = class extends EventEmitter {
     dom.editor = this;
   }
   /**
-   * Creates all node and mark views.
-   */
+  * Creates all node and mark views.
+  */
   createNodeViews() {
-    if (this.view.isDestroyed) {
-      return;
-    }
+    if (this.view.isDestroyed) return;
     this.view.setProps({
       markViews: this.extensionManager.markViews,
       nodeViews: this.extensionManager.nodeViews
     });
   }
   /**
-   * Prepend class name to element.
-   */
+  * Prepend class name to element.
+  */
   prependClass() {
     this.view.dom.className = `${this.className} ${this.view.dom.className}`;
   }
@@ -18244,22 +16707,20 @@ var Editor = class extends EventEmitter {
     return tr2;
   }
   /**
-   * The callback over which to send transactions (state updates) produced by the view.
-   *
-   * @param transaction An editor state transaction
-   */
+  * The callback over which to send transactions (state updates) produced by the view.
+  *
+  * @param transaction An editor state transaction
+  */
   dispatchTransaction(transaction) {
-    if (this.view.isDestroyed) {
-      return;
-    }
+    if (this.view.isDestroyed) return;
     if (this.isCapturingTransaction) {
       if (!this.capturedTransaction) {
         this.capturedTransaction = transaction;
         return;
       }
       transaction.steps.forEach((step) => {
-        var _a;
-        return (_a = this.capturedTransaction) == null ? void 0 : _a.step(step);
+        var _this$capturedTransac;
+        return (_this$capturedTransac = this.capturedTransaction) === null || _this$capturedTransac === void 0 ? void 0 : _this$capturedTransac.step(step);
       });
       return;
     }
@@ -18272,43 +16733,31 @@ var Editor = class extends EventEmitter {
       transaction,
       nextState: state
     });
-    if (!rootTrWasApplied) {
-      return;
-    }
+    if (!rootTrWasApplied) return;
     this.view.updateState(state);
     this.emit("transaction", {
       editor: this,
       transaction,
       appendedTransactions: transactions.slice(1)
     });
-    if (selectionHasChanged) {
-      this.emit("selectionUpdate", {
-        editor: this,
-        transaction
-      });
-    }
+    if (selectionHasChanged) this.emit("selectionUpdate", {
+      editor: this,
+      transaction
+    });
     const mostRecentFocusTr = transactions.findLast((tr2) => tr2.getMeta("focus") || tr2.getMeta("blur"));
-    const focus2 = mostRecentFocusTr == null ? void 0 : mostRecentFocusTr.getMeta("focus");
-    const blur2 = mostRecentFocusTr == null ? void 0 : mostRecentFocusTr.getMeta("blur");
-    if (focus2) {
-      this.emit("focus", {
-        editor: this,
-        event: focus2.event,
-        // oxlint-disable-next-lineno-non-null-assertion
-        transaction: mostRecentFocusTr
-      });
-    }
-    if (blur2) {
-      this.emit("blur", {
-        editor: this,
-        event: blur2.event,
-        // oxlint-disable-next-lineno-non-null-assertion
-        transaction: mostRecentFocusTr
-      });
-    }
-    if (transaction.getMeta("preventUpdate") || !transactions.some((tr2) => tr2.docChanged) || prevState.doc.eq(state.doc)) {
-      return;
-    }
+    const focus2 = mostRecentFocusTr === null || mostRecentFocusTr === void 0 ? void 0 : mostRecentFocusTr.getMeta("focus");
+    const blur2 = mostRecentFocusTr === null || mostRecentFocusTr === void 0 ? void 0 : mostRecentFocusTr.getMeta("blur");
+    if (focus2) this.emit("focus", {
+      editor: this,
+      event: focus2.event,
+      transaction: mostRecentFocusTr
+    });
+    if (blur2) this.emit("blur", {
+      editor: this,
+      event: blur2.event,
+      transaction: mostRecentFocusTr
+    });
+    if (transaction.getMeta("preventUpdate") || !transactions.some((tr2) => tr2.docChanged) || prevState.doc.eq(state.doc)) return;
     this.emit("update", {
       editor: this,
       transaction,
@@ -18316,8 +16765,8 @@ var Editor = class extends EventEmitter {
     });
   }
   /**
-   * Get attributes of the currently selected node or mark.
-   */
+  * Get attributes of the currently selected node or mark.
+  */
   getAttributes(nameOrType) {
     return getAttributes(this.state, nameOrType);
   }
@@ -18327,20 +16776,20 @@ var Editor = class extends EventEmitter {
     return isActive(this.state, name, attributes);
   }
   /**
-   * Get the document as JSON.
-   */
+  * Get the document as JSON.
+  */
   getJSON() {
     return this.state.doc.toJSON();
   }
   /**
-   * Get the document as HTML.
-   */
+  * Get the document as HTML.
+  */
   getHTML() {
     return getHTMLFromFragment(this.state.doc.content, this.schema);
   }
   /**
-   * Get the document as text.
-   */
+  * Get the document as text.
+  */
   getText(options) {
     const { blockSeparator = "\n\n", textSerializers = {} } = options || {};
     return getText2(this.state.doc, {
@@ -18352,18 +16801,16 @@ var Editor = class extends EventEmitter {
     });
   }
   /**
-   * Check if there is no content.
-   */
+  * Check if there is no content.
+  */
   get isEmpty() {
     return isNodeEmpty(this.state.doc);
   }
   /**
-   * Destroy the editor.
-   */
+  * Destroy the editor.
+  */
   destroy() {
-    if (this.destroyed) {
-      return;
-    }
+    if (this.destroyed) return;
     this.destroyed = true;
     this.emit("destroy");
     this.unmount();
@@ -18375,19 +16822,19 @@ var Editor = class extends EventEmitter {
     this.extensionStorage = {};
   }
   /**
-   * Check if the editor is already destroyed.
-   */
+  * Check if the editor is already destroyed.
+  */
   get isDestroyed() {
-    var _a, _b;
-    return (_b = (_a = this.editorView) == null ? void 0 : _a.isDestroyed) != null ? _b : true;
+    var _this$editorView$isDe, _this$editorView;
+    return (_this$editorView$isDe = (_this$editorView = this.editorView) === null || _this$editorView === void 0 ? void 0 : _this$editorView.isDestroyed) !== null && _this$editorView$isDe !== void 0 ? _this$editorView$isDe : true;
   }
   $node(selector, attributes) {
-    var _a;
-    return ((_a = this.$doc) == null ? void 0 : _a.querySelector(selector, attributes)) || null;
+    var _this$$doc;
+    return ((_this$$doc = this.$doc) === null || _this$$doc === void 0 ? void 0 : _this$$doc.querySelector(selector, attributes)) || null;
   }
   $nodes(selector, attributes) {
-    var _a;
-    return ((_a = this.$doc) == null ? void 0 : _a.querySelectorAll(selector, attributes)) || null;
+    var _this$$doc2;
+    return ((_this$$doc2 = this.$doc) === null || _this$$doc2 === void 0 ? void 0 : _this$$doc2.querySelectorAll(selector, attributes)) || null;
   }
   $pos(pos) {
     const $pos = this.state.doc.resolve(pos);
@@ -18403,9 +16850,7 @@ function markInputRule(config) {
     find: config.find,
     handler: ({ state, range, match }) => {
       const attributes = callOrReturn(config.getAttributes, void 0, match);
-      if (attributes === false || attributes === null) {
-        return null;
-      }
+      if (attributes === false || attributes === null) return null;
       const { tr: tr2 } = state;
       const captureGroup = match[match.length - 1];
       const fullMatch = match[0];
@@ -18413,19 +16858,11 @@ function markInputRule(config) {
         const startSpaces = fullMatch.search(/\S/);
         const textStart = range.from + fullMatch.indexOf(captureGroup);
         const textEnd = textStart + captureGroup.length;
-        const excludedMarks = getMarksBetween(range.from, range.to, state.doc).filter((item) => {
-          const excluded = item.mark.type.excluded;
-          return excluded.find((type) => type === config.type && type !== item.mark.type);
-        }).filter((item) => item.to > textStart);
-        if (excludedMarks.length) {
-          return null;
-        }
-        if (textEnd < range.to) {
-          tr2.delete(textEnd, range.to);
-        }
-        if (textStart > range.from) {
-          tr2.delete(range.from + startSpaces, textStart);
-        }
+        if (getMarksBetween(range.from, range.to, state.doc).filter((item) => {
+          return item.mark.type.excluded.find((type) => type === config.type && type !== item.mark.type);
+        }).filter((item) => item.to > textStart).length) return null;
+        if (textEnd < range.to) tr2.delete(textEnd, range.to);
+        if (textStart > range.from) tr2.delete(range.from + startSpaces, textStart);
         const markEnd = range.from + startSpaces + captureGroup.length;
         tr2.addMark(range.from + startSpaces, markEnd, config.type.create(attributes || {}));
         tr2.removeStoredMark(config.type);
@@ -18444,22 +16881,15 @@ function nodeInputRule(config) {
       let end = range.to;
       const newNode = config.type.create(attributes);
       if (match[1]) {
-        const offset = match[0].lastIndexOf(match[1]);
-        let matchStart = start + offset;
-        if (matchStart > end) {
-          matchStart = end;
-        } else {
-          end = matchStart + match[1].length;
-        }
+        let matchStart = start + match[0].lastIndexOf(match[1]);
+        if (matchStart > end) matchStart = end;
+        else end = matchStart + match[1].length;
         const lastChar = match[0][match[0].length - 1];
         tr2.insertText(lastChar, start + match[0].length - 1);
         tr2.replaceWith(matchStart, end, newNode);
       } else if (match[0]) {
         const insertionStart = config.type.isInline ? start : start - 1;
-        tr2.insert(insertionStart, config.type.create(attributes)).delete(
-          tr2.mapping.map(start),
-          tr2.mapping.map(end)
-        );
+        tr2.insert(insertionStart, config.type.create(attributes)).delete(tr2.mapping.map(start), tr2.mapping.map(end));
       }
       tr2.scrollIntoView();
     },
@@ -18472,9 +16902,7 @@ function textblockTypeInputRule(config) {
     handler: ({ state, range, match }) => {
       const $start = state.doc.resolve(range.from);
       const attributes = callOrReturn(config.getAttributes, void 0, match) || {};
-      if (!$start.node(-1).canReplaceWith($start.index(-1), $start.indexAfter(-1), config.type)) {
-        return null;
-      }
+      if (!$start.node(-1).canReplaceWith($start.index(-1), $start.indexAfter(-1), config.type)) return null;
       state.tr.delete(range.from, range.to).setBlockType(range.from, range.from, config.type, attributes);
     },
     undoable: config.undoable
@@ -18486,12 +16914,9 @@ function wrappingInputRule(config) {
     handler: ({ state, range, match, chain }) => {
       const attributes = callOrReturn(config.getAttributes, void 0, match) || {};
       const tr2 = state.tr.delete(range.from, range.to);
-      const $start = tr2.doc.resolve(range.from);
-      const blockRange = $start.blockRange();
+      const blockRange = tr2.doc.resolve(range.from).blockRange();
       const wrapping = blockRange && findWrapping(blockRange, config.type, attributes);
-      if (!wrapping) {
-        return null;
-      }
+      if (!wrapping) return null;
       tr2.wrap(blockRange, wrapping);
       if (config.keepMarks && config.editor) {
         const { selection, storedMarks } = state;
@@ -18507,9 +16932,7 @@ function wrappingInputRule(config) {
         chain().updateAttributes(nodeType, attributes).run();
       }
       const before = tr2.doc.resolve(range.from - 1).nodeBefore;
-      if (before && before.type === config.type && canJoin(tr2.doc, range.from - 1) && (!config.joinPredicate || config.joinPredicate(match, before))) {
-        tr2.join(range.from - 1);
-      }
+      if (before && before.type === config.type && canJoin(tr2.doc, range.from - 1) && (!config.joinPredicate || config.joinPredicate(match, before))) tr2.join(range.from - 1);
     },
     undoable: config.undoable
   });
@@ -18519,14 +16942,15 @@ var isTouchEvent = (e) => {
 };
 var ResizableNodeView = class {
   /**
-   * Creates a new ResizableNodeView instance.
-   *
-   * The constructor sets up the resize handles, applies initial sizing from
-   * node attributes, and configures all resize behavior options.
-   *
-   * @param options - Configuration options for the resizable node view
-   */
+  * Creates a new ResizableNodeView instance.
+  *
+  * The constructor sets up the resize handles, applies initial sizing from
+  * node attributes, and configures all resize behavior options.
+  *
+  * @param options - Configuration options for the resizable node view
+  */
   constructor(options) {
+    var _options$options, _options$options2, _options$options3, _options$options4, _options$options5, _options$options6;
     this.directions = [
       "bottom-left",
       "bottom-right",
@@ -18557,54 +16981,39 @@ var ResizableNodeView = class {
     this.lastEditableState = void 0;
     this.handleMap = /* @__PURE__ */ new Map();
     this.handleMouseMove = (event) => {
-      if (!this.isResizing || !this.activeHandle) {
-        return;
-      }
+      if (!this.isResizing || !this.activeHandle) return;
       const deltaX = event.clientX - this.startX;
       const deltaY = event.clientY - this.startY;
       this.handleResize(deltaX, deltaY);
     };
     this.handleTouchMove = (event) => {
-      if (!this.isResizing || !this.activeHandle) {
-        return;
-      }
+      if (!this.isResizing || !this.activeHandle) return;
       const touch = event.touches[0];
-      if (!touch) {
-        return;
-      }
+      if (!touch) return;
       const deltaX = touch.clientX - this.startX;
       const deltaY = touch.clientY - this.startY;
       this.handleResize(deltaX, deltaY);
     };
     this.handleMouseUp = () => {
-      if (!this.isResizing) {
-        return;
-      }
+      if (!this.isResizing) return;
       const finalWidth = this.element.offsetWidth;
       const finalHeight = this.element.offsetHeight;
       this.onCommit(finalWidth, finalHeight);
       this.isResizing = false;
       this.activeHandle = null;
       this.container.dataset.resizeState = "false";
-      if (this.classNames.resizing) {
-        this.container.classList.remove(this.classNames.resizing);
-      }
+      if (this.classNames.resizing) this.container.classList.remove(this.classNames.resizing);
       document.removeEventListener("mousemove", this.handleMouseMove);
       document.removeEventListener("mouseup", this.handleMouseUp);
       document.removeEventListener("keydown", this.handleKeyDown);
       document.removeEventListener("keyup", this.handleKeyUp);
     };
     this.handleKeyDown = (event) => {
-      if (event.key === "Shift") {
-        this.isShiftKeyPressed = true;
-      }
+      if (event.key === "Shift") this.isShiftKeyPressed = true;
     };
     this.handleKeyUp = (event) => {
-      if (event.key === "Shift") {
-        this.isShiftKeyPressed = false;
-      }
+      if (event.key === "Shift") this.isShiftKeyPressed = false;
     };
-    var _a, _b, _c, _d, _e, _f;
     this.node = options.node;
     this.editor = options.editor;
     this.element = options.element;
@@ -18614,32 +17023,20 @@ var ResizableNodeView = class {
     this.onResize = options.onResize;
     this.onCommit = options.onCommit;
     this.onUpdate = options.onUpdate;
-    if ((_a = options.options) == null ? void 0 : _a.min) {
-      this.minSize = {
-        ...this.minSize,
-        ...options.options.min
-      };
-    }
-    if ((_b = options.options) == null ? void 0 : _b.max) {
-      this.maxSize = options.options.max;
-    }
-    if ((_c = options == null ? void 0 : options.options) == null ? void 0 : _c.directions) {
-      this.directions = options.options.directions;
-    }
-    if ((_d = options.options) == null ? void 0 : _d.preserveAspectRatio) {
-      this.preserveAspectRatio = options.options.preserveAspectRatio;
-    }
-    if ((_e = options.options) == null ? void 0 : _e.className) {
-      this.classNames = {
-        container: options.options.className.container || "",
-        wrapper: options.options.className.wrapper || "",
-        handle: options.options.className.handle || "",
-        resizing: options.options.className.resizing || ""
-      };
-    }
-    if ((_f = options.options) == null ? void 0 : _f.createCustomHandle) {
-      this.createCustomHandle = options.options.createCustomHandle;
-    }
+    if ((_options$options = options.options) === null || _options$options === void 0 ? void 0 : _options$options.min) this.minSize = {
+      ...this.minSize,
+      ...options.options.min
+    };
+    if ((_options$options2 = options.options) === null || _options$options2 === void 0 ? void 0 : _options$options2.max) this.maxSize = options.options.max;
+    if (options === null || options === void 0 || (_options$options3 = options.options) === null || _options$options3 === void 0 ? void 0 : _options$options3.directions) this.directions = options.options.directions;
+    if ((_options$options4 = options.options) === null || _options$options4 === void 0 ? void 0 : _options$options4.preserveAspectRatio) this.preserveAspectRatio = options.options.preserveAspectRatio;
+    if ((_options$options5 = options.options) === null || _options$options5 === void 0 ? void 0 : _options$options5.className) this.classNames = {
+      container: options.options.className.container || "",
+      wrapper: options.options.className.wrapper || "",
+      handle: options.options.className.handle || "",
+      resizing: options.options.className.resizing || ""
+    };
+    if ((_options$options6 = options.options) === null || _options$options6 === void 0 ? void 0 : _options$options6.createCustomHandle) this.createCustomHandle = options.options.createCustomHandle;
     this.wrapper = this.createWrapper();
     this.container = this.createContainer();
     this.applyInitialSize();
@@ -18647,66 +17044,55 @@ var ResizableNodeView = class {
     this.editor.on("update", this.handleEditorUpdate.bind(this));
   }
   /**
-   * Returns the top-level DOM node that should be placed in the editor.
-   *
-   * This is required by the ProseMirror NodeView interface. The container
-   * includes the wrapper, handles, and the actual content element.
-   *
-   * @returns The container element to be inserted into the editor
-   */
+  * Returns the top-level DOM node that should be placed in the editor.
+  *
+  * This is required by the ProseMirror NodeView interface. The container
+  * includes the wrapper, handles, and the actual content element.
+  *
+  * @returns The container element to be inserted into the editor
+  */
   get dom() {
     return this.container;
   }
   get contentDOM() {
-    var _a;
-    return (_a = this.contentElement) != null ? _a : null;
+    var _this$contentElement;
+    return (_this$contentElement = this.contentElement) !== null && _this$contentElement !== void 0 ? _this$contentElement : null;
   }
   handleEditorUpdate() {
     const isEditable = this.editor.isEditable;
-    if (isEditable === this.lastEditableState) {
-      return;
-    }
+    if (isEditable === this.lastEditableState) return;
     this.lastEditableState = isEditable;
-    if (!isEditable) {
-      this.removeHandles();
-    } else if (isEditable && this.handleMap.size === 0) {
-      this.attachHandles();
-    }
+    if (!isEditable) this.removeHandles();
+    else if (isEditable && this.handleMap.size === 0) this.attachHandles();
   }
   /**
-   * Called when the node's content or attributes change.
-   *
-   * Updates the internal node reference. If a custom `onUpdate` callback
-   * was provided, it will be called to handle additional update logic.
-   *
-   * @param node - The new/updated node
-   * @param decorations - Node decorations
-   * @param innerDecorations - Inner decorations
-   * @returns `false` if the node type has changed (requires full rebuild), otherwise the result of `onUpdate` or `true`
-   */
+  * Called when the node's content or attributes change.
+  *
+  * Updates the internal node reference. If a custom `onUpdate` callback
+  * was provided, it will be called to handle additional update logic.
+  *
+  * @param node - The new/updated node
+  * @param decorations - Node decorations
+  * @param innerDecorations - Inner decorations
+  * @returns `false` if the node type has changed (requires full rebuild), otherwise the result of `onUpdate` or `true`
+  */
   update(node, decorations, innerDecorations) {
-    if (node.type !== this.node.type) {
-      return false;
-    }
+    if (node.type !== this.node.type) return false;
     this.node = node;
-    if (this.onUpdate) {
-      return this.onUpdate(node, decorations, innerDecorations);
-    }
+    if (this.onUpdate) return this.onUpdate(node, decorations, innerDecorations);
     return true;
   }
   /**
-   * Cleanup method called when the node view is being removed.
-   *
-   * Removes all event listeners to prevent memory leaks. This is required
-   * by the ProseMirror NodeView interface. If a resize is active when
-   * destroy is called, it will be properly cancelled.
-   */
+  * Cleanup method called when the node view is being removed.
+  *
+  * Removes all event listeners to prevent memory leaks. This is required
+  * by the ProseMirror NodeView interface. If a resize is active when
+  * destroy is called, it will be properly cancelled.
+  */
   destroy() {
     if (this.isResizing) {
       this.container.dataset.resizeState = "false";
-      if (this.classNames.resizing) {
-        this.container.classList.remove(this.classNames.resizing);
-      }
+      if (this.classNames.resizing) this.container.classList.remove(this.classNames.resizing);
       document.removeEventListener("mousemove", this.handleMouseMove);
       document.removeEventListener("mouseup", this.handleMouseUp);
       document.removeEventListener("keydown", this.handleKeyDown);
@@ -18718,89 +17104,75 @@ var ResizableNodeView = class {
     this.container.remove();
   }
   /**
-   * Creates the outer container element.
-   *
-   * The container is the top-level element returned by the NodeView and
-   * wraps the entire resizable node. It's set up with flexbox to handle
-   * alignment and includes data attributes for styling and identification.
-   *
-   * @returns The container element
-   */
+  * Creates the outer container element.
+  *
+  * The container is the top-level element returned by the NodeView and
+  * wraps the entire resizable node. It's set up with flexbox to handle
+  * alignment and includes data attributes for styling and identification.
+  *
+  * @returns The container element
+  */
   createContainer() {
     const element = document.createElement("div");
     element.dataset.resizeContainer = "";
     element.dataset.node = this.node.type.name;
     element.style.display = this.node.type.isInline ? "inline-flex" : "flex";
-    if (this.classNames.container) {
-      element.className = this.classNames.container;
-    }
+    if (this.classNames.container) element.className = this.classNames.container;
     element.appendChild(this.wrapper);
     return element;
   }
   /**
-   * Creates the wrapper element that contains the content and handles.
-   *
-   * The wrapper uses relative positioning so that resize handles can be
-   * positioned absolutely within it. This is the direct parent of the
-   * content element being made resizable.
-   *
-   * @returns The wrapper element
-   */
+  * Creates the wrapper element that contains the content and handles.
+  *
+  * The wrapper uses relative positioning so that resize handles can be
+  * positioned absolutely within it. This is the direct parent of the
+  * content element being made resizable.
+  *
+  * @returns The wrapper element
+  */
   createWrapper() {
     const element = document.createElement("div");
     element.style.position = "relative";
     element.style.display = "block";
     element.dataset.resizeWrapper = "";
-    if (this.classNames.wrapper) {
-      element.className = this.classNames.wrapper;
-    }
+    if (this.classNames.wrapper) element.className = this.classNames.wrapper;
     element.appendChild(this.element);
     return element;
   }
   /**
-   * Creates a resize handle element for a specific direction.
-   *
-   * Each handle is absolutely positioned and includes a data attribute
-   * identifying its direction for styling purposes.
-   *
-   * @param direction - The resize direction for this handle
-   * @returns The handle element
-   */
+  * Creates a resize handle element for a specific direction.
+  *
+  * Each handle is absolutely positioned and includes a data attribute
+  * identifying its direction for styling purposes.
+  *
+  * @param direction - The resize direction for this handle
+  * @returns The handle element
+  */
   createHandle(direction) {
     const handle = document.createElement("div");
     handle.dataset.resizeHandle = direction;
     handle.style.position = "absolute";
-    if (this.classNames.handle) {
-      handle.className = this.classNames.handle;
-    }
+    if (this.classNames.handle) handle.className = this.classNames.handle;
     return handle;
   }
   /**
-   * Positions a handle element according to its direction.
-   *
-   * Corner handles (e.g., 'top-left') are positioned at the intersection
-   * of two edges. Edge handles (e.g., 'top') span the full width or height.
-   *
-   * @param handle - The handle element to position
-   * @param direction - The direction determining the position
-   */
+  * Positions a handle element according to its direction.
+  *
+  * Corner handles (e.g., 'top-left') are positioned at the intersection
+  * of two edges. Edge handles (e.g., 'top') span the full width or height.
+  *
+  * @param handle - The handle element to position
+  * @param direction - The direction determining the position
+  */
   positionHandle(handle, direction) {
     const isTop = direction.includes("top");
     const isBottom = direction.includes("bottom");
     const isLeft = direction.includes("left");
     const isRight = direction.includes("right");
-    if (isTop) {
-      handle.style.top = "0";
-    }
-    if (isBottom) {
-      handle.style.bottom = "0";
-    }
-    if (isLeft) {
-      handle.style.left = "0";
-    }
-    if (isRight) {
-      handle.style.right = "0";
-    }
+    if (isTop) handle.style.top = "0";
+    if (isBottom) handle.style.bottom = "0";
+    if (isLeft) handle.style.left = "0";
+    if (isRight) handle.style.right = "0";
     if (direction === "top" || direction === "bottom") {
       handle.style.left = "0";
       handle.style.right = "0";
@@ -18811,82 +17183,66 @@ var ResizableNodeView = class {
     }
   }
   /**
-   * Creates and attaches all resize handles to the wrapper.
-   *
-   * Iterates through the configured directions, creates a handle for each,
-   * positions it, attaches the mousedown listener, and appends it to the DOM.
-   */
+  * Creates and attaches all resize handles to the wrapper.
+  *
+  * Iterates through the configured directions, creates a handle for each,
+  * positions it, attaches the mousedown listener, and appends it to the DOM.
+  */
   attachHandles() {
     this.directions.forEach((direction) => {
       let handle;
-      if (this.createCustomHandle) {
-        handle = this.createCustomHandle(direction);
-      } else {
-        handle = this.createHandle(direction);
-      }
+      if (this.createCustomHandle) handle = this.createCustomHandle(direction);
+      else handle = this.createHandle(direction);
       if (!(handle instanceof HTMLElement)) {
-        console.warn(
-          `[ResizableNodeView] createCustomHandle("${direction}") did not return an HTMLElement. Falling back to default handle.`
-        );
+        console.warn(`[ResizableNodeView] createCustomHandle("${direction}") did not return an HTMLElement. Falling back to default handle.`);
         handle = this.createHandle(direction);
       }
-      if (!this.createCustomHandle) {
-        this.positionHandle(handle, direction);
-      }
+      if (!this.createCustomHandle) this.positionHandle(handle, direction);
       handle.addEventListener("mousedown", (event) => this.handleResizeStart(event, direction));
-      handle.addEventListener(
-        "touchstart",
-        (event) => this.handleResizeStart(event, direction)
-      );
+      handle.addEventListener("touchstart", (event) => this.handleResizeStart(event, direction));
       this.handleMap.set(direction, handle);
       this.wrapper.appendChild(handle);
     });
   }
   /**
-   * Removes all resize handles from the wrapper.
-   *
-   * Cleans up the handle map and removes each handle element from the DOM.
-   */
+  * Removes all resize handles from the wrapper.
+  *
+  * Cleans up the handle map and removes each handle element from the DOM.
+  */
   removeHandles() {
     this.handleMap.forEach((el) => el.remove());
     this.handleMap.clear();
   }
   /**
-   * Applies initial sizing from node attributes to the element.
-   *
-   * If width/height attributes exist on the node, they're applied to the element.
-   * Otherwise, the element's natural/current dimensions are measured. The aspect
-   * ratio is calculated for later use in aspect-ratio-preserving resizes.
-   */
+  * Applies initial sizing from node attributes to the element.
+  *
+  * If width/height attributes exist on the node, they're applied to the element.
+  * Otherwise, the element's natural/current dimensions are measured. The aspect
+  * ratio is calculated for later use in aspect-ratio-preserving resizes.
+  */
   applyInitialSize() {
     const width = this.node.attrs.width;
     const height = this.node.attrs.height;
     if (width) {
       this.element.style.width = `${width}px`;
       this.initialWidth = width;
-    } else {
-      this.initialWidth = this.element.offsetWidth;
-    }
+    } else this.initialWidth = this.element.offsetWidth;
     if (height) {
       this.element.style.height = `${height}px`;
       this.initialHeight = height;
-    } else {
-      this.initialHeight = this.element.offsetHeight;
-    }
-    if (this.initialWidth > 0 && this.initialHeight > 0) {
-      this.aspectRatio = this.initialWidth / this.initialHeight;
-    }
+    } else this.initialHeight = this.element.offsetHeight;
+    if (this.initialWidth > 0 && this.initialHeight > 0) this.aspectRatio = this.initialWidth / this.initialHeight;
   }
   /**
-   * Initiates a resize operation when a handle is clicked.
-   *
-   * Captures the starting mouse position and element dimensions, sets up
-   * the resize state, adds the resizing class and state attribute, and
-   * attaches document-level listeners for mouse movement and keyboard input.
-   *
-   * @param event - The mouse down event
-   * @param direction - The direction of the handle being dragged
-   */
+  * Initiates a resize operation when a handle is clicked.
+  *
+  * Captures the starting mouse position and element dimensions, sets up
+  * the resize state, adds the resizing class and state attribute, and
+  * attaches document-level listeners for mouse movement and keyboard input.
+  *
+  * @param event - The mouse down event
+  * @param direction - The direction of the handle being dragged
+  */
   handleResizeStart(event, direction) {
     event.preventDefault();
     event.stopPropagation();
@@ -18901,16 +17257,11 @@ var ResizableNodeView = class {
     }
     this.startWidth = this.element.offsetWidth;
     this.startHeight = this.element.offsetHeight;
-    if (this.startWidth > 0 && this.startHeight > 0) {
-      this.aspectRatio = this.startWidth / this.startHeight;
-    }
-    const pos = this.getPos();
-    if (pos !== void 0) {
+    if (this.startWidth > 0 && this.startHeight > 0) this.aspectRatio = this.startWidth / this.startHeight;
+    if (this.getPos() !== void 0) {
     }
     this.container.dataset.resizeState = "true";
-    if (this.classNames.resizing) {
-      this.container.classList.add(this.classNames.resizing);
-    }
+    if (this.classNames.resizing) this.container.classList.add(this.classNames.resizing);
     document.addEventListener("mousemove", this.handleMouseMove);
     document.addEventListener("touchmove", this.handleTouchMove);
     document.addEventListener("mouseup", this.handleMouseUp);
@@ -18918,31 +17269,27 @@ var ResizableNodeView = class {
     document.addEventListener("keyup", this.handleKeyUp);
   }
   handleResize(deltaX, deltaY) {
-    if (!this.activeHandle) {
-      return;
-    }
+    if (!this.activeHandle) return;
     const shouldPreserveAspectRatio = this.preserveAspectRatio || this.isShiftKeyPressed;
     const { width, height } = this.calculateNewDimensions(this.activeHandle, deltaX, deltaY);
     const constrained = this.applyConstraints(width, height, shouldPreserveAspectRatio);
     this.element.style.width = `${constrained.width}px`;
     this.element.style.height = `${constrained.height}px`;
-    if (this.onResize) {
-      this.onResize(constrained.width, constrained.height);
-    }
+    if (this.onResize) this.onResize(constrained.width, constrained.height);
   }
   /**
-   * Calculates new dimensions based on mouse delta and resize direction.
-   *
-   * Takes the starting dimensions and applies the mouse movement delta
-   * according to the handle direction. For corner handles, both dimensions
-   * are affected. For edge handles, only one dimension changes. If aspect
-   * ratio should be preserved, delegates to applyAspectRatio.
-   *
-   * @param direction - The active resize handle direction
-   * @param deltaX - Horizontal mouse movement since resize start
-   * @param deltaY - Vertical mouse movement since resize start
-   * @returns The calculated width and height
-   */
+  * Calculates new dimensions based on mouse delta and resize direction.
+  *
+  * Takes the starting dimensions and applies the mouse movement delta
+  * according to the handle direction. For corner handles, both dimensions
+  * are affected. For edge handles, only one dimension changes. If aspect
+  * ratio should be preserved, delegates to applyAspectRatio.
+  *
+  * @param direction - The active resize handle direction
+  * @param deltaX - Horizontal mouse movement since resize start
+  * @param deltaY - Vertical mouse movement since resize start
+  * @returns The calculated width and height
+  */
   calculateNewDimensions(direction, deltaX, deltaY) {
     let newWidth = this.startWidth;
     let newHeight = this.startHeight;
@@ -18950,55 +17297,45 @@ var ResizableNodeView = class {
     const isLeft = direction.includes("left");
     const isBottom = direction.includes("bottom");
     const isTop = direction.includes("top");
-    if (isRight) {
-      newWidth = this.startWidth + deltaX;
-    } else if (isLeft) {
-      newWidth = this.startWidth - deltaX;
-    }
-    if (isBottom) {
-      newHeight = this.startHeight + deltaY;
-    } else if (isTop) {
-      newHeight = this.startHeight - deltaY;
-    }
-    if (direction === "right" || direction === "left") {
-      newWidth = this.startWidth + (isRight ? deltaX : -deltaX);
-    }
-    if (direction === "top" || direction === "bottom") {
-      newHeight = this.startHeight + (isBottom ? deltaY : -deltaY);
-    }
-    const shouldPreserveAspectRatio = this.preserveAspectRatio || this.isShiftKeyPressed;
-    if (shouldPreserveAspectRatio) {
-      return this.applyAspectRatio(newWidth, newHeight, direction);
-    }
-    return { width: newWidth, height: newHeight };
+    if (isRight) newWidth = this.startWidth + deltaX;
+    else if (isLeft) newWidth = this.startWidth - deltaX;
+    if (isBottom) newHeight = this.startHeight + deltaY;
+    else if (isTop) newHeight = this.startHeight - deltaY;
+    if (direction === "right" || direction === "left") newWidth = this.startWidth + (isRight ? deltaX : -deltaX);
+    if (direction === "top" || direction === "bottom") newHeight = this.startHeight + (isBottom ? deltaY : -deltaY);
+    if (this.preserveAspectRatio || this.isShiftKeyPressed) return this.applyAspectRatio(newWidth, newHeight, direction);
+    return {
+      width: newWidth,
+      height: newHeight
+    };
   }
   /**
-   * Applies min/max constraints to dimensions.
-   *
-   * When aspect ratio is NOT preserved, constraints are applied independently
-   * to width and height. When aspect ratio IS preserved, constraints are
-   * applied while maintaining the aspect ratio—if one dimension hits a limit,
-   * the other is recalculated proportionally.
-   *
-   * This ensures that aspect ratio is never broken when constrained.
-   *
-   * @param width - The unconstrained width
-   * @param height - The unconstrained height
-   * @param preserveAspectRatio - Whether to maintain aspect ratio while constraining
-   * @returns The constrained dimensions
-   */
+  * Applies min/max constraints to dimensions.
+  *
+  * When aspect ratio is NOT preserved, constraints are applied independently
+  * to width and height. When aspect ratio IS preserved, constraints are
+  * applied while maintaining the aspect ratio—if one dimension hits a limit,
+  * the other is recalculated proportionally.
+  *
+  * This ensures that aspect ratio is never broken when constrained.
+  *
+  * @param width - The unconstrained width
+  * @param height - The unconstrained height
+  * @param preserveAspectRatio - Whether to maintain aspect ratio while constraining
+  * @returns The constrained dimensions
+  */
   applyConstraints(width, height, preserveAspectRatio) {
-    var _a, _b, _c, _d;
+    var _this$maxSize3, _this$maxSize4;
     if (!preserveAspectRatio) {
+      var _this$maxSize, _this$maxSize2;
       let constrainedWidth2 = Math.max(this.minSize.width, width);
       let constrainedHeight2 = Math.max(this.minSize.height, height);
-      if ((_a = this.maxSize) == null ? void 0 : _a.width) {
-        constrainedWidth2 = Math.min(this.maxSize.width, constrainedWidth2);
-      }
-      if ((_b = this.maxSize) == null ? void 0 : _b.height) {
-        constrainedHeight2 = Math.min(this.maxSize.height, constrainedHeight2);
-      }
-      return { width: constrainedWidth2, height: constrainedHeight2 };
+      if ((_this$maxSize = this.maxSize) === null || _this$maxSize === void 0 ? void 0 : _this$maxSize.width) constrainedWidth2 = Math.min(this.maxSize.width, constrainedWidth2);
+      if ((_this$maxSize2 = this.maxSize) === null || _this$maxSize2 === void 0 ? void 0 : _this$maxSize2.height) constrainedHeight2 = Math.min(this.maxSize.height, constrainedHeight2);
+      return {
+        width: constrainedWidth2,
+        height: constrainedHeight2
+      };
     }
     let constrainedWidth = width;
     let constrainedHeight = height;
@@ -19010,62 +17347,61 @@ var ResizableNodeView = class {
       constrainedHeight = this.minSize.height;
       constrainedWidth = constrainedHeight * this.aspectRatio;
     }
-    if (((_c = this.maxSize) == null ? void 0 : _c.width) && constrainedWidth > this.maxSize.width) {
+    if (((_this$maxSize3 = this.maxSize) === null || _this$maxSize3 === void 0 ? void 0 : _this$maxSize3.width) && constrainedWidth > this.maxSize.width) {
       constrainedWidth = this.maxSize.width;
       constrainedHeight = constrainedWidth / this.aspectRatio;
     }
-    if (((_d = this.maxSize) == null ? void 0 : _d.height) && constrainedHeight > this.maxSize.height) {
+    if (((_this$maxSize4 = this.maxSize) === null || _this$maxSize4 === void 0 ? void 0 : _this$maxSize4.height) && constrainedHeight > this.maxSize.height) {
       constrainedHeight = this.maxSize.height;
       constrainedWidth = constrainedHeight * this.aspectRatio;
     }
-    return { width: constrainedWidth, height: constrainedHeight };
+    return {
+      width: constrainedWidth,
+      height: constrainedHeight
+    };
   }
   /**
-   * Adjusts dimensions to maintain the original aspect ratio.
-   *
-   * For horizontal handles (left/right), uses width as the primary dimension
-   * and calculates height from it. For vertical handles (top/bottom), uses
-   * height as primary and calculates width. For corner handles, uses width
-   * as the primary dimension.
-   *
-   * @param width - The new width
-   * @param height - The new height
-   * @param direction - The active resize direction
-   * @returns Dimensions adjusted to preserve aspect ratio
-   */
+  * Adjusts dimensions to maintain the original aspect ratio.
+  *
+  * For horizontal handles (left/right), uses width as the primary dimension
+  * and calculates height from it. For vertical handles (top/bottom), uses
+  * height as primary and calculates width. For corner handles, uses width
+  * as the primary dimension.
+  *
+  * @param width - The new width
+  * @param height - The new height
+  * @param direction - The active resize direction
+  * @returns Dimensions adjusted to preserve aspect ratio
+  */
   applyAspectRatio(width, height, direction) {
     const isHorizontal = direction === "left" || direction === "right";
     const isVertical = direction === "top" || direction === "bottom";
-    if (isHorizontal) {
-      return {
-        width,
-        height: width / this.aspectRatio
-      };
-    }
-    if (isVertical) {
-      return {
-        width: height * this.aspectRatio,
-        height
-      };
-    }
+    if (isHorizontal) return {
+      width,
+      height: width / this.aspectRatio
+    };
+    if (isVertical) return {
+      width: height * this.aspectRatio,
+      height
+    };
     return {
       width,
       height: width / this.aspectRatio
     };
   }
 };
-var Node3 = class _Node extends Extendable {
-  constructor() {
-    super(...arguments);
+var Node2 = class Node3 extends Extendable {
+  constructor(..._args) {
+    super(..._args);
     this.type = "node";
   }
   /**
-   * Create a new Node instance
-   * @param config - Node configuration object or a function that returns a configuration object
-   */
+  * Create a new Node instance
+  * @param config - Node configuration object or a function that returns a configuration object
+  */
   static create(config = {}) {
     const resolvedConfig = typeof config === "function" ? config() : config;
-    return new _Node(resolvedConfig);
+    return new Node3(resolvedConfig);
   }
   configure(options) {
     return super.configure(options);
@@ -19080,9 +17416,7 @@ function markPasteRule(config) {
     find: config.find,
     handler: ({ state, range, match, pasteEvent }) => {
       const attributes = callOrReturn(config.getAttributes, void 0, match, pasteEvent);
-      if (attributes === false || attributes === null) {
-        return null;
-      }
+      if (attributes === false || attributes === null) return null;
       const { tr: tr2 } = state;
       const captureGroup = match[match.length - 1];
       const fullMatch = match[0];
@@ -19091,50 +17425,73 @@ function markPasteRule(config) {
         const startSpaces = fullMatch.search(/\S/);
         const textStart = range.from + fullMatch.indexOf(captureGroup);
         const textEnd = textStart + captureGroup.length;
-        const excludedMarks = getMarksBetween(range.from, range.to, state.doc).filter((item) => {
-          const excluded = item.mark.type.excluded;
-          return excluded.find((type) => type === config.type && type !== item.mark.type);
-        }).filter((item) => item.to > textStart);
-        if (excludedMarks.length) {
-          return null;
-        }
-        if (textEnd < range.to) {
-          tr2.delete(textEnd, range.to);
-        }
-        if (textStart > range.from) {
-          tr2.delete(range.from + startSpaces, textStart);
-        }
+        if (getMarksBetween(range.from, range.to, state.doc).filter((item) => {
+          return item.mark.type.excluded.find((type) => type === config.type && type !== item.mark.type);
+        }).filter((item) => item.to > textStart).length) return null;
+        if (textEnd < range.to) tr2.delete(textEnd, range.to);
+        if (textStart > range.from) tr2.delete(range.from + startSpaces, textStart);
         markEnd = range.from + startSpaces + captureGroup.length;
         tr2.addMark(range.from + startSpaces, markEnd, config.type.create(attributes || {}));
-        const isMatchAtEndOfText = match.index !== void 0 && match.input !== void 0 && match.index + match[0].length >= match.input.length;
-        if (!isMatchAtEndOfText) {
-          tr2.removeStoredMark(config.type);
-        }
+        if (!(match.index !== void 0 && match.input !== void 0 && match.index + match[0].length >= match.input.length)) tr2.removeStoredMark(config.type);
       }
     }
   });
 }
 
-// node_modules/.pnpm/@tiptap+core@3.30.1_@tiptap+pm@3.30.1/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
-var h = (tag, attributes) => {
-  if (tag === "slot") {
-    return 0;
-  }
+// node_modules/.pnpm/@tiptap+core@3.30.5_@tiptap+pm@3.30.5/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
+var jsxElements = /* @__PURE__ */ new WeakSet();
+var jsxFragments = /* @__PURE__ */ new WeakSet();
+function createJSXElement(spec) {
+  const element = spec;
+  jsxElements.add(element);
+  return element;
+}
+function isJSXElement(value) {
+  return Array.isArray(value) && jsxElements.has(value);
+}
+function flattenFragmentChildren(children) {
+  return children.flatMap((child) => {
+    if (child == null) return [];
+    if (Array.isArray(child) && jsxFragments.has(child) && !isJSXElement(child)) return flattenFragmentChildren(child);
+    return [child];
+  });
+}
+function render(tag, attributes) {
+  if (tag === "slot") return 0;
   if (tag instanceof Function) {
-    return tag(attributes);
+    const result = tag(attributes);
+    if (Array.isArray(result) && !isJSXElement(result) && !jsxFragments.has(result)) return createJSXElement(result);
+    return result;
   }
-  const { children, ...rest } = attributes != null ? attributes : {};
-  if (tag === "svg") {
-    throw new Error(
-      "SVG elements are not supported in the JSX syntax, use the array syntax instead"
-    );
+  const { children, ...rest } = attributes !== null && attributes !== void 0 ? attributes : {};
+  if (tag === "svg") throw new Error("SVG elements are not supported in the JSX syntax, use the array syntax instead");
+  if (Array.isArray(children)) {
+    if (isJSXElement(children)) return createJSXElement([
+      tag,
+      rest,
+      children
+    ]);
+    if (children.length === 0) return createJSXElement([tag, rest]);
+    const flattenedChildren = flattenFragmentChildren(children);
+    if (flattenedChildren.length === 0) return createJSXElement([tag, rest]);
+    return createJSXElement([
+      tag,
+      rest,
+      ...flattenedChildren
+    ]);
   }
-  return [tag, rest, children];
-};
+  if (children !== void 0 && children !== null) return createJSXElement([
+    tag,
+    rest,
+    children
+  ]);
+  return createJSXElement([tag, rest]);
+}
+var h = (tag, attributes) => render(tag, attributes);
 
-// node_modules/.pnpm/@tiptap+extension-blockquote@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1__@tiptap+pm@3.30.1/node_modules/@tiptap/extension-blockquote/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-blockquote@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-blockquote/dist/index.js
 var handleBackspace = (editor, type) => {
-  var _a;
+  var _previous$lastChild;
   const { state } = editor;
   const { selection } = state;
   if (!selection.empty) return false;
@@ -19145,20 +17502,12 @@ var handleBackspace = (editor, type) => {
   const parent = $from.node(parentDepth);
   const index = $from.index(parentDepth);
   if (index === 0) return false;
-  if (parent.type === type) {
-    return editor.commands.lift(type.name);
-  }
+  if (parent.type === type) return editor.commands.lift(type.name);
   const previous = parent.child(index - 1);
-  if (previous.type !== type || !((_a = previous.lastChild) == null ? void 0 : _a.isTextblock)) {
-    return false;
-  }
-  const blockStart = $from.before();
-  const insideBlockquoteEnd = blockStart - 1;
-  const targetPos = insideBlockquoteEnd - 1;
+  if (previous.type !== type || !((_previous$lastChild = previous.lastChild) === null || _previous$lastChild === void 0 ? void 0 : _previous$lastChild.isTextblock)) return false;
+  const targetPos = $from.before() - 1 - 1;
   return editor.commands.command(({ tr: tr2, dispatch }) => {
-    if (!dispatch) {
-      return true;
-    }
+    if (!dispatch) return true;
     const content = $from.parent.content;
     const slice2 = new Slice(content, 0, 0);
     tr2.replace(targetPos, $from.after(), slice2);
@@ -19169,12 +17518,10 @@ var handleBackspace = (editor, type) => {
   });
 };
 var inputRegex = /^\s*>\s$/;
-var Blockquote = Node3.create({
+var Blockquote = Node2.create({
   name: "blockquote",
   addOptions() {
-    return {
-      HTMLAttributes: {}
-    };
+    return { HTMLAttributes: {} };
   },
   content: "block+",
   group: "block",
@@ -19183,27 +17530,24 @@ var Blockquote = Node3.create({
     return [{ tag: "blockquote" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return /* @__PURE__ */ h("blockquote", { ...mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), children: /* @__PURE__ */ h("slot", {}) });
+    return /* @__PURE__ */ h("blockquote", {
+      ...mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      children: /* @__PURE__ */ h("slot", {})
+    });
   },
   parseMarkdown: (token, helpers) => {
-    var _a;
-    const parseBlockChildren = (_a = helpers.parseBlockChildren) != null ? _a : helpers.parseChildren;
+    var _helpers$parseBlockCh;
+    const parseBlockChildren = (_helpers$parseBlockCh = helpers.parseBlockChildren) !== null && _helpers$parseBlockCh !== void 0 ? _helpers$parseBlockCh : helpers.parseChildren;
     return helpers.createNode("blockquote", void 0, parseBlockChildren(token.tokens || []));
   },
   renderMarkdown: (node, h2) => {
-    if (!node.content) {
-      return "";
-    }
+    if (!node.content) return "";
     const prefix = ">";
     const result = [];
     node.content.forEach((child, index) => {
-      var _a, _b;
-      const childContent = (_b = (_a = h2.renderChild) == null ? void 0 : _a.call(h2, child, index)) != null ? _b : h2.renderChildren([child]);
-      const lines = childContent.split("\n");
-      const linesWithPrefix = lines.map((line) => {
-        if (line.trim() === "") {
-          return prefix;
-        }
+      var _h$renderChild, _h$renderChild2;
+      const linesWithPrefix = ((_h$renderChild = (_h$renderChild2 = h2.renderChild) === null || _h$renderChild2 === void 0 ? void 0 : _h$renderChild2.call(h2, child, index)) !== null && _h$renderChild !== void 0 ? _h$renderChild : h2.renderChildren([child])).split("\n").map((line) => {
+        if (line.trim() === "") return prefix;
         return `${prefix} ${line}`;
       });
       result.push(linesWithPrefix.join("\n"));
@@ -19232,16 +17576,14 @@ ${prefix}
     };
   },
   addInputRules() {
-    return [
-      wrappingInputRule({
-        find: inputRegex,
-        type: this.type
-      })
-    ];
+    return [wrappingInputRule({
+      find: inputRegex,
+      type: this.type
+    })];
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-bold@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-bold/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-bold@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-bold/dist/index.js
 var starInputRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))$/;
 var starPasteRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))/g;
 var underscoreInputRegex = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
@@ -19249,15 +17591,11 @@ var underscorePasteRegex = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))/g;
 var Bold = Mark2.create({
   name: "bold",
   addOptions() {
-    return {
-      HTMLAttributes: {}
-    };
+    return { HTMLAttributes: {} };
   },
   parseHTML() {
     return [
-      {
-        tag: "strong"
-      },
+      { tag: "strong" },
       {
         tag: "b",
         getAttrs: (node) => node.style.fontWeight !== "normal" && null
@@ -19273,18 +17611,19 @@ var Bold = Mark2.create({
     ];
   },
   renderHTML({ HTMLAttributes }) {
-    return /* @__PURE__ */ h("strong", { ...mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), children: /* @__PURE__ */ h("slot", {}) });
+    return /* @__PURE__ */ h("strong", {
+      ...mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      children: /* @__PURE__ */ h("slot", {})
+    });
   },
   markdownTokenName: "strong",
   parseMarkdown: (token, helpers) => {
     return helpers.applyMark("bold", helpers.parseInline(token.tokens || []));
   },
-  markdownOptions: {
-    htmlReopen: {
-      open: "<strong>",
-      close: "</strong>"
-    }
-  },
+  markdownOptions: { htmlReopen: {
+    open: "<strong>",
+    close: "</strong>"
+  } },
   renderMarkdown: (node, h2) => {
     return `**${h2.renderChildren(node)}**`;
   },
@@ -19308,40 +17647,30 @@ var Bold = Mark2.create({
     };
   },
   addInputRules() {
-    return [
-      markInputRule({
-        find: starInputRegex,
-        type: this.type
-      }),
-      markInputRule({
-        find: underscoreInputRegex,
-        type: this.type
-      })
-    ];
+    return [markInputRule({
+      find: starInputRegex,
+      type: this.type
+    }), markInputRule({
+      find: underscoreInputRegex,
+      type: this.type
+    })];
   },
   addPasteRules() {
-    return [
-      markPasteRule({
-        find: starPasteRegex,
-        type: this.type
-      }),
-      markPasteRule({
-        find: underscorePasteRegex,
-        type: this.type
-      })
-    ];
+    return [markPasteRule({
+      find: starPasteRegex,
+      type: this.type
+    }), markPasteRule({
+      find: underscorePasteRegex,
+      type: this.type
+    })];
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-code/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-code/dist/index.js
 var inputRegexMatch = (text) => {
   const match = /`([^`]+)`(?!`)$/.exec(text);
-  if (!match) {
-    return null;
-  }
-  if (match.index > 0 && text[match.index - 1] === "`") {
-    return null;
-  }
+  if (!match) return null;
+  if (match.index > 0 && text[match.index - 1] === "`") return null;
   return {
     index: match.index,
     text: match[0],
@@ -19353,9 +17682,7 @@ var pasteRegexMatch = (text) => {
   const matches2 = [];
   let match;
   while ((match = regex.exec(text)) !== null) {
-    if (match.index > 0 && text[match.index - 1] === "`") {
-      continue;
-    }
+    if (match.index > 0 && text[match.index - 1] === "`") continue;
     matches2.push({
       index: match.index,
       text: match[0],
@@ -19367,9 +17694,7 @@ var pasteRegexMatch = (text) => {
 var Code = Mark2.create({
   name: "code",
   addOptions() {
-    return {
-      HTMLAttributes: {}
-    };
+    return { HTMLAttributes: {} };
   },
   excludes: "_",
   code: true,
@@ -19378,16 +17703,21 @@ var Code = Mark2.create({
     return [{ tag: "code" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["code", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      "code",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   markdownTokenName: "codespan",
   parseMarkdown: (token, helpers) => {
-    return helpers.applyMark("code", [{ type: "text", text: token.text || "" }]);
+    return helpers.applyMark("code", [{
+      type: "text",
+      text: token.text || ""
+    }]);
   },
   renderMarkdown: (node, h2) => {
-    if (!node.content) {
-      return "";
-    }
+    if (!node.content) return "";
     return `\`${h2.renderChildren(node.content)}\``;
   },
   addCommands() {
@@ -19404,33 +17734,27 @@ var Code = Mark2.create({
     };
   },
   addKeyboardShortcuts() {
-    return {
-      "Mod-e": () => this.editor.commands.toggleCode()
-    };
+    return { "Mod-e": () => this.editor.commands.toggleCode() };
   },
   addInputRules() {
-    return [
-      markInputRule({
-        find: inputRegexMatch,
-        type: this.type
-      })
-    ];
+    return [markInputRule({
+      find: inputRegexMatch,
+      type: this.type
+    })];
   },
   addPasteRules() {
-    return [
-      markPasteRule({
-        find: pasteRegexMatch,
-        type: this.type
-      })
-    ];
+    return [markPasteRule({
+      find: pasteRegexMatch,
+      type: this.type
+    })];
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code-block@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1__@tiptap+pm@3.30.1/node_modules/@tiptap/extension-code-block/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code-block@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-code-block/dist/index.js
 var DEFAULT_TAB_SIZE = 4;
 var backtickInputRegex = /^```([a-z]+)?[\s\n]$/;
 var tildeInputRegex = /^~~~([a-z]+)?[\s\n]$/;
-var CodeBlock = Node3.create({
+var CodeBlock = Node2.create({
   name: "codeBlock",
   addOptions() {
     return {
@@ -19450,34 +17774,24 @@ var CodeBlock = Node3.create({
   code: true,
   defining: true,
   addAttributes() {
-    return {
-      language: {
-        default: this.options.defaultLanguage,
-        parseHTML: (element) => {
-          var _a;
-          const { languageClassPrefix } = this.options;
-          if (!languageClassPrefix) {
-            return null;
-          }
-          const classNames = [...((_a = element.firstElementChild) == null ? void 0 : _a.classList) || []];
-          const languages = classNames.filter((className) => className.startsWith(languageClassPrefix)).map((className) => className.replace(languageClassPrefix, ""));
-          const language = languages[0];
-          if (!language) {
-            return null;
-          }
-          return language;
-        },
-        rendered: false
-      }
-    };
+    return { language: {
+      default: this.options.defaultLanguage,
+      parseHTML: (element) => {
+        var _element$firstElement;
+        const { languageClassPrefix } = this.options;
+        if (!languageClassPrefix) return null;
+        const language = [...((_element$firstElement = element.firstElementChild) === null || _element$firstElement === void 0 ? void 0 : _element$firstElement.classList) || []].filter((className) => className.startsWith(languageClassPrefix)).map((className) => className.replace(languageClassPrefix, ""))[0];
+        if (!language) return null;
+        return language;
+      },
+      rendered: false
+    } };
   },
   parseHTML() {
-    return [
-      {
-        tag: "pre",
-        preserveWhitespace: "full"
-      }
-    ];
+    return [{
+      tag: "pre",
+      preserveWhitespace: "full"
+    }];
   },
   renderHTML({ node, HTMLAttributes }) {
     return [
@@ -19485,37 +17799,29 @@ var CodeBlock = Node3.create({
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
       [
         "code",
-        {
-          class: node.attrs.language ? this.options.languageClassPrefix + node.attrs.language : null
-        },
+        { class: node.attrs.language ? this.options.languageClassPrefix + node.attrs.language : null },
         0
       ]
     ];
   },
   markdownTokenName: "code",
   parseMarkdown: (token, helpers) => {
-    var _a, _b;
-    if (((_a = token.raw) == null ? void 0 : _a.startsWith("```")) === false && ((_b = token.raw) == null ? void 0 : _b.startsWith("~~~")) === false && token.codeBlockStyle !== "indented") {
-      return [];
-    }
-    return helpers.createNode(
-      "codeBlock",
-      { language: token.lang || null },
-      token.text ? [helpers.createTextNode(token.text)] : []
-    );
+    var _token$raw, _token$raw2;
+    if (((_token$raw = token.raw) === null || _token$raw === void 0 ? void 0 : _token$raw.startsWith("```")) === false && ((_token$raw2 = token.raw) === null || _token$raw2 === void 0 ? void 0 : _token$raw2.startsWith("~~~")) === false && token.codeBlockStyle !== "indented") return [];
+    return helpers.createNode("codeBlock", { language: token.lang || null }, token.text ? [helpers.createTextNode(token.text)] : []);
   },
   renderMarkdown: (node, h2) => {
-    var _a;
+    var _node$attrs;
     let output = "";
-    const language = ((_a = node.attrs) == null ? void 0 : _a.language) || "";
-    if (!node.content) {
-      output = `\`\`\`${language}
+    const language = ((_node$attrs = node.attrs) === null || _node$attrs === void 0 ? void 0 : _node$attrs.language) || "";
+    if (!node.content) output = `\`\`\`${language}
 
 \`\`\``;
-    } else {
-      const lines = [`\`\`\`${language}`, h2.renderChildren(node.content), "```"];
-      output = lines.join("\n");
-    }
+    else output = [
+      `\`\`\`${language}`,
+      h2.renderChildren(node.content),
+      "```"
+    ].join("\n");
     return output;
   },
   addCommands() {
@@ -19531,100 +17837,68 @@ var CodeBlock = Node3.create({
   addKeyboardShortcuts() {
     return {
       "Mod-Alt-c": () => this.editor.commands.toggleCodeBlock(),
-      // remove code block when at start of document or code block is empty
       Backspace: () => {
         const { empty: empty2, $anchor } = this.editor.state.selection;
         const isAtStart = $anchor.pos === 1;
-        if (!empty2 || $anchor.parent.type.name !== this.name) {
-          return false;
-        }
-        if (isAtStart || !$anchor.parent.textContent.length) {
-          return this.editor.commands.clearNodes();
-        }
+        if (!empty2 || $anchor.parent.type.name !== this.name) return false;
+        if (isAtStart || !$anchor.parent.textContent.length) return this.editor.commands.clearNodes();
         return false;
       },
-      // handle tab indentation
       Tab: ({ editor }) => {
-        var _a;
-        if (!this.options.enableTabIndentation) {
-          return false;
-        }
-        const tabSize = (_a = this.options.tabSize) != null ? _a : DEFAULT_TAB_SIZE;
+        var _this$options$tabSize;
+        if (!this.options.enableTabIndentation) return false;
+        const tabSize = (_this$options$tabSize = this.options.tabSize) !== null && _this$options$tabSize !== void 0 ? _this$options$tabSize : DEFAULT_TAB_SIZE;
         const { state } = editor;
         const { selection } = state;
         const { $from, empty: empty2 } = selection;
-        if ($from.parent.type !== this.type) {
-          return false;
-        }
+        if ($from.parent.type !== this.type) return false;
         const indent = " ".repeat(tabSize);
-        if (empty2) {
-          return editor.commands.insertContent(indent);
-        }
+        if (empty2) return editor.commands.insertContent(indent);
         return editor.commands.command(({ tr: tr2 }) => {
           const { from: from2, to } = selection;
-          const text = state.doc.textBetween(from2, to, "\n", "\n");
-          const lines = text.split("\n");
-          const indentedText = lines.map((line) => indent + line).join("\n");
+          const indentedText = state.doc.textBetween(from2, to, "\n", "\n").split("\n").map((line) => indent + line).join("\n");
           tr2.replaceWith(from2, to, state.schema.text(indentedText));
           return true;
         });
       },
-      // handle shift+tab reverse indentation
       "Shift-Tab": ({ editor }) => {
-        var _a;
-        if (!this.options.enableTabIndentation) {
-          return false;
-        }
-        const tabSize = (_a = this.options.tabSize) != null ? _a : DEFAULT_TAB_SIZE;
+        var _this$options$tabSize2;
+        if (!this.options.enableTabIndentation) return false;
+        const tabSize = (_this$options$tabSize2 = this.options.tabSize) !== null && _this$options$tabSize2 !== void 0 ? _this$options$tabSize2 : DEFAULT_TAB_SIZE;
         const { state } = editor;
         const { selection } = state;
         const { $from, empty: empty2 } = selection;
-        if ($from.parent.type !== this.type) {
-          return false;
-        }
-        if (empty2) {
-          return editor.commands.command(({ tr: tr2 }) => {
-            var _a2;
-            const { pos } = $from;
-            const codeBlockStart = $from.start();
-            const codeBlockEnd = $from.end();
-            const allText = state.doc.textBetween(codeBlockStart, codeBlockEnd, "\n", "\n");
-            const lines = allText.split("\n");
-            let currentLineIndex = 0;
-            let charCount = 0;
-            const relativeCursorPos = pos - codeBlockStart;
-            for (let i2 = 0; i2 < lines.length; i2 += 1) {
-              if (charCount + lines[i2].length >= relativeCursorPos) {
-                currentLineIndex = i2;
-                break;
-              }
-              charCount += lines[i2].length + 1;
+        if ($from.parent.type !== this.type) return false;
+        if (empty2) return editor.commands.command(({ tr: tr2 }) => {
+          var _currentLine$match;
+          const { pos } = $from;
+          const codeBlockStart = $from.start();
+          const codeBlockEnd = $from.end();
+          const lines = state.doc.textBetween(codeBlockStart, codeBlockEnd, "\n", "\n").split("\n");
+          let currentLineIndex = 0;
+          let charCount = 0;
+          const relativeCursorPos = pos - codeBlockStart;
+          for (let i2 = 0; i2 < lines.length; i2 += 1) {
+            if (charCount + lines[i2].length >= relativeCursorPos) {
+              currentLineIndex = i2;
+              break;
             }
-            const currentLine = lines[currentLineIndex];
-            const leadingSpaces = ((_a2 = currentLine.match(/^ */)) == null ? void 0 : _a2[0]) || "";
-            const spacesToRemove = Math.min(leadingSpaces.length, tabSize);
-            if (spacesToRemove === 0) {
-              return true;
-            }
-            let lineStartPos = codeBlockStart;
-            for (let i2 = 0; i2 < currentLineIndex; i2 += 1) {
-              lineStartPos += lines[i2].length + 1;
-            }
-            tr2.delete(lineStartPos, lineStartPos + spacesToRemove);
-            const cursorPosInLine = pos - lineStartPos;
-            if (cursorPosInLine <= spacesToRemove) {
-              tr2.setSelection(TextSelection.create(tr2.doc, lineStartPos));
-            }
-            return true;
-          });
-        }
+            charCount += lines[i2].length + 1;
+          }
+          const leadingSpaces = ((_currentLine$match = lines[currentLineIndex].match(/^ */)) === null || _currentLine$match === void 0 ? void 0 : _currentLine$match[0]) || "";
+          const spacesToRemove = Math.min(leadingSpaces.length, tabSize);
+          if (spacesToRemove === 0) return true;
+          let lineStartPos = codeBlockStart;
+          for (let i2 = 0; i2 < currentLineIndex; i2 += 1) lineStartPos += lines[i2].length + 1;
+          tr2.delete(lineStartPos, lineStartPos + spacesToRemove);
+          if (pos - lineStartPos <= spacesToRemove) tr2.setSelection(TextSelection.create(tr2.doc, lineStartPos));
+          return true;
+        });
         return editor.commands.command(({ tr: tr2 }) => {
           const { from: from2, to } = selection;
-          const text = state.doc.textBetween(from2, to, "\n", "\n");
-          const lines = text.split("\n");
-          const reverseIndentText = lines.map((line) => {
-            var _a2;
-            const leadingSpaces = ((_a2 = line.match(/^ */)) == null ? void 0 : _a2[0]) || "";
+          const reverseIndentText = state.doc.textBetween(from2, to, "\n", "\n").split("\n").map((line) => {
+            var _line$match;
+            const leadingSpaces = ((_line$match = line.match(/^ */)) === null || _line$match === void 0 ? void 0 : _line$match[0]) || "";
             const spacesToRemove = Math.min(leadingSpaces.length, tabSize);
             return line.slice(spacesToRemove);
           }).join("\n");
@@ -19632,150 +17906,96 @@ var CodeBlock = Node3.create({
           return true;
         });
       },
-      // exit node on triple enter
       Enter: ({ editor }) => {
-        if (!this.options.exitOnTripleEnter) {
-          return false;
-        }
+        if (!this.options.exitOnTripleEnter) return false;
         const { state } = editor;
         const { selection } = state;
         const { $from, empty: empty2 } = selection;
-        if (!empty2 || $from.parent.type !== this.type) {
-          return false;
-        }
+        if (!empty2 || $from.parent.type !== this.type) return false;
         const isAtEnd = $from.parentOffset === $from.parent.nodeSize - 2;
         const endsWithDoubleNewline = $from.parent.textContent.endsWith("\n\n");
-        if (!isAtEnd || !endsWithDoubleNewline) {
-          return false;
-        }
+        if (!isAtEnd || !endsWithDoubleNewline) return false;
         return editor.chain().command(({ tr: tr2 }) => {
           tr2.delete($from.pos - 2, $from.pos);
           return true;
         }).exitCode().run();
       },
-      // exit node on arrow up if there is no node before it
       ArrowUp: ({ editor }) => {
-        if (!this.options.exitOnArrowUp) {
-          return false;
-        }
+        if (!this.options.exitOnArrowUp) return false;
         const { state } = editor;
         const { selection } = state;
         const { $from, empty: empty2 } = selection;
-        if (!empty2 || $from.parent.type !== this.type) {
-          return false;
-        }
-        if ($from.parentOffset !== 0) {
-          return false;
-        }
+        if (!empty2 || $from.parent.type !== this.type) return false;
+        if ($from.parentOffset !== 0) return false;
         const before = $from.before();
-        if (before > 0) {
-          return false;
-        }
+        if (before > 0) return false;
         return editor.commands.insertDefaultBlock({ pos: before });
       },
-      // exit node on arrow down
       ArrowDown: ({ editor }) => {
-        if (!this.options.exitOnArrowDown) {
-          return false;
-        }
+        if (!this.options.exitOnArrowDown) return false;
         const { state } = editor;
         const { selection, doc: doc3 } = state;
         const { $from, empty: empty2 } = selection;
-        if (!empty2 || $from.parent.type !== this.type) {
-          return false;
-        }
-        const isAtEnd = $from.parentOffset === $from.parent.nodeSize - 2;
-        if (!isAtEnd) {
-          return false;
-        }
+        if (!empty2 || $from.parent.type !== this.type) return false;
+        if (!($from.parentOffset === $from.parent.nodeSize - 2)) return false;
         const after = $from.after();
-        if (after === void 0) {
-          return false;
-        }
-        const nodeAfter = doc3.nodeAt(after);
-        if (nodeAfter) {
-          return editor.commands.command(({ tr: tr2 }) => {
-            tr2.setSelection(Selection.near(doc3.resolve(after)));
-            return true;
-          });
-        }
+        if (after === void 0) return false;
+        if (doc3.nodeAt(after)) return editor.commands.command(({ tr: tr2 }) => {
+          tr2.setSelection(Selection.near(doc3.resolve(after)));
+          return true;
+        });
         return editor.commands.exitCode();
       }
     };
   },
   addInputRules() {
-    return [
-      textblockTypeInputRule({
-        find: backtickInputRegex,
-        type: this.type,
-        getAttributes: (match) => ({
-          language: match[1]
-        })
-      }),
-      textblockTypeInputRule({
-        find: tildeInputRegex,
-        type: this.type,
-        getAttributes: (match) => ({
-          language: match[1]
-        })
-      })
-    ];
+    return [textblockTypeInputRule({
+      find: backtickInputRegex,
+      type: this.type,
+      getAttributes: (match) => ({ language: match[1] })
+    }), textblockTypeInputRule({
+      find: tildeInputRegex,
+      type: this.type,
+      getAttributes: (match) => ({ language: match[1] })
+    })];
   },
   addProseMirrorPlugins() {
-    return [
-      // this plugin creates a code block for pasted content from VS Code
-      // we can also detect the copied code language
-      new Plugin({
-        key: new PluginKey("codeBlockVSCodeHandler"),
-        props: {
-          handlePaste: (view, event) => {
-            if (!event.clipboardData) {
-              return false;
-            }
-            if (this.editor.isActive(this.type.name)) {
-              return false;
-            }
-            const text = event.clipboardData.getData("text/plain");
-            const vscode = event.clipboardData.getData("vscode-editor-data");
-            const vscodeData = vscode ? JSON.parse(vscode) : void 0;
-            const language = vscodeData == null ? void 0 : vscodeData.mode;
-            if (!text || !language) {
-              return false;
-            }
-            const { tr: tr2, schema } = view.state;
-            const textNode = schema.text(text.replace(/\r\n?/g, "\n"));
-            tr2.replaceSelectionWith(this.type.create({ language }, textNode));
-            if (tr2.selection.$from.parent.type !== this.type) {
-              tr2.setSelection(
-                TextSelection.near(tr2.doc.resolve(Math.max(0, tr2.selection.from - 2)))
-              );
-            }
-            tr2.setMeta("paste", true);
-            view.dispatch(tr2);
-            return true;
-          }
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("codeBlockVSCodeHandler"),
+      props: { handlePaste: (view, event) => {
+        if (!event.clipboardData) return false;
+        if (this.editor.isActive(this.type.name)) return false;
+        const text = event.clipboardData.getData("text/plain");
+        const vscode = event.clipboardData.getData("vscode-editor-data");
+        const vscodeData = vscode ? JSON.parse(vscode) : void 0;
+        const language = vscodeData === null || vscodeData === void 0 ? void 0 : vscodeData.mode;
+        if (!text || !language) return false;
+        const { tr: tr2, schema } = view.state;
+        const textNode = schema.text(text.replace(/\r\n?/g, "\n"));
+        tr2.replaceSelectionWith(this.type.create({ language }, textNode));
+        if (tr2.selection.$from.parent.type !== this.type) tr2.setSelection(TextSelection.near(tr2.doc.resolve(Math.max(0, tr2.selection.from - 2))));
+        tr2.setMeta("paste", true);
+        view.dispatch(tr2);
+        return true;
+      } }
+    })];
   }
 });
-var index_default = CodeBlock;
+var src_default = CodeBlock;
 
-// node_modules/.pnpm/@tiptap+extension-document@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-document/dist/index.js
-var Document = Node3.create({
+// node_modules/.pnpm/@tiptap+extension-document@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-document/dist/index.js
+var Document = Node2.create({
   name: "doc",
   topNode: true,
   content: "block+",
   renderMarkdown: (node, h2) => {
-    if (!node.content) {
-      return "";
-    }
+    if (!node.content) return "";
     return h2.renderChildren(node.content, "\n\n");
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-hard-break@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-hard-break/dist/index.js
-var HardBreak = Node3.create({
+// node_modules/.pnpm/@tiptap+extension-hard-break@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-hard-break/dist/index.js
+var HardBreak = Node2.create({
   name: "hardBreak",
   markdownTokenName: "br",
   addOptions() {
@@ -19800,36 +18020,25 @@ var HardBreak = Node3.create({
   renderMarkdown: () => `  
 `,
   parseMarkdown: () => {
-    return {
-      type: "hardBreak"
-    };
+    return { type: "hardBreak" };
   },
   addCommands() {
-    return {
-      setHardBreak: () => ({ commands, chain, state, editor }) => {
-        return commands.first([
-          () => commands.exitCode(),
-          () => commands.command(() => {
-            const { selection, storedMarks } = state;
-            if (selection.$from.parent.type.spec.isolating) {
-              return false;
-            }
-            const { keepMarks } = this.options;
-            const { splittableMarks } = editor.extensionManager;
-            const marks = storedMarks || selection.$to.parentOffset && selection.$from.marks();
-            return chain().insertContent({ type: this.name }).command(({ tr: tr2, dispatch }) => {
-              if (dispatch && marks && keepMarks) {
-                const filteredMarks = marks.filter(
-                  (mark) => splittableMarks.includes(mark.type.name)
-                );
-                tr2.ensureMarks(filteredMarks);
-              }
-              return true;
-            }).scrollIntoView().run();
-          })
-        ]);
-      }
-    };
+    return { setHardBreak: () => ({ commands, chain, state, editor }) => {
+      return commands.first([() => commands.exitCode(), () => commands.command(() => {
+        const { selection, storedMarks } = state;
+        if (selection.$from.parent.type.spec.isolating) return false;
+        const { keepMarks } = this.options;
+        const { splittableMarks } = editor.extensionManager;
+        const marks = storedMarks || selection.$to.parentOffset && selection.$from.marks();
+        return chain().insertContent({ type: this.name }).command(({ tr: tr2, dispatch }) => {
+          if (dispatch && marks && keepMarks) {
+            const filteredMarks = marks.filter((mark) => splittableMarks.includes(mark.type.name));
+            tr2.ensureMarks(filteredMarks);
+          }
+          return true;
+        }).scrollIntoView().run();
+      })]);
+    } };
   },
   addKeyboardShortcuts() {
     return {
@@ -19839,12 +18048,19 @@ var HardBreak = Node3.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-heading@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-heading/dist/index.js
-var Heading = Node3.create({
+// node_modules/.pnpm/@tiptap+extension-heading@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-heading/dist/index.js
+var Heading = Node2.create({
   name: "heading",
   addOptions() {
     return {
-      levels: [1, 2, 3, 4, 5, 6],
+      levels: [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
       HTMLAttributes: {}
     };
   },
@@ -19852,12 +18068,10 @@ var Heading = Node3.create({
   group: "block",
   defining: true,
   addAttributes() {
-    return {
-      level: {
-        default: 1,
-        rendered: false
-      }
-    };
+    return { level: {
+      default: 1,
+      rendered: false
+    } };
   },
   parseHTML() {
     return this.options.levels.map((level) => ({
@@ -19866,66 +18080,53 @@ var Heading = Node3.create({
     }));
   },
   renderHTML({ node, HTMLAttributes }) {
-    const hasLevel = this.options.levels.includes(node.attrs.level);
-    const level = hasLevel ? node.attrs.level : this.options.levels[0];
-    return [`h${level}`, mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      `h${this.options.levels.includes(node.attrs.level) ? node.attrs.level : this.options.levels[0]}`,
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   parseMarkdown: (token, helpers) => {
-    return helpers.createNode(
-      "heading",
-      { level: token.depth || 1 },
-      helpers.parseInline(token.tokens || [])
-    );
+    return helpers.createNode("heading", { level: token.depth || 1 }, helpers.parseInline(token.tokens || []));
   },
   renderMarkdown: (node, h2) => {
-    var _a;
-    const level = ((_a = node.attrs) == null ? void 0 : _a.level) ? parseInt(node.attrs.level, 10) : 1;
+    var _node$attrs;
+    const level = ((_node$attrs = node.attrs) === null || _node$attrs === void 0 ? void 0 : _node$attrs.level) ? parseInt(node.attrs.level, 10) : 1;
     const headingChars = "#".repeat(level);
-    if (!node.content) {
-      return "";
-    }
+    if (!node.content) return "";
     return `${headingChars} ${h2.renderChildren(node.content)}`;
   },
   addCommands() {
     return {
       setHeading: (attributes) => ({ commands }) => {
-        if (!this.options.levels.includes(attributes.level)) {
-          return false;
-        }
+        if (!this.options.levels.includes(attributes.level)) return false;
         return commands.setNode(this.name, attributes);
       },
       toggleHeading: (attributes) => ({ commands }) => {
-        if (!this.options.levels.includes(attributes.level)) {
-          return false;
-        }
+        if (!this.options.levels.includes(attributes.level)) return false;
         return commands.toggleNode(this.name, "paragraph", attributes);
       }
     };
   },
   addKeyboardShortcuts() {
-    return this.options.levels.reduce(
-      (items, level) => ({
-        ...items,
-        [`Mod-Alt-${level}`]: () => this.editor.commands.toggleHeading({ level })
-      }),
-      {}
-    );
+    return this.options.levels.reduce((items, level) => ({
+      ...items,
+      [`Mod-Alt-${level}`]: () => this.editor.commands.toggleHeading({ level })
+    }), {});
   },
   addInputRules() {
     return this.options.levels.map((level) => {
       return textblockTypeInputRule({
         find: new RegExp(`^(#{${Math.min(...this.options.levels)},${level}})\\s$`),
         type: this.type,
-        getAttributes: {
-          level
-        }
+        getAttributes: { level }
       });
     });
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1__@tiptap+pm@3.30.1/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
-var HorizontalRule = Node3.create({
+// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
+var HorizontalRule = Node2.create({
   name: "horizontalRule",
   addOptions() {
     return {
@@ -19948,60 +18149,45 @@ var HorizontalRule = Node3.create({
     return "---";
   },
   addCommands() {
-    return {
-      setHorizontalRule: () => ({ chain, state }) => {
-        if (!canInsertNode(state, state.schema.nodes[this.name])) {
-          return false;
-        }
-        const { selection } = state;
-        const { $to: $originTo } = selection;
-        const currentChain = chain();
-        if (isNodeSelection(selection)) {
-          currentChain.insertContentAt($originTo.pos, {
-            type: this.name
-          });
-        } else {
-          currentChain.insertContent({ type: this.name });
-        }
-        return currentChain.command(({ state: chainState, tr: tr2, dispatch }) => {
-          if (dispatch) {
-            const { $to } = tr2.selection;
-            const posAfter = $to.end();
-            if ($to.nodeAfter) {
-              if ($to.nodeAfter.isTextblock) {
-                tr2.setSelection(TextSelection.create(tr2.doc, $to.pos + 1));
-              } else if ($to.nodeAfter.isBlock) {
-                tr2.setSelection(NodeSelection.create(tr2.doc, $to.pos));
-              } else {
-                tr2.setSelection(TextSelection.create(tr2.doc, $to.pos));
-              }
-            } else {
-              const nodeType = chainState.schema.nodes[this.options.nextNodeType] || $to.parent.type.contentMatch.defaultType;
-              const node = nodeType == null ? void 0 : nodeType.create();
-              if (node) {
-                tr2.insert(posAfter, node);
-                tr2.setSelection(TextSelection.create(tr2.doc, posAfter + 1));
-              }
+    return { setHorizontalRule: () => ({ chain, state }) => {
+      if (!canInsertNode(state, state.schema.nodes[this.name])) return false;
+      const { selection } = state;
+      const { $to: $originTo } = selection;
+      const currentChain = chain();
+      if (isNodeSelection(selection)) currentChain.insertContentAt($originTo.pos, { type: this.name });
+      else currentChain.insertContent({ type: this.name });
+      return currentChain.command(({ state: chainState, tr: tr2, dispatch }) => {
+        if (dispatch) {
+          const { $to } = tr2.selection;
+          const posAfter = $to.end();
+          if ($to.nodeAfter) {
+            if ($to.nodeAfter.isTextblock) tr2.setSelection(TextSelection.create(tr2.doc, $to.pos + 1));
+            else if ($to.nodeAfter.isBlock) tr2.setSelection(NodeSelection.create(tr2.doc, $to.pos));
+            else tr2.setSelection(TextSelection.create(tr2.doc, $to.pos));
+          } else {
+            const nodeType = chainState.schema.nodes[this.options.nextNodeType] || $to.parent.type.contentMatch.defaultType;
+            const node = nodeType === null || nodeType === void 0 ? void 0 : nodeType.create();
+            if (node) {
+              tr2.insert(posAfter, node);
+              tr2.setSelection(TextSelection.create(tr2.doc, posAfter + 1));
             }
-            tr2.scrollIntoView();
           }
-          return true;
-        }).run();
-      }
-    };
+          tr2.scrollIntoView();
+        }
+        return true;
+      }).run();
+    } };
   },
   addInputRules() {
-    return [
-      nodeInputRule({
-        find: /^(?:---|—-|___\s|\*\*\*\s)$/,
-        type: this.type
-      })
-    ];
+    return [nodeInputRule({
+      find: /^(?:---|—-|___\s|\*\*\*\s)$/,
+      type: this.type
+    })];
   }
 });
-var index_default2 = HorizontalRule;
+var src_default2 = HorizontalRule;
 
-// node_modules/.pnpm/@tiptap+extension-italic@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-italic/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-italic@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-italic/dist/index.js
 var starInputRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))$/;
 var starPasteRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))/g;
 var underscoreInputRegex2 = /(?:^|\s)(_(?!\s+_)((?:[^_]+))_(?!\s+_))$/;
@@ -20009,15 +18195,11 @@ var underscorePasteRegex2 = /(?:^|\s)(_(?!\s+_)((?:[^_]+))_(?!\s+_))/g;
 var Italic = Mark2.create({
   name: "italic",
   addOptions() {
-    return {
-      HTMLAttributes: {}
-    };
+    return { HTMLAttributes: {} };
   },
   parseHTML() {
     return [
-      {
-        tag: "em"
-      },
+      { tag: "em" },
       {
         tag: "i",
         getAttrs: (node) => node.style.fontStyle !== "normal" && null
@@ -20026,13 +18208,15 @@ var Italic = Mark2.create({
         style: "font-style=normal",
         clearMark: (mark) => mark.type.name === this.name
       },
-      {
-        style: "font-style=italic"
-      }
+      { style: "font-style=italic" }
     ];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["em", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      "em",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   addCommands() {
     return {
@@ -20051,12 +18235,10 @@ var Italic = Mark2.create({
   parseMarkdown: (token, helpers) => {
     return helpers.applyMark("italic", helpers.parseInline(token.tokens || []));
   },
-  markdownOptions: {
-    htmlReopen: {
-      open: "<em>",
-      close: "</em>"
-    }
-  },
+  markdownOptions: { htmlReopen: {
+    open: "<em>",
+    close: "</em>"
+  } },
   renderMarkdown: (node, h2) => {
     return `*${h2.renderChildren(node)}*`;
   },
@@ -20067,28 +18249,22 @@ var Italic = Mark2.create({
     };
   },
   addInputRules() {
-    return [
-      markInputRule({
-        find: starInputRegex2,
-        type: this.type
-      }),
-      markInputRule({
-        find: underscoreInputRegex2,
-        type: this.type
-      })
-    ];
+    return [markInputRule({
+      find: starInputRegex2,
+      type: this.type
+    }), markInputRule({
+      find: underscoreInputRegex2,
+      type: this.type
+    })];
   },
   addPasteRules() {
-    return [
-      markPasteRule({
-        find: starPasteRegex2,
-        type: this.type
-      }),
-      markPasteRule({
-        find: underscorePasteRegex2,
-        type: this.type
-      })
-    ];
+    return [markPasteRule({
+      find: starPasteRegex2,
+      type: this.type
+    }), markPasteRule({
+      find: underscorePasteRegex2,
+      type: this.type
+    })];
   }
 });
 
@@ -20599,7 +18775,7 @@ function init$2(customSchemes = []) {
     }, tk)
   };
 }
-function run$1(start, str) {
+function run$12(start, str) {
   const iterable = stringToArray(str.replace(/[A-Z]/g, (c) => c.toLowerCase()));
   const charCount = iterable.length;
   const tokens = [];
@@ -21106,7 +19282,7 @@ function init$1({
     tokens: tk
   };
 }
-function run3(start, input, tokens) {
+function run2(start, input, tokens) {
   let len = tokens.length;
   let cursor = 0;
   let multis = [];
@@ -21216,9 +19392,9 @@ function tokenize(str) {
   if (!INIT.initialized) {
     init();
   }
-  return run3(INIT.parser.start, str, run$1(INIT.scanner.start, str));
+  return run2(INIT.parser.start, str, run$12(INIT.scanner.start, str));
 }
-tokenize.scan = run$1;
+tokenize.scan = run$12;
 function find(str, type = null, opts = null) {
   if (type && typeof type === "object") {
     if (opts) {
@@ -21239,18 +19415,14 @@ function find(str, type = null, opts = null) {
   return filtered;
 }
 
-// node_modules/.pnpm/@tiptap+extension-link@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1__@tiptap+pm@3.30.1/node_modules/@tiptap/extension-link/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-link@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-link/dist/index.js
 var UNICODE_WHITESPACE_PATTERN = "[\0- \xA0\u1680\u180E\u2000-\u2029\u205F\u3000]";
 var UNICODE_WHITESPACE_REGEX = new RegExp(UNICODE_WHITESPACE_PATTERN);
 var UNICODE_WHITESPACE_REGEX_END = new RegExp(`${UNICODE_WHITESPACE_PATTERN}$`);
 var UNICODE_WHITESPACE_REGEX_GLOBAL = new RegExp(UNICODE_WHITESPACE_PATTERN, "g");
 function isValidLinkStructure(tokens) {
-  if (tokens.length === 1) {
-    return tokens[0].isLink;
-  }
-  if (tokens.length === 3 && tokens[1].isLink) {
-    return ["()", "[]"].includes(tokens[0].value + tokens[2].value);
-  }
+  if (tokens.length === 1) return tokens[0].isLink;
+  if (tokens.length === 3 && tokens[1].isLink) return ["()", "[]"].includes(tokens[0].value + tokens[2].value);
   return false;
 }
 function autolink(options) {
@@ -21258,88 +19430,45 @@ function autolink(options) {
     key: new PluginKey("autolink"),
     appendTransaction: (transactions, oldState, newState) => {
       const docChanges = transactions.some((transaction) => transaction.docChanged) && !oldState.doc.eq(newState.doc);
-      const preventAutolink = transactions.some(
-        (transaction) => transaction.getMeta("preventAutolink")
-      );
-      if (!docChanges || preventAutolink) {
-        return;
-      }
+      const preventAutolink = transactions.some((transaction) => transaction.getMeta("preventAutolink"));
+      if (!docChanges || preventAutolink) return;
       const { tr: tr2 } = newState;
       const transform = combineTransactionSteps(oldState.doc, [...transactions]);
-      const changes = getChangedRanges(transform);
-      changes.forEach(({ newRange }) => {
-        const nodesInChangedRanges = findChildrenInRange(
-          newState.doc,
-          newRange,
-          (node) => node.isTextblock
-        );
+      getChangedRanges(transform).forEach(({ newRange }) => {
+        const nodesInChangedRanges = findChildrenInRange(newState.doc, newRange, (node) => node.isTextblock);
         let textBlock;
         let textBeforeWhitespace;
         if (nodesInChangedRanges.length > 1) {
           textBlock = nodesInChangedRanges[0];
-          textBeforeWhitespace = newState.doc.textBetween(
-            textBlock.pos,
-            textBlock.pos + textBlock.node.nodeSize,
-            void 0,
-            " "
-          );
+          textBeforeWhitespace = newState.doc.textBetween(textBlock.pos, textBlock.pos + textBlock.node.nodeSize, void 0, " ");
         } else if (nodesInChangedRanges.length) {
           const endText = newState.doc.textBetween(newRange.from, newRange.to, " ", " ");
-          if (!UNICODE_WHITESPACE_REGEX_END.test(endText)) {
-            return;
-          }
+          if (!UNICODE_WHITESPACE_REGEX_END.test(endText)) return;
           textBlock = nodesInChangedRanges[0];
-          textBeforeWhitespace = newState.doc.textBetween(
-            textBlock.pos,
-            newRange.to,
-            void 0,
-            " "
-          );
+          textBeforeWhitespace = newState.doc.textBetween(textBlock.pos, newRange.to, void 0, " ");
         }
         if (textBlock && textBeforeWhitespace) {
           const wordsBeforeWhitespace = textBeforeWhitespace.split(UNICODE_WHITESPACE_REGEX).filter(Boolean);
-          if (wordsBeforeWhitespace.length <= 0) {
-            return false;
-          }
+          if (wordsBeforeWhitespace.length <= 0) return false;
           const lastWordBeforeSpace = wordsBeforeWhitespace[wordsBeforeWhitespace.length - 1];
           const lastWordAndBlockOffset = textBlock.pos + textBeforeWhitespace.lastIndexOf(lastWordBeforeSpace);
-          if (!lastWordBeforeSpace) {
-            return false;
-          }
-          const linksBeforeSpace = tokenize(lastWordBeforeSpace).map(
-            (t) => t.toObject(options.defaultProtocol)
-          );
-          if (!isValidLinkStructure(linksBeforeSpace)) {
-            return false;
-          }
+          if (!lastWordBeforeSpace) return false;
+          const linksBeforeSpace = tokenize(lastWordBeforeSpace).map((t) => t.toObject(options.defaultProtocol));
+          if (!isValidLinkStructure(linksBeforeSpace)) return false;
           linksBeforeSpace.filter((link) => link.isLink).map((link) => ({
             ...link,
             from: lastWordAndBlockOffset + link.start + 1,
             to: lastWordAndBlockOffset + link.end + 1
           })).filter((link) => {
-            if (!newState.schema.marks.code) {
-              return true;
-            }
+            if (!newState.schema.marks.code) return true;
             return !newState.doc.rangeHasMark(link.from, link.to, newState.schema.marks.code);
           }).filter((link) => options.validate(link.value)).filter((link) => options.shouldAutoLink(link.value)).forEach((link) => {
-            if (getMarksBetween(link.from, link.to, newState.doc).some(
-              (item) => item.mark.type === options.type
-            )) {
-              return;
-            }
-            tr2.addMark(
-              link.from,
-              link.to,
-              options.type.create({
-                href: link.href
-              })
-            );
+            if (getMarksBetween(link.from, link.to, newState.doc).some((item) => item.mark.type === options.type)) return;
+            tr2.addMark(link.from, link.to, options.type.create({ href: link.href }));
           });
         }
       });
-      if (!tr2.steps.length) {
-        return;
-      }
+      if (!tr2.steps.length) return;
       return tr2;
     }
   });
@@ -21347,58 +19476,40 @@ function autolink(options) {
 function clickHandler(options) {
   return new Plugin({
     key: new PluginKey("handleClickLink"),
-    props: {
-      handleClick: (view, pos, event) => {
-        var _a, _b;
-        if (event.button !== 0) {
-          return false;
-        }
-        if (!view.editable) {
-          return false;
-        }
-        let link = null;
-        if (event.target instanceof HTMLAnchorElement) {
-          link = event.target;
-        } else {
-          const target = event.target;
-          if (!target) {
-            return false;
-          }
-          const root = options.editor.view.dom;
-          link = target.closest("a");
-          if (link && !root.contains(link)) {
-            link = null;
-          }
-        }
-        if (!link) {
-          return false;
-        }
-        let handled = false;
-        if (options.enableClickSelection) {
-          const commandResult = options.editor.commands.extendMarkRange(options.type.name);
-          handled = commandResult;
-        }
-        if (options.openOnClick) {
-          const attrs = getAttributes(view.state, options.type.name);
-          const href = (_a = link.href) != null ? _a : attrs.href;
-          const target = (_b = link.target) != null ? _b : attrs.target;
-          if (href) {
-            window.open(href, target);
-            handled = true;
-          }
-        }
-        return handled;
+    props: { handleClick: (view, pos, event) => {
+      if (event.button !== 0) return false;
+      if (!view.editable) return false;
+      let link = null;
+      if (event.target instanceof HTMLAnchorElement) link = event.target;
+      else {
+        const target = event.target;
+        if (!target) return false;
+        const root = options.editor.view.dom;
+        link = target.closest("a");
+        if (link && !root.contains(link)) link = null;
       }
-    }
+      if (!link) return false;
+      let handled = false;
+      if (options.enableClickSelection) handled = options.editor.commands.extendMarkRange(options.type.name);
+      if (options.openOnClick) {
+        var _link$href, _link$target;
+        const attrs = getAttributes(view.state, options.type.name);
+        const href = (_link$href = link.href) !== null && _link$href !== void 0 ? _link$href : attrs.href;
+        const target = (_link$target = link.target) !== null && _link$target !== void 0 ? _link$target : attrs.target;
+        if (href) {
+          window.open(href, target);
+          handled = true;
+        }
+      }
+      return handled;
+    } }
   });
 }
 var MARKDOWN_LINK_INPUT_REGEX = /\[([^[\]]+)\]\(((?:[^\s()]|\([^\s()]*\))+)(?:\s+(?:(["'])(.*?)\3|“(.*?)”|‘(.*?)’))?\)$/;
 var MARKDOWN_LINK_PASTE_REGEX = /\[([^[\]]+)\]\(((?:[^\s()]|\([^\s()]*\))+)(?:\s+(?:(["'])(.*?)\3|“(.*?)”|‘(.*?)’))?\)/g;
 function isEscaped(text, index) {
   let backslashes = 0;
-  for (let position = index - 1; position >= 0 && text[position] === "\\"; position -= 1) {
-    backslashes += 1;
-  }
+  for (let position = index - 1; position >= 0 && text[position] === "\\"; position -= 1) backslashes += 1;
   return backslashes % 2 === 1;
 }
 function isInsideCodeSpan(text, matchIndex) {
@@ -21418,37 +19529,28 @@ function isInsideCodeSpan(text, matchIndex) {
       runLength += 1;
       index += 1;
     }
-    if (openRunLength === 0) {
-      openRunLength = runLength;
-    } else if (runLength === openRunLength) {
-      openRunLength = 0;
-    }
+    if (openRunLength === 0) openRunLength = runLength;
+    else if (runLength === openRunLength) openRunLength = 0;
   }
   return openRunLength > 0;
 }
 function isConvertibleLink(text, match, isAllowedHref) {
-  var _a, _b;
+  var _match$index, _match$index2;
   const [, linkText, href] = match;
-  const characterBefore = match.index ? text[match.index - 1] : void 0;
-  if (characterBefore === "!" || isEscaped(text, (_a = match.index) != null ? _a : 0)) {
-    return false;
-  }
-  if (isInsideCodeSpan(text, (_b = match.index) != null ? _b : 0)) {
-    return false;
-  }
+  if ((match.index ? text[match.index - 1] : void 0) === "!" || isEscaped(text, (_match$index = match.index) !== null && _match$index !== void 0 ? _match$index : 0)) return false;
+  if (isInsideCodeSpan(text, (_match$index2 = match.index) !== null && _match$index2 !== void 0 ? _match$index2 : 0)) return false;
   return !!linkText.trim() && isAllowedHref(href);
 }
 function toRuleMatch(match) {
-  var _a, _b;
+  var _ref, _match$index3;
   const [linkSyntax, linkText, href, , straightQuotedTitle, curlyDoubleTitle, curlySingleTitle] = match;
-  const title = (_a = straightQuotedTitle != null ? straightQuotedTitle : curlyDoubleTitle) != null ? _a : curlySingleTitle;
+  const title = (_ref = straightQuotedTitle !== null && straightQuotedTitle !== void 0 ? straightQuotedTitle : curlyDoubleTitle) !== null && _ref !== void 0 ? _ref : curlySingleTitle;
   return {
-    index: (_b = match.index) != null ? _b : 0,
+    index: (_match$index3 = match.index) !== null && _match$index3 !== void 0 ? _match$index3 : 0,
     text: linkSyntax,
     replaceWith: linkText,
     data: {
       href,
-      // an empty title ("") counts as no title, as in CommonMark
       title: title || null,
       markdown: true
     }
@@ -21458,19 +19560,17 @@ function matchesOverlap(a, b) {
   return a.index < b.index + b.text.length && b.index < a.index + a.text.length;
 }
 function getMarkdownLinkAttributes(match) {
-  var _a, _b, _c;
+  var _match$data, _match$data$title, _match$data2;
   return {
-    href: (_a = match.data) == null ? void 0 : _a.href,
-    title: (_c = (_b = match.data) == null ? void 0 : _b.title) != null ? _c : null
+    href: (_match$data = match.data) === null || _match$data === void 0 ? void 0 : _match$data.href,
+    title: (_match$data$title = (_match$data2 = match.data) === null || _match$data2 === void 0 ? void 0 : _match$data2.title) !== null && _match$data$title !== void 0 ? _match$data$title : null
   };
 }
 function markdownLinkInputRule(config) {
   const rule = markInputRule({
     find: (text) => {
       const match = MARKDOWN_LINK_INPUT_REGEX.exec(text);
-      if (!match || !isConvertibleLink(text, match, config.isAllowedHref)) {
-        return null;
-      }
+      if (!match || !isConvertibleLink(text, match, config.isAllowedHref)) return null;
       return toRuleMatch(match);
     },
     type: config.type,
@@ -21480,9 +19580,7 @@ function markdownLinkInputRule(config) {
     find: rule.find,
     handler: (props) => {
       const result = rule.handler(props);
-      if (result !== null && props.state.tr.steps.length) {
-        props.state.tr.setMeta("preventAutolink", true);
-      }
+      if (result !== null && props.state.tr.steps.length) props.state.tr.setMeta("preventAutolink", true);
       return result;
     }
   });
@@ -21490,16 +19588,10 @@ function markdownLinkInputRule(config) {
 function markdownLinkPasteRule(config) {
   const rule = markPasteRule({
     find: (text) => {
-      var _a, _b;
+      var _config$findPlainUrls, _config$findPlainUrls2;
       const markdownMatches = [];
-      for (const match of text.matchAll(MARKDOWN_LINK_PASTE_REGEX)) {
-        if (isConvertibleLink(text, match, config.isAllowedHref)) {
-          markdownMatches.push(toRuleMatch(match));
-        }
-      }
-      const plainUrlMatches = ((_b = (_a = config.findPlainUrls) == null ? void 0 : _a.call(config, text)) != null ? _b : []).filter(
-        (urlMatch) => !markdownMatches.some((markdownMatch) => matchesOverlap(markdownMatch, urlMatch))
-      );
+      for (const match of text.matchAll(MARKDOWN_LINK_PASTE_REGEX)) if (isConvertibleLink(text, match, config.isAllowedHref)) markdownMatches.push(toRuleMatch(match));
+      const plainUrlMatches = ((_config$findPlainUrls = (_config$findPlainUrls2 = config.findPlainUrls) === null || _config$findPlainUrls2 === void 0 ? void 0 : _config$findPlainUrls2.call(config, text)) !== null && _config$findPlainUrls !== void 0 ? _config$findPlainUrls : []).filter((urlMatch) => !markdownMatches.some((markdownMatch) => matchesOverlap(markdownMatch, urlMatch)));
       return [...markdownMatches, ...plainUrlMatches];
     },
     type: config.type,
@@ -21508,11 +19600,9 @@ function markdownLinkPasteRule(config) {
   return new PasteRule({
     find: rule.find,
     handler: (props) => {
-      var _a;
+      var _props$match$data;
       const result = rule.handler(props);
-      if (result !== null && props.state.tr.steps.length && ((_a = props.match.data) == null ? void 0 : _a.markdown)) {
-        props.state.tr.setMeta("preventAutolink", true);
-      }
+      if (result !== null && props.state.tr.steps.length && ((_props$match$data = props.match.data) === null || _props$match$data === void 0 ? void 0 : _props$match$data.markdown)) props.state.tr.setMeta("preventAutolink", true);
       return result;
     }
   });
@@ -21520,30 +19610,20 @@ function markdownLinkPasteRule(config) {
 function pasteHandler(options) {
   return new Plugin({
     key: new PluginKey("handlePasteLink"),
-    props: {
-      handlePaste: (view, _event, slice2) => {
-        const { shouldAutoLink } = options;
-        const { state } = view;
-        const { selection } = state;
-        const { empty: empty2 } = selection;
-        if (empty2) {
-          return false;
-        }
-        let textContent = "";
-        slice2.content.forEach((node) => {
-          textContent += node.textContent;
-        });
-        const link = find(textContent, { defaultProtocol: options.defaultProtocol }).find(
-          (item) => item.isLink && item.value === textContent
-        );
-        if (!textContent || !link || shouldAutoLink !== void 0 && !shouldAutoLink(link.value)) {
-          return false;
-        }
-        return options.editor.commands.setMark(options.type, {
-          href: link.href
-        });
-      }
-    }
+    props: { handlePaste: (view, _event, slice2) => {
+      const { shouldAutoLink } = options;
+      const { state } = view;
+      const { selection } = state;
+      const { empty: empty2 } = selection;
+      if (empty2) return false;
+      let textContent = "";
+      slice2.content.forEach((node) => {
+        textContent += node.textContent;
+      });
+      const link = find(textContent, { defaultProtocol: options.defaultProtocol }).find((item) => item.isLink && item.value === textContent);
+      if (!textContent || !link || shouldAutoLink !== void 0 && !shouldAutoLink(link.value)) return false;
+      return options.editor.commands.setMark(options.type, { href: link.href });
+    } }
   });
 }
 function isAllowedUri(uri, protocols) {
@@ -21559,20 +19639,11 @@ function isAllowedUri(uri, protocols) {
     "cid",
     "xmpp"
   ];
-  if (protocols) {
-    protocols.forEach((protocol) => {
-      const nextProtocol = typeof protocol === "string" ? protocol : protocol.scheme;
-      if (nextProtocol) {
-        allowedProtocols.push(nextProtocol);
-      }
-    });
-  }
-  return !uri || uri.replace(UNICODE_WHITESPACE_REGEX_GLOBAL, "").match(
-    new RegExp(
-      `^(?:(?:${allowedProtocols.map((protocol) => protocol.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|")}):|[^a-z]|[a-z0-9+.\\-]+(?:[^a-z+.\\-:]|$))`,
-      "i"
-    )
-  );
+  if (protocols) protocols.forEach((protocol) => {
+    const nextProtocol = typeof protocol === "string" ? protocol : protocol.scheme;
+    if (nextProtocol) allowedProtocols.push(nextProtocol);
+  });
+  return !uri || uri.replace(UNICODE_WHITESPACE_REGEX_GLOBAL, "").match(new RegExp(`^(?:(?:${allowedProtocols.map((protocol) => protocol.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")).join("|")}):|[^a-z]|[a-z0-9+.\\-]+(?:[^a-z+.\\-:]|$))`, "i"));
 }
 var Link = Mark2.create({
   name: "link",
@@ -21582,9 +19653,7 @@ var Link = Mark2.create({
   onCreate() {
     if (this.options.validate && !this.options.shouldAutoLink) {
       this.options.shouldAutoLink = this.options.validate;
-      console.warn(
-        "The `validate` option is deprecated. Rename to the `shouldAutoLink` option instead."
-      );
+      console.warn("The `validate` option is deprecated. Rename to the `shouldAutoLink` option instead.");
     }
     this.options.protocols.forEach((protocol) => {
       if (typeof protocol === "string") {
@@ -21606,7 +19675,6 @@ var Link = Mark2.create({
       enableClickSelection: false,
       linkOnPaste: true,
       markdownLinks: false,
-      // TODO (major) - default to true on next major version
       autolink: true,
       protocols: [],
       defaultProtocol: "http",
@@ -21620,23 +19688,16 @@ var Link = Mark2.create({
       shouldAutoLink: (url) => {
         const hasProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(url);
         const hasMaybeProtocol = /^[a-z][a-z0-9+.-]*:/i.test(url);
-        if (hasProtocol || hasMaybeProtocol && !url.includes("@")) {
-          return true;
-        }
-        const urlWithoutUserinfo = url.includes("@") ? url.split("@").pop() : url;
-        const hostname = urlWithoutUserinfo.split(/[/?#:]/)[0];
-        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
-          return false;
-        }
-        if (!/\./.test(hostname)) {
-          return false;
-        }
+        if (hasProtocol || hasMaybeProtocol && !url.includes("@")) return true;
+        const hostname = (url.includes("@") ? url.split("@").pop() : url).split(/[/?#:]/)[0];
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return false;
+        if (!/\./.test(hostname)) return false;
         return true;
       }
     };
   },
   addAttributes() {
-    var _a, _b, _c;
+    var _this$options$HTMLAtt, _this$options$HTMLAtt2, _this$options$HTMLAtt3;
     return {
       href: {
         default: null,
@@ -21644,50 +19705,44 @@ var Link = Mark2.create({
           return element.getAttribute("href");
         }
       },
-      target: {
-        // Coerce `undefined` to `null` because `undefined` is an invalid attribute value
-        default: (_a = this.options.HTMLAttributes.target) != null ? _a : null
-      },
-      rel: {
-        // Coerce `undefined` to `null` because `undefined` is an invalid attribute value
-        default: (_b = this.options.HTMLAttributes.rel) != null ? _b : null
-      },
-      class: {
-        // Coerce `undefined` to `null` because `undefined` is an invalid attribute value
-        default: (_c = this.options.HTMLAttributes.class) != null ? _c : null
-      },
-      title: {
-        default: null
-      }
+      target: { default: (_this$options$HTMLAtt = this.options.HTMLAttributes.target) !== null && _this$options$HTMLAtt !== void 0 ? _this$options$HTMLAtt : null },
+      rel: { default: (_this$options$HTMLAtt2 = this.options.HTMLAttributes.rel) !== null && _this$options$HTMLAtt2 !== void 0 ? _this$options$HTMLAtt2 : null },
+      class: { default: (_this$options$HTMLAtt3 = this.options.HTMLAttributes.class) !== null && _this$options$HTMLAtt3 !== void 0 ? _this$options$HTMLAtt3 : null },
+      title: { default: null }
     };
   },
   parseHTML() {
-    return [
-      {
-        tag: "a[href]",
-        getAttrs: (dom) => {
-          const href = dom.getAttribute("href");
-          if (!href || !this.options.isAllowedUri(href, {
-            defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
-            protocols: this.options.protocols,
-            defaultProtocol: this.options.defaultProtocol
-          })) {
-            return false;
-          }
-          return null;
-        }
+    return [{
+      tag: "a[href]",
+      getAttrs: (dom) => {
+        const href = dom.getAttribute("href");
+        if (!href || !this.options.isAllowedUri(href, {
+          defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
+          protocols: this.options.protocols,
+          defaultProtocol: this.options.defaultProtocol
+        })) return false;
+        return null;
       }
-    ];
+    }];
   },
   renderHTML({ HTMLAttributes }) {
     if (!this.options.isAllowedUri(HTMLAttributes.href, {
       defaultValidate: (href) => !!isAllowedUri(href, this.options.protocols),
       protocols: this.options.protocols,
       defaultProtocol: this.options.defaultProtocol
-    })) {
-      return ["a", mergeAttributes(this.options.HTMLAttributes, { ...HTMLAttributes, href: "" }), 0];
-    }
-    return ["a", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    })) return [
+      "a",
+      mergeAttributes(this.options.HTMLAttributes, {
+        ...HTMLAttributes,
+        href: ""
+      }),
+      0
+    ];
+    return [
+      "a",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   markdownTokenName: "link",
   parseMarkdown: (token, helpers) => {
@@ -21697,9 +19752,9 @@ var Link = Mark2.create({
     });
   },
   renderMarkdown: (node, h2) => {
-    var _a, _b, _c, _d;
-    const href = (_b = (_a = node.attrs) == null ? void 0 : _a.href) != null ? _b : "";
-    const title = (_d = (_c = node.attrs) == null ? void 0 : _c.title) != null ? _d : "";
+    var _node$attrs$href, _node$attrs, _node$attrs$title, _node$attrs2;
+    const href = (_node$attrs$href = (_node$attrs = node.attrs) === null || _node$attrs === void 0 ? void 0 : _node$attrs.href) !== null && _node$attrs$href !== void 0 ? _node$attrs$href : "";
+    const title = (_node$attrs$title = (_node$attrs2 = node.attrs) === null || _node$attrs2 === void 0 ? void 0 : _node$attrs2.title) !== null && _node$attrs$title !== void 0 ? _node$attrs$title : "";
     const text = h2.renderChildren(node);
     return title ? `[${text}](${href} "${title}")` : `[${text}](${href})`;
   },
@@ -21711,9 +19766,7 @@ var Link = Mark2.create({
           defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
           protocols: this.options.protocols,
           defaultProtocol: this.options.defaultProtocol
-        })) {
-          return false;
-        }
+        })) return false;
         return chain().setMark(this.name, attributes).setMeta("preventAutolink", true).run();
       },
       toggleLink: (attributes) => ({ chain }) => {
@@ -21722,9 +19775,7 @@ var Link = Mark2.create({
           defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
           protocols: this.options.protocols,
           defaultProtocol: this.options.defaultProtocol
-        })) {
-          return false;
-        }
+        })) return false;
         return chain().toggleMark(this.name, attributes, { extendEmptyMarkRange: true }).setMeta("preventAutolink", true).run();
       },
       unsetLink: () => ({ chain }) => {
@@ -21733,122 +19784,88 @@ var Link = Mark2.create({
     };
   },
   addInputRules() {
-    if (!this.options.markdownLinks) {
-      return [];
-    }
-    return [
-      markdownLinkInputRule({
-        type: this.type,
-        isAllowedHref: (href) => this.options.isAllowedUri(href, {
-          defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
-          protocols: this.options.protocols,
-          defaultProtocol: this.options.defaultProtocol
-        })
+    if (!this.options.markdownLinks) return [];
+    return [markdownLinkInputRule({
+      type: this.type,
+      isAllowedHref: (href) => this.options.isAllowedUri(href, {
+        defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
+        protocols: this.options.protocols,
+        defaultProtocol: this.options.defaultProtocol
       })
-    ];
+    })];
   },
   addPasteRules() {
     const findPlainUrls = (text) => {
       const foundLinks = [];
       if (text) {
         const { protocols, defaultProtocol } = this.options;
-        const links = find(text).filter(
-          (item) => item.isLink && this.options.isAllowedUri(item.value, {
-            defaultValidate: (href) => !!isAllowedUri(href, protocols),
-            protocols,
-            defaultProtocol
-          })
-        );
-        links.forEach((link) => {
-          if (!this.options.shouldAutoLink(link.value)) {
-            return;
-          }
+        find(text).filter((item) => item.isLink && this.options.isAllowedUri(item.value, {
+          defaultValidate: (href) => !!isAllowedUri(href, protocols),
+          protocols,
+          defaultProtocol
+        })).forEach((link) => {
+          if (!this.options.shouldAutoLink(link.value)) return;
           foundLinks.push({
             text: link.value,
-            data: {
-              href: link.href
-            },
+            data: { href: link.href },
             index: link.start
           });
         });
       }
       return foundLinks;
     };
-    if (this.options.markdownLinks) {
-      return [
-        markdownLinkPasteRule({
-          type: this.type,
-          isAllowedHref: (href) => this.options.isAllowedUri(href, {
-            defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
-            protocols: this.options.protocols,
-            defaultProtocol: this.options.defaultProtocol
-          }),
-          findPlainUrls
-        })
-      ];
-    }
-    return [
-      markPasteRule({
-        find: findPlainUrls,
-        type: this.type,
-        getAttributes: (match) => {
-          var _a;
-          return {
-            href: (_a = match.data) == null ? void 0 : _a.href
-          };
-        }
-      })
-    ];
+    if (this.options.markdownLinks) return [markdownLinkPasteRule({
+      type: this.type,
+      isAllowedHref: (href) => this.options.isAllowedUri(href, {
+        defaultValidate: (url) => !!isAllowedUri(url, this.options.protocols),
+        protocols: this.options.protocols,
+        defaultProtocol: this.options.defaultProtocol
+      }),
+      findPlainUrls
+    })];
+    return [markPasteRule({
+      find: findPlainUrls,
+      type: this.type,
+      getAttributes: (match) => {
+        var _match$data;
+        return { href: (_match$data = match.data) === null || _match$data === void 0 ? void 0 : _match$data.href };
+      }
+    })];
   },
   addProseMirrorPlugins() {
     const plugins = [];
     const { protocols, defaultProtocol } = this.options;
-    if (this.options.autolink) {
-      plugins.push(
-        autolink({
-          type: this.type,
-          defaultProtocol: this.options.defaultProtocol,
-          validate: (url) => this.options.isAllowedUri(url, {
-            defaultValidate: (href) => !!isAllowedUri(href, protocols),
-            protocols,
-            defaultProtocol
-          }),
-          shouldAutoLink: this.options.shouldAutoLink
-        })
-      );
-    }
-    plugins.push(
-      clickHandler({
-        type: this.type,
-        editor: this.editor,
-        openOnClick: this.options.openOnClick === "whenNotEditable" ? true : this.options.openOnClick,
-        enableClickSelection: this.options.enableClickSelection
-      })
-    );
-    if (this.options.linkOnPaste) {
-      plugins.push(
-        pasteHandler({
-          editor: this.editor,
-          defaultProtocol: this.options.defaultProtocol,
-          type: this.type,
-          shouldAutoLink: this.options.shouldAutoLink
-        })
-      );
-    }
+    if (this.options.autolink) plugins.push(autolink({
+      type: this.type,
+      defaultProtocol: this.options.defaultProtocol,
+      validate: (url) => this.options.isAllowedUri(url, {
+        defaultValidate: (href) => !!isAllowedUri(href, protocols),
+        protocols,
+        defaultProtocol
+      }),
+      shouldAutoLink: this.options.shouldAutoLink
+    }));
+    plugins.push(clickHandler({
+      type: this.type,
+      editor: this.editor,
+      openOnClick: this.options.openOnClick === "whenNotEditable" ? true : this.options.openOnClick,
+      enableClickSelection: this.options.enableClickSelection
+    }));
+    if (this.options.linkOnPaste) plugins.push(pasteHandler({
+      editor: this.editor,
+      defaultProtocol: this.options.defaultProtocol,
+      type: this.type,
+      shouldAutoLink: this.options.shouldAutoLink
+    }));
     return plugins;
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-list@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1__@tiptap+pm@3.30.1/node_modules/@tiptap/extension-list/dist/index.js
-var __defProp2 = Object.defineProperty;
-var __export2 = (target, all) => {
-  for (var name in all)
-    __defProp2(target, name, { get: all[name], enumerable: true });
-};
-var ListItemName = "listItem";
-var TextStyleName = "textStyle";
+// node_modules/.pnpm/@tiptap+extension-list@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-list/dist/index.js
+var ListItemName$1 = "listItem";
+var TextStyleName$1 = "textStyle";
 var bulletListInputRegex = /^\s*([-+*])\s$/;
-var BulletList = Node3.create({
+var BulletList = Node2.create({
   name: "bulletList",
   addOptions() {
     return {
@@ -21866,114 +19883,82 @@ var BulletList = Node3.create({
     return [{ tag: "ul" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["ul", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      "ul",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   markdownTokenName: "list",
   parseMarkdown: (token, helpers) => {
-    if (token.type !== "list" || token.ordered) {
-      return [];
-    }
+    if (token.type !== "list" || token.ordered) return [];
     return {
       type: "bulletList",
       content: token.items ? helpers.parseChildren(token.items) : []
     };
   },
   renderMarkdown: (node, h2) => {
-    if (!node.content) {
-      return "";
-    }
+    if (!node.content) return "";
     return h2.renderChildren(node.content, "\n");
   },
-  markdownOptions: {
-    indentsContent: true
-  },
+  markdownOptions: { indentsContent: true },
   addCommands() {
-    return {
-      toggleBulletList: () => ({ commands, chain }) => {
-        if (this.options.keepAttributes) {
-          return chain().toggleList(this.name, this.options.itemTypeName, this.options.keepMarks).updateAttributes(ListItemName, this.editor.getAttributes(TextStyleName)).run();
-        }
-        return commands.toggleList(this.name, this.options.itemTypeName, this.options.keepMarks);
-      }
-    };
+    return { toggleBulletList: () => ({ commands, chain }) => {
+      if (this.options.keepAttributes) return chain().toggleList(this.name, this.options.itemTypeName, this.options.keepMarks).updateAttributes(ListItemName$1, this.editor.getAttributes(TextStyleName$1)).run();
+      return commands.toggleList(this.name, this.options.itemTypeName, this.options.keepMarks);
+    } };
   },
   addKeyboardShortcuts() {
-    return {
-      "Mod-Shift-8": () => this.editor.commands.toggleBulletList()
-    };
+    return { "Mod-Shift-8": () => this.editor.commands.toggleBulletList() };
   },
   addInputRules() {
     let inputRule = wrappingInputRule({
       find: bulletListInputRegex,
       type: this.type
     });
-    if (this.options.keepMarks || this.options.keepAttributes) {
-      inputRule = wrappingInputRule({
-        find: bulletListInputRegex,
-        type: this.type,
-        keepMarks: this.options.keepMarks,
-        keepAttributes: this.options.keepAttributes,
-        getAttributes: () => {
-          return this.editor.getAttributes(TextStyleName);
-        },
-        editor: this.editor
-      });
-    }
+    if (this.options.keepMarks || this.options.keepAttributes) inputRule = wrappingInputRule({
+      find: bulletListInputRegex,
+      type: this.type,
+      keepMarks: this.options.keepMarks,
+      keepAttributes: this.options.keepAttributes,
+      getAttributes: () => {
+        return this.editor.getAttributes(TextStyleName$1);
+      },
+      editor: this.editor
+    });
     return [inputRule];
   }
 });
 var getBranchingNestedListAtCursor = (state, itemName, wrapperNames) => {
   const { selection } = state;
-  if (!selection.empty) {
-    return null;
-  }
+  if (!selection.empty) return null;
   const { $from } = selection;
-  if (!$from.parent.isTextblock) {
-    return null;
-  }
-  if ($from.parentOffset !== $from.parent.content.size) {
-    return null;
-  }
+  if (!$from.parent.isTextblock) return null;
+  if ($from.parentOffset !== $from.parent.content.size) return null;
   let listItemDepth = -1;
-  for (let depth = $from.depth; depth > 0; depth -= 1) {
-    if ($from.node(depth).type.name === itemName) {
-      listItemDepth = depth;
-      break;
-    }
+  for (let depth = $from.depth; depth > 0; depth -= 1) if ($from.node(depth).type.name === itemName) {
+    listItemDepth = depth;
+    break;
   }
-  if (listItemDepth < 0) {
-    return null;
-  }
+  if (listItemDepth < 0) return null;
   const listItem = $from.node(listItemDepth);
   const indexInListItem = $from.index(listItemDepth);
-  if (indexInListItem + 1 >= listItem.childCount) {
-    return null;
-  }
+  if (indexInListItem + 1 >= listItem.childCount) return null;
   const nextChild = listItem.child(indexInListItem + 1);
-  if (!wrapperNames.includes(nextChild.type.name)) {
-    return null;
-  }
+  if (!wrapperNames.includes(nextChild.type.name)) return null;
   const itemType = state.schema.nodes[itemName];
   let hasBranching = false;
   nextChild.forEach((child) => {
-    if (child.type === itemType && child.childCount > 1) {
-      hasBranching = true;
-    }
+    if (child.type === itemType && child.childCount > 1) hasBranching = true;
   });
-  if (!hasBranching) {
-    return null;
-  }
+  if (!hasBranching) return null;
   const nodeAfter = state.doc.resolve($from.after()).nodeAfter;
-  if (!nodeAfter || !wrapperNames.includes(nodeAfter.type.name)) {
-    return null;
-  }
+  if (!nodeAfter || !wrapperNames.includes(nodeAfter.type.name)) return null;
   const items = [];
   nodeAfter.forEach((child) => {
     items.push(child);
   });
-  if (items.length === 0) {
-    return null;
-  }
+  if (items.length === 0) return null;
   return {
     listItemDepth,
     nestedList: nodeAfter,
@@ -21984,9 +19969,7 @@ var getBranchingNestedListAtCursor = (state, itemName, wrapperNames) => {
 };
 var hoistBranchingNestedList = (state, dispatch, itemName, wrapperNames) => {
   const context = getBranchingNestedListAtCursor(state, itemName, wrapperNames);
-  if (!context) {
-    return false;
-  }
+  if (!context) return false;
   const { selection } = state;
   const { nestedList, nestedListPos, insertPos, items } = context;
   const tr2 = state.tr;
@@ -21994,9 +19977,7 @@ var hoistBranchingNestedList = (state, dispatch, itemName, wrapperNames) => {
   const mappedInsertPos = tr2.mapping.map(insertPos);
   tr2.insert(mappedInsertPos, Fragment.from(items));
   tr2.setSelection(selection.map(tr2.doc, tr2.mapping));
-  if (dispatch) {
-    dispatch(tr2);
-  }
+  if (dispatch) dispatch(tr2);
   return true;
 };
 var handleDeleteBranchingNestedList = (editor, itemName, wrapperNames) => {
@@ -22031,16 +20012,13 @@ var ROMAN_NUMERALS = [
   [1, "i"]
 ];
 var ALPHA_NUMERALS = "abcdefghijklmnopqrstuvwxyz";
-var ORDERED_LIST_ALPHA_MARKER_PATTERN = "[a-zA-Z]{1,2}";
-var ORDERED_LIST_MARKER_PATTERN = String.raw`\d+|[ivxlcdmIVXLCDM]+|${ORDERED_LIST_ALPHA_MARKER_PATTERN}`;
+var ORDERED_LIST_MARKER_PATTERN = String.raw`\d+|[ivxlcdmIVXLCDM]+|${"[a-zA-Z]{1,2}"}`;
 function toRoman(num) {
   let remaining = num;
   let result = "";
-  for (const [value, numeral] of ROMAN_NUMERALS) {
-    while (remaining >= value) {
-      result += numeral;
-      remaining -= value;
-    }
+  for (const [value, numeral] of ROMAN_NUMERALS) while (remaining >= value) {
+    result += numeral;
+    remaining -= value;
   }
   return result;
 }
@@ -22053,36 +20031,25 @@ function fromRoman(roman) {
   let result = 0;
   while (index < lower.length) {
     let matched = false;
-    for (const [value, numeral] of ROMAN_NUMERALS) {
-      if (lower.startsWith(numeral, index)) {
-        result += value;
-        index += numeral.length;
-        matched = true;
-        break;
-      }
+    for (const [value, numeral] of ROMAN_NUMERALS) if (lower.startsWith(numeral, index)) {
+      result += value;
+      index += numeral.length;
+      matched = true;
+      break;
     }
-    if (!matched) {
-      return 0;
-    }
+    if (!matched) return 0;
   }
   return result;
 }
 function isValidRoman(marker) {
-  if (!/^[ivxlcdmIVXLCDM]+$/.test(marker)) {
-    return false;
-  }
+  if (!/^[ivxlcdmIVXLCDM]+$/.test(marker)) return false;
   const value = fromRoman(marker);
-  if (value <= 0) {
-    return false;
-  }
-  const expected = marker === marker.toLowerCase() ? toRoman(value) : toRomanUpper(value);
-  return expected === marker;
+  if (value <= 0) return false;
+  return (marker === marker.toLowerCase() ? toRoman(value) : toRomanUpper(value)) === marker;
 }
 function fromAlpha(marker) {
   const lower = marker.toLowerCase();
-  if (lower.length === 1) {
-    return lower.charCodeAt(0) - "a".charCodeAt(0) + 1;
-  }
+  if (lower.length === 1) return lower.charCodeAt(0) - "a".charCodeAt(0) + 1;
   if (lower.length === 2) {
     const first2 = lower.charCodeAt(0) - "a".charCodeAt(0);
     const second = lower.charCodeAt(1) - "a".charCodeAt(0);
@@ -22091,39 +20058,22 @@ function fromAlpha(marker) {
   return 0;
 }
 function toRomanAlpha(num) {
-  if (num <= 26) {
-    return ALPHA_NUMERALS[num - 1];
-  }
+  if (num <= 26) return ALPHA_NUMERALS[num - 1];
   const first2 = Math.floor((num - 1) / 26) - 1;
   const second = (num - 1) % 26;
-  if (first2 < 0) {
-    return ALPHA_NUMERALS[second];
-  }
+  if (first2 < 0) return ALPHA_NUMERALS[second];
   return ALPHA_NUMERALS[first2] + ALPHA_NUMERALS[second];
 }
 function detectMarkerType(marker) {
-  if (!marker || /^\d+$/.test(marker)) {
-    return void 0;
-  }
-  if (isValidRoman(marker)) {
-    return marker === marker.toLowerCase() ? "i" : "I";
-  }
-  if (/^[a-z]{1,2}$/.test(marker)) {
-    return "a";
-  }
-  if (/^[A-Z]{1,2}$/.test(marker)) {
-    return "A";
-  }
-  return void 0;
+  if (!marker || /^\d+$/.test(marker)) return;
+  if (isValidRoman(marker)) return marker === marker.toLowerCase() ? "i" : "I";
+  if (/^[a-z]{1,2}$/.test(marker)) return "a";
+  if (/^[A-Z]{1,2}$/.test(marker)) return "A";
 }
 function markerToStart(marker) {
-  if (/^\d+$/.test(marker)) {
-    return parseInt(marker, 10);
-  }
+  if (/^\d+$/.test(marker)) return parseInt(marker, 10);
   const type = detectMarkerType(marker);
-  if (type === "i" || type === "I") {
-    return fromRoman(marker);
-  }
+  if (type === "i" || type === "I") return fromRoman(marker);
   if (type === "a" || type === "A") {
     const start = fromAlpha(marker);
     return start > 0 ? start : 1;
@@ -22132,9 +20082,7 @@ function markerToStart(marker) {
   return Number.isNaN(parsed) ? 1 : parsed;
 }
 function startToMarker(type, start) {
-  if (type === "numeric") {
-    return String(start);
-  }
+  if (type === "numeric") return String(start);
   switch (type) {
     case "a":
       return toRomanAlpha(start);
@@ -22149,20 +20097,14 @@ function startToMarker(type, start) {
   }
 }
 function areOrderedListMarkersSequential(markers) {
-  var _a;
-  if (markers.length === 0) {
-    return false;
-  }
-  const firstType = (_a = detectMarkerType(markers[0])) != null ? _a : "numeric";
+  var _detectMarkerType;
+  if (markers.length === 0) return false;
+  const firstType = (_detectMarkerType = detectMarkerType(markers[0])) !== null && _detectMarkerType !== void 0 ? _detectMarkerType : "numeric";
   const firstStart = markerToStart(markers[0]);
-  if (firstStart < 1) {
-    return false;
-  }
+  if (firstStart < 1) return false;
   for (let i2 = 0; i2 < markers.length; i2++) {
     const expected = startToMarker(firstType, firstStart + i2);
-    if (markers[i2] !== expected) {
-      return false;
-    }
+    if (markers[i2] !== expected) return false;
   }
   return true;
 }
@@ -22175,19 +20117,13 @@ function parseListMarker(marker) {
 function buildOrderedListAttrsFromMarker(marker) {
   const { type, start } = parseListMarker(marker);
   const attrs = {};
-  if (type) {
-    attrs.type = type;
-  }
-  if (start !== 1) {
-    attrs.start = start;
-  }
+  if (type) attrs.type = type;
+  if (start !== 1) attrs.start = start;
   return attrs;
 }
 function getListMarker(type, index, separator = ". ") {
   const position = index + 1;
-  if (!type || type === "1") {
-    return `${position}${separator}`;
-  }
+  if (!type || type === "1") return `${position}${separator}`;
   switch (type) {
     case "a":
       return `${toRomanAlpha(position)}${separator}`;
@@ -22202,25 +20138,19 @@ function getListMarker(type, index, separator = ". ") {
   }
 }
 function isSameLineOrderedListToken(token) {
-  var _a, _b;
-  const nestedToken = (_a = token.tokens) == null ? void 0 : _a[0];
-  return Boolean(
-    token.text && ((_b = token.tokens) == null ? void 0 : _b.length) === 1 && (nestedToken == null ? void 0 : nestedToken.type) === "list" && nestedToken.ordered && nestedToken.raw === token.text
-  );
+  var _token$tokens, _token$tokens2;
+  const nestedToken = (_token$tokens = token.tokens) === null || _token$tokens === void 0 ? void 0 : _token$tokens[0];
+  return Boolean(token.text && ((_token$tokens2 = token.tokens) === null || _token$tokens2 === void 0 ? void 0 : _token$tokens2.length) === 1 && (nestedToken === null || nestedToken === void 0 ? void 0 : nestedToken.type) === "list" && nestedToken.ordered && nestedToken.raw === token.text);
 }
 function parseSameLineOrderedListText(text, helpers) {
-  if (helpers.tokenizeInline) {
-    return helpers.parseInline(helpers.tokenizeInline(text));
-  }
-  return helpers.parseInline([
-    {
-      type: "text",
-      raw: text,
-      text
-    }
-  ]);
+  if (helpers.tokenizeInline) return helpers.parseInline(helpers.tokenizeInline(text));
+  return helpers.parseInline([{
+    type: "text",
+    raw: text,
+    text
+  }]);
 }
-var ListItem = Node3.create({
+var ListItem = Node2.create({
   name: "listItem",
   addOptions() {
     return {
@@ -22232,98 +20162,66 @@ var ListItem = Node3.create({
   content: "paragraph block*",
   defining: true,
   parseHTML() {
-    return [
-      {
-        tag: "li"
-      }
-    ];
+    return [{ tag: "li" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["li", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      "li",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   markdownTokenName: "list_item",
   parseMarkdown: (token, helpers) => {
-    var _a;
-    if (token.type !== "list_item") {
-      return [];
-    }
-    const parseBlockChildren = (_a = helpers.parseBlockChildren) != null ? _a : helpers.parseChildren;
+    var _helpers$parseBlockCh;
+    if (token.type !== "list_item") return [];
+    const parseBlockChildren = (_helpers$parseBlockCh = helpers.parseBlockChildren) !== null && _helpers$parseBlockCh !== void 0 ? _helpers$parseBlockCh : helpers.parseChildren;
     let content = [];
     if (token.tokens && token.tokens.length > 0) {
-      if (isSameLineOrderedListToken(token)) {
-        return {
-          type: "listItem",
-          content: [
-            {
-              type: "paragraph",
-              content: parseSameLineOrderedListText(token.text || "", helpers)
-            }
-          ]
-        };
-      }
-      const hasParagraphTokens = token.tokens.some((t) => t.type === "paragraph");
-      if (hasParagraphTokens) {
-        content = parseBlockChildren(token.tokens);
-      } else {
+      if (isSameLineOrderedListToken(token)) return {
+        type: "listItem",
+        content: [{
+          type: "paragraph",
+          content: parseSameLineOrderedListText(token.text || "", helpers)
+        }]
+      };
+      if (token.tokens.some((t) => t.type === "paragraph")) content = parseBlockChildren(token.tokens);
+      else {
         const firstToken = token.tokens[0];
         if (firstToken && firstToken.type === "text" && firstToken.tokens && firstToken.tokens.length > 0) {
-          const inlineContent = helpers.parseInline(firstToken.tokens);
-          content = [
-            {
-              type: "paragraph",
-              content: inlineContent
-            }
-          ];
+          content = [{
+            type: "paragraph",
+            content: helpers.parseInline(firstToken.tokens)
+          }];
           if (token.tokens.length > 1) {
-            const remainingTokens = token.tokens.slice(1);
-            const additionalContent = parseBlockChildren(remainingTokens);
+            const additionalContent = parseBlockChildren(token.tokens.slice(1));
             content.push(...additionalContent);
           }
-        } else {
-          content = parseBlockChildren(token.tokens);
-        }
+        } else content = parseBlockChildren(token.tokens);
       }
     }
-    if (content.length === 0) {
-      content = [
-        {
-          type: "paragraph",
-          content: []
-        }
-      ];
-    }
+    if (content.length === 0) content = [{
+      type: "paragraph",
+      content: []
+    }];
     return {
       type: "listItem",
       content
     };
   },
   renderMarkdown: (node, h2, ctx) => {
-    return renderNestedMarkdownContent(
-      node,
-      h2,
-      (context) => {
-        var _a, _b, _c, _d;
-        if (context.parentType === "bulletList") {
-          return "- ";
-        }
-        if (context.parentType === "orderedList") {
-          const start = ((_b = (_a = context.meta) == null ? void 0 : _a.parentAttrs) == null ? void 0 : _b.start) || 1;
-          const type = (_d = (_c = context.meta) == null ? void 0 : _c.parentAttrs) == null ? void 0 : _d.type;
-          const index = start - 1 + (context.index || 0);
-          return getListMarker(type, index, ". ");
-        }
-        return "- ";
-      },
-      ctx
-    );
+    return renderNestedMarkdownContent(node, h2, (context) => {
+      if (context.parentType === "bulletList") return "- ";
+      if (context.parentType === "orderedList") {
+        var _context$meta, _context$meta2;
+        const start = ((_context$meta = context.meta) === null || _context$meta === void 0 || (_context$meta = _context$meta.parentAttrs) === null || _context$meta === void 0 ? void 0 : _context$meta.start) || 1;
+        return getListMarker((_context$meta2 = context.meta) === null || _context$meta2 === void 0 || (_context$meta2 = _context$meta2.parentAttrs) === null || _context$meta2 === void 0 ? void 0 : _context$meta2.type, start - 1 + (context.index || 0), ". ");
+      }
+      return "- ";
+    }, ctx);
   },
   addExtensions() {
-    return [
-      createBranchingListDeleteKeymap(this.name, [
-        this.options.bulletListTypeName,
-        this.options.orderedListTypeName
-      ])
-    ];
+    return [createBranchingListDeleteKeymap(this.name, [this.options.bulletListTypeName, this.options.orderedListTypeName])];
   },
   addKeyboardShortcuts() {
     return {
@@ -22332,20 +20230,6 @@ var ListItem = Node3.create({
       "Shift-Tab": () => this.editor.commands.liftListItem(this.name)
     };
   }
-});
-var listHelpers_exports = {};
-__export2(listHelpers_exports, {
-  findListItemPos: () => findListItemPos,
-  getNextListDepth: () => getNextListDepth,
-  handleBackspace: () => handleBackspace2,
-  handleDelete: () => handleDelete,
-  handleTab: () => handleTab,
-  hasListBefore: () => hasListBefore,
-  hasListItemAfter: () => hasListItemAfter,
-  hasListItemBefore: () => hasListItemBefore,
-  listItemHasSubList: () => listItemHasSubList,
-  nextListIsDeeper: () => nextListIsDeeper,
-  nextListIsHigher: () => nextListIsHigher
 });
 var findListItemPos = (typeOrName, state) => {
   const { $from } = state.selection;
@@ -22356,23 +20240,21 @@ var findListItemPos = (typeOrName, state) => {
   let targetDepth = null;
   while (currentDepth > 0 && targetDepth === null) {
     currentNode = $from.node(currentDepth);
-    if (currentNode.type === nodeType) {
-      targetDepth = currentDepth;
-    } else {
+    if (currentNode.type === nodeType) targetDepth = currentDepth;
+    else {
       currentDepth -= 1;
       currentPos -= 1;
     }
   }
-  if (targetDepth === null) {
-    return null;
-  }
-  return { $pos: state.doc.resolve(currentPos), depth: targetDepth };
+  if (targetDepth === null) return null;
+  return {
+    $pos: state.doc.resolve(currentPos),
+    depth: targetDepth
+  };
 };
 var getNextListDepth = (typeOrName, state) => {
   const listItemPos = findListItemPos(typeOrName, state);
-  if (!listItemPos) {
-    return false;
-  }
+  if (!listItemPos) return false;
   const [, depth] = getNodeAtPosition(state, typeOrName, listItemPos.$pos.pos + 4);
   return depth;
 };
@@ -22380,87 +20262,59 @@ var hasListBefore = (editorState, name, parentListTypes) => {
   const { $anchor } = editorState.selection;
   const previousNodePos = Math.max(0, $anchor.pos - 2);
   const previousNode = editorState.doc.resolve(previousNodePos).node();
-  if (!previousNode || !parentListTypes.includes(previousNode.type.name)) {
-    return false;
-  }
+  if (!previousNode || !parentListTypes.includes(previousNode.type.name)) return false;
   return true;
 };
 var handleBackspace2 = (editor, name, parentListTypes) => {
-  if (editor.commands.undoInputRule()) {
-    return true;
-  }
-  if (editor.state.selection.from !== editor.state.selection.to) {
-    return false;
-  }
+  if (editor.commands.undoInputRule()) return true;
+  if (editor.state.selection.from !== editor.state.selection.to) return false;
   if (!isNodeActive(editor.state, name) && hasListBefore(editor.state, name, parentListTypes)) {
     const { $anchor } = editor.state.selection;
     const $listPos = editor.state.doc.resolve($anchor.before() - 1);
     const listDescendants = [];
     $listPos.node().descendants((node, pos) => {
-      if (node.type.name === name) {
-        listDescendants.push({ node, pos });
-      }
+      if (node.type.name === name) listDescendants.push({
+        node,
+        pos
+      });
     });
     const lastItem = listDescendants.at(-1);
-    if (!lastItem) {
-      return false;
-    }
+    if (!lastItem) return false;
     const $lastItemPos = editor.state.doc.resolve($listPos.start() + lastItem.pos + 1);
-    return editor.chain().cut({ from: $anchor.start() - 1, to: $anchor.end() + 1 }, $lastItemPos.end()).joinForward().run();
+    return editor.chain().cut({
+      from: $anchor.start() - 1,
+      to: $anchor.end() + 1
+    }, $lastItemPos.end()).joinForward().run();
   }
-  if (!isNodeActive(editor.state, name)) {
-    return false;
-  }
-  if (!isAtStartOfNode(editor.state)) {
-    return false;
-  }
+  if (!isNodeActive(editor.state, name)) return false;
+  if (!isAtStartOfNode(editor.state)) return false;
   const { $from } = editor.state.selection;
   const itemDepth = $from.depth - 1;
-  if ($from.node(itemDepth).type !== editor.schema.nodes[name] || $from.index(itemDepth) !== 0) {
-    return false;
-  }
+  if ($from.node(itemDepth).type !== editor.schema.nodes[name] || $from.index(itemDepth) !== 0) return false;
   return editor.chain().liftListItem(name).run();
 };
 var nextListIsDeeper = (typeOrName, state) => {
   const listDepth = getNextListDepth(typeOrName, state);
   const listItemPos = findListItemPos(typeOrName, state);
-  if (!listItemPos || !listDepth) {
-    return false;
-  }
-  if (listDepth > listItemPos.depth) {
-    return true;
-  }
+  if (!listItemPos || !listDepth) return false;
+  if (listDepth > listItemPos.depth) return true;
   return false;
 };
 var nextListIsHigher = (typeOrName, state) => {
   const listDepth = getNextListDepth(typeOrName, state);
   const listItemPos = findListItemPos(typeOrName, state);
-  if (!listItemPos || !listDepth) {
-    return false;
-  }
-  if (listDepth < listItemPos.depth) {
-    return true;
-  }
+  if (!listItemPos || !listDepth) return false;
+  if (listDepth < listItemPos.depth) return true;
   return false;
 };
 var handleDelete = (editor, name) => {
-  if (!isNodeActive(editor.state, name)) {
-    return false;
-  }
-  if (!isAtEndOfNode(editor.state, name)) {
-    return false;
-  }
+  if (!isNodeActive(editor.state, name)) return false;
+  if (!isAtEndOfNode(editor.state, name)) return false;
   const { selection } = editor.state;
   const { $from, $to } = selection;
-  if (!selection.empty && $from.sameParent($to)) {
-    return false;
-  }
-  if (nextListIsDeeper(name, editor.state)) {
-    return editor.chain().focus(editor.state.selection.from + 4).lift(name).joinBackward().run();
-  }
-  if (nextListIsHigher(name, editor.state)) {
-    return editor.chain().joinForward().joinBackward().run();
-  }
+  if (!selection.empty && $from.sameParent($to)) return false;
+  if (nextListIsDeeper(name, editor.state)) return editor.chain().focus(editor.state.selection.from + 4).lift(name).joinBackward().run();
+  if (nextListIsHigher(name, editor.state)) return editor.chain().joinForward().joinBackward().run();
   return editor.commands.joinItemForward();
 };
 var handleTab = (editor, name, parentListTypes) => {
@@ -22476,9 +20330,7 @@ var handleTab = (editor, name, parentListTypes) => {
   const lastItem = previous.lastChild;
   if (!lastItem || lastItem.type.name !== name) return false;
   const block = $from.parent;
-  if (!lastItem.canReplace(lastItem.childCount, lastItem.childCount, Fragment.from(block))) {
-    return false;
-  }
+  if (!lastItem.canReplace(lastItem.childCount, lastItem.childCount, Fragment.from(block))) return false;
   const blockStart = $from.before();
   const blockEnd = $from.after();
   const insideLastItemEnd = blockStart - 2;
@@ -22491,126 +20343,62 @@ var handleTab = (editor, name, parentListTypes) => {
     return true;
   });
 };
-var hasListItemAfter = (typeOrName, state) => {
-  var _a;
-  const { $anchor } = state.selection;
-  const $targetPos = state.doc.resolve($anchor.pos - $anchor.parentOffset - 2);
-  if ($targetPos.index() === $targetPos.parent.childCount - 1) {
-    return false;
-  }
-  if (((_a = $targetPos.nodeAfter) == null ? void 0 : _a.type.name) !== typeOrName) {
-    return false;
-  }
-  return true;
-};
-var hasListItemBefore = (typeOrName, state) => {
-  var _a;
-  const { $anchor } = state.selection;
-  const $targetPos = state.doc.resolve($anchor.pos - 2);
-  if ($targetPos.index() === 0) {
-    return false;
-  }
-  if (((_a = $targetPos.nodeBefore) == null ? void 0 : _a.type.name) !== typeOrName) {
-    return false;
-  }
-  return true;
-};
-var listItemHasSubList = (typeOrName, state, node) => {
-  if (!node) {
-    return false;
-  }
-  const nodeType = getNodeType(typeOrName, state.schema);
-  let hasSubList = false;
-  node.descendants((child) => {
-    if (child.type === nodeType) {
-      hasSubList = true;
-    }
-  });
-  return hasSubList;
-};
 var ListKeymap = Extension.create({
   name: "listKeymap",
   addOptions() {
-    return {
-      listTypes: [
-        {
-          itemName: "listItem",
-          wrapperNames: ["bulletList", "orderedList"]
-        },
-        {
-          itemName: "taskItem",
-          wrapperNames: ["taskList"]
-        }
-      ]
-    };
+    return { listTypes: [{
+      itemName: "listItem",
+      wrapperNames: ["bulletList", "orderedList"]
+    }, {
+      itemName: "taskItem",
+      wrapperNames: ["taskList"]
+    }] };
   },
   addKeyboardShortcuts() {
     return {
       Delete: ({ editor }) => {
         let handled = false;
         this.options.listTypes.forEach(({ itemName }) => {
-          if (editor.state.schema.nodes[itemName] === void 0) {
-            return;
-          }
-          if (handleDelete(editor, itemName)) {
-            handled = true;
-          }
+          if (editor.state.schema.nodes[itemName] === void 0) return;
+          if (handleDelete(editor, itemName)) handled = true;
         });
         return handled;
       },
       "Mod-Delete": ({ editor }) => {
         let handled = false;
         this.options.listTypes.forEach(({ itemName }) => {
-          if (editor.state.schema.nodes[itemName] === void 0) {
-            return;
-          }
-          if (handleDelete(editor, itemName)) {
-            handled = true;
-          }
+          if (editor.state.schema.nodes[itemName] === void 0) return;
+          if (handleDelete(editor, itemName)) handled = true;
         });
         return handled;
       },
       Backspace: ({ editor }) => {
         let handled = false;
         this.options.listTypes.forEach(({ itemName, wrapperNames }) => {
-          if (editor.state.schema.nodes[itemName] === void 0) {
-            return;
-          }
-          if (handleBackspace2(editor, itemName, wrapperNames)) {
-            handled = true;
-          }
+          if (editor.state.schema.nodes[itemName] === void 0) return;
+          if (handleBackspace2(editor, itemName, wrapperNames)) handled = true;
         });
         return handled;
       },
       "Mod-Backspace": ({ editor }) => {
         let handled = false;
         this.options.listTypes.forEach(({ itemName, wrapperNames }) => {
-          if (editor.state.schema.nodes[itemName] === void 0) {
-            return;
-          }
-          if (handleBackspace2(editor, itemName, wrapperNames)) {
-            handled = true;
-          }
+          if (editor.state.schema.nodes[itemName] === void 0) return;
+          if (handleBackspace2(editor, itemName, wrapperNames)) handled = true;
         });
         return handled;
       },
       Tab: ({ editor }) => {
         for (const { itemName, wrapperNames } of this.options.listTypes) {
-          if (editor.state.schema.nodes[itemName] === void 0) {
-            continue;
-          }
-          if (handleTab(editor, itemName, wrapperNames)) {
-            return true;
-          }
+          if (editor.state.schema.nodes[itemName] === void 0) continue;
+          if (handleTab(editor, itemName, wrapperNames)) return true;
         }
         return false;
       }
     };
   }
 });
-var ORDERED_LIST_ITEM_REGEX = new RegExp(
-  `^(\\s*)(${ORDERED_LIST_MARKER_PATTERN})([.)])\\s+(.*)$`
-);
+var ORDERED_LIST_ITEM_REGEX = new RegExp(`^(\\s*)(${ORDERED_LIST_MARKER_PATTERN})([.)])\\s+(.*)$`);
 var INDENTED_LINE_REGEX = /^\s/;
 var PARAGRAPH_INTERRUPTERS = {
   heading: /^#{1,6}(?:\s|$)/,
@@ -22624,10 +20412,7 @@ function isOrderedListMarkerLine(line) {
 }
 function isBlockContentLine(line) {
   const trimmedLine = line.trimStart();
-  return PARAGRAPH_INTERRUPTERS.bulletItem.test(trimmedLine) || isOrderedListMarkerLine(trimmedLine) || PARAGRAPH_INTERRUPTERS.heading.test(trimmedLine) || // dash breaks are excluded: "---" directly below paragraph text is a
-  // setext heading underline, not a thematic break
-  PARAGRAPH_INTERRUPTERS.thematicBreak.test(trimmedLine) && !trimmedLine.startsWith("-") || // oxlint-disable-next-line prefer-string-starts-ends-with
-  /^>\s?/.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.codeFence.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.blockMath.test(trimmedLine);
+  return PARAGRAPH_INTERRUPTERS.bulletItem.test(trimmedLine) || isOrderedListMarkerLine(trimmedLine) || PARAGRAPH_INTERRUPTERS.heading.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.thematicBreak.test(trimmedLine) && !trimmedLine.startsWith("-") || /^>\s?/.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.codeFence.test(trimmedLine) || PARAGRAPH_INTERRUPTERS.blockMath.test(trimmedLine);
 }
 function interruptsLazyContinuation(line) {
   return Object.values(PARAGRAPH_INTERRUPTERS).some((pattern) => pattern.test(line));
@@ -22665,9 +20450,7 @@ function collectOrderedListItems(lines) {
   while (currentLineIndex < lines.length) {
     const line = lines[currentLineIndex];
     const match = line.match(ORDERED_LIST_ITEM_REGEX);
-    if (!match) {
-      break;
-    }
+    if (!match) break;
     const [, indent, marker, _separator, content] = match;
     const indentLevel = indent.length;
     const number = parseInt(marker, 10);
@@ -22679,10 +20462,7 @@ function collectOrderedListItems(lines) {
     let sawBlankLine = false;
     while (nextLineIndex < lines.length) {
       const nextLine = lines[nextLineIndex];
-      const nextMatch = nextLine.match(ORDERED_LIST_ITEM_REGEX);
-      if (nextMatch) {
-        break;
-      }
+      if (nextLine.match(ORDERED_LIST_ITEM_REGEX)) break;
       if (nextLine.trim() === "") {
         itemLines.push(nextLine);
         itemContentLines.push("");
@@ -22695,9 +20475,7 @@ function collectOrderedListItems(lines) {
         itemContentLines.push(nextLine.slice(Math.min(leadingWhitespace, contentIndent)));
         nextLineIndex += 1;
       } else {
-        if (sawBlankLine || interruptsLazyContinuation(nextLine)) {
-          break;
-        }
+        if (sawBlankLine || interruptsLazyContinuation(nextLine)) break;
         itemLines.push(nextLine);
         itemContentLines.push(nextLine);
         nextLineIndex += 1;
@@ -22716,41 +20494,32 @@ function collectOrderedListItems(lines) {
   }
   return [listItems, consumed];
 }
-var PLAIN_TEXT_ORDERED_LIST_LINE_REGEX = new RegExp(
-  `^(${ORDERED_LIST_MARKER_PATTERN})([.)])\\s+(.+)$`
-);
+var PLAIN_TEXT_ORDERED_LIST_LINE_REGEX = new RegExp(`^(${ORDERED_LIST_MARKER_PATTERN})([.)])\\s+(.+)$`);
 function parsePlainTextOrderedListPaste(text) {
   const lines = text.split("\n").filter((l) => l.trim().length > 0);
-  if (lines.length === 0) {
-    return null;
-  }
+  if (lines.length === 0) return null;
   const parsedItems = [];
   for (const line of lines) {
     const match = line.trim().match(PLAIN_TEXT_ORDERED_LIST_LINE_REGEX);
-    if (!match) {
-      return null;
-    }
+    if (!match) return null;
     parsedItems.push({
       marker: match[1],
       content: match[3]
     });
   }
-  const markers = parsedItems.map((item) => item.marker);
-  if (!areOrderedListMarkersSequential(markers)) {
-    return null;
-  }
-  const attrs = buildOrderedListAttrsFromMarker(parsedItems[0].marker);
+  if (!areOrderedListMarkersSequential(parsedItems.map((item) => item.marker))) return null;
   return {
     type: "orderedList",
-    attrs,
+    attrs: buildOrderedListAttrsFromMarker(parsedItems[0].marker),
     content: parsedItems.map((item) => ({
       type: "listItem",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: item.content }]
-        }
-      ]
+      content: [{
+        type: "paragraph",
+        content: [{
+          type: "text",
+          text: item.content
+        }]
+      }]
     }))
   };
 }
@@ -22763,13 +20532,11 @@ function buildNestedStructure(items, baseIndent, lexer) {
       const { paragraphLines, blockLines } = splitItemContent(item.contentLines);
       const mainText = paragraphLines.join("\n").trim();
       const tokens = [];
-      if (mainText) {
-        tokens.push({
-          type: "paragraph",
-          raw: mainText,
-          tokens: lexer.inlineTokens(mainText)
-        });
-      }
+      if (mainText) tokens.push({
+        type: "paragraph",
+        raw: mainText,
+        tokens: lexer.inlineTokens(mainText)
+      });
       const additionalContent = blockLines.join("\n").trim();
       if (additionalContent) {
         const blockTokens = lexer.blockTokens(additionalContent);
@@ -22782,8 +20549,7 @@ function buildNestedStructure(items, baseIndent, lexer) {
         lookAheadIndex += 1;
       }
       if (nestedItems.length > 0) {
-        const nextIndent = Math.min(...nestedItems.map((nestedItem) => nestedItem.indent));
-        const nestedListItems = buildNestedStructure(nestedItems, nextIndent, lexer);
+        const nestedListItems = buildNestedStructure(nestedItems, Math.min(...nestedItems.map((nestedItem) => nestedItem.indent)), lexer);
         tokens.push({
           type: "list",
           ordered: true,
@@ -22799,52 +20565,40 @@ function buildNestedStructure(items, baseIndent, lexer) {
         tokens
       });
       currentIndex = lookAheadIndex;
-    } else {
-      currentIndex += 1;
-    }
+    } else currentIndex += 1;
   }
   return result;
 }
 function parseListItems(items, helpers) {
   return items.map((item) => {
-    if (item.type !== "list_item") {
-      return helpers.parseChildren([item])[0];
-    }
+    if (item.type !== "list_item") return helpers.parseChildren([item])[0];
     const content = [];
-    if (item.tokens && item.tokens.length > 0) {
-      item.tokens.forEach((itemToken) => {
-        if (itemToken.type === "paragraph" || itemToken.type === "list" || itemToken.type === "blockquote" || itemToken.type === "code") {
-          content.push(...helpers.parseChildren([itemToken]));
-        } else if (itemToken.type === "text" && itemToken.tokens) {
-          const inlineContent = helpers.parseChildren([itemToken]);
-          content.push({
-            type: "paragraph",
-            content: inlineContent
-          });
-        } else {
-          const parsed = helpers.parseChildren([itemToken]);
-          if (parsed.length > 0) {
-            content.push(...parsed);
-          }
-        }
-      });
-    }
+    if (item.tokens && item.tokens.length > 0) item.tokens.forEach((itemToken) => {
+      if (itemToken.type === "paragraph" || itemToken.type === "list" || itemToken.type === "blockquote" || itemToken.type === "code") content.push(...helpers.parseChildren([itemToken]));
+      else if (itemToken.type === "text" && itemToken.tokens) {
+        const inlineContent = helpers.parseChildren([itemToken]);
+        content.push({
+          type: "paragraph",
+          content: inlineContent
+        });
+      } else {
+        const parsed = helpers.parseChildren([itemToken]);
+        if (parsed.length > 0) content.push(...parsed);
+      }
+    });
     return {
       type: "listItem",
       content
     };
   });
 }
-var ListItemName2 = "listItem";
-var TextStyleName2 = "textStyle";
+var ListItemName = "listItem";
+var TextStyleName = "textStyle";
 var orderedListInputRegex = /^(\d+)\.\s$/;
 function cssListStyleTypeToHtmlType(style2) {
   const match = style2.match(/list-style-type\s*:\s*([^;]+)/i);
-  if (!match) {
-    return null;
-  }
-  const cssValue = match[1].trim().toLowerCase();
-  switch (cssValue) {
+  if (!match) return null;
+  switch (match[1].trim().toLowerCase()) {
     case "upper-roman":
       return "I";
     case "lower-roman":
@@ -22859,7 +20613,7 @@ function cssListStyleTypeToHtmlType(style2) {
       return null;
   }
 }
-var OrderedList = Node3.create({
+var OrderedList = Node2.create({
   name: "orderedList",
   addOptions() {
     return {
@@ -22885,24 +20639,18 @@ var OrderedList = Node3.create({
         default: null,
         parseHTML: (element) => {
           const htmlType = element.getAttribute("type");
-          if (htmlType) {
-            return htmlType;
-          }
+          if (htmlType) return htmlType;
           const style2 = element.getAttribute("style");
           if (style2) {
             const mappedFromOl = cssListStyleTypeToHtmlType(style2);
-            if (mappedFromOl) {
-              return mappedFromOl;
-            }
+            if (mappedFromOl) return mappedFromOl;
           }
           const firstLi = element.querySelector("li");
           if (firstLi) {
             const liStyle = firstLi.getAttribute("style");
             if (liStyle) {
               const mappedFromLi = cssListStyleTypeToHtmlType(liStyle);
-              if (mappedFromLi) {
-                return mappedFromLi;
-              }
+              if (mappedFromLi) return mappedFromLi;
             }
           }
           return null;
@@ -22911,141 +20659,95 @@ var OrderedList = Node3.create({
     };
   },
   parseHTML() {
-    return [
-      {
-        tag: "ol"
-      }
-    ];
+    return [{ tag: "ol" }];
   },
   renderHTML({ HTMLAttributes }) {
     const { start, type, ...attributesWithoutType } = HTMLAttributes;
     const attrs = mergeAttributes(this.options.HTMLAttributes, attributesWithoutType);
-    if (start !== 1) {
-      attrs.start = start;
-    }
-    if (type && type !== "1") {
-      attrs.type = type;
-    }
-    return ["ol", attrs, 0];
+    if (start !== 1) attrs.start = start;
+    if (type && type !== "1") attrs.type = type;
+    return [
+      "ol",
+      attrs,
+      0
+    ];
   },
   markdownTokenName: "list",
   parseMarkdown: (token, helpers) => {
-    if (token.type !== "list" || !token.ordered) {
-      return [];
-    }
+    if (token.type !== "list" || !token.ordered) return [];
     const startValue = token.start || 1;
     const typeValue = token.typeMarker;
     const content = token.items ? parseListItems(token.items, helpers) : [];
     const attrs = {};
-    if (startValue !== 1) {
-      attrs.start = startValue;
-    }
-    if (typeValue) {
-      attrs.type = typeValue;
-    }
-    if (Object.keys(attrs).length > 0) {
-      return {
-        type: "orderedList",
-        attrs,
-        content
-      };
-    }
+    if (startValue !== 1) attrs.start = startValue;
+    if (typeValue) attrs.type = typeValue;
+    if (Object.keys(attrs).length > 0) return {
+      type: "orderedList",
+      attrs,
+      content
+    };
     return {
       type: "orderedList",
       content
     };
   },
   renderMarkdown: (node, h2) => {
-    if (!node.content) {
-      return "";
-    }
+    if (!node.content) return "";
     return h2.renderChildren(node.content, "\n");
   },
   markdownTokenizer: {
     name: "orderedList",
     level: "block",
-    // marked already breaks paragraphs before a start-of-line list marker. It
-    // probes this with `src.slice(1)`, so any marker it surfaces here is
-    // mid-line (like the "216)" in "(216) 555-1234") and must not start a list.
-    // We still define the callback so marked does not fall back to probing
-    // `tokenize`, which would re-introduce the mid-line split.
     start: () => -1,
     tokenize: (src, _tokens, lexer) => {
-      var _a, _b;
+      var _listItems$, _listItems$2;
       const lines = src.split("\n");
       const [listItems, consumed] = collectOrderedListItems(lines);
-      if (listItems.length === 0) {
-        return void 0;
-      }
+      if (listItems.length === 0) return;
       const items = buildNestedStructure(listItems, listItems[0].indent, lexer);
-      if (items.length === 0) {
-        return void 0;
-      }
-      const startValue = ((_a = listItems[0]) == null ? void 0 : _a.number) || 1;
-      const typeMarker = (_b = listItems[0]) == null ? void 0 : _b.type;
+      if (items.length === 0) return;
       return {
         type: "list",
         ordered: true,
-        start: startValue,
-        typeMarker,
+        start: ((_listItems$ = listItems[0]) === null || _listItems$ === void 0 ? void 0 : _listItems$.number) || 1,
+        typeMarker: (_listItems$2 = listItems[0]) === null || _listItems$2 === void 0 ? void 0 : _listItems$2.type,
         items,
         raw: lines.slice(0, consumed).join("\n")
       };
     }
   },
-  markdownOptions: {
-    indentsContent: true
-  },
+  markdownOptions: { indentsContent: true },
   addCommands() {
-    return {
-      toggleOrderedList: () => ({ commands, chain }) => {
-        if (this.options.keepAttributes) {
-          return chain().toggleList(this.name, this.options.itemTypeName, this.options.keepMarks).updateAttributes(ListItemName2, this.editor.getAttributes(TextStyleName2)).run();
-        }
-        return commands.toggleList(this.name, this.options.itemTypeName, this.options.keepMarks);
-      }
-    };
+    return { toggleOrderedList: () => ({ commands, chain }) => {
+      if (this.options.keepAttributes) return chain().toggleList(this.name, this.options.itemTypeName, this.options.keepMarks).updateAttributes(ListItemName, this.editor.getAttributes(TextStyleName)).run();
+      return commands.toggleList(this.name, this.options.itemTypeName, this.options.keepMarks);
+    } };
   },
   addKeyboardShortcuts() {
-    return {
-      "Mod-Shift-7": () => this.editor.commands.toggleOrderedList()
-    };
+    return { "Mod-Shift-7": () => this.editor.commands.toggleOrderedList() };
   },
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        props: {
-          handlePaste: (view, event) => {
-            var _a, _b;
-            const html = (_a = event.clipboardData) == null ? void 0 : _a.getData("text/html");
-            if (html == null ? void 0 : html.trim()) {
-              return false;
-            }
-            const text = (_b = event.clipboardData) == null ? void 0 : _b.getData("text/plain");
-            if (!text) {
-              return false;
-            }
-            const orderedListContent = parsePlainTextOrderedListPaste(text);
-            if (!orderedListContent) {
-              return false;
-            }
-            try {
-              const orderedListNode = view.state.schema.nodeFromJSON(orderedListContent);
-              const tr2 = view.state.tr.replaceSelectionWith(orderedListNode);
-              view.dispatch(tr2);
-              return true;
-            } catch {
-              return false;
-            }
-          }
-        }
-      })
-    ];
+    return [new Plugin({ props: { handlePaste: (view, event) => {
+      var _event$clipboardData, _event$clipboardData2;
+      const html = (_event$clipboardData = event.clipboardData) === null || _event$clipboardData === void 0 ? void 0 : _event$clipboardData.getData("text/html");
+      if (html === null || html === void 0 ? void 0 : html.trim()) return false;
+      const text = (_event$clipboardData2 = event.clipboardData) === null || _event$clipboardData2 === void 0 ? void 0 : _event$clipboardData2.getData("text/plain");
+      if (!text) return false;
+      const orderedListContent = parsePlainTextOrderedListPaste(text);
+      if (!orderedListContent) return false;
+      try {
+        const orderedListNode = view.state.schema.nodeFromJSON(orderedListContent);
+        const tr2 = view.state.tr.replaceSelectionWith(orderedListNode);
+        view.dispatch(tr2);
+        return true;
+      } catch {
+        return false;
+      }
+    } } })];
   },
   addInputRules() {
     const joinPredicate = (match, node) => {
-      const hasDefaultType = !node.attrs.type || node.attrs.type === "1";
-      return hasDefaultType && node.childCount + node.attrs.start === +match[1];
+      return (!node.attrs.type || node.attrs.type === "1") && node.childCount + node.attrs.start === +match[1];
     };
     let inputRule = wrappingInputRule({
       find: orderedListInputRegex,
@@ -23053,27 +20755,28 @@ var OrderedList = Node3.create({
       getAttributes: (match) => ({ start: +match[1] }),
       joinPredicate
     });
-    if (this.options.keepMarks || this.options.keepAttributes) {
-      inputRule = wrappingInputRule({
-        find: orderedListInputRegex,
-        type: this.type,
-        keepMarks: this.options.keepMarks,
-        keepAttributes: this.options.keepAttributes,
-        getAttributes: (match) => ({ start: +match[1], ...this.editor.getAttributes(TextStyleName2) }),
-        joinPredicate,
-        editor: this.editor
-      });
-    }
+    if (this.options.keepMarks || this.options.keepAttributes) inputRule = wrappingInputRule({
+      find: orderedListInputRegex,
+      type: this.type,
+      keepMarks: this.options.keepMarks,
+      keepAttributes: this.options.keepAttributes,
+      getAttributes: (match) => ({
+        start: +match[1],
+        ...this.editor.getAttributes(TextStyleName)
+      }),
+      joinPredicate,
+      editor: this.editor
+    });
     return [inputRule];
   }
 });
 var inputRegex2 = /^\s*(\[([( |x])?\])\s$/;
 var visuallyHiddenStyle = "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0";
 var getCheckboxLabel = (node, checked, a11y) => {
-  var _a;
-  return ((_a = a11y == null ? void 0 : a11y.checkboxLabel) == null ? void 0 : _a.call(a11y, node, checked)) || `Task item checkbox for ${node.textContent || "empty task item"}`;
+  var _a11y$checkboxLabel;
+  return (a11y === null || a11y === void 0 || (_a11y$checkboxLabel = a11y.checkboxLabel) === null || _a11y$checkboxLabel === void 0 ? void 0 : _a11y$checkboxLabel.call(a11y, node, checked)) || `Task item checkbox for ${node.textContent || "empty task item"}`;
 };
-var TaskItem = Node3.create({
+var TaskItem = Node2.create({
   name: "taskItem",
   addOptions() {
     return {
@@ -23088,47 +20791,36 @@ var TaskItem = Node3.create({
   },
   defining: true,
   addAttributes() {
-    return {
-      checked: {
-        default: false,
-        keepOnSplit: false,
-        parseHTML: (element) => {
-          const dataChecked = element.getAttribute("data-checked");
-          return dataChecked === "" || dataChecked === "true";
-        },
-        renderHTML: (attributes) => ({
-          "data-checked": attributes.checked
-        })
-      }
-    };
+    return { checked: {
+      default: false,
+      keepOnSplit: false,
+      parseHTML: (element) => {
+        const dataChecked = element.getAttribute("data-checked");
+        return dataChecked === "" || dataChecked === "true";
+      },
+      renderHTML: (attributes) => ({ "data-checked": attributes.checked })
+    } };
   },
   parseHTML() {
-    return [
-      {
-        tag: `li[data-type="${this.name}"]`,
-        priority: 51,
-        contentElement: (element) => {
-          var _a;
-          return (_a = element.querySelector("div")) != null ? _a : element;
-        }
+    return [{
+      tag: `li[data-type="${this.name}"]`,
+      priority: 51,
+      contentElement: (element) => {
+        var _element$querySelecto;
+        return (_element$querySelecto = element.querySelector("div")) !== null && _element$querySelecto !== void 0 ? _element$querySelecto : element;
       }
-    ];
+    }];
   },
   renderHTML({ node, HTMLAttributes }) {
     return [
       "li",
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        "data-type": this.name
-      }),
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { "data-type": this.name }),
       [
         "label",
-        [
-          "input",
-          {
-            type: "checkbox",
-            checked: node.attrs.checked ? "checked" : null
-          }
-        ],
+        ["input", {
+          type: "checkbox",
+          checked: node.attrs.checked ? "checked" : null
+        }],
         ["span"]
       ],
       ["div", 0]
@@ -23136,13 +20828,9 @@ var TaskItem = Node3.create({
   },
   parseMarkdown: (token, h2) => {
     const content = [];
-    if (token.tokens && token.tokens.length > 0) {
-      content.push(h2.createNode("paragraph", {}, h2.parseInline(token.tokens)));
-    } else if (token.text) {
-      content.push(h2.createNode("paragraph", {}, [h2.createNode("text", { text: token.text })]));
-    } else {
-      content.push(h2.createNode("paragraph", {}, []));
-    }
+    if (token.tokens && token.tokens.length > 0) content.push(h2.createNode("paragraph", {}, h2.parseInline(token.tokens)));
+    else if (token.text) content.push(h2.createNode("paragraph", {}, [h2.createNode("text", { text: token.text })]));
+    else content.push(h2.createNode("paragraph", {}, []));
     if (token.nestedTokens && token.nestedTokens.length > 0) {
       const nestedContent = h2.parseChildren(token.nestedTokens);
       content.push(...nestedContent);
@@ -23150,15 +20838,12 @@ var TaskItem = Node3.create({
     return h2.createNode("taskItem", { checked: token.checked || false }, content);
   },
   renderMarkdown: (node, h2) => {
-    var _a;
-    const checkedChar = ((_a = node.attrs) == null ? void 0 : _a.checked) ? "x" : " ";
-    const prefix = `- [${checkedChar}] `;
+    var _node$attrs;
+    const prefix = `- [${((_node$attrs = node.attrs) === null || _node$attrs === void 0 ? void 0 : _node$attrs.checked) ? "x" : " "}] `;
     return renderNestedMarkdownContent(node, h2, prefix);
   },
   addExtensions() {
-    if (!this.options.nested) {
-      return [];
-    }
+    if (!this.options.nested) return [];
     return [createBranchingListDeleteKeymap(this.name, [this.options.taskListTypeName])];
   },
   addKeyboardShortcuts() {
@@ -23166,9 +20851,7 @@ var TaskItem = Node3.create({
       Enter: () => this.editor.commands.splitListItem(this.name),
       "Shift-Tab": () => this.editor.commands.liftListItem(this.name)
     };
-    if (!this.options.nested) {
-      return shortcuts;
-    }
+    if (!this.options.nested) return shortcuts;
     return {
       ...shortcuts,
       Tab: () => this.editor.commands.sinkListItem(this.name)
@@ -23197,24 +20880,18 @@ var TaskItem = Node3.create({
           return;
         }
         const { checked } = event.target;
-        if (editor.isEditable && typeof getPos === "function") {
-          editor.chain().focus(void 0, { scrollIntoView: false }).command(({ tr: tr2 }) => {
-            const position = getPos();
-            if (typeof position !== "number") {
-              return false;
-            }
-            const currentNode = tr2.doc.nodeAt(position);
-            tr2.setNodeMarkup(position, void 0, {
-              ...currentNode == null ? void 0 : currentNode.attrs,
-              checked
-            });
-            return true;
-          }).run();
-        }
+        if (editor.isEditable && typeof getPos === "function") editor.chain().focus(void 0, { scrollIntoView: false }).command(({ tr: tr2 }) => {
+          const position = getPos();
+          if (typeof position !== "number") return false;
+          const currentNode = tr2.doc.nodeAt(position);
+          tr2.setNodeMarkup(position, void 0, {
+            ...currentNode === null || currentNode === void 0 ? void 0 : currentNode.attrs,
+            checked
+          });
+          return true;
+        }).run();
         if (!editor.isEditable && this.options.onReadOnlyChecked) {
-          if (!this.options.onReadOnlyChecked(node, checked)) {
-            checkbox.checked = !checkbox.checked;
-          }
+          if (!this.options.onReadOnlyChecked(node, checked)) checkbox.checked = !checkbox.checked;
         }
       });
       Object.entries(this.options.HTMLAttributes).forEach(([key, value]) => {
@@ -23232,9 +20909,7 @@ var TaskItem = Node3.create({
         dom: listItem,
         contentDOM: content,
         update: (updatedNode) => {
-          if (updatedNode.type !== this.type) {
-            return false;
-          }
+          if (updatedNode.type !== this.type) return false;
           listItem.dataset.checked = updatedNode.attrs.checked;
           checkbox.checked = updatedNode.attrs.checked;
           updateA11Y(updatedNode);
@@ -23244,23 +20919,15 @@ var TaskItem = Node3.create({
           const staticAttrs = this.options.HTMLAttributes;
           prevRenderedAttributeKeys.forEach((key) => {
             if (!newKeys.has(key)) {
-              if (key in staticAttrs) {
-                listItem.setAttribute(key, staticAttrs[key]);
-              } else {
-                listItem.removeAttribute(key);
-              }
+              if (key in staticAttrs) listItem.setAttribute(key, staticAttrs[key]);
+              else listItem.removeAttribute(key);
             }
           });
           Object.entries(newHTMLAttributes).forEach(([key, value]) => {
             if (value === null || value === void 0) {
-              if (key in staticAttrs) {
-                listItem.setAttribute(key, staticAttrs[key]);
-              } else {
-                listItem.removeAttribute(key);
-              }
-            } else {
-              listItem.setAttribute(key, value);
-            }
+              if (key in staticAttrs) listItem.setAttribute(key, staticAttrs[key]);
+              else listItem.removeAttribute(key);
+            } else listItem.setAttribute(key, value);
           });
           prevRenderedAttributeKeys = newKeys;
           return true;
@@ -23269,18 +20936,14 @@ var TaskItem = Node3.create({
     };
   },
   addInputRules() {
-    return [
-      wrappingInputRule({
-        find: inputRegex2,
-        type: this.type,
-        getAttributes: (match) => ({
-          checked: match[match.length - 1] === "x"
-        })
-      })
-    ];
+    return [wrappingInputRule({
+      find: inputRegex2,
+      type: this.type,
+      getAttributes: (match) => ({ checked: match[match.length - 1] === "x" })
+    })];
   }
 });
-var TaskList = Node3.create({
+var TaskList = Node2.create({
   name: "taskList",
   addOptions() {
     return {
@@ -23293,12 +20956,10 @@ var TaskList = Node3.create({
     return `${this.options.itemTypeName}+`;
   },
   parseHTML() {
-    return [
-      {
-        tag: `ul[data-type="${this.name}"]`,
-        priority: 51
-      }
-    ];
+    return [{
+      tag: `ul[data-type="${this.name}"]`,
+      priority: 51
+    }];
   },
   renderHTML({ HTMLAttributes }) {
     return [
@@ -23311,62 +20972,20 @@ var TaskList = Node3.create({
     return h2.createNode("taskList", {}, h2.parseChildren(token.items || []));
   },
   renderMarkdown: (node, h2) => {
-    if (!node.content) {
-      return "";
-    }
+    if (!node.content) return "";
     return h2.renderChildren(node.content, "\n");
   },
   markdownTokenizer: {
     name: "taskList",
     level: "block",
     start(src) {
-      var _a;
-      const index = (_a = src.match(/^\s*[-+*]\s+\[([ xX])\]\s+/)) == null ? void 0 : _a.index;
+      var _src$match;
+      const index = (_src$match = src.match(/^\s*[-+*]\s+\[([ xX])\]\s+/)) === null || _src$match === void 0 ? void 0 : _src$match.index;
       return index !== void 0 ? index : -1;
     },
     tokenize(src, tokens, lexer) {
       const parseTaskListContent = (content) => {
-        const nestedResult = parseIndentedBlocks(
-          content,
-          {
-            itemPattern: /^(\s*)([-+*])\s+\[([ xX])\]\s+(.*)$/,
-            extractItemData: (match) => ({
-              indentLevel: match[1].length,
-              mainContent: match[4],
-              checked: match[3].toLowerCase() === "x"
-            }),
-            createToken: (data, nestedTokens) => ({
-              type: "taskItem",
-              raw: "",
-              mainContent: data.mainContent,
-              indentLevel: data.indentLevel,
-              checked: data.checked,
-              text: data.mainContent,
-              tokens: lexer.inlineTokens(data.mainContent),
-              nestedTokens
-            }),
-            // Allow recursive nesting
-            customNestedParser: parseTaskListContent
-          },
-          lexer
-        );
-        if (nestedResult) {
-          const taskListToken = {
-            type: "taskList",
-            raw: nestedResult.raw,
-            items: nestedResult.items
-          };
-          const remainder = content.slice(nestedResult.raw.length);
-          if (remainder.trim()) {
-            return [taskListToken, ...lexer.blockTokens(remainder)];
-          }
-          return [taskListToken];
-        }
-        return lexer.blockTokens(content);
-      };
-      const result = parseIndentedBlocks(
-        src,
-        {
+        const nestedResult = parseIndentedBlocks(content, {
           itemPattern: /^(\s*)([-+*])\s+\[([ xX])\]\s+(.*)$/,
           extractItemData: (match) => ({
             indentLevel: match[1].length,
@@ -23383,14 +21002,40 @@ var TaskList = Node3.create({
             tokens: lexer.inlineTokens(data.mainContent),
             nestedTokens
           }),
-          // Use the recursive parser for nested content
           customNestedParser: parseTaskListContent
-        },
-        lexer
-      );
-      if (!result) {
-        return void 0;
-      }
+        }, lexer);
+        if (nestedResult) {
+          const taskListToken = {
+            type: "taskList",
+            raw: nestedResult.raw,
+            items: nestedResult.items
+          };
+          const remainder = content.slice(nestedResult.raw.length);
+          if (remainder.trim()) return [taskListToken, ...lexer.blockTokens(remainder)];
+          return [taskListToken];
+        }
+        return lexer.blockTokens(content);
+      };
+      const result = parseIndentedBlocks(src, {
+        itemPattern: /^(\s*)([-+*])\s+\[([ xX])\]\s+(.*)$/,
+        extractItemData: (match) => ({
+          indentLevel: match[1].length,
+          mainContent: match[4],
+          checked: match[3].toLowerCase() === "x"
+        }),
+        createToken: (data, nestedTokens) => ({
+          type: "taskItem",
+          raw: "",
+          mainContent: data.mainContent,
+          indentLevel: data.indentLevel,
+          checked: data.checked,
+          text: data.mainContent,
+          tokens: lexer.inlineTokens(data.mainContent),
+          nestedTokens
+        }),
+        customNestedParser: parseTaskListContent
+      }, lexer);
+      if (!result) return;
       return {
         type: "taskList",
         raw: result.raw,
@@ -23398,58 +21043,38 @@ var TaskList = Node3.create({
       };
     }
   },
-  markdownOptions: {
-    indentsContent: true
-  },
+  markdownOptions: { indentsContent: true },
   addCommands() {
-    return {
-      toggleTaskList: () => ({ commands }) => {
-        return commands.toggleList(this.name, this.options.itemTypeName);
-      }
-    };
+    return { toggleTaskList: () => ({ commands }) => {
+      return commands.toggleList(this.name, this.options.itemTypeName);
+    } };
   },
   addKeyboardShortcuts() {
-    return {
-      "Mod-Shift-9": () => this.editor.commands.toggleTaskList()
-    };
+    return { "Mod-Shift-9": () => this.editor.commands.toggleTaskList() };
   }
 });
 var ListKit = Extension.create({
   name: "listKit",
   addExtensions() {
     const extensions = [];
-    if (this.options.bulletList !== false) {
-      extensions.push(BulletList.configure(this.options.bulletList));
-    }
-    if (this.options.listItem !== false) {
-      extensions.push(ListItem.configure(this.options.listItem));
-    }
-    if (this.options.listKeymap !== false) {
-      extensions.push(ListKeymap.configure(this.options.listKeymap));
-    }
-    if (this.options.orderedList !== false) {
-      extensions.push(OrderedList.configure(this.options.orderedList));
-    }
-    if (this.options.taskItem !== false) {
-      extensions.push(TaskItem.configure(this.options.taskItem));
-    }
-    if (this.options.taskList !== false) {
-      extensions.push(TaskList.configure(this.options.taskList));
-    }
+    if (this.options.bulletList !== false) extensions.push(BulletList.configure(this.options.bulletList));
+    if (this.options.listItem !== false) extensions.push(ListItem.configure(this.options.listItem));
+    if (this.options.listKeymap !== false) extensions.push(ListKeymap.configure(this.options.listKeymap));
+    if (this.options.orderedList !== false) extensions.push(OrderedList.configure(this.options.orderedList));
+    if (this.options.taskItem !== false) extensions.push(TaskItem.configure(this.options.taskItem));
+    if (this.options.taskList !== false) extensions.push(TaskList.configure(this.options.taskList));
     return extensions;
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-paragraph@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-paragraph/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-paragraph@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-paragraph/dist/index.js
 var EMPTY_PARAGRAPH_MARKDOWN = "&nbsp;";
 var NBSP_CHAR = "\xA0";
-var Paragraph = Node3.create({
+var Paragraph = Node2.create({
   name: "paragraph",
   priority: 1e3,
   addOptions() {
-    return {
-      HTMLAttributes: {}
-    };
+    return { HTMLAttributes: {} };
   },
   group: "block",
   content: "inline*",
@@ -23457,68 +21082,52 @@ var Paragraph = Node3.create({
     return [{ tag: "p" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["p", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      "p",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   parseMarkdown: (token, helpers) => {
     const tokens = token.tokens || [];
-    if (tokens.length === 1 && tokens[0].type === "image") {
-      return helpers.parseChildren([tokens[0]]);
-    }
+    if (tokens.length === 1 && tokens[0].type === "image") return helpers.parseChildren([tokens[0]]);
     const content = helpers.parseInline(tokens);
-    const hasExplicitEmptyParagraphMarker = tokens.length === 1 && tokens[0].type === "text" && (tokens[0].raw === EMPTY_PARAGRAPH_MARKDOWN || tokens[0].text === EMPTY_PARAGRAPH_MARKDOWN || tokens[0].raw === NBSP_CHAR || tokens[0].text === NBSP_CHAR);
-    if (hasExplicitEmptyParagraphMarker && content.length === 1 && content[0].type === "text" && (content[0].text === EMPTY_PARAGRAPH_MARKDOWN || content[0].text === NBSP_CHAR)) {
-      return helpers.createNode("paragraph", void 0, []);
-    }
+    if (tokens.length === 1 && tokens[0].type === "text" && (tokens[0].raw === EMPTY_PARAGRAPH_MARKDOWN || tokens[0].text === EMPTY_PARAGRAPH_MARKDOWN || tokens[0].raw === NBSP_CHAR || tokens[0].text === NBSP_CHAR) && content.length === 1 && content[0].type === "text" && (content[0].text === EMPTY_PARAGRAPH_MARKDOWN || content[0].text === NBSP_CHAR)) return helpers.createNode("paragraph", void 0, []);
     return helpers.createNode("paragraph", void 0, content);
   },
   renderMarkdown: (node, h2, ctx) => {
-    var _a, _b;
-    if (!node) {
-      return "";
-    }
+    if (!node) return "";
     const content = Array.isArray(node.content) ? node.content : [];
     if (content.length === 0) {
-      const previousContent = Array.isArray((_a = ctx == null ? void 0 : ctx.previousNode) == null ? void 0 : _a.content) ? ctx.previousNode.content : [];
-      const previousNodeIsEmptyParagraph = ((_b = ctx == null ? void 0 : ctx.previousNode) == null ? void 0 : _b.type) === "paragraph" && previousContent.length === 0;
-      return previousNodeIsEmptyParagraph ? EMPTY_PARAGRAPH_MARKDOWN : "";
+      var _ctx$previousNode, _ctx$previousNode2;
+      const previousContent = Array.isArray(ctx === null || ctx === void 0 || (_ctx$previousNode = ctx.previousNode) === null || _ctx$previousNode === void 0 ? void 0 : _ctx$previousNode.content) ? ctx.previousNode.content : [];
+      return (ctx === null || ctx === void 0 || (_ctx$previousNode2 = ctx.previousNode) === null || _ctx$previousNode2 === void 0 ? void 0 : _ctx$previousNode2.type) === "paragraph" && previousContent.length === 0 ? EMPTY_PARAGRAPH_MARKDOWN : "";
     }
     return h2.renderChildren(content);
   },
   addCommands() {
-    return {
-      setParagraph: () => ({ commands }) => {
-        return commands.setNode(this.name);
-      }
-    };
+    return { setParagraph: () => ({ commands }) => {
+      return commands.setNode(this.name);
+    } };
   },
   addKeyboardShortcuts() {
-    return {
-      "Mod-Alt-0": () => this.editor.commands.setParagraph()
-    };
+    return { "Mod-Alt-0": () => this.editor.commands.setParagraph() };
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-strike@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-strike/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-strike@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-strike/dist/index.js
 var inputRegex3 = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))$/;
 var pasteRegex = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))/g;
 var Strike = Mark2.create({
   name: "strike",
   addOptions() {
-    return {
-      HTMLAttributes: {}
-    };
+    return { HTMLAttributes: {} };
   },
   parseHTML() {
     return [
-      {
-        tag: "s"
-      },
-      {
-        tag: "del"
-      },
-      {
-        tag: "strike"
-      },
+      { tag: "s" },
+      { tag: "del" },
+      { tag: "strike" },
       {
         style: "text-decoration",
         consuming: false,
@@ -23527,7 +21136,11 @@ var Strike = Mark2.create({
     ];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["s", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      "s",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   markdownTokenName: "del",
   parseMarkdown: (token, helpers) => {
@@ -23550,30 +21163,24 @@ var Strike = Mark2.create({
     };
   },
   addKeyboardShortcuts() {
-    return {
-      "Mod-Shift-s": () => this.editor.commands.toggleStrike()
-    };
+    return { "Mod-Shift-s": () => this.editor.commands.toggleStrike() };
   },
   addInputRules() {
-    return [
-      markInputRule({
-        find: inputRegex3,
-        type: this.type
-      })
-    ];
+    return [markInputRule({
+      find: inputRegex3,
+      type: this.type
+    })];
   },
   addPasteRules() {
-    return [
-      markPasteRule({
-        find: pasteRegex,
-        type: this.type
-      })
-    ];
+    return [markPasteRule({
+      find: pasteRegex,
+      type: this.type
+    })];
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-text@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-text/dist/index.js
-var Text2 = Node3.create({
+// node_modules/.pnpm/@tiptap+extension-text@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-text/dist/index.js
+var Text2 = Node2.create({
   name: "text",
   group: "inline",
   parseMarkdown: (token) => {
@@ -23585,28 +21192,25 @@ var Text2 = Node3.create({
   renderMarkdown: (node) => node.text || ""
 });
 
-// node_modules/.pnpm/@tiptap+extension-underline@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-underline/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-underline@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-underline/dist/index.js
 var Underline = Mark2.create({
   name: "underline",
   addOptions() {
-    return {
-      HTMLAttributes: {}
-    };
+    return { HTMLAttributes: {} };
   },
   parseHTML() {
-    return [
-      {
-        tag: "u"
-      },
-      {
-        style: "text-decoration",
-        consuming: false,
-        getAttrs: (style2) => style2.includes("underline") ? {} : false
-      }
-    ];
+    return [{ tag: "u" }, {
+      style: "text-decoration",
+      consuming: false,
+      getAttrs: (style2) => style2.includes("underline") ? {} : false
+    }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["u", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), 0];
+    return [
+      "u",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0
+    ];
   },
   parseMarkdown(token, helpers) {
     return helpers.applyMark(this.name || "underline", helpers.parseInline(token.tokens || []));
@@ -23621,11 +21225,8 @@ var Underline = Mark2.create({
       return src.indexOf("++");
     },
     tokenize(src, _tokens, lexer) {
-      const rule = /^(\+\+)([\s\S]+?)(\+\+)/;
-      const match = rule.exec(src);
-      if (!match) {
-        return void 0;
-      }
+      const match = /^(\+\+)([\s\S]+?)(\+\+)/.exec(src);
+      if (!match) return;
       const innerContent = match[2].trim();
       return {
         type: "underline",
@@ -24552,7 +22153,7 @@ var redo = buildCommand(true, true);
 var undoNoScroll = buildCommand(false, false);
 var redoNoScroll = buildCommand(true, false);
 
-// node_modules/.pnpm/@tiptap+extensions@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1__@tiptap+pm@3.30.1/node_modules/@tiptap/extensions/dist/index.js
+// node_modules/.pnpm/@tiptap+extensions@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extensions/dist/index.js
 var CharacterCount = Extension.create({
   name: "characterCount",
   addOptions() {
@@ -24572,82 +22173,60 @@ var CharacterCount = Extension.create({
   },
   onBeforeCreate() {
     this.storage.characters = (options) => {
-      const node = (options == null ? void 0 : options.node) || this.editor.state.doc;
-      const mode = (options == null ? void 0 : options.mode) || this.options.mode;
-      if (mode === "textSize") {
+      const node = (options === null || options === void 0 ? void 0 : options.node) || this.editor.state.doc;
+      if (((options === null || options === void 0 ? void 0 : options.mode) || this.options.mode) === "textSize") {
         const text = node.textBetween(0, node.content.size, void 0, " ");
         return this.options.textCounter(text);
       }
       return node.nodeSize;
     };
     this.storage.words = (options) => {
-      const node = (options == null ? void 0 : options.node) || this.editor.state.doc;
+      const node = (options === null || options === void 0 ? void 0 : options.node) || this.editor.state.doc;
       const text = node.textBetween(0, node.content.size, " ", " ");
       return this.options.wordCounter(text);
     };
   },
   addProseMirrorPlugins() {
     let initialEvaluationDone = false;
-    return [
-      new Plugin({
-        key: new PluginKey("characterCount"),
-        appendTransaction: (transactions, oldState, newState) => {
-          if (initialEvaluationDone) {
-            return;
-          }
-          const limit = this.options.limit;
-          const autoTrim = this.options.autoTrim;
-          if (limit === null || limit === void 0 || limit === 0 || autoTrim === false) {
-            initialEvaluationDone = true;
-            return;
-          }
-          const initialContentSize = this.storage.characters({ node: newState.doc });
-          if (initialContentSize > limit) {
-            const over = initialContentSize - limit;
-            const from2 = 0;
-            const to = over;
-            console.warn(
-              `[CharacterCount] Initial content exceeded limit of ${limit} characters. Content was automatically trimmed.`
-            );
-            const tr2 = newState.tr.deleteRange(from2, to);
-            initialEvaluationDone = true;
-            return tr2;
-          }
+    return [new Plugin({
+      key: new PluginKey("characterCount"),
+      appendTransaction: (transactions, oldState, newState) => {
+        if (initialEvaluationDone) return;
+        const limit = this.options.limit;
+        const autoTrim = this.options.autoTrim;
+        if (limit === null || limit === void 0 || limit === 0 || autoTrim === false) {
           initialEvaluationDone = true;
-        },
-        filterTransaction: (transaction, state) => {
-          const limit = this.options.limit;
-          if (!transaction.docChanged || limit === 0 || limit === null || limit === void 0) {
-            return true;
-          }
-          const oldSize = this.storage.characters({ node: state.doc });
-          const newSize = this.storage.characters({ node: transaction.doc });
-          if (newSize <= limit) {
-            return true;
-          }
-          if (oldSize > limit && newSize > limit && newSize <= oldSize) {
-            return true;
-          }
-          if (oldSize > limit && newSize > limit && newSize > oldSize) {
-            return false;
-          }
-          const isPaste = transaction.getMeta("paste");
-          if (!isPaste) {
-            return false;
-          }
-          const pos = transaction.selection.$head.pos;
-          const over = newSize - limit;
-          const from2 = pos - over;
-          const to = pos;
-          transaction.deleteRange(from2, to);
-          const updatedSize = this.storage.characters({ node: transaction.doc });
-          if (updatedSize > limit) {
-            return false;
-          }
-          return true;
+          return;
         }
-      })
-    ];
+        const initialContentSize = this.storage.characters({ node: newState.doc });
+        if (initialContentSize > limit) {
+          const over = initialContentSize - limit;
+          const from2 = 0;
+          const to = over;
+          console.warn(`[CharacterCount] Initial content exceeded limit of ${limit} characters. Content was automatically trimmed.`);
+          const tr2 = newState.tr.deleteRange(from2, to);
+          initialEvaluationDone = true;
+          return tr2;
+        }
+        initialEvaluationDone = true;
+      },
+      filterTransaction: (transaction, state) => {
+        const limit = this.options.limit;
+        if (!transaction.docChanged || limit === 0 || limit === null || limit === void 0) return true;
+        const oldSize = this.storage.characters({ node: state.doc });
+        const newSize = this.storage.characters({ node: transaction.doc });
+        if (newSize <= limit) return true;
+        if (oldSize > limit && newSize > limit && newSize <= oldSize) return true;
+        if (oldSize > limit && newSize > limit && newSize > oldSize) return false;
+        if (!transaction.getMeta("paste")) return false;
+        const pos = transaction.selection.$head.pos;
+        const from2 = pos - (newSize - limit);
+        const to = pos;
+        transaction.deleteRange(from2, to);
+        if (this.storage.characters({ node: transaction.doc }) > limit) return false;
+        return true;
+      }
+    })];
   }
 });
 var Dropcursor = Extension.create({
@@ -24672,55 +22251,30 @@ var Focus = Extension.create({
     };
   },
   addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey("focus"),
-        props: {
-          decorations: ({ doc: doc3, selection }) => {
-            const { isEditable, isFocused } = this.editor;
-            const { anchor } = selection;
-            const decorations = [];
-            if (!isEditable || !isFocused) {
-              return DecorationSet.create(doc3, []);
-            }
-            let maxLevels = 0;
-            if (this.options.mode === "deepest") {
-              doc3.descendants((node, pos) => {
-                if (node.isText) {
-                  return;
-                }
-                const isCurrent = anchor >= pos && anchor <= pos + node.nodeSize - 1;
-                if (!isCurrent) {
-                  return false;
-                }
-                maxLevels += 1;
-              });
-            }
-            let currentLevel = 0;
-            doc3.descendants((node, pos) => {
-              if (node.isText) {
-                return false;
-              }
-              const isCurrent = anchor >= pos && anchor <= pos + node.nodeSize - 1;
-              if (!isCurrent) {
-                return false;
-              }
-              currentLevel += 1;
-              const outOfScope = this.options.mode === "deepest" && maxLevels - currentLevel > 0 || this.options.mode === "shallowest" && currentLevel > 1;
-              if (outOfScope) {
-                return this.options.mode === "deepest";
-              }
-              decorations.push(
-                Decoration.node(pos, pos + node.nodeSize, {
-                  class: this.options.className
-                })
-              );
-            });
-            return DecorationSet.create(doc3, decorations);
-          }
-        }
-      })
-    ];
+    return [new Plugin({
+      key: new PluginKey("focus"),
+      props: { decorations: ({ doc: doc3, selection }) => {
+        const { isEditable, isFocused } = this.editor;
+        const { anchor } = selection;
+        const decorations = [];
+        if (!isEditable || !isFocused) return DecorationSet.create(doc3, []);
+        let maxLevels = 0;
+        if (this.options.mode === "deepest") doc3.descendants((node, pos) => {
+          if (node.isText) return;
+          if (!(anchor >= pos && anchor <= pos + node.nodeSize - 1)) return false;
+          maxLevels += 1;
+        });
+        let currentLevel = 0;
+        doc3.descendants((node, pos) => {
+          if (node.isText) return false;
+          if (!(anchor >= pos && anchor <= pos + node.nodeSize - 1)) return false;
+          currentLevel += 1;
+          if (this.options.mode === "deepest" && maxLevels - currentLevel > 0 || this.options.mode === "shallowest" && currentLevel > 1) return this.options.mode === "deepest";
+          decorations.push(Decoration.node(pos, pos + node.nodeSize, { class: this.options.className }));
+        });
+        return DecorationSet.create(doc3, decorations);
+      } }
+    })];
   }
 });
 var Gapcursor = Extension.create({
@@ -24729,34 +22283,21 @@ var Gapcursor = Extension.create({
     return [gapCursor()];
   },
   extendNodeSchema(extension) {
-    var _a;
+    var _callOrReturn;
     const context = {
       name: extension.name,
       options: extension.options,
       storage: extension.storage
     };
-    return {
-      allowGapCursor: (_a = callOrReturn(getExtensionField(extension, "allowGapCursor", context))) != null ? _a : null
-    };
+    return { allowGapCursor: (_callOrReturn = callOrReturn(getExtensionField(extension, "allowGapCursor", context))) !== null && _callOrReturn !== void 0 ? _callOrReturn : null };
   }
 });
 var DEFAULT_DATA_ATTRIBUTE = "placeholder";
 var PLUGIN_KEY = new PluginKey("tiptap__placeholder");
 function createPlaceholderDecoration(options) {
-  const {
-    editor,
-    placeholder,
-    dataAttribute,
-    pos,
-    node,
-    isEmptyDoc,
-    hasAnchor,
-    classes: { emptyNode, emptyEditor }
-  } = options;
+  const { editor, placeholder, dataAttribute, pos, node, isEmptyDoc, hasAnchor, classes: { emptyNode, emptyEditor } } = options;
   const classes = [emptyNode];
-  if (isEmptyDoc) {
-    classes.push(emptyEditor);
-  }
+  if (isEmptyDoc) classes.push(emptyEditor);
   return Decoration.node(pos, pos + node.nodeSize, {
     class: classes.join(" "),
     [dataAttribute]: typeof placeholder === "function" ? placeholder({
@@ -24770,121 +22311,97 @@ function createPlaceholderDecoration(options) {
 function resolveEmptyNodeClass(emptyNodeClass, props) {
   return typeof emptyNodeClass === "function" ? emptyNodeClass(props) : emptyNodeClass;
 }
-function scanRangeForDecorations({
-  editor,
-  options,
-  dataAttribute,
-  doc: doc3,
-  selection,
-  from: from2,
-  to
-}) {
+function scanRangeForDecorations({ editor, options, dataAttribute, doc: doc3, selection, from: from2, to }) {
   const { anchor } = selection;
   const decorations = [];
   const isEmptyDoc = editor.isEmpty;
   doc3.nodesBetween(from2, to, (node, pos) => {
     const hasAnchor = anchor >= pos && anchor <= pos + node.nodeSize;
     const isEmpty = !node.isLeaf && isNodeEmpty(node);
-    if (!node.type.isTextblock) {
-      return options.includeChildren;
-    }
-    if ((hasAnchor || !options.showOnlyCurrent) && isEmpty) {
-      decorations.push(
-        createPlaceholderDecoration({
+    if (!node.type.isTextblock) return options.includeChildren;
+    if ((hasAnchor || !options.showOnlyCurrent) && isEmpty) decorations.push(createPlaceholderDecoration({
+      editor,
+      isEmptyDoc,
+      dataAttribute,
+      hasAnchor,
+      placeholder: options.placeholder,
+      classes: {
+        emptyEditor: options.emptyEditorClass,
+        emptyNode: resolveEmptyNodeClass(options.emptyNodeClass, {
           editor,
-          isEmptyDoc,
-          dataAttribute,
-          hasAnchor,
-          placeholder: options.placeholder,
-          classes: {
-            emptyEditor: options.emptyEditorClass,
-            emptyNode: resolveEmptyNodeClass(options.emptyNodeClass, {
-              editor,
-              node,
-              pos,
-              hasAnchor
-            })
-          },
           node,
-          pos
+          pos,
+          hasAnchor
         })
-      );
-    }
+      },
+      node,
+      pos
+    }));
     return options.includeChildren;
   });
   return decorations;
 }
-function buildPlaceholderDecorations({
-  editor,
-  options,
-  dataAttribute,
-  doc: doc3,
-  selection
-}) {
-  const active = editor.isEditable || !options.showOnlyWhenEditable;
-  if (!active) {
-    return null;
-  }
+function buildPlaceholderDecorations({ editor, options, dataAttribute, doc: doc3, selection }) {
+  if (!(editor.isEditable || !options.showOnlyWhenEditable)) return null;
   const { anchor } = selection;
   const decorations = [];
   const isEmptyDoc = editor.isEmpty;
-  const useResolvedPath = options.showOnlyCurrent && !options.includeChildren;
-  if (useResolvedPath) {
+  if (options.showOnlyCurrent && !options.includeChildren) {
     const resolved = doc3.resolve(anchor);
     const node = resolved.depth > 0 ? resolved.node(1) : resolved.nodeAfter;
     const nodeStart = resolved.depth > 0 ? resolved.before(1) : anchor;
     if (node && node.type.isTextblock && isNodeEmpty(node)) {
       const hasAnchor = anchor >= nodeStart && anchor <= nodeStart + node.nodeSize;
-      decorations.push(
-        createPlaceholderDecoration({
-          editor,
-          isEmptyDoc,
-          dataAttribute,
-          hasAnchor,
-          placeholder: options.placeholder,
-          classes: {
-            emptyEditor: options.emptyEditorClass,
-            emptyNode: resolveEmptyNodeClass(options.emptyNodeClass, {
-              editor,
-              node,
-              pos: nodeStart,
-              hasAnchor
-            })
-          },
-          node,
-          pos: nodeStart
-        })
-      );
-    }
-  } else {
-    decorations.push(
-      ...scanRangeForDecorations({
+      decorations.push(createPlaceholderDecoration({
         editor,
-        options,
+        isEmptyDoc,
         dataAttribute,
-        doc: doc3,
-        selection,
-        from: 0,
-        to: doc3.content.size
-      })
-    );
-  }
+        hasAnchor,
+        placeholder: options.placeholder,
+        classes: {
+          emptyEditor: options.emptyEditorClass,
+          emptyNode: resolveEmptyNodeClass(options.emptyNodeClass, {
+            editor,
+            node,
+            pos: nodeStart,
+            hasAnchor
+          })
+        },
+        node,
+        pos: nodeStart
+      }));
+    }
+  } else decorations.push(...scanRangeForDecorations({
+    editor,
+    options,
+    dataAttribute,
+    doc: doc3,
+    selection,
+    from: 0,
+    to: doc3.content.size
+  }));
   return DecorationSet.create(doc3, decorations);
 }
 function resolveTopLevelRange(doc3, pos) {
-  var _a;
   const resolved = doc3.resolve(pos);
   if (resolved.depth === 0) {
-    const node2 = (_a = resolved.nodeAfter) != null ? _a : resolved.nodeBefore;
-    if (!node2) {
-      return { from: pos, to: pos };
-    }
-    const nodePos = resolved.nodeAfter ? pos : pos - node2.nodeSize;
-    return { from: nodePos, to: nodePos + node2.nodeSize };
+    var _resolved$nodeAfter;
+    const node = (_resolved$nodeAfter = resolved.nodeAfter) !== null && _resolved$nodeAfter !== void 0 ? _resolved$nodeAfter : resolved.nodeBefore;
+    if (!node) return {
+      from: pos,
+      to: pos
+    };
+    const nodePos = resolved.nodeAfter ? pos : pos - node.nodeSize;
+    return {
+      from: nodePos,
+      to: nodePos + node.nodeSize
+    };
   }
   const topLevelPos = resolved.before(1);
-  const node = resolved.node(1);
-  return { from: topLevelPos, to: topLevelPos + node.nodeSize };
+  return {
+    from: topLevelPos,
+    to: topLevelPos + resolved.node(1).nodeSize
+  };
 }
 function toContentRelativeRange(doc3, range) {
   return {
@@ -24899,94 +22416,57 @@ function getTopLevelBlocksInRange(doc3, from2, to) {
     const nodeEnd = nodeStart + node.nodeSize;
     const absNodeStart = nodeStart + 1;
     const absNodeEnd = nodeEnd + 1;
-    if (absNodeStart < to && absNodeEnd > from2) {
-      ranges.push({ from: nodeStart, to: nodeEnd });
-    }
+    if (absNodeStart < to && absNodeEnd > from2) ranges.push({
+      from: nodeStart,
+      to: nodeEnd
+    });
   });
   return ranges;
 }
 function mergeRanges(ranges) {
-  if (ranges.length === 0) {
-    return [];
-  }
+  if (ranges.length === 0) return [];
   const sorted = [...ranges].sort((a, b) => a.from - b.from);
   const merged = [{ ...sorted[0] }];
   for (let i2 = 1; i2 < sorted.length; i2 += 1) {
     const last = merged[merged.length - 1];
     const current = sorted[i2];
-    if (current.from <= last.to) {
-      last.to = Math.max(last.to, current.to);
-    } else {
-      merged.push({ ...current });
-    }
+    if (current.from <= last.to) last.to = Math.max(last.to, current.to);
+    else merged.push({ ...current });
   }
   return merged;
 }
 function collectBlocksForChange(doc3, change) {
   const ranges = getTopLevelBlocksInRange(doc3, change.from, change.to);
   ranges.push(toContentRelativeRange(doc3, resolveTopLevelRange(doc3, change.from)));
-  if (change.to > change.from) {
-    ranges.push(
-      toContentRelativeRange(
-        doc3,
-        resolveTopLevelRange(doc3, Math.min(change.to, doc3.content.size + 1) - 1)
-      )
-    );
-  } else if (change.from < doc3.content.size + 1) {
-    ranges.push(
-      toContentRelativeRange(
-        doc3,
-        resolveTopLevelRange(doc3, Math.min(change.from + 1, doc3.content.size))
-      )
-    );
-  }
+  if (change.to > change.from) ranges.push(toContentRelativeRange(doc3, resolveTopLevelRange(doc3, Math.min(change.to, doc3.content.size + 1) - 1)));
+  else if (change.from < doc3.content.size + 1) ranges.push(toContentRelativeRange(doc3, resolveTopLevelRange(doc3, Math.min(change.from + 1, doc3.content.size))));
   return ranges;
 }
 function collectRescanRanges(tr2, oldState, newState) {
   const ranges = [];
   if (tr2.docChanged) {
     const changes = getChangedRanges(tr2);
-    for (const change of changes) {
-      ranges.push(...collectBlocksForChange(newState.doc, change.newRange));
-    }
+    for (const change of changes) ranges.push(...collectBlocksForChange(newState.doc, change.newRange));
   }
   if (tr2.selectionSet) {
-    ranges.push(
-      toContentRelativeRange(
-        newState.doc,
-        resolveTopLevelRange(newState.doc, tr2.mapping.map(oldState.selection.anchor))
-      )
-    );
-    ranges.push(
-      toContentRelativeRange(
-        newState.doc,
-        resolveTopLevelRange(newState.doc, newState.selection.anchor)
-      )
-    );
+    ranges.push(toContentRelativeRange(newState.doc, resolveTopLevelRange(newState.doc, tr2.mapping.map(oldState.selection.anchor))));
+    ranges.push(toContentRelativeRange(newState.doc, resolveTopLevelRange(newState.doc, newState.selection.anchor)));
   }
   return mergeRanges(ranges);
 }
 function clampRange(from2, to, doc3) {
   const clampedFrom = Math.max(0, Math.min(from2, doc3.content.size));
-  const clampedTo = Math.max(clampedFrom, Math.min(to, doc3.content.size));
-  return { from: clampedFrom, to: clampedTo };
+  return {
+    from: clampedFrom,
+    to: Math.max(clampedFrom, Math.min(to, doc3.content.size))
+  };
 }
-function updateDecorationsInRanges({
-  decorations,
-  ranges,
-  editor,
-  options,
-  dataAttribute,
-  doc: doc3,
-  selection
-}) {
+function updateDecorationsInRanges({ decorations, ranges, editor, options, dataAttribute, doc: doc3, selection }) {
   let next = decorations;
   for (const range of ranges) {
     const { from: from2, to } = clampRange(range.from, range.to, doc3);
     const existing = next.find(from2, to).filter((decoration) => decoration.from >= from2 && decoration.to <= to);
-    if (existing.length) {
-      next = next.remove(existing);
-    }
+    if (existing.length) next = next.remove(existing);
     const newDecos = scanRangeForDecorations({
       editor,
       options,
@@ -24996,17 +22476,11 @@ function updateDecorationsInRanges({
       from: from2,
       to
     });
-    if (newDecos.length) {
-      next = next.add(doc3, newDecos);
-    }
+    if (newDecos.length) next = next.add(doc3, newDecos);
   }
   return next;
 }
-function createPlaceholderStateField({
-  editor,
-  options,
-  dataAttribute
-}) {
+function createPlaceholderStateField({ editor, options, dataAttribute }) {
   return {
     init(_config, state) {
       const decorations = buildPlaceholderDecorations({
@@ -25016,17 +22490,13 @@ function createPlaceholderStateField({
         doc: state.doc,
         selection: state.selection
       });
-      return decorations != null ? decorations : DecorationSet.empty;
+      return decorations !== null && decorations !== void 0 ? decorations : DecorationSet.empty;
     },
     apply(tr2, prev, oldState, newState) {
-      if (!tr2.docChanged && !tr2.selectionSet) {
-        return prev;
-      }
-      const mapped = prev.map(tr2.mapping, tr2.doc);
-      const ranges = collectRescanRanges(tr2, oldState, newState);
+      if (!tr2.docChanged && !tr2.selectionSet) return prev;
       return updateDecorationsInRanges({
-        decorations: mapped,
-        ranges,
+        decorations: prev.map(tr2.mapping, tr2.doc),
+        ranges: collectRescanRanges(tr2, oldState, newState),
         editor,
         options,
         dataAttribute,
@@ -25044,18 +22514,22 @@ function createPlaceholderPlugin({ editor, options }) {
   const useResolvedPath = options.showOnlyCurrent && !options.includeChildren;
   return new Plugin({
     key: PLUGIN_KEY,
-    ...useResolvedPath ? {} : {
-      state: createPlaceholderStateField({ editor, options, dataAttribute })
-    },
-    props: {
-      decorations: useResolvedPath ? ({ doc: doc3, selection }) => buildPlaceholderDecorations({ editor, options, dataAttribute, doc: doc3, selection }) : (state) => {
-        var _a;
-        if (options.showOnlyWhenEditable && !editor.isEditable) {
-          return DecorationSet.empty;
-        }
-        return (_a = PLUGIN_KEY.getState(state)) != null ? _a : DecorationSet.empty;
-      }
-    }
+    ...useResolvedPath ? {} : { state: createPlaceholderStateField({
+      editor,
+      options,
+      dataAttribute
+    }) },
+    props: { decorations: useResolvedPath ? ({ doc: doc3, selection }) => buildPlaceholderDecorations({
+      editor,
+      options,
+      dataAttribute,
+      doc: doc3,
+      selection
+    }) : (state) => {
+      var _PLUGIN_KEY$getState;
+      if (options.showOnlyWhenEditable && !editor.isEditable) return DecorationSet.empty;
+      return (_PLUGIN_KEY$getState = PLUGIN_KEY.getState(state)) !== null && _PLUGIN_KEY$getState !== void 0 ? _PLUGIN_KEY$getState : DecorationSet.empty;
+    } }
   });
 }
 var Placeholder = Extension.create({
@@ -25072,7 +22546,10 @@ var Placeholder = Extension.create({
     };
   },
   addProseMirrorPlugins() {
-    return [createPlaceholderPlugin({ editor: this.editor, options: this.options })];
+    return [createPlaceholderPlugin({
+      editor: this.editor,
+      options: this.options
+    })];
   }
 });
 function shouldSyncDomSelection(state, editor) {
@@ -25082,8 +22559,8 @@ function shouldPreserveSelection(state, editor) {
   return shouldSyncDomSelection(state, editor) && !editor.isFocused && !editor.view.dragging;
 }
 function clearDomSelection() {
-  var _a;
-  (_a = window.getSelection()) == null ? void 0 : _a.removeAllRanges();
+  var _window$getSelection;
+  (_window$getSelection = window.getSelection()) === null || _window$getSelection === void 0 || _window$getSelection.removeAllRanges();
 }
 function restoreDomSelection(view) {
   view.focus();
@@ -25091,57 +22568,37 @@ function restoreDomSelection(view) {
 var Selection2 = Extension.create({
   name: "selection",
   addOptions() {
-    return {
-      className: "selection"
-    };
+    return { className: "selection" };
   },
   addProseMirrorPlugins() {
     const { editor, options } = this;
-    return [
-      new Plugin({
-        key: new PluginKey("selection"),
-        props: {
-          decorations(state) {
-            if (!shouldPreserveSelection(state, editor)) {
-              return null;
-            }
-            return DecorationSet.create(state.doc, [
-              Decoration.inline(state.selection.from, state.selection.to, {
-                class: options.className
-              })
-            ]);
+    return [new Plugin({
+      key: new PluginKey("selection"),
+      props: {
+        decorations(state) {
+          if (!shouldPreserveSelection(state, editor)) return null;
+          return DecorationSet.create(state.doc, [Decoration.inline(state.selection.from, state.selection.to, { class: options.className })]);
+        },
+        handleDOMEvents: {
+          blur(view) {
+            if (!shouldSyncDomSelection(view.state, editor)) return false;
+            clearDomSelection();
+            return false;
           },
-          handleDOMEvents: {
-            blur(view) {
-              if (!shouldSyncDomSelection(view.state, editor)) {
-                return false;
-              }
-              clearDomSelection();
-              return false;
-            },
-            focus(view) {
-              if (!shouldSyncDomSelection(view.state, editor)) {
-                return false;
-              }
-              requestAnimationFrame(() => {
-                if (!editor.isDestroyed && view.hasFocus()) {
-                  restoreDomSelection(view);
-                }
-              });
-              return false;
-            }
+          focus(view) {
+            if (!shouldSyncDomSelection(view.state, editor)) return false;
+            requestAnimationFrame(() => {
+              if (!editor.isDestroyed && view.hasFocus()) restoreDomSelection(view);
+            });
+            return false;
           }
         }
-      })
-    ];
+      }
+    })];
   }
 });
-var skipTrailingNodeMeta = "skipTrailingNode";
-function nodeEqualsType({
-  types,
-  node
-}) {
-  return node && Array.isArray(types) && types.includes(node.type) || (node == null ? void 0 : node.type) === types;
+function nodeEqualsType({ types, node }) {
+  return node && Array.isArray(types) && types.includes(node.type) || (node === null || node === void 0 ? void 0 : node.type) === types;
 }
 var TrailingNode = Extension.create({
   name: "trailingNode",
@@ -25152,44 +22609,40 @@ var TrailingNode = Extension.create({
     };
   },
   addProseMirrorPlugins() {
-    var _a;
+    var _this$editor$schema$t;
     const plugin = new PluginKey(this.name);
-    const defaultNode = this.options.node || ((_a = this.editor.schema.topNodeType.contentMatch.defaultType) == null ? void 0 : _a.name) || "paragraph";
+    const defaultNode = this.options.node || ((_this$editor$schema$t = this.editor.schema.topNodeType.contentMatch.defaultType) === null || _this$editor$schema$t === void 0 ? void 0 : _this$editor$schema$t.name) || "paragraph";
     const disabledNodes = Object.entries(this.editor.schema.nodes).map(([, value]) => value).filter((node) => (this.options.notAfter || []).concat(defaultNode).includes(node.name));
-    return [
-      new Plugin({
-        key: plugin,
-        appendTransaction: (transactions, __, state) => {
-          const { doc: doc3, tr: tr2, schema } = state;
-          const shouldInsertNodeAtEnd = plugin.getState(state);
-          const endPosition = doc3.content.size;
-          const type = schema.nodes[defaultNode];
-          if (transactions.some((transaction) => transaction.getMeta(skipTrailingNodeMeta))) {
-            return;
-          }
-          if (!shouldInsertNodeAtEnd) {
-            return;
-          }
-          return tr2.insert(endPosition, type.create());
+    return [new Plugin({
+      key: plugin,
+      appendTransaction: (transactions, __, state) => {
+        const { doc: doc3, tr: tr2, schema } = state;
+        const shouldInsertNodeAtEnd = plugin.getState(state);
+        const endPosition = doc3.content.size;
+        const type = schema.nodes[defaultNode];
+        if (transactions.some((transaction) => transaction.getMeta("skipTrailingNode"))) return;
+        if (!shouldInsertNodeAtEnd) return;
+        return tr2.insert(endPosition, type.create());
+      },
+      state: {
+        init: (_, state) => {
+          const lastNode = state.tr.doc.lastChild;
+          return !nodeEqualsType({
+            node: lastNode,
+            types: disabledNodes
+          });
         },
-        state: {
-          init: (_, state) => {
-            const lastNode = state.tr.doc.lastChild;
-            return !nodeEqualsType({ node: lastNode, types: disabledNodes });
-          },
-          apply: (tr2, value) => {
-            if (!tr2.docChanged) {
-              return value;
-            }
-            if (tr2.getMeta("__uniqueIDTransaction")) {
-              return value;
-            }
-            const lastNode = tr2.doc.lastChild;
-            return !nodeEqualsType({ node: lastNode, types: disabledNodes });
-          }
+        apply: (tr2, value) => {
+          if (!tr2.docChanged) return value;
+          if (tr2.getMeta("__uniqueIDTransaction")) return value;
+          const lastNode = tr2.doc.lastChild;
+          return !nodeEqualsType({
+            node: lastNode,
+            types: disabledNodes
+          });
         }
-      })
-    ];
+      }
+    })];
   }
 });
 var UndoRedo = Extension.create({
@@ -25218,102 +22671,68 @@ var UndoRedo = Extension.create({
       "Mod-z": () => this.editor.commands.undo(),
       "Shift-Mod-z": () => this.editor.commands.redo(),
       "Mod-y": () => this.editor.commands.redo(),
-      // Russian keyboard layouts
       "Mod-\u044F": () => this.editor.commands.undo(),
       "Shift-Mod-\u044F": () => this.editor.commands.redo()
     };
   }
 });
 
-// node_modules/.pnpm/@tiptap+starter-kit@3.30.1/node_modules/@tiptap/starter-kit/dist/index.js
+// node_modules/.pnpm/@tiptap+starter-kit@3.30.5/node_modules/@tiptap/starter-kit/dist/index.js
 var StarterKit = Extension.create({
   name: "starterKit",
   addExtensions() {
-    var _a, _b, _c, _d;
     const extensions = [];
-    if (this.options.bold !== false) {
-      extensions.push(Bold.configure(this.options.bold));
-    }
-    if (this.options.blockquote !== false) {
-      extensions.push(Blockquote.configure(this.options.blockquote));
-    }
-    if (this.options.bulletList !== false) {
-      extensions.push(BulletList.configure(this.options.bulletList));
-    }
-    if (this.options.code !== false) {
-      extensions.push(Code.configure(this.options.code));
-    }
-    if (this.options.codeBlock !== false) {
-      extensions.push(CodeBlock.configure(this.options.codeBlock));
-    }
-    if (this.options.document !== false) {
-      extensions.push(Document.configure(this.options.document));
-    }
-    if (this.options.dropcursor !== false) {
-      extensions.push(Dropcursor.configure(this.options.dropcursor));
-    }
-    if (this.options.gapcursor !== false) {
-      extensions.push(Gapcursor.configure(this.options.gapcursor));
-    }
-    if (this.options.hardBreak !== false) {
-      extensions.push(HardBreak.configure(this.options.hardBreak));
-    }
-    if (this.options.heading !== false) {
-      extensions.push(Heading.configure(this.options.heading));
-    }
-    if (this.options.undoRedo !== false) {
-      extensions.push(UndoRedo.configure(this.options.undoRedo));
-    }
-    if (this.options.horizontalRule !== false) {
-      extensions.push(HorizontalRule.configure(this.options.horizontalRule));
-    }
-    if (this.options.italic !== false) {
-      extensions.push(Italic.configure(this.options.italic));
-    }
-    if (this.options.listItem !== false) {
-      extensions.push(ListItem.configure(this.options.listItem));
-    }
+    if (this.options.bold !== false) extensions.push(Bold.configure(this.options.bold));
+    if (this.options.blockquote !== false) extensions.push(Blockquote.configure(this.options.blockquote));
+    if (this.options.bulletList !== false) extensions.push(BulletList.configure(this.options.bulletList));
+    if (this.options.code !== false) extensions.push(Code.configure(this.options.code));
+    if (this.options.codeBlock !== false) extensions.push(CodeBlock.configure(this.options.codeBlock));
+    if (this.options.document !== false) extensions.push(Document.configure(this.options.document));
+    if (this.options.dropcursor !== false) extensions.push(Dropcursor.configure(this.options.dropcursor));
+    if (this.options.gapcursor !== false) extensions.push(Gapcursor.configure(this.options.gapcursor));
+    if (this.options.hardBreak !== false) extensions.push(HardBreak.configure(this.options.hardBreak));
+    if (this.options.heading !== false) extensions.push(Heading.configure(this.options.heading));
+    if (this.options.undoRedo !== false) extensions.push(UndoRedo.configure(this.options.undoRedo));
+    if (this.options.horizontalRule !== false) extensions.push(HorizontalRule.configure(this.options.horizontalRule));
+    if (this.options.italic !== false) extensions.push(Italic.configure(this.options.italic));
+    if (this.options.listItem !== false) extensions.push(ListItem.configure(this.options.listItem));
     if (this.options.listKeymap !== false) {
-      extensions.push(ListKeymap.configure((_a = this.options) == null ? void 0 : _a.listKeymap));
+      var _this$options;
+      extensions.push(ListKeymap.configure((_this$options = this.options) === null || _this$options === void 0 ? void 0 : _this$options.listKeymap));
     }
     if (this.options.link !== false) {
-      extensions.push(Link.configure((_b = this.options) == null ? void 0 : _b.link));
+      var _this$options2;
+      extensions.push(Link.configure((_this$options2 = this.options) === null || _this$options2 === void 0 ? void 0 : _this$options2.link));
     }
-    if (this.options.orderedList !== false) {
-      extensions.push(OrderedList.configure(this.options.orderedList));
-    }
-    if (this.options.paragraph !== false) {
-      extensions.push(Paragraph.configure(this.options.paragraph));
-    }
-    if (this.options.strike !== false) {
-      extensions.push(Strike.configure(this.options.strike));
-    }
-    if (this.options.text !== false) {
-      extensions.push(Text2.configure(this.options.text));
-    }
+    if (this.options.orderedList !== false) extensions.push(OrderedList.configure(this.options.orderedList));
+    if (this.options.paragraph !== false) extensions.push(Paragraph.configure(this.options.paragraph));
+    if (this.options.strike !== false) extensions.push(Strike.configure(this.options.strike));
+    if (this.options.text !== false) extensions.push(Text2.configure(this.options.text));
     if (this.options.underline !== false) {
-      extensions.push(Underline.configure((_c = this.options) == null ? void 0 : _c.underline));
+      var _this$options3;
+      extensions.push(Underline.configure((_this$options3 = this.options) === null || _this$options3 === void 0 ? void 0 : _this$options3.underline));
     }
     if (this.options.trailingNode !== false) {
-      extensions.push(TrailingNode.configure((_d = this.options) == null ? void 0 : _d.trailingNode));
+      var _this$options4;
+      extensions.push(TrailingNode.configure((_this$options4 = this.options) === null || _this$options4 === void 0 ? void 0 : _this$options4.trailingNode));
     }
     return extensions;
   }
 });
-var index_default3 = StarterKit;
+var src_default3 = StarterKit;
 
-// node_modules/.pnpm/@tiptap+extension-placeholder@3.30.1_@tiptap+extensions@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1__@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-placeholder/dist/index.js
-var index_default4 = Placeholder;
+// node_modules/.pnpm/@tiptap+extension-placeholder@3.30.5_@tiptap+extensions@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-placeholder/dist/index.js
+var src_default4 = Placeholder;
 
-// node_modules/.pnpm/@tiptap+extension-task-list@3.30.1_@tiptap+extension-list@3.30.1_@tiptap+core@3.30.1_@t_6a88a53f62c7f67441357d8a63a54a8f/node_modules/@tiptap/extension-task-list/dist/index.js
-var index_default5 = TaskList;
+// node_modules/.pnpm/@tiptap+extension-task-list@3.30.5_@tiptap+extension-list@3.30.5_@tiptap+core@3.30.5_@t_565ca6af8255e895b14644f423a30d7c/node_modules/@tiptap/extension-task-list/dist/index.js
+var src_default5 = TaskList;
 
-// node_modules/.pnpm/@tiptap+extension-task-item@3.30.1_@tiptap+extension-list@3.30.1_@tiptap+core@3.30.1_@t_fc76838e23101da5062ed4ef788114b5/node_modules/@tiptap/extension-task-item/dist/index.js
-var index_default6 = TaskItem;
+// node_modules/.pnpm/@tiptap+extension-task-item@3.30.5_@tiptap+extension-list@3.30.5_@tiptap+core@3.30.5_@t_bf9280703e0aff797f8f1952bf6fd784/node_modules/@tiptap/extension-task-item/dist/index.js
+var src_default6 = TaskItem;
 
-// node_modules/.pnpm/@tiptap+extension-image@3.30.1_@tiptap+core@3.30.1_@tiptap+pm@3.30.1_/node_modules/@tiptap/extension-image/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-image@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-image/dist/index.js
 var inputRegex4 = /(?:^|\s)(!\[(.+|:?)]\((\S+)(?:(?:\s+)["'](\S+)["'])?\))$/;
-var Image = Node3.create({
+var Image = Node2.create({
   name: "image",
   addOptions() {
     return {
@@ -25332,29 +22751,15 @@ var Image = Node3.create({
   draggable: true,
   addAttributes() {
     return {
-      src: {
-        default: null
-      },
-      alt: {
-        default: null
-      },
-      title: {
-        default: null
-      },
-      width: {
-        default: null
-      },
-      height: {
-        default: null
-      }
+      src: { default: null },
+      alt: { default: null },
+      title: { default: null },
+      width: { default: null },
+      height: { default: null }
     };
   },
   parseHTML() {
-    return [
-      {
-        tag: this.options.allowBase64 ? "img[src]" : 'img[src]:not([src^="data:"])'
-      }
-    ];
+    return [{ tag: this.options.allowBase64 ? "img[src]" : 'img[src]:not([src^="data:"])' }];
   },
   renderHTML({ HTMLAttributes }) {
     return ["img", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)];
@@ -25367,76 +22772,56 @@ var Image = Node3.create({
     });
   },
   renderMarkdown: (node) => {
-    var _a, _b, _c, _d, _e, _f;
-    const src = (_b = (_a = node.attrs) == null ? void 0 : _a.src) != null ? _b : "";
-    const alt = (_d = (_c = node.attrs) == null ? void 0 : _c.alt) != null ? _d : "";
-    const title = (_f = (_e = node.attrs) == null ? void 0 : _e.title) != null ? _f : "";
+    var _node$attrs$src, _node$attrs, _node$attrs$alt, _node$attrs2, _node$attrs$title, _node$attrs3;
+    const src = (_node$attrs$src = (_node$attrs = node.attrs) === null || _node$attrs === void 0 ? void 0 : _node$attrs.src) !== null && _node$attrs$src !== void 0 ? _node$attrs$src : "";
+    const alt = (_node$attrs$alt = (_node$attrs2 = node.attrs) === null || _node$attrs2 === void 0 ? void 0 : _node$attrs2.alt) !== null && _node$attrs$alt !== void 0 ? _node$attrs$alt : "";
+    const title = (_node$attrs$title = (_node$attrs3 = node.attrs) === null || _node$attrs3 === void 0 ? void 0 : _node$attrs3.title) !== null && _node$attrs$title !== void 0 ? _node$attrs$title : "";
     return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`;
   },
   addNodeView() {
-    if (!this.options.resize || !this.options.resize.enabled || typeof document === "undefined") {
-      return null;
-    }
+    if (!this.options.resize || !this.options.resize.enabled || typeof document === "undefined") return null;
     const { directions, minWidth, minHeight, alwaysPreserveAspectRatio } = this.options.resize;
-    const resizeManagedAttributes = /* @__PURE__ */ new Set(["src", "width", "height"]);
+    const resizeManagedAttributes = /* @__PURE__ */ new Set([
+      "src",
+      "width",
+      "height"
+    ]);
     return ({ node, getPos, HTMLAttributes, editor }) => {
       const el = document.createElement("img");
       el.draggable = false;
       const mergedAttributes = mergeAttributes(this.options.HTMLAttributes, HTMLAttributes);
       Object.entries(mergedAttributes).forEach(([key, value]) => {
-        if (value != null) {
-          switch (key) {
-            case "src":
-            case "width":
-            case "height":
-              break;
-            default:
-              el.setAttribute(key, value);
-              break;
-          }
+        if (value != null) switch (key) {
+          case "src":
+          case "width":
+          case "height":
+            break;
+          default:
+            el.setAttribute(key, value);
         }
       });
-      if (mergedAttributes.src !== null) {
-        el.src = mergedAttributes.src;
-      }
+      if (mergedAttributes.src !== null) el.src = mergedAttributes.src;
       let previousHTMLAttributes = { ...HTMLAttributes };
       const syncImageSource = (src) => {
         if (typeof src === "string" && src !== "") {
-          if (el.getAttribute("src") !== src) {
-            el.src = src;
-          }
+          if (el.getAttribute("src") !== src) el.src = src;
           return;
         }
-        if (el.hasAttribute("src")) {
-          el.removeAttribute("src");
-        }
-        if (el.src !== "") {
-          el.src = "";
-        }
+        if (el.hasAttribute("src")) el.removeAttribute("src");
+        if (el.src !== "") el.src = "";
       };
       syncImageSource(HTMLAttributes.src);
       const onUpdate = (updatedNode) => {
-        if (updatedNode.type !== node.type) {
-          return false;
-        }
-        const extensionAttributes = editor.extensionManager.attributes.filter(
-          (attribute) => attribute.type === updatedNode.type.name
-        );
+        if (updatedNode.type !== node.type) return false;
+        const extensionAttributes = editor.extensionManager.attributes.filter((attribute) => attribute.type === updatedNode.type.name);
         const newHTMLAttributes = getRenderedAttributes(updatedNode, extensionAttributes);
         Object.keys(previousHTMLAttributes).forEach((key) => {
-          if (!resizeManagedAttributes.has(key) && !(key in newHTMLAttributes)) {
-            el.removeAttribute(key);
-          }
+          if (!resizeManagedAttributes.has(key) && !(key in newHTMLAttributes)) el.removeAttribute(key);
         });
         Object.entries(newHTMLAttributes).forEach(([key, value]) => {
-          if (resizeManagedAttributes.has(key)) {
-            return;
-          }
-          if (value != null) {
-            el.setAttribute(key, value);
-          } else {
-            el.removeAttribute(key);
-          }
+          if (resizeManagedAttributes.has(key)) return;
+          if (value != null) el.setAttribute(key, value);
+          else el.removeAttribute(key);
         });
         syncImageSource(newHTMLAttributes.src);
         previousHTMLAttributes = newHTMLAttributes;
@@ -25453,9 +22838,7 @@ var Image = Node3.create({
         },
         onCommit: (width, height) => {
           const pos = getPos();
-          if (pos === void 0) {
-            return;
-          }
+          if (pos === void 0) return;
           this.editor.chain().setNodeSelection(pos).updateAttributes(this.name, {
             width,
             height
@@ -25472,39 +22855,44 @@ var Image = Node3.create({
         }
       });
       const dom = nodeView.dom;
-      dom.style.visibility = "hidden";
-      dom.style.pointerEvents = "none";
-      el.onload = () => {
+      const showNodeView = () => {
         dom.style.visibility = "";
         dom.style.pointerEvents = "";
       };
+      dom.style.visibility = "hidden";
+      dom.style.pointerEvents = "none";
+      if (el.complete && el.naturalWidth > 0) showNodeView();
+      else {
+        el.onload = showNodeView;
+        el.onerror = showNodeView;
+      }
       return nodeView;
     };
   },
   addCommands() {
-    return {
-      setImage: (options) => ({ commands }) => {
-        return commands.insertContent({
-          type: this.name,
-          attrs: options
-        });
-      }
-    };
+    return { setImage: (options) => ({ commands }) => {
+      return commands.insertContent({
+        type: this.name,
+        attrs: options
+      });
+    } };
   },
   addInputRules() {
-    return [
-      nodeInputRule({
-        find: inputRegex4,
-        type: this.type,
-        getAttributes: (match) => {
-          const [, , alt, src, title] = match;
-          return { src, alt, title };
-        }
-      })
-    ];
+    return [nodeInputRule({
+      find: inputRegex4,
+      type: this.type,
+      getAttributes: (match) => {
+        const [, , alt, src, title] = match;
+        return {
+          src,
+          alt,
+          title
+        };
+      }
+    })];
   }
 });
-var index_default7 = Image;
+var src_default7 = Image;
 
 // src/editor/note_editor.js
 var editorIcon = (name, extraClasses = "") => window.StreamientIcons?.icon(name, extraClasses) || `<span class="st-icon material-symbols-outlined ${extraClasses}" aria-hidden="true">${name}</span>`;
@@ -25622,17 +23010,17 @@ function createEditor(element, { content = "", onUpdate = null } = {}) {
   const editorOptions = {
     element: editorMount,
     extensions: [
-      index_default3.configure({
+      src_default3.configure({
         codeBlock: false,
         horizontalRule: false
       }),
-      index_default,
-      index_default2,
-      index_default5,
-      index_default6.configure({
+      src_default,
+      src_default2,
+      src_default5,
+      src_default6.configure({
         nested: true
       }),
-      index_default7
+      src_default7
     ],
     content
   };
@@ -25767,12 +23155,12 @@ function createEmailEditor(element, { content = "", onUpdate = null, placeholder
   const editorOptions = {
     element: editorMount,
     extensions: [
-      index_default3.configure({
+      src_default3.configure({
         codeBlock: false,
         heading: false,
         horizontalRule: false
       }),
-      index_default4.configure({ placeholder })
+      src_default4.configure({ placeholder })
     ],
     content,
     editorProps: {

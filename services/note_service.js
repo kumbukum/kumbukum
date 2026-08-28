@@ -4,6 +4,7 @@ import { emitToTenant } from '../modules/socket.js';
 import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
 import * as audit from './audit_service.js';
 import { createLogger } from '../modules/logger.js';
+import { syncStreamientItem } from './obsidian_sync_service.js';
 
 const log = createLogger('note');
 
@@ -21,6 +22,7 @@ export async function createNote(userId, host_id, data, ctx = {}) {
 	emitToTenant(host_id, 'note:created', note);
 	invalidateGraphCache(host_id).catch(() => {});
 	audit.log({ action: 'create', resource: 'note', resource_id: note._id.toString(), user_id: userId, host_id, ...ctx });
+	await syncStreamientItem('note', note._id, host_id).catch((err) => log.error({ err, note_id: note._id }, 'Obsidian note export deferred'));
 	return note;
 }
 
@@ -40,6 +42,17 @@ export async function getNote(host_id, noteId) {
 }
 
 export async function updateNote(host_id, noteId, data, ctx = {}) {
+	const linked = await Note.findOne({ _id: noteId, host_id }).select('obsidian_source').lean();
+	if (linked?.obsidian_source?.file_id && data.content !== undefined && data.markdown_content === undefined) {
+		const err = new Error('Obsidian-synced notes must be edited as Markdown');
+		err.status = 409;
+		err.code = 'markdown_required';
+		throw err;
+	}
+	if (linked?.obsidian_source?.file_id && data.markdown_content !== undefined) {
+		await syncStreamientItem('note', noteId, host_id, { markdown: String(data.markdown_content) });
+		return getNote(host_id, noteId);
+	}
 	const update = {};
 	if (data.title !== undefined) update.title = data.title;
 	if (data.content !== undefined) update.content = data.content;
@@ -64,6 +77,7 @@ export async function updateNote(host_id, noteId, data, ctx = {}) {
 			const details = audit.diffSnapshot(before, note);
 			audit.log({ action: 'update', resource: 'note', resource_id: noteId, host_id, details, ...ctx });
 		}
+		await syncStreamientItem('note', noteId, host_id);
 	}
 
 	return note;
@@ -81,6 +95,7 @@ export async function deleteNote(host_id, noteId, ctx = {}) {
 		emitToTenant(host_id, 'note:deleted', { _id: noteId });
 		invalidateGraphCache(host_id).catch(() => {});
 		if (ctx.user_id) audit.log({ action: 'delete', resource: 'note', resource_id: noteId, host_id, ...ctx });
+		await syncStreamientItem('note', noteId, host_id);
 	}
 	return note;
 }

@@ -8,6 +8,7 @@ const TYPE_LABELS = {
 	urls: 'URL',
 	emails: 'Email',
 	pages: 'Page',
+	vault_files: 'Vault file',
 };
 const CONTENT_FIELDS = {
 	notes: ['text_content'],
@@ -15,6 +16,7 @@ const CONTENT_FIELDS = {
 	urls: ['description', 'text_content', 'url'],
 	emails: ['text_content', 'attachment_text_content'],
 	pages: ['text_content', 'url'],
+	vault_files: ['text_content', 'path', 'mime_type'],
 };
 const TITLE_FIELDS = {
 	notes: ['title'],
@@ -22,6 +24,7 @@ const TITLE_FIELDS = {
 	urls: ['title', 'url'],
 	emails: ['subject'],
 	pages: ['title', 'url'],
+	vault_files: ['title', 'path'],
 };
 
 function compactText(value, limit = 240) {

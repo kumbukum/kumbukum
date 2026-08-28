@@ -5,6 +5,7 @@ import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { Email } from '../model/email.js';
 import { GitRepo } from '../model/git_repo.js';
+import { ObsidianConnection } from '../model/obsidian_connection.js';
 import { emitToTenant } from '../modules/socket.js';
 import * as audit from './audit_service.js';
 
@@ -53,12 +54,13 @@ export async function getProject(host_id, projectId) {
 
 export async function getProjectDeleteState(host_id, projectId) {
 	const filter = { project: projectId, host_id, in_trash: { $ne: true } };
-	const [notes, memory, urls, emails, gitRepos] = await Promise.all([
+	const [notes, memory, urls, emails, gitRepos, obsidianConnections] = await Promise.all([
 		Note.countDocuments(filter),
 		Memory.countDocuments(filter),
 		Url.countDocuments(filter),
 		Email.countDocuments(filter),
 		GitRepo.countDocuments({ project: projectId, host_id }),
+		ObsidianConnection.countDocuments({ project: projectId, host_id }),
 	]);
 	const blockers = [];
 	if (notes) blockers.push(`${notes} note${notes > 1 ? 's' : ''}`);
@@ -66,10 +68,11 @@ export async function getProjectDeleteState(host_id, projectId) {
 	if (urls) blockers.push(`${urls} URL${urls > 1 ? 's' : ''}`);
 	if (emails) blockers.push(`${emails} email${emails > 1 ? 's' : ''}`);
 	if (gitRepos) blockers.push(`${gitRepos} git repo${gitRepos > 1 ? 's' : ''}`);
+	if (obsidianConnections) blockers.push(`${obsidianConnections} Obsidian connection${obsidianConnections > 1 ? 's' : ''}`);
 	return {
 		canDelete: blockers.length === 0,
 		blockers,
-		counts: { notes, memory, urls, emails, gitRepos },
+		counts: { notes, memory, urls, emails, gitRepos, obsidianConnections },
 	};
 }
 

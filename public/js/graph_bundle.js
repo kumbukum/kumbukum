@@ -6419,9 +6419,9 @@ var require_cose_base = __commonJS({
   }
 });
 
-// node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.1/node_modules/cytoscape-fcose/cytoscape-fcose.js
+// node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.2/node_modules/cytoscape-fcose/cytoscape-fcose.js
 var require_cytoscape_fcose = __commonJS({
-  "node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.1/node_modules/cytoscape-fcose/cytoscape-fcose.js"(exports, module) {
+  "node_modules/.pnpm/cytoscape-fcose@2.2.0_cytoscape@3.34.2/node_modules/cytoscape-fcose/cytoscape-fcose.js"(exports, module) {
     (function webpackUniversalModuleDefinition(root, factory) {
       if (typeof exports === "object" && typeof module === "object")
         module.exports = factory(require_cose_base());
@@ -7706,7 +7706,7 @@ var require_cytoscape_fcose = __commonJS({
   }
 });
 
-// node_modules/.pnpm/cytoscape@3.34.1/node_modules/cytoscape/dist/cytoscape.esm.mjs
+// node_modules/.pnpm/cytoscape@3.34.2/node_modules/cytoscape/dist/cytoscape.esm.mjs
 function _arrayLikeToArray(r, a) {
   (null == a || a > r.length) && (a = r.length);
   for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
@@ -38055,7 +38055,7 @@ sheetfn.appendToStyle = function(style3) {
   }
   return style3;
 };
-var version = "3.34.1";
+var version = "3.34.2";
 var cytoscape2 = function cytoscape3(options2) {
   if (options2 === void 0) {
     options2 = {};

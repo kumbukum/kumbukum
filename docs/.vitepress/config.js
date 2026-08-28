@@ -90,6 +90,7 @@ export default defineConfig({
                         { text: 'AI Chat', link: '/guide/ai-chat' },
                         { text: 'Import', link: '/guide/import' },
                         { text: 'Git Sync', link: '/guide/git-sync' },
+						{ text: 'Obsidian Sync', link: '/guide/obsidian-sync' },
                         { text: 'Settings', link: '/guide/settings' },
                     ],
                 },

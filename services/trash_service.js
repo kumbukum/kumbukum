@@ -7,6 +7,7 @@ import { bulkIndexDocuments, bulkRemoveDocuments, exportTrashDocuments, listTras
 import { emitToTenant } from '../modules/socket.js';
 import { removeLinksForItems } from './graph_service.js';
 import { createLogger } from '../modules/logger.js';
+import { syncStreamientItem } from './obsidian_sync_service.js';
 
 const log = createLogger('trash');
 
@@ -156,6 +157,8 @@ async function restoreItemsByType(host_id, type, ids, deps = {}) {
 		if (failed.length) log.error({ failed, type, host_id }, 'Typesense bulk restore index error');
 		for (const doc of docs) {
 			emitToTenant(host_id, `${eventTypeForTrashType(type)}:created`, doc);
+			if (type === 'notes' && doc.obsidian_source?.file_id) await syncStreamientItem('note', doc._id, host_id);
+			if (type === 'memories' && doc.obsidian_source?.file_id) await syncStreamientItem('memory', doc._id, host_id);
 		}
 	}
 	if (missingIds.length) {

@@ -507,6 +507,7 @@ describe('no-card trial tenant cleanup', () => {
 		const deletedCollections = [];
 		const unlinkedFiles = [];
 		let deletedGitHost = '';
+		let deletedObsidianHost = '';
 		let conversationCleanupHost = '';
 
 		const result = await deleteTenantData('host-1', 'tenant-1', {
@@ -520,6 +521,9 @@ describe('no-card trial tenant cleanup', () => {
 			},
 			deleteGitRepoHostDirectory: (hostId) => {
 				deletedGitHost = hostId;
+			},
+			deleteObsidianHostDirectory: (hostId) => {
+				deletedObsidianHost = hostId;
 			},
 			unlink: (filePath, callback) => {
 				unlinkedFiles.push(filePath);
@@ -537,11 +541,12 @@ describe('no-card trial tenant cleanup', () => {
 		assert.equal(calls.Tenant, 'tenant-1');
 		assert.deepEqual(unlinkedFiles, ['/tmp/streamient-export.zip']);
 		assert.equal(deletedGitHost, 'host-1');
+		assert.equal(deletedObsidianHost, 'host-1');
 		assert.equal(conversationCleanupHost, 'host-1');
 		assert.deepEqual(deletedCollections, getTenantTypesenseCollectionNames('host-1'));
 		assert.equal(result.deleted, true);
 		assert.equal(result.users, 1);
 		assert.equal(result.export_files, 1);
-		assert.equal(result.typesense_collections_deleted, 5);
+		assert.equal(result.typesense_collections_deleted, 6);
 	});
 });

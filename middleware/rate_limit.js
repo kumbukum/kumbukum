@@ -49,6 +49,8 @@ const UPLOAD_API_PATTERNS = [
 	{ method: 'POST', pattern: /^\/settings\/white-label\/assets\/[^/]+$/ },
 	{ method: 'POST', pattern: /^\/mobile\/note-imports$/ },
 	{ method: 'POST', pattern: /^\/mobile\/note-imports\/[^/]+\/complete$/ },
+	{ method: 'POST', pattern: /^\/obsidian\/uploads$/ },
+	{ method: 'POST', pattern: /^\/obsidian\/uploads\/[^/]+\/complete$/ },
 ];
 
 function hashValue(value) {
@@ -201,7 +203,7 @@ export function shouldSkipCommon(request) {
 }
 
 export function isMobileUploadChunk(request) {
-	return String(request.method || '').toUpperCase() === 'PATCH' && /^\/mobile\/note-imports\/[^/]+$/.test(getRequestPath(request));
+	return String(request.method || '').toUpperCase() === 'PATCH' && /^(?:\/mobile\/note-imports|\/obsidian\/uploads)\/[^/]+$/.test(getRequestPath(request));
 }
 
 function createNoopLimiter() {

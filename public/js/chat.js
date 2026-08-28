@@ -431,6 +431,9 @@ let rmCurrentId = null;
 let rmCurrentType = null;
 let rmContent = '';
 let rmTextContent = '';
+let rmMarkdownContent = '';
+let rmIsObsidianSynced = false;
+let rmObsidianConnectionId = '';
 let rmSelectedLinks = [];
 let rmOriginalLinks = [];
 let rmTagConnections = [];
@@ -539,6 +542,11 @@ async function openItemModal(type, id, defaults = {}) {
 			const endpoint = typeEndpoints[type];
 			const res = await api('GET', `/${endpoint}/${id}`);
 			const record = res.note || res.memory || res.url || res;
+			if (record.obsidian_source?.file_id && (type === 'notes' || type === 'memory')) {
+				const contentResponse = await fetch(`/api/v1/obsidian/files/${record.obsidian_source.file_id}/content`);
+				if (!contentResponse.ok) throw new Error('Failed to load canonical Markdown');
+				record.markdown_content = await contentResponse.text();
+			}
 			titleEl.textContent = record.title || record.url || 'Untitled';
 			loadingEl.classList.add('d-none');
 			rmPopulate(type, record);
@@ -552,6 +560,10 @@ async function openItemModal(type, id, defaults = {}) {
  * Open modal from a chat search result item (may include pages/unknown types).
  */
 async function openResultModal(item) {
+	if (item._type === 'vault_files' && item.id) {
+		window.open(`/api/v1/obsidian/files/${encodeURIComponent(item.id)}/content`, '_blank', 'noopener');
+		return;
+	}
 	const editableTypes = ['notes', 'memory', 'urls'];
 	if (editableTypes.includes(item._type) && item.id) {
 		return openItemModal(item._type, item.id, item);
@@ -1038,6 +1050,12 @@ function rmPopulate(type, record) {
 		document.getElementById('rm-note-tags').value = (record.tags || []).join(', ');
 		rmContent = record.content || '';
 		rmTextContent = record.text_content || '';
+		rmIsObsidianSynced = Boolean(record.obsidian_source?.file_id);
+		rmObsidianConnectionId = record.obsidian_source?.connection_id || '';
+		rmMarkdownContent = record.markdown_content || '';
+		document.getElementById('rm-note-title').readOnly = rmIsObsidianSynced;
+		document.getElementById('rm-note-tags').readOnly = rmIsObsidianSynced;
+		document.getElementById('rm-note-markdown').value = rmMarkdownContent;
 		rmShowNotePreview();
 	} else if (type === 'memory') {
 		const panel = document.getElementById('result-modal-memory');
@@ -1047,6 +1065,13 @@ function rmPopulate(type, record) {
 		document.getElementById('rm-memory-source').value = record.source || '';
 		rmContent = record.content || '';
 		rmTextContent = record.text_content || record.content || '';
+		rmIsObsidianSynced = Boolean(record.obsidian_source?.file_id);
+		rmObsidianConnectionId = record.obsidian_source?.connection_id || '';
+		rmMarkdownContent = record.markdown_content || '';
+		document.getElementById('rm-memory-title').readOnly = rmIsObsidianSynced;
+		document.getElementById('rm-memory-tags').readOnly = rmIsObsidianSynced;
+		document.getElementById('rm-memory-source').readOnly = rmIsObsidianSynced;
+		document.getElementById('rm-memory-markdown').value = rmMarkdownContent;
 		rmShowMemoryPreview();
 	} else if (type === 'urls') {
 		const panel = document.getElementById('result-modal-url');
@@ -1084,42 +1109,104 @@ function rmPopulate(type, record) {
 
 // ── Note preview/edit tabs ───────────────────────────────────────
 
+function rmSanitizePreviewHtml(html) {
+	const template = document.createElement('template');
+	template.innerHTML = String(html || '');
+	template.content.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach((element) => element.remove());
+	template.content.querySelectorAll('*').forEach((element) => {
+		for (const attribute of [...element.attributes]) {
+			const name = attribute.name.toLowerCase();
+			const value = attribute.value.trim();
+			if (name.startsWith('on') || name === 'style') element.removeAttribute(attribute.name);
+			if ((name === 'href' || name === 'src') && !/^(?:https?:|mailto:|\/|#)/i.test(value)) element.removeAttribute(attribute.name);
+		}
+	});
+	return template.innerHTML;
+}
+
 function rmRenderPreview(textContent, htmlContent) {
 	if (!textContent && !htmlContent) return '<p class="text-muted">No content</p>';
-	if (textContent && window.marked) return window.marked.parse(textContent);
-	return htmlContent || `<pre>${textContent}</pre>`;
+	if (textContent && window.marked) return rmSanitizePreviewHtml(window.marked.parse(textContent));
+	return rmSanitizePreviewHtml(htmlContent || `<pre>${escapeHtml(textContent)}</pre>`);
+}
+
+function rmCanonicalMarkdownBody() {
+	if (!rmMarkdownContent.startsWith('---')) return rmMarkdownContent;
+	return rmMarkdownContent.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+}
+
+async function rmRenderObsidianPreview(element) {
+	let markdown = rmCanonicalMarkdownBody();
+	const references = [];
+	for (const match of markdown.matchAll(/!?\[\[([^\]]+)\]\]/g)) references.push(match[1].split('|')[0].split('#')[0].trim());
+	for (const match of markdown.matchAll(/!?\[[^\]]*\]\((?!https?:|data:|\/)([^)]+)\)/g)) references.push(match[1].split('#')[0].trim());
+	if (rmObsidianConnectionId && references.length) {
+		try {
+			const result = await api('POST', `/obsidian/connections/${rmObsidianConnectionId}/resolve`, { paths: [...new Set(references)] });
+			const resolved = new Map((result.files || []).map((file) => [file.input, file]));
+			markdown = markdown.replace(/(!?)\[\[([^\]]+)\]\]/g, function (_match, embed, value) {
+				const pieces = value.split('|');
+				const target = pieces[0].split('#')[0].trim();
+				const label = pieces[1] || target.split('/').pop();
+				const file = resolved.get(target);
+				if (!file) return _match;
+				if (embed && String(file.mime_type || '').startsWith('image/')) return `![${label}](${file.download_url})`;
+				const href = file.note_id ? `/notes?open=${file.note_id}` : file.memory_id ? `/memories?open=${file.memory_id}` : file.download_url;
+				return `[${label}](${href})`;
+			});
+			markdown = markdown.replace(/(!?)\[([^\]]*)\]\((?!https?:|data:|\/)([^)]+)\)/g, function (_match, embed, label, targetValue) {
+				const target = targetValue.split('#')[0].trim();
+				const file = resolved.get(target);
+				if (!file) return _match;
+				return `${embed ? '!' : ''}[${label}](${file.download_url})`;
+			});
+		} catch {
+			// Keep unresolved Obsidian syntax visible when link lookup is unavailable.
+		}
+	}
+	element.innerHTML = rmRenderPreview(markdown, '');
 }
 
 function rmShowNotePreview() {
+	if (rmIsObsidianSynced) rmMarkdownContent = document.getElementById('rm-note-markdown')?.value || '';
 	document.getElementById('rm-note-tab-preview').classList.add('active');
 	document.getElementById('rm-note-tab-edit').classList.remove('active');
 	document.getElementById('rm-note-preview').classList.remove('d-none');
 	document.getElementById('rm-note-editor').classList.add('d-none');
-	document.getElementById('rm-note-preview').innerHTML = rmRenderPreview(rmTextContent, rmContent);
+	document.getElementById('rm-note-markdown-wrap').classList.add('d-none');
+	const preview = document.getElementById('rm-note-preview');
+	if (rmIsObsidianSynced) void rmRenderObsidianPreview(preview);
+	else preview.innerHTML = rmRenderPreview(rmTextContent, rmContent);
 }
 
 function rmShowNoteEdit() {
 	document.getElementById('rm-note-tab-preview').classList.remove('active');
 	document.getElementById('rm-note-tab-edit').classList.add('active');
 	document.getElementById('rm-note-preview').classList.add('d-none');
-	document.getElementById('rm-note-editor').classList.remove('d-none');
-	if (!rmEditor) rmInitEditor('rm-note-editor', rmContent);
+	document.getElementById('rm-note-editor').classList.toggle('d-none', rmIsObsidianSynced);
+	document.getElementById('rm-note-markdown-wrap').classList.toggle('d-none', !rmIsObsidianSynced);
+	if (!rmIsObsidianSynced && !rmEditor) rmInitEditor('rm-note-editor', rmContent);
 }
 
 function rmShowMemoryPreview() {
+	if (rmIsObsidianSynced) rmMarkdownContent = document.getElementById('rm-memory-markdown')?.value || '';
 	document.getElementById('rm-memory-tab-preview').classList.add('active');
 	document.getElementById('rm-memory-tab-edit').classList.remove('active');
 	document.getElementById('rm-memory-preview').classList.remove('d-none');
 	document.getElementById('rm-memory-editor').classList.add('d-none');
-	document.getElementById('rm-memory-preview').innerHTML = rmRenderPreview(rmTextContent, rmContent);
+	document.getElementById('rm-memory-markdown-wrap').classList.add('d-none');
+	const preview = document.getElementById('rm-memory-preview');
+	if (rmIsObsidianSynced) void rmRenderObsidianPreview(preview);
+	else preview.innerHTML = rmRenderPreview(rmTextContent, rmContent);
 }
 
 function rmShowMemoryEdit() {
 	document.getElementById('rm-memory-tab-preview').classList.remove('active');
 	document.getElementById('rm-memory-tab-edit').classList.add('active');
 	document.getElementById('rm-memory-preview').classList.add('d-none');
-	document.getElementById('rm-memory-editor').classList.remove('d-none');
-	if (!rmEditor) rmInitEditor('rm-memory-editor', rmContent);
+	document.getElementById('rm-memory-editor').classList.toggle('d-none', rmIsObsidianSynced);
+	document.getElementById('rm-memory-markdown-wrap').classList.toggle('d-none', !rmIsObsidianSynced);
+	if (!rmIsObsidianSynced && !rmEditor) rmInitEditor('rm-memory-editor', rmContent);
 }
 
 function rmShowUrlDetails() {
@@ -1172,6 +1259,10 @@ function rmInitEditor(containerId, content) {
 }
 
 function rmGetEditorContent() {
+	if (rmIsObsidianSynced) {
+		const id = rmCurrentType === 'notes' ? 'rm-note-markdown' : 'rm-memory-markdown';
+		return { markdown_content: document.getElementById(id)?.value || '' };
+	}
 	if (rmEditor) return { content: rmEditor.getHTML(), text_content: rmEditor.getText() };
 	return { content: rmContent, text_content: rmTextContent };
 }
@@ -1371,6 +1462,9 @@ function rmCleanup() {
 	rmCurrentType = null;
 	rmContent = '';
 	rmTextContent = '';
+	rmMarkdownContent = '';
+	rmIsObsidianSynced = false;
+	rmObsidianConnectionId = '';
 	rmSelectedLinks = [];
 	rmOriginalLinks = [];
 	rmTagConnections = [];
@@ -1386,6 +1480,12 @@ function rmCleanup() {
 	document.getElementById('result-modal-memory')?.classList.add('d-none');
 	document.getElementById('result-modal-url')?.classList.add('d-none');
 	document.getElementById('result-modal-email')?.classList.add('d-none');
+	document.getElementById('rm-note-markdown-wrap')?.classList.add('d-none');
+	document.getElementById('rm-memory-markdown-wrap')?.classList.add('d-none');
+	for (const id of ['rm-note-title', 'rm-note-tags', 'rm-memory-title', 'rm-memory-tags', 'rm-memory-source']) {
+		const element = document.getElementById(id);
+		if (element && !rmIsDemoReadOnly()) element.readOnly = false;
+	}
 	rmSetUrlVisitLink('');
 	rmShowUrlDetails();
 }
@@ -1479,9 +1579,9 @@ function initResultModalHandlers() {
 
 			if (rmCurrentType === 'notes') {
 				const title = document.getElementById('rm-note-title').value.trim() || 'Untitled';
-				const { content, text_content } = rmGetEditorContent();
+				const editorContent = rmGetEditorContent();
 				const tags = document.getElementById('rm-note-tags').value.split(',').map((t) => t.trim()).filter(Boolean);
-				const data = { title, content, text_content, tags, project: window.currentProjectId };
+				const data = rmIsObsidianSynced ? { markdown_content: editorContent.markdown_content } : { title, content: editorContent.content, text_content: editorContent.text_content, tags, project: window.currentProjectId };
 				if (isCreate) {
 					const { note } = await api('POST', '/notes', data);
 					rmCurrentId = note._id;
@@ -1492,10 +1592,10 @@ function initResultModalHandlers() {
 			} else if (rmCurrentType === 'memory') {
 				const title = document.getElementById('rm-memory-title').value.trim();
 				if (!title) return showError('Title is required');
-				const { content, text_content } = rmGetEditorContent();
+				const editorContent = rmGetEditorContent();
 				const tags = document.getElementById('rm-memory-tags').value.split(',').map((t) => t.trim()).filter(Boolean);
 				const source = document.getElementById('rm-memory-source').value.trim();
-				const data = { title, content, text_content, tags, source, project: window.currentProjectId };
+				const data = rmIsObsidianSynced ? { markdown_content: editorContent.markdown_content } : { title, content: editorContent.content, text_content: editorContent.text_content, tags, source, project: window.currentProjectId };
 				if (isCreate) {
 					const { memory } = await api('POST', '/memories', data);
 					rmCurrentId = memory._id;

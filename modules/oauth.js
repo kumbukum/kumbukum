@@ -56,6 +56,17 @@ export const MOBILE_SCOPE_DETAILS = {
 	},
 };
 
+export const OBSIDIAN_SCOPE_DETAILS = {
+	'vault:read': {
+		label: 'Read Obsidian vault sync data',
+		description: 'Read projects, vault connections, file manifests, changes, and synchronized file content.',
+	},
+	'vault:write': {
+		label: 'Synchronize an Obsidian vault',
+		description: 'Create and update vault connections, files, Notes, Memories, attachments, and trash state.',
+	},
+};
+
 export const MCP_BASELINE_SCOPES = ['mcp:read'];
 export const MCP_ALL_SCOPES = Object.keys(MCP_SCOPE_DETAILS);
 export const MCP_DEFAULT_SCOPES = ['mcp:read', 'mcp:write', 'mcp:email', 'mcp:git'];
@@ -64,6 +75,10 @@ export const MOBILE_ALL_SCOPES = Object.keys(MOBILE_SCOPE_DETAILS);
 export const MOBILE_DEFAULT_SCOPES = [...MOBILE_ALL_SCOPES];
 export const MOBILE_CLIENT_ID = 'streamient-mobile';
 export const MOBILE_REDIRECT_URI = 'com.streamient.mobile://oauth/callback';
+export const OBSIDIAN_ALL_SCOPES = Object.keys(OBSIDIAN_SCOPE_DETAILS);
+export const OBSIDIAN_DEFAULT_SCOPES = [...OBSIDIAN_ALL_SCOPES];
+export const OBSIDIAN_CLIENT_ID = 'streamient-obsidian';
+export const OBSIDIAN_REDIRECT_URI = 'obsidian://streamient-auth';
 
 export const MCP_TOOL_SCOPES = {
 	chat: ['mcp:read', 'mcp:write'],
@@ -204,7 +219,7 @@ export function normalizeScopeInput(scope) {
 			.filter(Boolean);
 
 	return [...new Set(values)]
-		.filter((item) => MCP_SCOPE_DETAILS[item] || MOBILE_SCOPE_DETAILS[item])
+		.filter((item) => MCP_SCOPE_DETAILS[item] || MOBILE_SCOPE_DETAILS[item] || OBSIDIAN_SCOPE_DETAILS[item])
 		.sort();
 }
 
@@ -229,7 +244,7 @@ export function isApiResource(resource) {
 }
 
 export function getSupportedScopesForResource(resource) {
-	if (isApiResource(resource)) return MOBILE_ALL_SCOPES;
+	if (isApiResource(resource)) return [...MOBILE_ALL_SCOPES, ...OBSIDIAN_ALL_SCOPES];
 	return isMcpAppResource(resource) ? MCP_APP_DEFAULT_SCOPES : MCP_ALL_SCOPES;
 }
 
@@ -250,15 +265,15 @@ export function hasRequiredScopes(grantedScopes, requiredScopes) {
 export function listScopeDetails(scopes) {
 	return normalizeScopeInput(scopes).map((scope) => ({
 		scope,
-		...(MCP_SCOPE_DETAILS[scope] || MOBILE_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
+		...(MCP_SCOPE_DETAILS[scope] || MOBILE_SCOPE_DETAILS[scope] || OBSIDIAN_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
 	}));
 }
 
 export function listScopeDetailsForResource(resource, scopes) {
-	const details = isApiResource(resource) ? MOBILE_SCOPE_DETAILS : isMcpAppResource(resource) ? MCP_APP_SCOPE_DETAILS : MCP_SCOPE_DETAILS;
+	const details = isApiResource(resource) ? { ...MOBILE_SCOPE_DETAILS, ...OBSIDIAN_SCOPE_DETAILS } : isMcpAppResource(resource) ? MCP_APP_SCOPE_DETAILS : MCP_SCOPE_DETAILS;
 	return normalizeScopeInput(scopes).map((scope) => ({
 		scope,
-		...(details[scope] || MCP_SCOPE_DETAILS[scope] || MOBILE_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
+		...(details[scope] || MCP_SCOPE_DETAILS[scope] || MOBILE_SCOPE_DETAILS[scope] || OBSIDIAN_SCOPE_DETAILS[scope] || { label: scope, description: scope }),
 	}));
 }
 
