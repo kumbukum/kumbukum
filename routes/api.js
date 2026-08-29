@@ -26,6 +26,7 @@ import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { Email } from '../model/email.js';
+import { ObsidianFile } from '../model/obsidian_file.js';
 import { User } from '../model/user.js';
 import { UserPasskey } from '../model/user_passkey.js';
 import * as graphService from '../services/graph_service.js';
@@ -44,6 +45,7 @@ import crypto from 'node:crypto';
 import { createLogger } from '../modules/logger.js';
 import { isSupportedTimezone } from '../modules/timezones.js';
 import mobileApiRouter from './mobile_api.js';
+import obsidianApiRouter from './obsidian_api.js';
 import { streamientDemoApiMiddleware } from '../services/streamient_demo_service.js';
 
 const log = createLogger('api');
@@ -68,11 +70,12 @@ router.use(async (req, res, next) => {
 });
 
 router.use((req, res, next) => {
-	if (req.authMethod === 'oauth-api' && !req.path.startsWith('/mobile')) return res.status(403).json({ error: 'Mobile OAuth tokens may access only mobile routes' });
+	if (req.authMethod === 'oauth-api' && !req.path.startsWith('/mobile') && !req.path.startsWith('/obsidian')) return res.status(403).json({ error: 'OAuth tokens may access only their application routes' });
 	next();
 });
 
 router.use('/mobile', mobileApiRouter);
+router.use('/obsidian', obsidianApiRouter);
 
 function auditCtx(req) {
 	// old header name still sent by not-yet-updated browser extensions
@@ -186,6 +189,7 @@ router.get('/projects/:id/settings', requireProjectSettingsAccess, async (req, r
 	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
 	const plan = tenant?.plan || 'free';
 	const proOnlyFeatureEnabled = hasProFeatureAccess(req.billingUser, plan, req.isHosted);
+	const obsidianSyncConfigured = config.obsidian.enabled && Boolean(config.obsidian.encryptionKey);
 	const gitRepos = proOnlyFeatureEnabled ? await gitSyncService.listGitRepos(req.host_id, req.params.id).catch(() => []) : [];
 
 	res.json({
@@ -193,6 +197,8 @@ router.get('/projects/:id/settings', requireProjectSettingsAccess, async (req, r
 		features: {
 			git_sync: proOnlyFeatureEnabled,
 			email_ingest: proOnlyFeatureEnabled,
+			obsidian_sync: proOnlyFeatureEnabled,
+			obsidian_sync_configured: obsidianSyncConfigured,
 		},
 		email_forward_domain: String(config.emailForwardDomain || '').trim().replace(/^@+/, ''),
 		git_repos: gitRepos,
@@ -203,7 +209,7 @@ router.get('/features', async (req, res) => {
 	const tenant = await Tenant.findOne({ host_id: req.host_id }).select('plan').lean();
 	const plan = tenant?.plan || 'free';
 	const proOnlyFeatureEnabled = hasProFeatureAccess(req.billingUser, plan, req.isHosted);
-	res.json({ features: { email_ingest: proOnlyFeatureEnabled, git_sync: proOnlyFeatureEnabled } });
+	res.json({ features: { email_ingest: proOnlyFeatureEnabled, git_sync: proOnlyFeatureEnabled, obsidian_sync: proOnlyFeatureEnabled, obsidian_sync_configured: config.obsidian.enabled && Boolean(config.obsidian.encryptionKey) } });
 });
 
 router.put('/projects/:id', requireProjectSettingsAccess, async (req, res) => {
@@ -838,7 +844,7 @@ router.get('/counts', async (req, res) => {
 
 router.get('/reindex/status', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
-		const status = await getReindexStatus(req.host_id, { Note, Memory, Url, Email });
+		const status = await getReindexStatus(req.host_id, { Note, Memory, Url, Email, ObsidianFile });
 		res.json(status);
 	} catch (err) {
 		log.error({ err, host_id: req.host_id }, 'Reindex status error');
@@ -848,12 +854,12 @@ router.get('/reindex/status', requireRestrictedSettingsAccess, async (req, res) 
 
 router.post('/reindex', requireRestrictedSettingsAccess, async (req, res) => {
 	try {
-		const results = await reindexHost(req.host_id, { Note, Memory, Url, Email });
+		const results = await reindexHost(req.host_id, { Note, Memory, Url, Email, ObsidianFile });
 		const totalQueued = Object.values(results).reduce((sum, entry) => sum + (entry.queued || 0), 0);
 		const message = totalQueued > 0
 			? `Reindexing is queued for ${totalQueued} item${totalQueued === 1 ? '' : 's'}.`
 			: 'Search index is already up to date.';
-		const status = await getReindexStatus(req.host_id, { Note, Memory, Url, Email });
+		const status = await getReindexStatus(req.host_id, { Note, Memory, Url, Email, ObsidianFile });
 		const payload = {
 			...status,
 			status: totalQueued > 0 ? status.status : 'complete',

@@ -178,6 +178,10 @@
 	}
 
 	function openTarget(item) {
+		if (item.type === 'vault_files') {
+			window.open(`/api/v1/obsidian/files/${encodeURIComponent(item.id)}/content`, '_blank', 'noopener');
+			return;
+		}
 		if (typeof window.openResultModal === 'function') {
 			window.openResultModal({
 				_type: item.type,

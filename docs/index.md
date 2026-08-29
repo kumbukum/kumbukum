@@ -36,3 +36,5 @@ features:
       details: Save notes and URLs from anywhere, plus an email side panel for Gmail, Outlook, and Fastmail. Chrome only.
     - title: Bidirectional Git Sync
       details: Sync your data to and from your Git repos per project.
+    - title: Obsidian Sync
+      details: Keep Markdown, Canvas, Bases, documents, and attachments synchronized across Streamient and Obsidian.

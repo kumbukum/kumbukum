@@ -6,6 +6,7 @@ import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { Email } from '../model/email.js';
+import { ObsidianFile } from '../model/obsidian_file.js';
 import { sendTrialEnding3DayEmail, sendTrialEnding24HourEmail, sendTrialExpiredEmail } from '../services/email_service.js';
 import { cleanupExpiredExports } from '../services/export_service.js';
 import { runScheduledSync } from '../services/git_sync_service.js';
@@ -13,7 +14,10 @@ import { reconcileActiveTrashTenants } from '../services/trash_reconciliation_se
 import { runEmailRetentionCleanup, runTrashRetentionCleanup } from '../services/trash_retention_service.js';
 import { cleanupOrphanedImportFiles, createNoteImportWorker, logImportWorkerError } from '../services/note_import_service.js';
 import { startHelpmonksSignupSequenceWorker } from '../services/helpmonks_signup_sequence_service.js';
+import { cleanupOrphanedUploads } from '../services/obsidian_blob_service.js';
+import { cleanupObsidianRetention, createObsidianExtractionWorker } from '../services/obsidian_sync_service.js';
 import { createLogger } from './logger.js';
+import config from '../config.js';
 
 export { runEmailRetentionCleanup };
 
@@ -110,6 +114,10 @@ export function startScheduler() {
 	const noteImportWorker = createNoteImportWorker();
 	noteImportWorker.start().catch(logImportWorkerError);
 	startHelpmonksSignupSequenceWorker().catch((err) => log.error({ err }, 'Helpmonks signup sequence worker failed to start'));
+	if (config.obsidian.enabled) {
+		const obsidianExtractionWorker = createObsidianExtractionWorker();
+		obsidianExtractionWorker.start().catch((err) => log.error({ err }, 'Obsidian extraction worker failed'));
+	}
 
 	let crawlReindexRunning = false;
 	new Cron('*/10 * * * *', async () => {
@@ -145,7 +153,7 @@ export function startScheduler() {
 		if (indexRunning) return;
 		indexRunning = true;
 		try {
-			const indexed = await runStreamientIndexer({ Note, Memory, Url, Email });
+			const indexed = await runStreamientIndexer({ Note, Memory, Url, Email, ObsidianFile });
 			if (indexed > 0) log.info({ indexed }, 'Streamient indexer batch complete');
 		} catch (err) {
 			log.error({ err }, 'Streamient indexer batch error');
@@ -170,6 +178,24 @@ export function startScheduler() {
 			if (removed) log.info({ removed }, 'Orphaned mobile import cleanup complete');
 		} catch (err) {
 			log.error({ err }, 'Orphaned mobile import cleanup error');
+		}
+	});
+
+	new Cron('25 * * * *', async () => {
+		try {
+			const removed = await cleanupOrphanedUploads();
+			if (removed) log.info({ removed }, 'Orphaned Obsidian upload cleanup complete');
+		} catch (err) {
+			log.error({ err }, 'Orphaned Obsidian upload cleanup error');
+		}
+	});
+
+	new Cron('45 2 * * *', async () => {
+		try {
+			const summary = await cleanupObsidianRetention();
+			if (summary.purged_files || summary.deleted_blobs) log.info(summary, 'Obsidian retention cleanup complete');
+		} catch (err) {
+			log.error({ err }, 'Obsidian retention cleanup error');
 		}
 	});
 

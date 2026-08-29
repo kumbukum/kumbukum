@@ -4,6 +4,7 @@ import { requireTenant, Tenant } from '../modules/tenancy.js';
 import { User } from '../model/user.js';
 import { listProjects, getProject, getProjectCounts, getProjectDeleteState } from '../services/project_service.js';
 import { listGitRepos } from '../services/git_sync_service.js';
+import { listConnections as listObsidianConnections } from '../services/obsidian_sync_service.js';
 import { formatTrialEndsIn, getBillingUserForHost, hasProductAccess, hasProFeatureAccess } from '../services/subscription_access_service.js';
 import { serializeWhiteLabelSettings } from '../services/white_label_service.js';
 import { getCustomCode } from '../services/custom_code_service.js';
@@ -335,13 +336,19 @@ router.get('/ajax/project-settings/:id', requireRestrictedSettingsAccess, async 
 		const plan = tenant?.plan || 'free';
 		const proOnlyFeatureEnabled = hasProFeatureAccess(res.locals.billing_user, plan, req.isHosted);
 		const emailForwardDomain = String(config.emailForwardDomain || '').trim().replace(/^@+/, '');
-		const [gitRepos] = await Promise.all([
+		const obsidianSyncAccessEnabled = proOnlyFeatureEnabled;
+		const obsidianSyncConfigured = config.obsidian.enabled && Boolean(config.obsidian.encryptionKey);
+		const [gitRepos, obsidianConnections] = await Promise.all([
 			proOnlyFeatureEnabled ? listGitRepos(req.host_id, req.params.id).catch(() => []) : [],
+			obsidianSyncAccessEnabled && obsidianSyncConfigured ? listObsidianConnections(req.host_id, req.params.id).catch(() => []) : [],
 		]);
 		res.render('ajax/project_settings', {
 			project,
 			gitRepos,
 			gitSyncEnabled: proOnlyFeatureEnabled,
+			obsidianConnections,
+			obsidianSyncAccessEnabled,
+			obsidianSyncConfigured,
 			emailFeatureEnabled: true,
 			emailForwardDomain,
 			is_hosted: req.isHosted,

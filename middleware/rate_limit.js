@@ -49,6 +49,8 @@ const UPLOAD_API_PATTERNS = [
 	{ method: 'POST', pattern: /^\/settings\/white-label\/assets\/[^/]+$/ },
 	{ method: 'POST', pattern: /^\/mobile\/note-imports$/ },
 	{ method: 'POST', pattern: /^\/mobile\/note-imports\/[^/]+\/complete$/ },
+	{ method: 'POST', pattern: /^\/obsidian\/uploads$/ },
+	{ method: 'POST', pattern: /^\/obsidian\/uploads\/[^/]+\/complete$/ },
 ];
 
 function hashValue(value) {
@@ -87,6 +89,7 @@ export function getConfig() {
 		enabled: getBooleanEnv('API_RATE_LIMIT_ENABLED'),
 		windowMs: getIntegerEnv('API_RATE_LIMIT_WINDOW_MS', { min: 1 }),
 		generalPerMinute: getIntegerEnv('API_RATE_LIMIT_GENERAL_PER_MINUTE'),
+		obsidianPerMinute: getIntegerEnv('API_RATE_LIMIT_OBSIDIAN_PER_MINUTE'),
 		razunaFilesPerMinute: getIntegerEnv('API_RATE_LIMIT_RAZUNA_FILES_PER_MINUTE'),
 		expensivePerMinute: getIntegerEnv('API_RATE_LIMIT_EXPENSIVE_PER_MINUTE'),
 		uploadPerMinute: getIntegerEnv('API_RATE_LIMIT_UPLOAD_PER_MINUTE'),
@@ -196,12 +199,16 @@ export function isUploadApi(request) {
 	return UPLOAD_API_PATTERNS.some((entry) => entry.method === method && entry.pattern.test(path));
 }
 
+export function isObsidianSyncApi(request) {
+	return /^\/obsidian(?:\/|$)/.test(getRequestPath(request));
+}
+
 export function shouldSkipCommon(request) {
 	return request.method === 'OPTIONS' || isApiPing(request) || hasStreamientDemoSessionEntry(request);
 }
 
 export function isMobileUploadChunk(request) {
-	return String(request.method || '').toUpperCase() === 'PATCH' && /^\/mobile\/note-imports\/[^/]+$/.test(getRequestPath(request));
+	return String(request.method || '').toUpperCase() === 'PATCH' && /^(?:\/mobile\/note-imports|\/obsidian\/uploads)\/[^/]+$/.test(getRequestPath(request));
 }
 
 function createNoopLimiter() {
@@ -259,7 +266,18 @@ export function createUploadApiLimiter() {
 		name: 'api-upload',
 		limit: rateLimitConfig.uploadPerMinute,
 		skip: function skipUpload(request) {
-			return shouldSkipCommon(request) || !isUploadApi(request);
+			return shouldSkipCommon(request) || isObsidianSyncApi(request) || !isUploadApi(request);
+		},
+	});
+}
+
+export function createObsidianApiLimiter() {
+	const rateLimitConfig = getConfig();
+	return createLimiter({
+		name: 'api-obsidian',
+		limit: rateLimitConfig.obsidianPerMinute,
+		skip: function skipObsidian(request) {
+			return shouldSkipCommon(request) || !isObsidianSyncApi(request);
 		},
 	});
 }
@@ -270,7 +288,7 @@ export function createGeneralApiLimiter() {
 		name: 'api-general',
 		limit: rateLimitConfig.generalPerMinute,
 		skip: function skipGeneral(request) {
-			return shouldSkipCommon(request) || isSearchReadApi(request) || isMobileUploadChunk(request);
+			return shouldSkipCommon(request) || isSearchReadApi(request) || isMobileUploadChunk(request) || isObsidianSyncApi(request);
 		},
 	});
 }
@@ -325,6 +343,7 @@ export function createApiLimiters() {
 		createExpensiveApiLimiter(),
 		createUploadApiLimiter(),
 		createSearchReadApiLimiter(),
+		createObsidianApiLimiter(),
 		createGeneralApiLimiter(),
 	];
 }

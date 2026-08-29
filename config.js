@@ -311,6 +311,13 @@ const config = {
 	},
 
 	gitEncryptionKey: process.env.GIT_ENCRYPTION_KEY || '',
+	obsidian: {
+		enabled: process.env.OBSIDIAN_SYNC_ENABLED === 'true',
+		vaultsDir: process.env.OBSIDIAN_VAULTS_DIR || 'assets/obsidian-vaults',
+		encryptionKey: process.env.OBSIDIAN_VAULT_ENCRYPTION_KEY || '',
+		maxFileBytes: parseLimitEnv(process.env.OBSIDIAN_SYNC_MAX_FILE_BYTES, 200_000_000),
+		maxVaultBytes: parseLimitEnv(process.env.OBSIDIAN_SYNC_MAX_VAULT_BYTES, 10_000_000_000),
+	},
 
 	screenshotUrl: process.env.SCREENSHOT_URL || '',
 	screenshotSecret: process.env.SCREENSHOT_SECRET || 'change-me-screenshot-secret',

@@ -38,8 +38,9 @@ const _chunk_fields = {
 	urls: ['text_content'],
 	emails: ['text_content', 'attachment_text_content'],
 	pages: ['text_content'],
+	vault_files: ['text_content'],
 };
-const _trash_filtered_types = new Set(['notes', 'memory', 'urls', 'emails']);
+const _trash_filtered_types = new Set(['notes', 'memory', 'urls', 'emails', 'vault_files']);
 const _trash_query_by = {
 	notes: 'title',
 	memory: 'title',
@@ -47,6 +48,7 @@ const _trash_query_by = {
 	emails: 'subject',
 };
 const TYPESENSE_MAX_PAGE_SIZE = 250;
+const ensuredCollectionHosts = new Set();
 
 function chunkMetadataFields() {
 	return [
@@ -368,6 +370,12 @@ function emailThreadKey(doc = {}) {
 		|| String(doc._id || doc.id || '');
 }
 
+function pathTitle(value) {
+	const normalized = String(value || '').replace(/\\/g, '/');
+	const name = normalized.split('/').at(-1) || normalized;
+	return name.replace(/\.[^.]+$/, '') || 'Untitled';
+}
+
 function normalizeEmailAddressValue(value) {
 	const text = String(value || '').trim();
 	if (!text) return '';
@@ -404,6 +412,8 @@ export function toTypesenseDoc(type, doc) {
 			return { ...base, title: doc.title || '', content: doc.content || '', tags: doc.tags || [], source: doc.source || '' };
 		case 'urls':
 			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', text_content: doc.text_content || '' };
+		case 'vault_files':
+			return { ...base, title: pathTitle(doc.path), path: doc.path || '', kind: doc.kind || 'other', mime_type: doc.mime_type || 'application/octet-stream', size: Number(doc.size || 0), connection_id: doc.connection?.toString?.() || '', text_content: doc.text_content || '' };
 			case 'emails':
 				const fromEmails = normalizeEmailAddressList(doc.from);
 				const toEmails = normalizeEmailAddressList(doc.to);
@@ -602,12 +612,44 @@ const schemas = {
 		default_sorting_field: 'crawled_at',
 		token_separators: _token_separators,
 	}),
+
+	vault_files: (host_id) => ({
+		name: buildCollectionName('vault_files', host_id),
+		enable_nested_fields: true,
+		fields: [
+			{ name: 'title', type: 'string' },
+			{ name: 'path', type: 'string' },
+			{ name: 'kind', type: 'string', facet: true },
+			{ name: 'mime_type', type: 'string', facet: true },
+			{ name: 'size', type: 'int64' },
+			{ name: 'connection_id', type: 'string', facet: true },
+			{ name: 'text_content', type: 'string' },
+			{ name: 'project_id', type: 'string', facet: true },
+			{ name: 'in_trash', type: 'bool', facet: true, optional: true },
+			{ name: 'trashed_at', type: 'int64', optional: true },
+			{ name: 'created_at', type: 'int64' },
+			{ name: 'updated_at', type: 'int64' },
+			...chunkMetadataFields(),
+			{
+				name: 'embedding',
+				type: 'float[]',
+				num_dim: 384,
+				embed: {
+					from: ['title', 'path', 'text_content'],
+					model_config: { model_name: 'ts/multilingual-e5-small' },
+				},
+			},
+		],
+		default_sorting_field: 'updated_at',
+		token_separators: _token_separators,
+	}),
 };
 
 /**
  * Ensure all 4 collections exist for a given host.
  */
 export async function ensureCollections(host_id) {
+	if (ensuredCollectionHosts.has(host_id)) return;
 	const ts = getTypesenseClient();
 	for (const [type, schemaFn] of Object.entries(schemas)) {
 		const schema = schemaFn(host_id);
@@ -636,6 +678,7 @@ export async function ensureCollections(host_id) {
 			}
 		}
 	}
+	ensuredCollectionHosts.add(host_id);
 }
 
 /**
@@ -1061,9 +1104,10 @@ export async function exportTrashDocuments(host_id, type, deps = {}) {
  * Multi-search across all collections for a host.
  */
 export async function searchAll(host_id, query, options = {}) {
+	await ensureCollections(host_id).catch((err) => log.warn({ err, host_id }, 'Typesense collection ensure failed before search'));
 	const ts = getTypesenseClient();
 	const includeEmails = options.includeEmails !== false;
-	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
+	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages', 'vault_files'] : ['notes', 'memory', 'urls', 'pages', 'vault_files'];
 	const requested = options.perPage || 5;
 	// Over-fetch so source_id dedup (chunk collapse) can still fill the page.
 	const fetchSize = Math.min(requested * 3, 250);
@@ -1133,6 +1177,11 @@ const QUICK_SEARCH_FIELDS = {
 		include_fields: 'id,source_id,title,url,parent_url_id,text_content,project_id,crawled_at',
 		highlight_fields: 'title,url,text_content',
 	},
+	vault_files: {
+		query_by: 'title,path,kind,mime_type,text_content',
+		include_fields: 'id,source_id,title,path,kind,mime_type,size,text_content,project_id,created_at,updated_at',
+		highlight_fields: 'title,path,text_content',
+	},
 };
 
 /**
@@ -1141,9 +1190,10 @@ const QUICK_SEARCH_FIELDS = {
  * keyword queries such as email subjects return immediately with highlights.
  */
 export async function quickSearch(host_id, query, options = {}) {
+	await ensureCollections(host_id).catch((err) => log.warn({ err, host_id }, 'Typesense collection ensure failed before quick search'));
 	const ts = getTypesenseClient();
 	const includeEmails = options.includeEmails !== false;
-	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
+	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages', 'vault_files'] : ['notes', 'memory', 'urls', 'pages', 'vault_files'];
 	const perPage = Math.min(Math.max(parseInt(options.perPage, 10) || 6, 1), 20);
 	const q = String(query || '').trim();
 	if (!q) return {};
@@ -1192,7 +1242,7 @@ export async function quickSearch(host_id, query, options = {}) {
  */
 export async function getCollectionCounts(host_id) {
 	const ts = getTypesenseClient();
-	const types = ['notes', 'memory', 'urls', 'emails'];
+	const types = ['notes', 'memory', 'urls', 'emails', 'vault_files'];
 	const counts = {};
 	await Promise.all(types.map(async (type) => {
 		try {
@@ -1281,7 +1331,7 @@ export async function reindexHost(host_id, models) {
 	// Clear synced conversation model tracking
 	syncedConvoModels.clear();
 
-	for (const { type, model } of typeModelMap) {
+	for (const { type, model, query: typeQuery = {} } of typeModelMap) {
 		const schemaFn = schemas[type];
 		if (!schemaFn) continue;
 
@@ -1293,7 +1343,7 @@ export async function reindexHost(host_id, models) {
 			if (createErr.httpStatus !== 409) throw createErr;
 		}
 
-		const query = { host_id };
+		const query = { host_id, ...typeQuery };
 		const total = await model.countDocuments(query);
 		await model.updateMany(query, { $set: { is_indexed: false } }, { timestamps: false });
 		results[type] = { queued: total };
@@ -1349,13 +1399,14 @@ const BATCH_LIMIT = 150;
 const REINDEX_STATUS_TTL_SECONDS = 3600;
 
 function getIndexedTypeModelMap(models) {
-	const { Note, Memory, Url, Email } = models;
+	const { Note, Memory, Url, Email, ObsidianFile } = models;
 	return [
 		{ type: 'notes', model: Note },
 		{ type: 'memory', model: Memory },
 		{ type: 'urls', model: Url },
 		{ type: 'emails', model: Email },
-	];
+		...(ObsidianFile ? [{ type: 'vault_files', model: ObsidianFile, query: { kind: { $ne: 'markdown' } } }] : []),
+	].filter((entry) => entry.model);
 }
 
 function getReindexStatusKey(host_id) {
@@ -1391,8 +1442,8 @@ async function clearStoredReindexStatus(host_id) {
 	}
 }
 
-async function countTypeIndexStatus(host_id, model) {
-	const query = { host_id };
+async function countTypeIndexStatus(host_id, model, typeQuery = {}) {
+	const query = { host_id, ...typeQuery };
 	const [dbRecords, indexedRecords, notIndexedRecords] = await Promise.all([
 		model.countDocuments(query),
 		model.countDocuments({ ...query, is_indexed: true }),
@@ -1423,8 +1474,8 @@ export async function getSearchIndexCounts(host_id, modelsOrMap) {
 	const typeModelMap = Array.isArray(modelsOrMap) ? modelsOrMap : getIndexedTypeModelMap(modelsOrMap || {});
 	const counts = emptySearchIndexCounts(typeModelMap);
 
-	await Promise.all(typeModelMap.map(async ({ type, model }) => {
-		const typeCounts = await countTypeIndexStatus(host_id, model);
+	await Promise.all(typeModelMap.map(async ({ type, model, query = {} }) => {
+		const typeCounts = await countTypeIndexStatus(host_id, model, query);
 		counts.by_type[type] = typeCounts;
 		counts.db_records += typeCounts.db_records;
 		counts.indexed_records += typeCounts.indexed_records;
@@ -1484,10 +1535,10 @@ export async function runStreamientIndexer(models) {
 	let totalIndexed = 0;
 	const hostProgress = new Map();
 
-	for (const { type, model } of typeModelMap) {
+	for (const { type, model, query: typeQuery = {} } of typeModelMap) {
 		// Fast aggregate: get host_ids that have unindexed docs, sorted by most-recently-updated first
 		const hosts = await model.aggregate([
-			{ $match: { is_indexed: { $ne: true } } },
+			{ $match: { ...typeQuery, is_indexed: { $ne: true } } },
 			{ $sort: { updatedAt: -1 } },
 			{ $group: { _id: '$host_id' } },
 		]);
@@ -1498,7 +1549,7 @@ export async function runStreamientIndexer(models) {
 			await ensureCollections(host_id);
 
 			const docs = await model
-				.find({ host_id, is_indexed: { $ne: true } })
+				.find({ host_id, ...typeQuery, is_indexed: { $ne: true } })
 				.sort({ updatedAt: -1 })
 				.limit(BATCH_LIMIT)
 				.lean();
@@ -1509,7 +1560,7 @@ export async function runStreamientIndexer(models) {
 			if (!progress) {
 				progress = {
 					indexed: 0,
-					by_type: { notes: 0, memory: 0, urls: 0, emails: 0 },
+					by_type: Object.fromEntries(typeModelMap.map((entry) => [entry.type, 0])),
 				};
 				hostProgress.set(host_id, progress);
 			}
@@ -1859,6 +1910,7 @@ async function _updateConversationModel(modelId, fields) {
  * @returns {{ results: object, conversation: { answer: string, conversationId: string, itemIds: string[] }, action: object|null }}
  */
 export async function conversationSearch(hostId, userId, query, options = {}) {
+	await ensureCollections(hostId).catch((err) => log.warn({ err, host_id: hostId }, 'Typesense collection ensure failed before conversation search'));
 	const ts = getTypesenseClient();
 	const llmScope = normalizeLlmScope(options.llmScope);
 	const convoModelId = getConversationModelId(hostId, userId, llmScope);
@@ -1868,7 +1920,7 @@ export async function conversationSearch(hostId, userId, query, options = {}) {
 
 	// Build per-collection search requests — embedding-only makes every param
 	// identical across collections, so only the collection name varies here.
-	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages'] : ['notes', 'memory', 'urls', 'pages'];
+	const types = includeEmails ? ['notes', 'memory', 'urls', 'emails', 'pages', 'vault_files'] : ['notes', 'memory', 'urls', 'pages', 'vault_files'];
 	const searches = types.map((type) => {
 		const filters = [];
 		if (projectId) filters.push(`project_id:=${exactFilterValue(projectId)}`);

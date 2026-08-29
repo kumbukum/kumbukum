@@ -406,6 +406,16 @@ const swaggerSpec = {
                     global: { type: 'string', description: 'General AI behavior instructions.' },
                 },
             },
+            FeatureAvailability: {
+                type: 'object',
+                required: ['git_sync', 'email_ingest', 'obsidian_sync', 'obsidian_sync_configured'],
+                properties: {
+                    git_sync: { type: 'boolean' },
+                    email_ingest: { type: 'boolean' },
+                    obsidian_sync: { type: 'boolean', description: 'Plan access, matching Git Sync access.' },
+                    obsidian_sync_configured: { type: 'boolean', description: 'Whether the server feature flag and vault encryption key are configured.' },
+                },
+            },
             GitRepo: {
                 type: 'object',
                 properties: {
@@ -839,13 +849,7 @@ const swaggerSpec = {
 	                                    type: 'object',
 	                                    properties: {
 	                                        project: { $ref: '#/components/schemas/Project' },
-	                                        features: {
-	                                            type: 'object',
-	                                            properties: {
-	                                                git_sync: { type: 'boolean' },
-	                                                email_ingest: { type: 'boolean' },
-	                                            },
-	                                        },
+	                                        features: { $ref: '#/components/schemas/FeatureAvailability' },
 	                                        email_forward_domain: { type: 'string' },
 	                                        git_repos: { type: 'array', items: { $ref: '#/components/schemas/GitRepo' } },
 	                                    },
@@ -855,6 +859,19 @@ const swaggerSpec = {
 	                    },
 	                    403: { description: 'Owner/admin access required', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
 	                    404: { description: 'Not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+	                },
+	            },
+	        },
+	        '/features': {
+	            get: {
+	                tags: ['Projects'],
+	                summary: 'Get account feature availability',
+	                description: 'Returns plan access for Git Sync, email ingestion, and Obsidian Sync plus Obsidian server readiness.',
+	                responses: {
+	                    200: {
+	                        description: 'OK',
+	                        content: { 'application/json': { schema: { type: 'object', properties: { features: { $ref: '#/components/schemas/FeatureAvailability' } } } } },
+	                    },
 	                },
 	            },
 	        },
@@ -2830,6 +2847,69 @@ Object.assign(swaggerSpec.paths, {
 	'/mobile/socket-token': {
 		post: { tags: ['Mobile'], summary: 'Issue a short-lived Socket.IO token', security: mobileReadSecurity, responses: { ...mobileErrorResponses, 200: { description: '15-minute token and refresh interval' } } },
 	},
+});
+
+swaggerSpec.components.securitySchemes.ObsidianOAuth = {
+	type: 'oauth2',
+	description: 'OAuth 2.0 Authorization Code with PKCE for the first-party Streamient Sync Obsidian plugin.',
+	flows: {
+		authorizationCode: {
+			authorizationUrl: '/oauth/authorize',
+			tokenUrl: '/oauth/token',
+			scopes: {
+				'vault:read': 'Read vault connections, manifests, changes, and file content',
+				'vault:write': 'Create connections and synchronize vault files',
+			},
+		},
+	},
+};
+
+Object.assign(swaggerSpec.components.schemas, {
+	ObsidianManifestEntry: {
+		type: 'object', required: ['path', 'kind', 'size', 'sha256', 'modified_at', 'base_revision'],
+		properties: { file_id: { type: 'string' }, path: { type: 'string' }, kind: { type: 'string' }, size: { type: 'integer', format: 'int64' }, sha256: { type: 'string', pattern: '^[a-f0-9]{64}$' }, modified_at: { type: 'string', format: 'date-time' }, base_revision: { type: 'integer', minimum: 0 }, in_trash: { type: 'boolean' } },
+	},
+	ObsidianMutation: {
+		type: 'object', required: ['operation_id', 'operation', 'path', 'base_revision', 'modified_at', 'device_id'],
+		properties: { operation_id: { type: 'string' }, operation: { type: 'string', enum: ['create', 'update', 'rename', 'trash', 'restore'] }, file_id: { type: 'string' }, path: { type: 'string' }, previous_path: { type: 'string' }, base_revision: { type: 'integer', minimum: 0 }, modified_at: { type: 'string', format: 'date-time' }, upload_id: { type: 'string' }, device_id: { type: 'string' } },
+	},
+	ObsidianChange: {
+		type: 'object', required: ['sequence', 'file_id', 'operation', 'path', 'revision', 'sha256', 'modified_at', 'source'],
+		properties: { connection_id: { type: 'string' }, sequence: { type: 'integer', format: 'int64' }, file_id: { type: 'string' }, operation: { type: 'string', enum: ['create', 'update', 'rename', 'trash', 'restore'] }, path: { type: 'string' }, previous_path: { type: 'string', nullable: true }, revision: { type: 'integer' }, sha256: { type: 'string' }, modified_at: { type: 'string', format: 'date-time' }, source: { type: 'string', enum: ['obsidian', 'streamient'] }, device_id: { type: 'string', nullable: true }, conflict: { type: 'boolean' }, conflict_reason: { type: 'string', nullable: true }, losing_revision_id: { type: 'string', nullable: true }, revision_download_url: { type: 'string', nullable: true }, download_url: { type: 'string', nullable: true } },
+	},
+	ObsidianUpload: {
+		type: 'object', required: ['id', 'connection_id', 'path', 'upload_length', 'upload_offset', 'chunk_size', 'sha256', 'state'],
+		properties: { id: { type: 'string' }, connection_id: { type: 'string' }, path: { type: 'string' }, mime_type: { type: 'string' }, upload_length: { type: 'integer', format: 'int64' }, upload_offset: { type: 'integer', format: 'int64' }, chunk_size: { type: 'integer', enum: [20000000] }, sha256: { type: 'string' }, state: { type: 'string', enum: ['uploading', 'complete', 'failed', 'canceled'] }, blob_id: { type: 'string', nullable: true }, error: { type: 'string', nullable: true } },
+	},
+});
+
+const obsidianReadSecurity = [{ ObsidianOAuth: ['vault:read'] }];
+const obsidianWriteSecurity = [{ ObsidianOAuth: ['vault:write'] }];
+const obsidianErrors = { 400: { description: 'Invalid sync request' }, 401: { description: 'Missing or expired OAuth token' }, 403: { description: 'Feature disabled, Pro required, or insufficient scope' }, 404: { description: 'Connection, upload, or file not found' }, 409: { description: 'Revision, checksum, path, offset, or state conflict' }, 503: { description: 'Obsidian encryption is not configured' } };
+
+Object.assign(swaggerSpec.paths, {
+	'/obsidian/projects': { get: { tags: ['Obsidian Sync'], summary: 'List projects available to the plugin', security: obsidianReadSecurity, responses: { ...obsidianErrors, 200: { description: 'Active projects' } } } },
+	'/obsidian/connections': {
+		get: { tags: ['Obsidian Sync'], summary: 'List vault connections', security: obsidianReadSecurity, parameters: [{ name: 'project_id', in: 'query', schema: { type: 'string' } }], responses: { ...obsidianErrors, 200: { description: 'Vault connections' } } },
+		post: { tags: ['Obsidian Sync'], summary: 'Create or join the project vault connection', security: obsidianWriteSecurity, requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['project_id', 'device_id'], properties: { project_id: { type: 'string' }, name: { type: 'string' }, streamient_folder: { type: 'string', default: 'Streamient' }, device_id: { type: 'string' }, device_name: { type: 'string' }, platform: { type: 'string', enum: ['desktop', 'mobile'] } } } } } }, responses: { ...obsidianErrors, 201: { description: 'Connection created or joined' } } },
+	},
+	'/obsidian/connections/{connectionId}': {
+		patch: { tags: ['Obsidian Sync'], summary: 'Enable, disconnect, or configure a connection', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { enabled: { type: 'boolean' }, name: { type: 'string' }, streamient_folder: { type: 'string' } } } } } }, responses: { ...obsidianErrors, 200: { description: 'Updated connection' } } },
+		delete: { tags: ['Obsidian Sync'], summary: 'Remove a connection, encrypted mirror, attachments, and history while retaining Notes and Memories', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...obsidianErrors, 200: { description: 'Connection removed and projected knowledge retained' } } },
+	},
+	'/obsidian/connections/{connectionId}/devices': { post: { tags: ['Obsidian Sync'], summary: 'Register or refresh a device', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...obsidianErrors, 200: { description: 'Updated device list' } } } },
+	'/obsidian/connections/{connectionId}/request-sync': { post: { tags: ['Obsidian Sync'], summary: 'Request a full sync from online plugin devices', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...obsidianErrors, 202: { description: 'Sync requested' } } } },
+	'/obsidian/connections/{connectionId}/manifest': { post: { tags: ['Obsidian Sync'], summary: 'Upload or reconcile a batched full-vault manifest', description: 'Send up to 500 files per numbered batch with complete=false, then finalize the manifest_id with batch_count and complete=true. Preview finalization is non-mutating.', security: [{ ObsidianOAuth: ['vault:read', 'vault:write'] }], parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { manifest_id: { type: 'string' }, batch_index: { type: 'integer', minimum: 0, maximum: 199 }, batch_count: { type: 'integer', minimum: 0, maximum: 200 }, complete: { type: 'boolean' }, preview: { type: 'boolean' }, files: { type: 'array', maxItems: 500, items: { $ref: '#/components/schemas/ObsidianManifestEntry' } }, device_id: { type: 'string' }, device_name: { type: 'string' }, platform: { type: 'string' } } } } } }, responses: { ...obsidianErrors, 200: { description: 'Batch acknowledgement or final upload, download, trash, ignore, and no-op actions' } } } },
+	'/obsidian/connections/{connectionId}/mutations': { post: { tags: ['Obsidian Sync'], summary: 'Apply up to 100 idempotent file mutations', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['mutations'], properties: { mutations: { type: 'array', minItems: 1, maxItems: 100, items: { $ref: '#/components/schemas/ObsidianMutation' } } } } } } }, responses: { ...obsidianErrors, 200: { description: 'Accepted, duplicate, or newest-wins conflict outcomes' } } } },
+	'/obsidian/connections/{connectionId}/changes': { get: { tags: ['Obsidian Sync'], summary: 'Read ordered changes after a cursor', security: obsidianReadSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'after', in: 'query', schema: { type: 'integer', format: 'int64', minimum: 0 } }, { name: 'device_id', in: 'query', schema: { type: 'string' } }], responses: { ...obsidianErrors, 200: { description: 'Ordered changes and next cursor', content: { 'application/json': { schema: { type: 'object', properties: { changes: { type: 'array', items: { $ref: '#/components/schemas/ObsidianChange' } }, cursor: { type: 'integer', format: 'int64' }, has_more: { type: 'boolean' }, sync_requested_at: { type: 'string', format: 'date-time', nullable: true } } } } } } } } },
+	'/obsidian/connections/{connectionId}/conflicts': { get: { tags: ['Obsidian Sync'], summary: 'List newest-wins conflicts and recoverable revision URLs', security: obsidianReadSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }, { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 250 } }], responses: { ...obsidianErrors, 200: { description: 'Newest conflicts first' } } } },
+	'/obsidian/connections/{connectionId}/resolve': { post: { tags: ['Obsidian Sync'], summary: 'Resolve Obsidian wiki links and embeds', security: obsidianReadSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { paths: { type: 'array', maxItems: 100, items: { type: 'string' } } } } } } }, responses: { ...obsidianErrors, 200: { description: 'Resolved file, Note, Memory, and download targets' } } } },
+	'/obsidian/uploads': { post: { tags: ['Obsidian Sync uploads'], summary: 'Create an encrypted resumable upload', security: obsidianWriteSecurity, responses: { ...obsidianErrors, 201: { description: 'Upload session', content: { 'application/json': { schema: { type: 'object', properties: { upload: { $ref: '#/components/schemas/ObsidianUpload' } } } } } }, 413: { description: 'File exceeds configured limit' }, 429: { description: 'Too many active uploads' } } } },
+	'/obsidian/uploads/{id}': { head: { tags: ['Obsidian Sync uploads'], summary: 'Read upload offset', security: obsidianWriteSecurity, responses: { 204: { description: 'Upload headers' }, 404: { description: 'Upload not found' } } }, get: { tags: ['Obsidian Sync uploads'], summary: 'Get upload status', security: obsidianWriteSecurity, responses: { ...obsidianErrors, 200: { description: 'Upload session' } } }, patch: { tags: ['Obsidian Sync uploads'], summary: 'Append one encrypted integrity-checked chunk', security: obsidianWriteSecurity, requestBody: { required: true, content: { 'application/offset+octet-stream': { schema: { type: 'string', format: 'binary', maxLength: 20000000 } } } }, responses: { ...obsidianErrors, 204: { description: 'Chunk accepted' }, 413: { description: 'Chunk too large' }, 507: { description: 'Insufficient storage' } } }, delete: { tags: ['Obsidian Sync uploads'], summary: 'Cancel an upload', security: obsidianWriteSecurity, responses: { ...obsidianErrors, 200: { description: 'Canceled upload' } } } },
+	'/obsidian/uploads/{id}/complete': { post: { tags: ['Obsidian Sync uploads'], summary: 'Verify and finalize the encrypted blob', security: obsidianWriteSecurity, responses: { ...obsidianErrors, 200: { description: 'Completed upload' } } } },
+	'/obsidian/files/{id}': { get: { tags: ['Obsidian Sync'], summary: 'Get synchronized file metadata', security: obsidianReadSecurity, responses: { ...obsidianErrors, 200: { description: 'File metadata' } } } },
+	'/obsidian/files/{id}/content': { get: { tags: ['Obsidian Sync'], summary: 'Stream decrypted synchronized file content', security: obsidianReadSecurity, responses: { ...obsidianErrors, 200: { description: 'File bytes', content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } } } } },
+	'/obsidian/revisions/{id}/content': { get: { tags: ['Obsidian Sync'], summary: 'Download a recoverable losing conflict revision before its 30-day expiry', security: obsidianReadSecurity, responses: { ...obsidianErrors, 200: { description: 'Revision bytes', content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } } } } },
 });
 
 export default swaggerSpec;

@@ -573,6 +573,110 @@ function bindProjectSettingsModal(projectId, activeTab) {
 	});
 	setProjectSettingsTab(bodyEl, activeTab || 'details');
 
+	bodyEl.querySelectorAll('[data-obsidian-connection-id]').forEach(function (item) {
+		var connectionId = item.dataset.obsidianConnectionId;
+		var requestButton = item.querySelector('[data-obsidian-request-sync]');
+		var editButton = item.querySelector('[data-obsidian-edit]');
+		var conflictsButton = item.querySelector('[data-obsidian-conflicts]');
+		var toggleButton = item.querySelector('[data-obsidian-toggle]');
+		var removeButton = item.querySelector('[data-obsidian-remove]');
+		var enabledBadge = item.querySelector('[data-obsidian-enabled]');
+
+		requestButton?.addEventListener('click', async function () {
+			requestButton.disabled = true;
+			try {
+				await api('POST', `/obsidian/connections/${connectionId}/request-sync`);
+				showSuccess('Sync requested. It will start when an Obsidian device is online.');
+			} catch (err) {
+				showError(err.message || 'Could not request sync');
+			} finally {
+				requestButton.disabled = false;
+			}
+		});
+
+		editButton?.addEventListener('click', async function () {
+			var currentFolder = item.querySelector('[data-obsidian-folder]')?.textContent?.trim() || 'Streamient';
+			var result = await Swal.fire({
+				title: 'Obsidian sync settings',
+				input: 'text',
+				inputLabel: 'Folder for Streamient-created notes',
+				inputValue: currentFolder,
+				showCancelButton: true,
+				confirmButtonText: 'Save',
+				inputValidator: function (value) { return value?.trim() ? undefined : 'Folder is required'; },
+			});
+			if (!result.isConfirmed) return;
+			try {
+				var response = await api('PATCH', `/obsidian/connections/${connectionId}`, { streamient_folder: result.value.trim() });
+				var folder = item.querySelector('[data-obsidian-folder]');
+				if (folder) folder.textContent = response.connection.streamient_folder;
+				showSuccess('Obsidian sync settings saved');
+			} catch (err) {
+				showError(err.message || 'Could not save settings');
+			}
+		});
+
+		conflictsButton?.addEventListener('click', async function () {
+			conflictsButton.disabled = true;
+			try {
+				var response = await api('GET', `/obsidian/connections/${connectionId}/conflicts?limit=100`);
+				var lines = (response.conflicts || []).map(function (conflict) {
+					var date = window.StreamientDateFormat?.formatLocale(conflict.modified_at, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) || conflict.modified_at;
+					return `${date} · ${conflict.path} · ${conflict.conflict_reason || 'Conflict'}`;
+				});
+				await Swal.fire({ title: 'Obsidian conflict history', text: lines.length ? `${lines.join('\n')}\n\nLosing file revisions remain downloadable through the API for 30 days.` : 'No conflicts recorded.', confirmButtonText: 'Close' });
+			} catch (err) {
+				showError(err.message || 'Could not load conflict history');
+			} finally {
+				conflictsButton.disabled = false;
+			}
+		});
+
+		toggleButton?.addEventListener('click', async function () {
+			var enabled = item.dataset.obsidianConnectionEnabled === 'true';
+			if (enabled) {
+				var result = await Swal.fire({ title: 'Disconnect this vault?', text: 'Synchronization stops. Existing Streamient knowledge remains.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Disconnect' });
+				if (!result.isConfirmed) return;
+			}
+			toggleButton.disabled = true;
+			try {
+				var response = await api('PATCH', `/obsidian/connections/${connectionId}`, { enabled: !enabled });
+				var nextEnabled = Boolean(response.connection.enabled);
+				item.dataset.obsidianConnectionEnabled = String(nextEnabled);
+				toggleButton.title = nextEnabled ? 'Disconnect' : 'Enable';
+				if (enabledBadge) {
+					enabledBadge.textContent = nextEnabled ? 'Enabled' : 'Disconnected';
+					enabledBadge.classList.toggle('bg-success', nextEnabled);
+					enabledBadge.classList.toggle('bg-secondary', !nextEnabled);
+				}
+				showSuccess(nextEnabled ? 'Obsidian sync enabled' : 'Obsidian vault disconnected');
+			} catch (err) {
+				showError(err.message || 'Could not update connection');
+			} finally {
+				toggleButton.disabled = false;
+			}
+		});
+
+		removeButton?.addEventListener('click', async function () {
+			var result = await Swal.fire({ title: 'Remove Obsidian connection?', text: 'This removes the encrypted vault mirror, sync history, and attachments. Existing Streamient Notes and Memories remain.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Remove connection' });
+			if (!result.isConfirmed) return;
+			removeButton.disabled = true;
+			try {
+				await api('DELETE', `/obsidian/connections/${connectionId}`);
+				var list = item.closest('#obsidian-connections-list');
+				item.remove();
+				if (list && !list.querySelector('[data-obsidian-connection-id]')) {
+					var template = bodyEl.querySelector('#obsidian-empty-connection-template');
+					if (template?.content) list.replaceWith(template.content.cloneNode(true));
+				}
+				showSuccess('Obsidian connection removed');
+			} catch (err) {
+				removeButton.disabled = false;
+				showError(err.message || 'Could not remove connection');
+			}
+		});
+	});
+
 	if (colorInput) {
 		colorInput.addEventListener('input', function () {
 			setProjectColorControls(colorInput.value.trim());
@@ -973,6 +1077,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 				window.dispatchEvent(new CustomEvent(evt, { detail: data || {} }));
 				refreshCounts();
 				loadTrashCount();
+			});
+		}
+		for (const evt of ['obsidian:file-changed', 'obsidian:sync-requested']) {
+			socket.on(evt, (data) => {
+				window.dispatchEvent(new CustomEvent(evt, { detail: data || {} }));
+				var connectionId = data?.connection_id;
+				if (!connectionId) return;
+				var item = document.querySelector(`[data-obsidian-connection-id="${String(connectionId).replace(/["\\]/g, '\\$&')}"]`);
+				if (!item) return;
+				var badges = item.querySelectorAll('.badge');
+				var status = badges[1];
+				if (!status) return;
+				status.className = evt === 'obsidian:sync-requested' ? 'badge bg-warning text-dark' : data?.conflict ? 'badge bg-warning text-dark' : 'badge bg-info';
+				status.textContent = evt === 'obsidian:sync-requested' ? 'Sync requested' : data?.conflict ? 'Sync conflict' : 'Last sync successful';
 			});
 		}
 		socket.on('email-counts:updated', (data) => {

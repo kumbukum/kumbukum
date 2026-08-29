@@ -8,6 +8,13 @@ import { Email } from '../model/email.js';
 import { Project } from '../model/project.js';
 import { GraphLink } from '../model/graph_link.js';
 import { GitRepo } from '../model/git_repo.js';
+import { ObsidianConnection } from '../model/obsidian_connection.js';
+import { ObsidianFile } from '../model/obsidian_file.js';
+import { ObsidianChange } from '../model/obsidian_change.js';
+import { ObsidianRevision } from '../model/obsidian_revision.js';
+import { ObsidianUpload } from '../model/obsidian_upload.js';
+import { ObsidianBlob } from '../model/obsidian_blob.js';
+import { ObsidianManifestBatch } from '../model/obsidian_manifest_batch.js';
 import { OAuthAuthorizationCode } from '../model/oauth_authorization_code.js';
 import { OAuthClient } from '../model/oauth_client.js';
 import { OAuthConsent } from '../model/oauth_consent.js';
@@ -21,11 +28,12 @@ import { AuditLog } from '../model/audit_log.js';
 import { Tenant } from '../modules/tenancy.js';
 import { getTypesenseClient, deleteConversationDataForHost, buildCollectionName } from '../modules/typesense.js';
 import { deleteGitRepoHostDirectory } from './git_sync_service.js';
+import { deleteObsidianHostDirectory } from './obsidian_sync_service.js';
 import { createLogger } from '../modules/logger.js';
 
 const log = createLogger('account-cleanup');
 
-const TENANT_COLLECTION_TYPES = ['notes', 'memory', 'urls', 'emails', 'pages'];
+const TENANT_COLLECTION_TYPES = ['notes', 'memory', 'urls', 'emails', 'pages', 'vault_files'];
 
 async function deleteTypesenseCollection(collectionName) {
 	const ts = getTypesenseClient();
@@ -104,6 +112,13 @@ export async function deleteTenantData(hostId, tenantId = null, deps = {}) {
 		Project,
 		GraphLink,
 		GitRepo,
+		ObsidianConnection: deps.models ? deps.models.ObsidianConnection : ObsidianConnection,
+		ObsidianFile: deps.models ? deps.models.ObsidianFile : ObsidianFile,
+		ObsidianChange: deps.models ? deps.models.ObsidianChange : ObsidianChange,
+		ObsidianRevision: deps.models ? deps.models.ObsidianRevision : ObsidianRevision,
+		ObsidianUpload: deps.models ? deps.models.ObsidianUpload : ObsidianUpload,
+		ObsidianBlob: deps.models ? deps.models.ObsidianBlob : ObsidianBlob,
+		ObsidianManifestBatch: deps.models ? deps.models.ObsidianManifestBatch : ObsidianManifestBatch,
 		OAuthAuthorizationCode,
 		OAuthClient,
 		OAuthConsent,
@@ -119,6 +134,7 @@ export async function deleteTenantData(hostId, tenantId = null, deps = {}) {
 	};
 	const removeTypesenseCollection = deps.deleteTypesenseCollection || deleteTypesenseCollection;
 	const removeGitRepoHostDirectory = deps.deleteGitRepoHostDirectory || deleteGitRepoHostDirectory;
+	const removeObsidianHostDirectory = deps.deleteObsidianHostDirectory || deleteObsidianHostDirectory;
 	const removeConversationData = deps.deleteConversationDataForHost || deleteConversationDataForHost;
 	const unlink = deps.unlink || fs.unlink;
 
@@ -143,6 +159,13 @@ export async function deleteTenantData(hostId, tenantId = null, deps = {}) {
 		models.Project.deleteMany({ host_id: hostId }),
 		models.GraphLink.deleteMany({ host_id: hostId }),
 		models.GitRepo.deleteMany({ host_id: hostId }),
+		models.ObsidianConnection?.deleteMany ? models.ObsidianConnection.deleteMany({ host_id: hostId }) : Promise.resolve(),
+		models.ObsidianFile?.deleteMany ? models.ObsidianFile.deleteMany({ host_id: hostId }) : Promise.resolve(),
+		models.ObsidianChange?.deleteMany ? models.ObsidianChange.deleteMany({ host_id: hostId }) : Promise.resolve(),
+		models.ObsidianRevision?.deleteMany ? models.ObsidianRevision.deleteMany({ host_id: hostId }) : Promise.resolve(),
+		models.ObsidianUpload?.deleteMany ? models.ObsidianUpload.deleteMany({ host_id: hostId }) : Promise.resolve(),
+		models.ObsidianBlob?.deleteMany ? models.ObsidianBlob.deleteMany({ host_id: hostId }) : Promise.resolve(),
+		models.ObsidianManifestBatch?.deleteMany ? models.ObsidianManifestBatch.deleteMany({ host_id: hostId }) : Promise.resolve(),
 		models.OAuthAuthorizationCode.deleteMany({ host_id: hostId }),
 		models.OAuthClient.deleteMany({ host_id: hostId }),
 		models.OAuthConsent.deleteMany({ host_id: hostId }),
@@ -163,6 +186,7 @@ export async function deleteTenantData(hostId, tenantId = null, deps = {}) {
 	}
 
 	removeGitRepoHostDirectory(hostId);
+	await removeObsidianHostDirectory(hostId);
 
 	await removeConversationData(hostId, tenantUserIds.map((id) => id.toString()));
 

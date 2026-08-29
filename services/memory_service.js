@@ -5,6 +5,7 @@ import { emitToTenant } from '../modules/socket.js';
 import { invalidateGraphCache, removeLinksForItem } from './graph_service.js';
 import * as audit from './audit_service.js';
 import { createLogger } from '../modules/logger.js';
+import { syncStreamientItem } from './obsidian_sync_service.js';
 
 const log = createLogger('memory');
 const DEFAULT_TAG_SUGGESTION_LIMIT = 50;
@@ -40,6 +41,7 @@ export async function storeMemory(userId, host_id, data, ctx = {}) {
 	emitToTenant(host_id, 'memory:created', mem);
 	invalidateGraphCache(host_id).catch(() => {});
 	audit.log({ action: 'create', resource: 'memory', resource_id: mem._id.toString(), user_id: userId, host_id, ...ctx });
+	await syncStreamientItem('memory', mem._id, host_id).catch((err) => log.error({ err, memory_id: mem._id }, 'Obsidian memory export deferred'));
 	return mem;
 }
 
@@ -62,6 +64,11 @@ export async function getMemory(host_id, memoryId) {
 }
 
 export async function updateMemory(host_id, memoryId, data, ctx = {}) {
+	const linked = await Memory.findOne({ _id: memoryId, host_id }).select('obsidian_source').lean();
+	if (linked?.obsidian_source?.file_id && data.markdown_content !== undefined) {
+		await syncStreamientItem('memory', memoryId, host_id, { markdown: String(data.markdown_content) });
+		return getMemory(host_id, memoryId);
+	}
 	const update = {};
 	if (data.title !== undefined) update.title = data.title;
 	if (data.content !== undefined) update.content = data.content;
@@ -86,6 +93,7 @@ export async function updateMemory(host_id, memoryId, data, ctx = {}) {
 			const details = audit.diffSnapshot(before, mem);
 			audit.log({ action: 'update', resource: 'memory', resource_id: memoryId, host_id, details, ...ctx });
 		}
+		await syncStreamientItem('memory', memoryId, host_id);
 	}
 
 	return mem;
@@ -103,6 +111,7 @@ export async function deleteMemory(host_id, memoryId, ctx = {}) {
 		emitToTenant(host_id, 'memory:deleted', { _id: memoryId });
 		invalidateGraphCache(host_id).catch(() => {});
 		if (ctx.user_id) audit.log({ action: 'delete', resource: 'memory', resource_id: memoryId, host_id, ...ctx });
+		await syncStreamientItem('memory', memoryId, host_id);
 	}
 	return mem;
 }
