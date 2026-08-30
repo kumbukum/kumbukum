@@ -6,7 +6,31 @@ name = "streamient"
 script = ""
 
 [[actions]]
-name = "Start Mac stack"
+name = "compose up"
 icon = "run"
-command = "docker compose --env-file ~/.config/dev-domains/streamient.env up -d"
-platform = "darwin"
+command = "docker compose up -d"
+
+[[actions]]
+name = "compose restart"
+icon = "run"
+command = "docker compose restart"
+
+[[actions]]
+name = "compose rebuild"
+icon = "run"
+command = "docker compose up -d --build --force-recreate"
+
+[[actions]]
+name = "compose stop"
+icon = "run"
+command = "docker compose stop"
+
+[[actions]]
+name = "compose status"
+icon = "run"
+command = "docker compose ps"
+
+[[actions]]
+name = "compose logs"
+icon = "run"
+command = "docker compose logs --tail=200 -f"
