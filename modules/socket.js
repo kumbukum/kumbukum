@@ -1,8 +1,10 @@
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-streams-adapter';
 import Redis from 'ioredis';
+import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import config from '../config.js';
+import { getRedisClient } from './redis.js';
 import { buildRedisConnectionOptions, isTransientRedisError } from './redis_options.js';
 import { startRedisHeartbeat } from './redis_heartbeat.js';
 import { resolveActiveTenantContext } from './tenancy.js';
@@ -18,11 +20,15 @@ let emailCountsHandler;
 let lastRedisReconnectLogAt = 0;
 
 const TENANT_EVENT_BRIDGE_CHANNEL = 'tenant-events';
+const TENANT_EVENT_BRIDGE_CLAIM_PREFIX = 'streamient:socket:tenant-event:';
+const TENANT_EVENT_BRIDGE_CLAIM_TTL_MS = 60000;
 const REDIS_RECONNECT_LOG_INTERVAL_MS = 10000;
 const SOCKET_ALLOWED_AUDIENCES = new Set(['streamient-api', 'kumbukum-api', 'streamient-socket']);
+const SOCKET_REDIS_BLOCK_TIME_MS = 10000;
+const SOCKET_REDIS_COMMAND_TIMEOUT_MS = SOCKET_REDIS_BLOCK_TIME_MS * 2;
 
-function createRedisClient() {
-	const connection = buildRedisConnectionOptions(config.redisOptions, { lazyConnect: true });
+function createRedisClient(options = {}) {
+	const connection = buildRedisConnectionOptions(config.redisOptions, { lazyConnect: true, ...options });
 	connection.options.protocol = 2;
 	return connection.url
 		? new Redis(connection.url, connection.options)
@@ -51,6 +57,16 @@ export function attachSocketRedisClientHandlers(redisClient, label) {
 	});
 
 	startRedisHeartbeat(redisClient);
+}
+
+export async function claimTenantBridgeEvent(redisClient, payload) {
+	if (!payload?.bridge_id) return true;
+	try {
+		return await redisClient.set(`${TENANT_EVENT_BRIDGE_CLAIM_PREFIX}${payload.bridge_id}`, '1', 'PX', TENANT_EVENT_BRIDGE_CLAIM_TTL_MS, 'NX') === 'OK';
+	} catch (err) {
+		log.warn({ err, bridge_id: payload.bridge_id }, 'Socket.IO tenant event bridge claim failed open');
+		return true;
+	}
 }
 
 function emitToTenantRoom(host_id, event, data) {
@@ -137,11 +153,12 @@ async function setupTenantEventBridge() {
 
 	bridgeSubscriber = createRedisClient();
 	attachSocketRedisClientHandlers(bridgeSubscriber, 'Socket.IO bridge subscriber');
-	bridgeSubscriber.on('message', (channel, message) => {
+	bridgeSubscriber.on('message', async (channel, message) => {
 		if (channel !== TENANT_EVENT_BRIDGE_CHANNEL) return;
 		try {
 			const payload = JSON.parse(message);
 			if (!payload?.host_id || !payload?.event) return;
+			if (!await claimTenantBridgeEvent(getRedisClient(), payload)) return;
 			emitToTenantRoom(payload.host_id, payload.event, payload.data);
 			if (payload.event === 'counts:refresh') emitEmailCounts(payload.host_id, payload.data || {});
 		} catch (err) {
@@ -154,10 +171,11 @@ async function setupTenantEventBridge() {
 }
 
 function publishTenantEvent(host_id, event, data) {
+	const payload = JSON.stringify({ bridge_id: randomUUID(), host_id, event, data });
 	ensureBridgePublisher()
 		.then((publisher) => {
 			if (!publisher) return;
-			return publisher.publish(TENANT_EVENT_BRIDGE_CHANNEL, JSON.stringify({ host_id, event, data }));
+			return publisher.publish(TENANT_EVENT_BRIDGE_CHANNEL, payload);
 		})
 		.catch((err) => {
 			log.warn({ err }, 'Socket.IO bridge publish failed');
@@ -211,10 +229,10 @@ export async function setupSocketIO(httpServer, sessionMiddleware, handlers = {}
 		if (config.socketRedis) {
 			let redisClient;
 			try {
-				redisClient = createRedisClient();
+				redisClient = createRedisClient({ commandTimeout: SOCKET_REDIS_COMMAND_TIMEOUT_MS, enableAutoPipelining: true });
 				attachSocketRedisClientHandlers(redisClient, 'Socket.IO Redis client');
 				await redisClient.connect();
-				io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: 10_000, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
+				io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: SOCKET_REDIS_BLOCK_TIME_MS, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
 				log.info('Socket.IO Redis streams adapter connected');
 			} catch (err) {
 				span.recordException(err);
@@ -274,7 +292,7 @@ export async function setupSocketIO(httpServer, sessionMiddleware, handlers = {}
  * Emit a CRUD event to a tenant room.
  * Delay (ms) is configurable via SOCKET_EMIT_DELAY to account for
  * replication lag in clustered setups (MongoDB ReplicaSet, Typesense
- * Cluster, Redis Sentinel). Default 500 ms; set to 0 for instant emit.
+ * Cluster, Redis Sentinel). Default 0 ms; set a positive delay only when needed.
  */
 export function emitToTenant(host_id, event, data) {
 	if (io) {

@@ -35,6 +35,9 @@ export function buildRedisConnectionOptions(opts, config = {}) {
 	const sentinelMaxRetriesPerRequest = hasOption(config, 'sentinelMaxRetriesPerRequest')
 		? config.sentinelMaxRetriesPerRequest
 		: null;
+	const enableAutoPipelining = hasOption(config, 'enableAutoPipelining')
+		? config.enableAutoPipelining
+		: optionOrDefault(typeof opts === 'object' && opts ? opts : {}, 'enableAutoPipelining', false);
 
 	if (isRedisSentinelOptions(opts)) {
 		return {
@@ -43,6 +46,7 @@ export function buildRedisConnectionOptions(opts, config = {}) {
 				...opts,
 				keepAlive: optionOrDefault(opts, 'keepAlive', 10000),
 				enableOfflineQueue: optionOrDefault(opts, 'enableOfflineQueue', true),
+				enableAutoPipelining,
 				sentinelRetryStrategy: optionOrDefault(opts, 'sentinelRetryStrategy', redisRetryStrategy),
 				connectTimeout: optionOrDefault(opts, 'connectTimeout', 10000),
 				commandTimeout: optionOrDefault(opts, 'commandTimeout', commandTimeout),
@@ -64,6 +68,7 @@ export function buildRedisConnectionOptions(opts, config = {}) {
 		...optionSource,
 		keepAlive: optionOrDefault(optionSource, 'keepAlive', 10000),
 		enableOfflineQueue: optionOrDefault(optionSource, 'enableOfflineQueue', true),
+		enableAutoPipelining,
 		connectTimeout: optionOrDefault(optionSource, 'connectTimeout', 10000),
 		commandTimeout: optionOrDefault(optionSource, 'commandTimeout', commandTimeout),
 		maxRetriesPerRequest: optionOrDefault(optionSource, 'maxRetriesPerRequest', singleMaxRetriesPerRequest),

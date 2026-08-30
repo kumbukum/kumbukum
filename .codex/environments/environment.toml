@@ -34,3 +34,8 @@ command = "docker compose ps"
 name = "compose logs"
 icon = "run"
 command = "docker compose logs --tail=200 -f"
+
+[[actions]]
+name = "release"
+icon = "run"
+command = "./release.sh"

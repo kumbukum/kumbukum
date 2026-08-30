@@ -189,7 +189,7 @@ const config = {
 	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 	redisOptions: parseRedisConfig(),
 	socketRedis: process.env.SOCKET_REDIS !== 'false' && !!(process.env.REDIS_URL || process.env.REDIS_SENTINEL),
-	socketEmitDelay: parseInt(process.env.SOCKET_EMIT_DELAY, 10) || 500,
+	socketEmitDelay: parseNonNegativeNumberEnv('SOCKET_EMIT_DELAY', 0),
 	sessionSecret: process.env.SESSION_SECRET || 'change-me',
 	jwtSecret: process.env.JWT_SECRET || 'change-me',
 	appUrl,
