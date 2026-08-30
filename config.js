@@ -77,6 +77,17 @@ function parseRedisConfig() {
 	return process.env.REDIS_URL || 'redis://localhost:6379';
 }
 
+export function resolveSocketIOConfig(env = process.env, defaults = {}) {
+	const adapter = String(env.SOCKET_IO_ADAPTER || (defaults.redisEnabled ? 'redis' : 'memory')).trim().toLowerCase();
+	if (!['memory', 'mongodb', 'redis'].includes(adapter)) {
+		throw new Error('SOCKET_IO_ADAPTER must be memory, mongodb, or redis');
+	}
+	return {
+		adapter,
+		mongoUrl: String(env.SOCKET_IO_MONGO_URL || defaults.mongoUri || '').trim(),
+	};
+}
+
 export function isHostedHostname(hostname) {
 	if (!hostname) return false;
 	const normalized = hostname.toLowerCase();
@@ -164,6 +175,8 @@ export function parseSmtpServersFromEnv(env = process.env) {
 const smtpServers = parseSmtpServersFromEnv();
 const primarySmtp = smtpServers[0] || {};
 const appUrl = process.env.APP_URL || 'http://localhost:3000';
+const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/streamient?replicaSet=rs0';
+const socketRedis = process.env.SOCKET_REDIS !== 'false' && !!(process.env.REDIS_URL || process.env.REDIS_SENTINEL);
 const chatAiProvider = process.env.CHAT_AI_MODEL_PROVIDER || 'google';
 const nlSearchProvider = process.env.NL_SEARCH_MODEL_PROVIDER || 'google';
 const tsConversationProvider = process.env.TS_CONVERSATION_MODEL_PROVIDER || 'google';
@@ -185,10 +198,11 @@ function getAppUrlHostname(value) {
 const config = {
 	env: process.env.NODE_ENV || 'development',
 	port: parseInt(process.env.PORT, 10) || 3000,
-	mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/streamient?replicaSet=rs0',
+	mongoUri,
 	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 	redisOptions: parseRedisConfig(),
-	socketRedis: process.env.SOCKET_REDIS !== 'false' && !!(process.env.REDIS_URL || process.env.REDIS_SENTINEL),
+	socketRedis,
+	socketIO: resolveSocketIOConfig(process.env, { mongoUri, redisEnabled: socketRedis }),
 	socketEmitDelay: parseNonNegativeNumberEnv('SOCKET_EMIT_DELAY', 0),
 	sessionSecret: process.env.SESSION_SECRET || 'change-me',
 	jwtSecret: process.env.JWT_SECRET || 'change-me',

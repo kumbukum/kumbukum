@@ -91,6 +91,12 @@ importers:
       '@simplewebauthn/server':
         specifier: ^13.3.3
         version: 13.3.3
+      '@socket.io/mongo-adapter':
+        specifier: ^0.4.0
+        version: 0.4.0(socket.io-adapter@2.5.8(supports-color@5.5.0))(socks@2.8.9)(supports-color@5.5.0)
+      '@socket.io/mongo-emitter':
+        specifier: ^0.2.0
+        version: 0.2.0(supports-color@5.5.0)
       '@socket.io/redis-streams-adapter':
         specifier: ^0.3.1
         version: 0.3.1(socket.io-adapter@2.5.8(supports-color@5.5.0))(supports-color@5.5.0)
@@ -314,6 +320,9 @@ importers:
       nodemon:
         specifier: ^3.1.14
         version: 3.1.14
+      socket.io-client:
+        specifier: ^4.8.3
+        version: 4.8.3(supports-color@5.5.0)
       vue-demi:
         specifier: ^0.14.10
         version: 0.14.10(vue@3.5.41(typescript@6.0.3))
@@ -2782,6 +2791,15 @@ packages:
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
 
+  '@socket.io/mongo-adapter@0.4.0':
+    resolution: {integrity: sha512-yP9OVpYI+ELDWPAAMHNgGFgUGnr2IFmHbgcGUqrKFzumHJH1+51PzveGt1If2tQcOdRX9fOR8GzdoRiFF0Nk8g==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      socket.io-adapter: ^2.5.2
+
+  '@socket.io/mongo-emitter@0.2.0':
+    resolution: {integrity: sha512-5ABxW7RbCza74Qok78aR2yeR7AF3e/XaA3bXDKF9C1DuodNi9mYT7H1kh8OQlZ3yD0KP9o2Chf1ScVbV4F4syQ==}
+
   '@socket.io/redis-streams-adapter@0.3.1':
     resolution: {integrity: sha512-J+kcx5w4TUYSSmvimMC+UZKdxdVAmppiVoscoOPkeJeLDgsf154Sth/NRVNNn8PUg5/bEYV5Q9MxDm+ztTx1LQ==}
     engines: {node: '>=14.0.0'}
@@ -5221,8 +5239,8 @@ packages:
     resolution: {integrity: sha512-GX0gsdbGVCgnRgbeGaubfjpBXyYRWOOCVeYh08bSQvDZqxz5ndXs1OTfAt/h36G1xvI94YIspsI0sVFqAV9+RQ==}
     engines: {node: '>=20.19.0'}
 
-  nwsapi@2.2.26:
-    resolution: {integrity: sha512-LPmrA6J31t9ac9294T/WZV6AK5CUcFZ+VXQ7pNNc1+JAjeKthW7vqekOBu6pXzsxD7slwJ7M4XMhamojG3T4oA==}
+  nwsapi@2.2.27:
+    resolution: {integrity: sha512-gQPNF78qebCQ6tvVFBYrvJdBNOrYZm90ZlXgpIFm06p6qHDHq/XC4TnJftN6OMbxVE0UTBAoRgcsDeJBBooITw==}
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -9485,6 +9503,27 @@ snapshots:
 
   '@socket.io/component-emitter@3.1.2': {}
 
+  '@socket.io/mongo-adapter@0.4.0(socket.io-adapter@2.5.8(supports-color@5.5.0))(socks@2.8.9)(supports-color@5.5.0)':
+    dependencies:
+      debug: 4.3.7(supports-color@5.5.0)
+      mongodb: 7.6.0(socks@2.8.9)
+      socket.io-adapter: 2.5.8(supports-color@5.5.0)
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-providers'
+      - '@mongodb-js/zstd'
+      - gcp-metadata
+      - kerberos
+      - mongodb-client-encryption
+      - snappy
+      - socks
+      - supports-color
+
+  '@socket.io/mongo-emitter@0.2.0(supports-color@5.5.0)':
+    dependencies:
+      debug: 4.3.7(supports-color@5.5.0)
+    transitivePeerDependencies:
+      - supports-color
+
   '@socket.io/redis-streams-adapter@0.3.1(socket.io-adapter@2.5.8(supports-color@5.5.0))(supports-color@5.5.0)':
     dependencies:
       '@msgpack/msgpack': 2.8.0
@@ -10791,6 +10830,18 @@ snapshots:
     dependencies:
       once: 1.4.0
 
+  engine.io-client@6.6.6(supports-color@5.5.0):
+    dependencies:
+      '@socket.io/component-emitter': 3.1.2
+      debug: 4.4.3(supports-color@5.5.0)
+      engine.io-parser: 5.2.3
+      ws: 8.21.3
+      xmlhttprequest-ssl: 2.1.2
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   engine.io-client@6.6.6(supports-color@7.2.0):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
@@ -11670,7 +11721,7 @@ snapshots:
       http-proxy-agent: 7.0.2(supports-color@5.5.0)
       https-proxy-agent: 7.0.6(supports-color@5.5.0)
       is-potential-custom-element-name: 1.0.1
-      nwsapi: 2.2.26
+      nwsapi: 2.2.27
       parse5: 7.3.0
       rrweb-cssom: 0.8.0
       saxes: 6.0.0
@@ -12187,7 +12238,7 @@ snapshots:
     dependencies:
       boolbase: 2.0.0
 
-  nwsapi@2.2.26: {}
+  nwsapi@2.2.27: {}
 
   object-assign@4.1.1: {}
 
@@ -13122,6 +13173,17 @@ snapshots:
     dependencies:
       debug: 4.4.3(supports-color@5.5.0)
       ws: 8.21.3
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  socket.io-client@4.8.3(supports-color@5.5.0):
+    dependencies:
+      '@socket.io/component-emitter': 3.1.2
+      debug: 4.4.3(supports-color@5.5.0)
+      engine.io-client: 6.6.6(supports-color@5.5.0)
+      socket.io-parser: 4.2.7(supports-color@5.5.0)
     transitivePeerDependencies:
       - bufferutil
       - supports-color

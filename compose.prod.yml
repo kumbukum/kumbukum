@@ -5,6 +5,8 @@ x-environment: &environment
   API_BASE_URL: http://app:3000
   STREAMIENT_APP: web
   MONGO_URI: mongodb://mongo:27017/streamient
+  SOCKET_IO_ADAPTER: ${SOCKET_IO_ADAPTER:-}
+  SOCKET_IO_MONGO_URL: ${SOCKET_IO_MONGO_URL:-}
   REDIS_URL: ${REDIS_URL:-redis://redis:6379}
   REDIS_SENTINEL: ${REDIS_SENTINEL:-}
   API_RATE_LIMIT_ENABLED: "${API_RATE_LIMIT_ENABLED:-true}"

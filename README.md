@@ -201,7 +201,7 @@ env 'ACCESS-TOKEN'=your-access-token API_BASE_URL=https://your-instance.com node
 - **Backend** — Node.js + Express
 - **Database** — MongoDB
 - **Search** — Typesense for full-text and semantic retrieval
-- **Cache / real-time** — Redis + Socket.IO
+- **Cache / real-time** — Redis cache + Socket.IO with MongoDB or Redis clustering
 - **Frontend** — Pug templates + vanilla JavaScript
 - **MCP app** — `apps/mcp/` for agent integrations
 

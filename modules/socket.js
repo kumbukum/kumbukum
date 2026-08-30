@@ -1,9 +1,13 @@
 import { Server } from 'socket.io';
-import { createAdapter } from '@socket.io/redis-streams-adapter';
+import { createAdapter as createMongoAdapter } from '@socket.io/mongo-adapter';
+import { Emitter as MongoEmitter } from '@socket.io/mongo-emitter';
+import { createAdapter as createRedisAdapter } from '@socket.io/redis-streams-adapter';
 import Redis from 'ioredis';
+import { MongoClient } from 'mongodb';
 import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import config from '../config.js';
+import mongoose from '../db.js';
 import { getRedisClient } from './redis.js';
 import { buildRedisConnectionOptions, isTransientRedisError } from './redis_options.js';
 import { startRedisHeartbeat } from './redis_heartbeat.js';
@@ -16,6 +20,10 @@ const log = createLogger('socket');
 let io;
 let bridgePublisher;
 let bridgeSubscriber;
+let socketMongoClient;
+let socketMongoCollection;
+let socketMongoCollectionPromise;
+let socketMongoEmitter;
 let emailCountsHandler;
 let lastRedisReconnectLogAt = 0;
 
@@ -26,6 +34,8 @@ const REDIS_RECONNECT_LOG_INTERVAL_MS = 10000;
 const SOCKET_ALLOWED_AUDIENCES = new Set(['streamient-api', 'kumbukum-api', 'streamient-socket']);
 const SOCKET_REDIS_BLOCK_TIME_MS = 10000;
 const SOCKET_REDIS_COMMAND_TIMEOUT_MS = SOCKET_REDIS_BLOCK_TIME_MS * 2;
+const SOCKET_MONGO_COLLECTION = 'socketio';
+const SOCKET_MONGO_TTL_SECONDS = 3600;
 
 function createRedisClient(options = {}) {
 	const connection = buildRedisConnectionOptions(config.redisOptions, { lazyConnect: true, ...options });
@@ -33,6 +43,50 @@ function createRedisClient(options = {}) {
 	return connection.url
 		? new Redis(connection.url, connection.options)
 		: new Redis(connection.options);
+}
+
+function usesRedisSocketTransport() {
+	return config.socketIO?.adapter === 'redis';
+}
+
+function usesMongoSocketTransport() {
+	return config.socketIO?.adapter === 'mongodb';
+}
+
+async function getSocketMongoClient(socketConfig) {
+	if (socketConfig.mongoUrl === config.mongoUri) return mongoose.connection.getClient();
+	if (socketMongoClient) return socketMongoClient;
+	socketMongoClient = new MongoClient(socketConfig.mongoUrl);
+	try {
+		await socketMongoClient.connect();
+	} catch (err) {
+		socketMongoClient = null;
+		throw err;
+	}
+	return socketMongoClient;
+}
+
+async function getSocketMongoCollection() {
+	if (socketMongoCollection) return socketMongoCollection;
+	if (socketMongoCollectionPromise) return socketMongoCollectionPromise;
+	socketMongoCollectionPromise = (async () => {
+		const socketConfig = config.socketIO || {};
+		const mongoClient = await getSocketMongoClient(socketConfig);
+		const collection = mongoClient.db().collection(SOCKET_MONGO_COLLECTION);
+		await collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: SOCKET_MONGO_TTL_SECONDS, background: true });
+		socketMongoCollection = collection;
+		return collection;
+	})().catch((err) => {
+		socketMongoCollectionPromise = null;
+		throw err;
+	});
+	return socketMongoCollectionPromise;
+}
+
+async function ensureMongoEmitter() {
+	if (socketMongoEmitter) return socketMongoEmitter;
+	socketMongoEmitter = new MongoEmitter(await getSocketMongoCollection(), '/', { addCreatedAtField: true });
+	return socketMongoEmitter;
 }
 
 export function attachSocketRedisClientHandlers(redisClient, label) {
@@ -139,7 +193,7 @@ export function resolveAuthorizedSubscribeRoom(identity, room, requestedUserId =
 }
 
 async function ensureBridgePublisher() {
-	if (!config.socketRedis) return null;
+	if (!usesRedisSocketTransport() || !config.socketRedis) return null;
 	if (bridgePublisher) return bridgePublisher;
 
 	bridgePublisher = createRedisClient();
@@ -149,7 +203,7 @@ async function ensureBridgePublisher() {
 }
 
 async function setupTenantEventBridge() {
-	if (!config.socketRedis || bridgeSubscriber) return;
+	if (!usesRedisSocketTransport() || !config.socketRedis || bridgeSubscriber) return;
 
 	bridgeSubscriber = createRedisClient();
 	attachSocketRedisClientHandlers(bridgeSubscriber, 'Socket.IO bridge subscriber');
@@ -171,6 +225,15 @@ async function setupTenantEventBridge() {
 }
 
 function publishTenantEvent(host_id, event, data) {
+	if (usesMongoSocketTransport()) {
+		ensureMongoEmitter()
+			.then((emitter) => emitter.to(`tenant:${host_id}`).emit(event, data))
+			.catch((err) => {
+				log.warn({ err }, 'Socket.IO MongoDB emitter failed');
+			});
+		return;
+	}
+	if (!usesRedisSocketTransport()) return;
 	const payload = JSON.stringify({ bridge_id: randomUUID(), host_id, event, data });
 	ensureBridgePublisher()
 		.then((publisher) => {
@@ -191,7 +254,9 @@ export async function setupSocketIO(httpServer, sessionMiddleware, handlers = {}
 		emailCountsHandler = handlers.emailCountsHandler || emailCountsHandler;
 		span.setAttribute('server.mode', process.env.SERVER_MODE || 'app');
 		span.setAttribute('service.app', process.env.STREAMIENT_APP || 'web');
-		span.setAttribute('socket.redis.enabled', !!config.socketRedis);
+		span.setAttribute('socket.adapter', config.socketIO.adapter);
+		span.setAttribute('socket.redis.enabled', usesRedisSocketTransport());
+		span.setAttribute('socket.mongodb.enabled', usesMongoSocketTransport());
 
 		io = new Server(httpServer, {
 			cookie: false,
@@ -225,20 +290,24 @@ export async function setupSocketIO(httpServer, sessionMiddleware, handlers = {}
 			}
 		});
 
-		// Redis streams adapter for horizontal scaling (multi-server only)
-		if (config.socketRedis) {
+		if (usesRedisSocketTransport()) {
+			if (!config.socketRedis) throw new Error('Socket.IO Redis adapter requires REDIS_URL or REDIS_SENTINEL');
 			let redisClient;
 			try {
 				redisClient = createRedisClient({ commandTimeout: SOCKET_REDIS_COMMAND_TIMEOUT_MS, enableAutoPipelining: true });
 				attachSocketRedisClientHandlers(redisClient, 'Socket.IO Redis client');
 				await redisClient.connect();
-				io.adapter(createAdapter(redisClient, { streamCount: 4, blockTimeInMs: SOCKET_REDIS_BLOCK_TIME_MS, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
+				io.adapter(createRedisAdapter(redisClient, { streamCount: 4, blockTimeInMs: SOCKET_REDIS_BLOCK_TIME_MS, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
 				log.info('Socket.IO Redis streams adapter connected');
 			} catch (err) {
 				span.recordException(err);
 				log.warn({ err }, 'Socket.IO Redis adapter failed, using in-memory');
 				if (redisClient) redisClient.disconnect();
 			}
+		} else if (usesMongoSocketTransport()) {
+			const mongoCollection = await getSocketMongoCollection();
+			io.adapter(createMongoAdapter(mongoCollection, { addCreatedAtField: true }));
+			log.info({ collection: SOCKET_MONGO_COLLECTION }, 'Socket.IO MongoDB adapter connected');
 		}
 
 		await setupTenantEventBridge();
