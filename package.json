@@ -55,7 +55,7 @@
     "@iframe-resizer/child": "^5.5.9",
     "@iframe-resizer/parent": "^5.5.9",
     "@keyv/valkey": "^1.0.11",
-    "@managani/cache": "0.1.3",
+    "@managani/cache": "0.1.4",
     "@managani/express": "^0.1.2",
     "@managani/node": "^0.1.2",
     "@opentelemetry/api": "1.9.1",
