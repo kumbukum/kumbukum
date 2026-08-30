@@ -84,6 +84,7 @@ export function isHostedHostname(hostname) {
 	// k.lan is the plain (self-hosted) dev. app.streamient.local is a legacy alias.
 	return normalized === 'app.streamient.local'
 		|| normalized === 'app.s.lan'
+		|| normalized === 'app.s.mac.lan'
 		|| normalized.endsWith('streamient.com');
 }
 

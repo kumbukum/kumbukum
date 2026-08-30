@@ -4,3 +4,9 @@ name = "streamient"
 
 [setup]
 script = ""
+
+[[actions]]
+name = "Start Mac stack"
+icon = "run"
+command = "docker compose --env-file ~/.config/dev-domains/streamient.env up -d"
+platform = "darwin"
