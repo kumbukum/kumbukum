@@ -66,8 +66,8 @@ x-env: &env
   PRO_TS_CONVERSATION_MODEL: "gemini-3.5-flash-lite"
   FREE_AI_DAILY_LIMIT: "${FREE_AI_DAILY_LIMIT:-}"
   # URLs
-  APP_URL: http://s.lan
-  MCP_BASE_URL: http://mcp.s.lan
+  APP_URL: "${APP_URL:-http://s.lan}"
+  MCP_BASE_URL: "${MCP_BASE_URL:-http://mcp.s.lan}"
   WS_URL: ""
   API_BASE_URL: http://streamient-app-1:3000
   EMAIL_FORWARD_DOMAIN: "email.streamient.com"

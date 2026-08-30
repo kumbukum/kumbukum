@@ -4,3 +4,38 @@ name = "streamient"
 
 [setup]
 script = ""
+
+[[actions]]
+name = "compose up"
+icon = "run"
+command = "docker compose up -d"
+
+[[actions]]
+name = "compose restart"
+icon = "run"
+command = "docker compose restart"
+
+[[actions]]
+name = "compose rebuild"
+icon = "run"
+command = "docker compose up -d --build --force-recreate"
+
+[[actions]]
+name = "compose stop"
+icon = "run"
+command = "docker compose stop"
+
+[[actions]]
+name = "compose status"
+icon = "run"
+command = "docker compose ps"
+
+[[actions]]
+name = "compose logs"
+icon = "run"
+command = "docker compose logs --tail=200 -f"
+
+[[actions]]
+name = "release"
+icon = "run"
+command = "./release.sh"
