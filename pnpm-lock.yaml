@@ -50,8 +50,8 @@ importers:
         specifier: ^1.0.11
         version: 1.0.11(supports-color@5.5.0)
       '@managani/cache':
-        specifier: 0.1.2
-        version: 0.1.2
+        specifier: 0.1.3
+        version: 0.1.3
       '@managani/express':
         specifier: ^0.1.2
         version: 0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@26.4.0)(@types/react@18.3.31)(axios@1.20.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(qrcode@1.5.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
@@ -1420,8 +1420,8 @@ packages:
   '@levischuck/tiny-cbor@0.2.11':
     resolution: {integrity: sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow==}
 
-  '@managani/cache@0.1.2':
-    resolution: {integrity: sha512-cS2XGlN+/G7ZfBQSIA0a9CxZmgqRLPZ6Q5NjP+0hRUU0tRcyQaq/I0iTLiPEvJ+3REGW5/t/fbOFcNdoM4YEXA==}
+  '@managani/cache@0.1.3':
+    resolution: {integrity: sha512-1lsnc+3RKh7paLGyHPUK6Ho/7d0FH4xcrp8stb5Z9i2viBtCq927HYHGtrJUs6aT8Fwk2rlK+9MG09f/M1IWOw==}
     engines: {node: '>=24'}
 
   '@managani/express@0.1.2':
@@ -7726,7 +7726,7 @@ snapshots:
 
   '@levischuck/tiny-cbor@0.2.11': {}
 
-  '@managani/cache@0.1.2':
+  '@managani/cache@0.1.3':
     dependencies:
       memcache: 1.10.0
 
