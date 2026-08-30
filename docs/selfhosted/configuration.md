@@ -45,7 +45,11 @@ docker compose -f compose.prod.yml up -d
 | `JWT_SECRET` | JWT signing secret | Yes | — |
 | `NODE_ENV` | Environment mode | No | `production` |
 | `SERVER_MODE` | Run mode: omit for full app, `ws` for WebSocket-only, `scheduler` for background jobs | No | — |
-| `SOCKET_REDIS` | Separate Redis URL for Socket.IO adapter (if different from `REDIS_URL`) | No | Uses `REDIS_URL` |
+| `SOCKET_IO_ADAPTER` | Socket.IO cluster transport: `mongodb`, `redis`, or `memory` | No | `redis` when Redis is configured; otherwise `memory` |
+| `SOCKET_IO_MONGO_URL` | Optional MongoDB connection override for the MongoDB adapter | No | `MONGO_URI` |
+| `SOCKET_REDIS` | Set to `false` to disable Redis-backed Socket.IO support | No | Enabled when Redis is configured |
+
+The MongoDB Socket.IO adapter stores events in the `socketio` collection and uses change streams, so it requires a MongoDB replica set or sharded cluster.
 
 ### White-Label / Custom Domains
 

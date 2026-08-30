@@ -91,6 +91,12 @@ importers:
       '@simplewebauthn/server':
         specifier: ^13.3.3
         version: 13.3.3
+      '@socket.io/mongo-adapter':
+        specifier: ^0.4.0
+        version: 0.4.0(socket.io-adapter@2.5.8(supports-color@5.5.0))(socks@2.8.9)(supports-color@5.5.0)
+      '@socket.io/mongo-emitter':
+        specifier: ^0.2.0
+        version: 0.2.0(supports-color@5.5.0)
       '@socket.io/redis-streams-adapter':
         specifier: ^0.3.1
         version: 0.3.1(socket.io-adapter@2.5.8(supports-color@5.5.0))(supports-color@5.5.0)
@@ -101,7 +107,7 @@ importers:
         specifier: ^3.46.0
         version: 3.46.0
       '@tiptap/core':
-        specifier: ^3.30.5
+        specifier: ^3.22.3
         version: 3.30.5(@tiptap/pm@3.30.5)
       '@tiptap/extension-blockquote':
         specifier: ^3.30.5
@@ -110,7 +116,7 @@ importers:
         specifier: ^3.30.5
         version: 3.30.5(@tiptap/extension-list@3.30.5(@tiptap/core@3.30.5(@tiptap/pm@3.30.5))(@tiptap/pm@3.30.5))
       '@tiptap/extension-code-block':
-        specifier: ^3.30.5
+        specifier: ^3.22.3
         version: 3.30.5(@tiptap/core@3.30.5(@tiptap/pm@3.30.5))(@tiptap/pm@3.30.5)
       '@tiptap/extension-heading':
         specifier: ^3.30.5
@@ -134,7 +140,7 @@ importers:
         specifier: ^3.30.5
         version: 3.30.5(@tiptap/extension-list@3.30.5(@tiptap/core@3.30.5(@tiptap/pm@3.30.5))(@tiptap/pm@3.30.5))
       '@tiptap/pm':
-        specifier: ^3.30.5
+        specifier: ^3.22.3
         version: 3.30.5
       '@tiptap/starter-kit':
         specifier: ^3.30.5
@@ -314,6 +320,9 @@ importers:
       nodemon:
         specifier: ^3.1.14
         version: 3.1.14
+      socket.io-client:
+        specifier: ^4.8.3
+        version: 4.8.3(supports-color@5.5.0)
       vue-demi:
         specifier: ^0.14.10
         version: 0.14.10(vue@3.5.41(typescript@6.0.3))
@@ -2781,6 +2790,15 @@ packages:
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
+
+  '@socket.io/mongo-adapter@0.4.0':
+    resolution: {integrity: sha512-yP9OVpYI+ELDWPAAMHNgGFgUGnr2IFmHbgcGUqrKFzumHJH1+51PzveGt1If2tQcOdRX9fOR8GzdoRiFF0Nk8g==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      socket.io-adapter: ^2.5.2
+
+  '@socket.io/mongo-emitter@0.2.0':
+    resolution: {integrity: sha512-5ABxW7RbCza74Qok78aR2yeR7AF3e/XaA3bXDKF9C1DuodNi9mYT7H1kh8OQlZ3yD0KP9o2Chf1ScVbV4F4syQ==}
 
   '@socket.io/redis-streams-adapter@0.3.1':
     resolution: {integrity: sha512-J+kcx5w4TUYSSmvimMC+UZKdxdVAmppiVoscoOPkeJeLDgsf154Sth/NRVNNn8PUg5/bEYV5Q9MxDm+ztTx1LQ==}
@@ -9485,6 +9503,27 @@ snapshots:
 
   '@socket.io/component-emitter@3.1.2': {}
 
+  '@socket.io/mongo-adapter@0.4.0(socket.io-adapter@2.5.8(supports-color@5.5.0))(socks@2.8.9)(supports-color@5.5.0)':
+    dependencies:
+      debug: 4.3.7(supports-color@5.5.0)
+      mongodb: 7.6.0(socks@2.8.9)
+      socket.io-adapter: 2.5.8(supports-color@5.5.0)
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-providers'
+      - '@mongodb-js/zstd'
+      - gcp-metadata
+      - kerberos
+      - mongodb-client-encryption
+      - snappy
+      - socks
+      - supports-color
+
+  '@socket.io/mongo-emitter@0.2.0(supports-color@5.5.0)':
+    dependencies:
+      debug: 4.3.7(supports-color@5.5.0)
+    transitivePeerDependencies:
+      - supports-color
+
   '@socket.io/redis-streams-adapter@0.3.1(socket.io-adapter@2.5.8(supports-color@5.5.0))(supports-color@5.5.0)':
     dependencies:
       '@msgpack/msgpack': 2.8.0
@@ -10790,6 +10829,18 @@ snapshots:
   end-of-stream@1.4.5:
     dependencies:
       once: 1.4.0
+
+  engine.io-client@6.6.6(supports-color@5.5.0):
+    dependencies:
+      '@socket.io/component-emitter': 3.1.2
+      debug: 4.4.3(supports-color@5.5.0)
+      engine.io-parser: 5.2.3
+      ws: 8.21.3
+      xmlhttprequest-ssl: 2.1.2
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
 
   engine.io-client@6.6.6(supports-color@7.2.0):
     dependencies:
@@ -13122,6 +13173,17 @@ snapshots:
     dependencies:
       debug: 4.4.3(supports-color@5.5.0)
       ws: 8.21.3
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  socket.io-client@4.8.3(supports-color@5.5.0):
+    dependencies:
+      '@socket.io/component-emitter': 3.1.2
+      debug: 4.4.3(supports-color@5.5.0)
+      engine.io-client: 6.6.6(supports-color@5.5.0)
+      socket.io-parser: 4.2.7(supports-color@5.5.0)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
