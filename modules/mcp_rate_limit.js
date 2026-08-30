@@ -1,8 +1,6 @@
 import crypto from 'node:crypto';
 import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
-import { getRedisClient as getSharedRedisClient } from './redis.js';
-import config from '../config.js';
+import { getCache, getMongoCoordinator, getRateLimitStore } from './cache.js';
 import { createLogger } from './logger.js';
 
 const log = createLogger('mcp-rate-limit');
@@ -35,8 +33,6 @@ const HEAVY_TOOL_PATTERNS = [
 	/trash/,
 ];
 
-let redisClient = null;
-let redisErrorLogged = false;
 let memoryFallbackLogged = false;
 const requestLimiters = new Map();
 const memoryCounters = new Map();
@@ -118,39 +114,16 @@ export function getClientIp(request) {
 	);
 }
 
-function getRedisClient() {
-	if (redisClient) return redisClient;
-	if (!config.socketRedis) return null;
-
+function getCacheStore(prefix) {
 	try {
-		const client = getSharedRedisClient();
-		if (!client || typeof client.call !== 'function') {
-			if (!redisErrorLogged) {
-				redisErrorLogged = true;
-				log.warn('MCP rate limit Redis connection unavailable; using memory fallback');
-			}
-			return null;
-		}
-
-		redisClient = client;
-		return redisClient;
+		return getRateLimitStore(prefix, getConfig().windowMs);
 	} catch (err) {
 		if (!memoryFallbackLogged) {
 			memoryFallbackLogged = true;
-			log.warn({ err }, 'MCP rate limit Redis setup failed; using memory fallback');
+			log.warn({ err }, 'MCP rate limit Memcached setup failed; using memory fallback');
 		}
-		return null;
+		return undefined;
 	}
-}
-
-function getRedisStore(prefix) {
-	const client = getRedisClient();
-	if (!client || typeof client.call !== 'function') return undefined;
-
-	return new RedisStore({
-		sendCommand: (...args) => client.call(...args),
-		prefix: `rl:${prefix}:`,
-	});
 }
 
 function createNoopLimiter() {
@@ -256,7 +229,8 @@ function createRequestLimiter(product, name, limit, keyGenerator, skip) {
 		windowMs: rateLimitConfig.windowMs,
 		limit,
 		keyGenerator,
-		store: getRedisStore(`mcp:${product}:${name}`),
+		store: getCacheStore(`mcp:${product}:${name}`),
+		passOnStoreError: true,
 		standardHeaders: 'draft-7',
 		legacyHeaders: false,
 		skip,
@@ -336,78 +310,66 @@ async function consumeCounter(product, name, key, limit, windowMs) {
 	if (!getConfig().enabled) return { allowed: true, count: 0 };
 	if (limit <= 0) return { allowed: false, count: 0 };
 
-	const client = getRedisClient();
-	const redisKey = `rl:mcp:${product}:${name}:${key}`;
+	const counterKey = `rl:mcp:${product}:${name}:${key}`;
 
-	if (client && typeof client.call === 'function') {
-		try {
-			const count = parseInt(await client.call('INCR', redisKey), 10);
-			if (count === 1) await client.call('PEXPIRE', redisKey, windowMs);
-			return { allowed: count <= limit, count };
-		} catch (err) {
-			if (!memoryFallbackLogged) {
-				memoryFallbackLogged = true;
-				log.warn({ err }, 'MCP rate limit counter Redis failed; using memory fallback');
-			}
+	try {
+		const count = await getCache().increment(counterKey, { ttlMs: windowMs });
+		if (Number.isFinite(count)) return { allowed: count <= limit, count };
+	} catch (err) {
+		if (!memoryFallbackLogged) {
+			memoryFallbackLogged = true;
+			log.warn({ err }, 'MCP rate limit counter Memcached failed; using memory fallback');
 		}
 	}
 
-	const counter = getMemoryCounter(redisKey, windowMs);
+	const counter = getMemoryCounter(counterKey, windowMs);
 	counter.count++;
 	return { allowed: counter.count <= limit, count: counter.count };
 }
 
-async function acquireConcurrency(product, name, key, limit) {
-	if (!getConfig().enabled) return { allowed: true, redisKey: null };
-	if (limit <= 0) return { allowed: false, redisKey: null };
+async function acquireConcurrency(product, name, key, limit, coordinator) {
+	if (!getConfig().enabled) return { allowed: true, semaphoreKey: null };
+	if (limit <= 0) return { allowed: false, semaphoreKey: null };
 
-	const client = getRedisClient();
-	const redisKey = `rl:mcp:${product}:concurrency:${name}:${key}`;
+	const semaphoreKey = `rl:mcp:${product}:concurrency:${name}:${key}`;
 
-	if (client && typeof client.call === 'function') {
-		try {
-			const count = parseInt(await client.call('INCR', redisKey), 10);
-			if (count === 1) await client.call('PEXPIRE', redisKey, CONCURRENCY_TTL_MS);
-			if (count > limit) {
-				await client.call('DECR', redisKey);
-				return { allowed: false, redisKey };
-			}
-			return { allowed: true, redisKey };
-		} catch (err) {
-			if (!memoryFallbackLogged) {
-				memoryFallbackLogged = true;
-				log.warn({ err }, 'MCP rate limit concurrency Redis failed; using memory fallback');
-			}
+	try {
+		const lease = await (coordinator || getMongoCoordinator()).acquireSemaphore(semaphoreKey, limit, { ttlMs: CONCURRENCY_TTL_MS });
+		return lease ? { allowed: true, lease } : { allowed: false, semaphoreKey };
+	} catch (err) {
+		if (name === 'heavy-tool') {
+			log.warn({ err }, 'MCP MongoDB heavy-tool concurrency failed; failing closed');
+			return { allowed: false, semaphoreKey, unavailable: true };
+		}
+		if (!memoryFallbackLogged) {
+			memoryFallbackLogged = true;
+			log.warn({ err }, 'MCP MongoDB concurrency failed; using memory fallback');
 		}
 	}
 
-	const memoryCount = memoryConcurrency.get(redisKey) || 0;
-	if (memoryCount >= limit) return { allowed: false, redisKey, memory: true };
-	memoryConcurrency.set(redisKey, memoryCount + 1);
-	return { allowed: true, redisKey, memory: true };
+	const memoryCount = memoryConcurrency.get(semaphoreKey) || 0;
+	if (memoryCount >= limit) return { allowed: false, semaphoreKey, memory: true };
+	memoryConcurrency.set(semaphoreKey, memoryCount + 1);
+	return { allowed: true, semaphoreKey, memory: true };
 }
 
-async function releaseConcurrency(lock) {
-	if (!lock || !lock.redisKey) return;
+async function releaseConcurrency(lock, coordinator) {
+	if (!lock || (!lock.lease && !lock.semaphoreKey)) return;
 
 	if (lock.memory) {
-		const memoryCount = memoryConcurrency.get(lock.redisKey) || 0;
+		const memoryCount = memoryConcurrency.get(lock.semaphoreKey) || 0;
 		if (memoryCount <= 1) {
-			memoryConcurrency.delete(lock.redisKey);
+			memoryConcurrency.delete(lock.semaphoreKey);
 		} else {
-			memoryConcurrency.set(lock.redisKey, memoryCount - 1);
+			memoryConcurrency.set(lock.semaphoreKey, memoryCount - 1);
 		}
 		return;
 	}
 
-	const client = getRedisClient();
-	if (!client || typeof client.call !== 'function') return;
-
 	try {
-		const count = parseInt(await client.call('DECR', lock.redisKey), 10);
-		if (count <= 0) await client.call('DEL', lock.redisKey);
+		await (coordinator || getMongoCoordinator()).releaseSemaphore(lock.lease);
 	} catch (err) {
-		log.warn({ err }, 'MCP rate limit concurrency release failed');
+		log.warn({ err }, 'MCP MongoDB concurrency release failed');
 	}
 }
 
@@ -445,16 +407,16 @@ export async function runToolWithLimits(options) {
 
 	const concurrencyName = isHeavy ? 'heavy-tool' : 'tool';
 	const concurrencyLimit = isHeavy ? rateLimitConfig.heavyToolConcurrency : rateLimitConfig.toolConcurrency;
-	const lock = await acquireConcurrency(product, concurrencyName, rateLimitKey, concurrencyLimit);
+	const lock = await acquireConcurrency(product, concurrencyName, rateLimitKey, concurrencyLimit, options.coordinator);
 	if (!lock.allowed) {
 		log.warn({ product, tool: toolName, bucket: concurrencyName }, 'MCP tool concurrency limit exceeded');
-		return buildToolLimitResult(toolName, 'Too many concurrent MCP tool calls. Please wait and try again.');
+		return buildToolLimitResult(toolName, lock.unavailable ? 'MCP concurrency service unavailable. Please try again later.' : 'Too many concurrent MCP tool calls. Please wait and try again.');
 	}
 
 	try {
 		return await options.run();
 	} finally {
-		await releaseConcurrency(lock);
+		await releaseConcurrency(lock, options.coordinator);
 	}
 }
 

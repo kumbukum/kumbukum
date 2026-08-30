@@ -20,7 +20,7 @@ import { ObsidianManifestBatch } from '../model/obsidian_manifest_batch.js';
 import { ObsidianBlob } from '../model/obsidian_blob.js';
 import { detectFileType } from '../modules/file_detect.js';
 import { emitToTenant } from '../modules/socket.js';
-import { getRedisClient } from '../modules/redis.js';
+import { getMongoCoordinator } from '../modules/cache.js';
 import { MongoQueue, MongoWorker } from '../modules/mongo_queue.js';
 import { extractText } from './import_service.js';
 import { materializeBlob, readBlobBuffer, storeBuffer, deleteBlob, deleteConnectionUploads } from './obsidian_blob_service.js';
@@ -196,12 +196,11 @@ async function connectionForWrite(hostId, connectionId) {
 }
 
 async function acquireManifestLock(connectionId) {
-	const redis = getRedisClient();
-	return Boolean(await redis.set(`obsidian-manifest:${connectionId}`, '1', 'EX', 600, 'NX'));
+	return getMongoCoordinator().acquireLock(`obsidian-manifest:${connectionId}`, { ttlMs: 600000 });
 }
 
-async function releaseManifestLock(connectionId) {
-	await getRedisClient().del(`obsidian-manifest:${connectionId}`);
+async function releaseManifestLock(lock) {
+	await getMongoCoordinator().releaseLock(lock);
 }
 
 async function nextSequence(connection) {
@@ -772,12 +771,12 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 			...memories.map((memory) => ({ action: 'download', path: `${connection.streamient_folder}/Memories/${safeFileName(memory.title)}.md`, preview: true })),
 		];
 	} else {
-		const locked = await acquireManifestLock(connection._id);
-		if (!locked) throw new ObsidianSyncError('A vault manifest is already being reconciled', 409, 'sync_in_progress');
+		const lock = await acquireManifestLock(connection._id);
+		if (!lock) throw new ObsidianSyncError('A vault manifest is already being reconciled', 409, 'sync_in_progress');
 		try {
 			await ensureProjectExports(connection);
 		} finally {
-			await releaseManifestLock(connection._id);
+			await releaseManifestLock(lock);
 		}
 	}
 	const entries = Array.isArray(data.files) ? data.files : [];

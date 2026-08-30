@@ -11,7 +11,7 @@ import config from './config.js';
 import { connectDB } from './db.js';
 import { setupSocketIO } from './modules/socket.js';
 import { initTypesense } from './modules/typesense.js';
-import { initRedis } from './modules/redis.js';
+import { initCache } from './modules/cache.js';
 import { resolveTenant, backfillStarterPlan, backfillTenantLimits } from './modules/tenancy.js';
 import { resolveRequestHosted } from './config.js';
 import { installIconLocals } from './modules/icons.js';
@@ -272,7 +272,7 @@ async function start() {
 	await backfillTypesenseTrashFields();
 	await backfillStarterPlan();
 	await backfillTenantLimits();
-	await initRedis();
+	await initCache();
 	if (SERVER_MODE === 'app') {
 		try {
 			await preloadAuthAssets();

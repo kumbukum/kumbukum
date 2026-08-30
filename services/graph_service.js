@@ -4,7 +4,7 @@ import { Memory } from '../model/memory.js';
 import { Url } from '../model/url.js';
 import { Email } from '../model/email.js';
 import { searchCollection, listDocuments } from '../modules/typesense.js';
-import { cacheGet, cacheSet, cacheInvalidate } from '../modules/redis.js';
+import { cacheGet, cacheInvalidateScope, cacheSet } from '../modules/cache.js';
 import * as audit from './audit_service.js';
 import { createLogger } from '../modules/logger.js';
 
@@ -199,10 +199,10 @@ export async function getGraphData(hostId, options = {}) {
 	// Step C: Tag-based edges
 	if (includeTags && nodes.length > 0) {
 		const cacheKey = `graph:tags:${hostId}:${projectId || 'all'}`;
-		let tagEdges = await cacheGet(cacheKey);
+		let tagEdges = await cacheGet(cacheKey, { scope: `graph:${hostId}` });
 		if (!tagEdges) {
 			tagEdges = computeTagEdges(nodes);
-			await cacheSet(cacheKey, tagEdges, CACHE_TTL);
+			await cacheSet(cacheKey, tagEdges, CACHE_TTL, { scope: `graph:${hostId}` });
 		}
 		edges.push(...tagEdges);
 	}
@@ -210,10 +210,10 @@ export async function getGraphData(hostId, options = {}) {
 	// Step D: Semantic similarity edges
 	if (includeSemantic && nodes.length > 0) {
 		const cacheKey = `graph:semantic:${hostId}:${projectId || 'all'}`;
-		let semanticEdges = await cacheGet(cacheKey);
+		let semanticEdges = await cacheGet(cacheKey, { scope: `graph:${hostId}` });
 		if (!semanticEdges) {
 			semanticEdges = await computeSemanticEdges(hostId, nodes, semanticThreshold);
-			await cacheSet(cacheKey, semanticEdges, CACHE_TTL);
+			await cacheSet(cacheKey, semanticEdges, CACHE_TTL, { scope: `graph:${hostId}` });
 		}
 		edges.push(...semanticEdges);
 	}
@@ -314,5 +314,5 @@ async function computeSemanticEdges(hostId, nodes, threshold) {
 // ---- Cache invalidation ----
 
 export async function invalidateGraphCache(hostId) {
-	await cacheInvalidate(`graph:*:${hostId}:*`);
+	await cacheInvalidateScope(`graph:${hostId}`);
 }

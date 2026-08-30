@@ -3,16 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { getRedisClient } from '../modules/redis.js';
 import { createLogger } from '../modules/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_ASSET_DIR = path.resolve(__dirname, '..', 'assets', 'auth');
 const AUTH_BACKGROUND_DIR = path.resolve(__dirname, '..', 'public', 'images', 'auth', 'backgrounds');
-const MANIFEST_KEY = 'auth-assets:v1:manifest';
-const BODY_KEY_PREFIX = 'auth-assets:v1:body:';
-const META_KEY_PREFIX = 'auth-assets:v1:meta:';
-const BACKGROUND_MANIFEST_KEY = 'auth-backgrounds:v1:manifest';
 const MAX_ASSET_SIZE = 8 * 1024 * 1024;
 const log = createLogger('auth-assets');
 
@@ -43,14 +38,6 @@ function isSafeAssetName(name = '') {
 
 function assetBaseName(filename = '') {
 	return path.basename(filename, path.extname(filename)).toLowerCase();
-}
-
-function bodyKey(filename) {
-	return `${BODY_KEY_PREFIX}${filename}`;
-}
-
-function metaKey(filename) {
-	return `${META_KEY_PREFIX}${filename}`;
 }
 
 function acceptsFormat(acceptHeader = '', mimeType = '') {
@@ -99,17 +86,8 @@ export function getRandomAuthBackgroundUrl(buildId = '', random = Math.random) {
 	return `${staticPrefix}/images/auth/backgrounds/${encodeURIComponent(filename)}`;
 }
 
-async function readManifest(client = getRedisClient()) {
-	try {
-		const raw = await client.get(MANIFEST_KEY);
-		if (!raw) return inMemoryManifest;
-		const parsed = JSON.parse(raw);
-		if (!Array.isArray(parsed)) return inMemoryManifest;
-		inMemoryManifest = parsed;
-		return inMemoryManifest;
-	} catch {
-		return inMemoryManifest;
-	}
+async function readManifest() {
+	return inMemoryManifest;
 }
 
 async function readAssetFromDisk(filename) {
@@ -138,22 +116,11 @@ async function readAssetFromDisk(filename) {
 	};
 }
 
-async function readAsset(client, filename, manifest) {
-	const meta = manifest.find((item) => item.filename === filename);
-	if (meta) {
-		try {
-			const raw = await client.get(bodyKey(filename));
-			if (raw) return { buffer: Buffer.from(raw, 'base64'), meta };
-		} catch {
-			// fall through to disk fallback
-		}
-	}
-
+async function readAsset(filename) {
 	return readAssetFromDisk(filename).catch(() => null);
 }
 
 export async function preloadAuthAssets() {
-	const client = getRedisClient();
 	await fs.mkdir(AUTH_ASSET_DIR, { recursive: true });
 
 	const entries = await fs.readdir(AUTH_ASSET_DIR, { withFileTypes: true });
@@ -169,19 +136,15 @@ export async function preloadAuthAssets() {
 		const asset = await readAssetFromDisk(entry.name);
 		if (!asset) continue;
 
-		await client.set(bodyKey(entry.name), asset.buffer.toString('base64'));
-		await client.set(metaKey(entry.name), JSON.stringify(asset.meta));
 		manifest.push(asset.meta);
 	}
 
 	manifest.sort((a, b) => a.filename.localeCompare(b.filename));
 	inMemoryManifest = manifest;
-	await client.set(MANIFEST_KEY, JSON.stringify(manifest));
-
 	if (manifest.length) {
-		log.info({ assets: manifest.map((item) => item.filename).join(', ') }, 'Auth assets preloaded into Redis');
+		log.info({ assets: manifest.map((item) => item.filename).join(', ') }, 'Auth assets preloaded from disk');
 	} else {
-		log.info({ path: path.relative(path.resolve(__dirname, '..'), AUTH_ASSET_DIR) }, 'Auth assets preloaded into Redis: none found');
+		log.info({ path: path.relative(path.resolve(__dirname, '..'), AUTH_ASSET_DIR) }, 'Auth assets preloaded from disk: none found');
 	}
 
 	return manifest;
@@ -216,23 +179,16 @@ export async function preloadAuthBackgrounds() {
 	manifest.sort((a, b) => a.filename.localeCompare(b.filename));
 	inMemoryBackgroundManifest = manifest;
 
-	try {
-		await getRedisClient().set(BACKGROUND_MANIFEST_KEY, JSON.stringify(manifest));
-	} catch {
-		// Static background files still work if Redis is temporarily unavailable.
-	}
-
-	log.info({ count: manifest.length }, 'Auth background images cached in Redis');
+	log.info({ count: manifest.length }, 'Auth background images loaded from disk');
 	return manifest;
 }
 
 export async function serveAuthAsset(req, res) {
-	const client = getRedisClient();
-	const manifest = await readManifest(client);
+	const manifest = await readManifest();
 	const filename = selectAuthAssetName(req.params.name, req.headers.accept || '', manifest);
 	if (!filename) return res.sendStatus(404);
 
-	const asset = await readAsset(client, filename, manifest);
+	const asset = await readAsset(filename);
 	if (!asset) return res.sendStatus(404);
 
 	const etag = `"${asset.meta.hash}"`;

@@ -49,6 +49,9 @@ importers:
       '@keyv/valkey':
         specifier: ^1.0.11
         version: 1.0.11(supports-color@5.5.0)
+      '@managani/cache':
+        specifier: 0.1.1
+        version: 0.1.1
       '@managani/express':
         specifier: ^0.1.2
         version: 0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@26.4.0)(@types/react@18.3.31)(axios@1.20.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(qrcode@1.5.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))
@@ -1416,6 +1419,10 @@ packages:
 
   '@levischuck/tiny-cbor@0.2.11':
     resolution: {integrity: sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow==}
+
+  '@managani/cache@0.1.1':
+    resolution: {integrity: sha512-CfJuCGrOO/8uNXD3n8Xl/Pbv9eaoiNr9ljGm2pqiqIb0wznR/DKeXYDVB1YiHSy8bWObDXZoNirlVK0Fp1MHdA==}
+    engines: {node: '>=24'}
 
   '@managani/express@0.1.2':
     resolution: {integrity: sha512-B724bV3zAscQTb23kfj65j37Ff3SnEUYVJmCKT0jqgMrnkesjS5Sq2bGPdgKb41ZS9RLzmgoamGuXHYKjkzZeA==}
@@ -4415,6 +4422,10 @@ packages:
     resolution: {integrity: sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==}
     engines: {node: '>= 0.4'}
 
+  hashery@3.0.1:
+    resolution: {integrity: sha512-jfLVt3/SEkJzW/OCSK7Bxdl+FpXYDpEE84QOU4wzKRpO7rNoafNK718Z71GPQR/ozfQmKxXS++MhbrL/eKaTow==}
+    engines: {node: '>=22.18'}
+
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
@@ -4442,6 +4453,10 @@ packages:
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
+
+  hookified@3.0.3:
+    resolution: {integrity: sha512-ZcbRytYgERoKtosiaXolUIPIWMgUCrSiWQEzFZ0kc8etD/LPgpy4/KOrtssFdK7ZXlTTyb4cob2veqj7osv8yA==}
+    engines: {node: '>=22.18.0'}
 
   html-encoding-sniffer@4.0.0:
     resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
@@ -4985,6 +5000,10 @@ packages:
   media-typer@1.1.1:
     resolution: {integrity: sha512-yz3xRaG20c6/BOzvYoDaGtPmGscs7YivItZEEqe6GbwNfHuxu9YNmvnEkMzKldAGY4/80pRcQRZSEnhquk9XuQ==}
     engines: {node: '>= 0.8'}
+
+  memcache@1.10.0:
+    resolution: {integrity: sha512-USVidZugkSeQuWK8qoI2UUVvTzs1i4tgZ0RhD1Jlw0Ep/02depgMLBoZRIae0YgnRbV4qOVW+QJlijmcoe6DzQ==}
+    engines: {node: '>=22.19.0', pnpm: '>=11'}
 
   memory-pager@1.5.0:
     resolution: {integrity: sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg==}
@@ -7706,6 +7725,10 @@ snapshots:
   '@kwsites/promise-deferred@1.1.1': {}
 
   '@levischuck/tiny-cbor@0.2.11': {}
+
+  '@managani/cache@0.1.1':
+    dependencies:
+      memcache: 1.10.0
 
   '@managani/express@0.1.2(encoding@0.1.13)(express@5.2.1(supports-color@5.5.0))(supports-color@5.5.0)(vitepress@1.6.4(@algolia/client-search@5.57.0)(@types/node@26.4.0)(@types/react@18.3.31)(axios@1.20.0(debug@4.4.3(supports-color@5.5.0))(supports-color@5.5.0))(lightningcss@1.33.0)(postcss@8.5.26)(qrcode@1.5.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3))(vue@3.5.41(typescript@6.0.3))':
     dependencies:
@@ -11385,6 +11408,10 @@ snapshots:
     dependencies:
       has-symbols: 1.1.0
 
+  hashery@3.0.1:
+    dependencies:
+      hookified: 3.0.3
+
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
@@ -11421,6 +11448,8 @@ snapshots:
   hono@4.13.5: {}
 
   hookable@5.5.3: {}
+
+  hookified@3.0.3: {}
 
   html-encoding-sniffer@4.0.0:
     dependencies:
@@ -12026,6 +12055,11 @@ snapshots:
       vfile: 6.0.3
 
   media-typer@1.1.1: {}
+
+  memcache@1.10.0:
+    dependencies:
+      hashery: 3.0.1
+      hookified: 3.0.3
 
   memory-pager@1.5.0: {}
 

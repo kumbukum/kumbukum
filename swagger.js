@@ -2404,15 +2404,15 @@ const swaggerSpec = {
                 },
             },
         },
-        '/health/redis': {
+        '/health/memcached': {
             get: {
                 tags: ['Health'],
-                summary: 'Redis health',
-                description: 'Returns 200 if Redis is reachable, 503 otherwise. No auth required.',
+                summary: 'Memcached health',
+                description: 'Returns 200 when at least one Memcached node is reachable, 503 otherwise. No auth required.',
                 security: [],
                 responses: {
-                    200: { description: 'Redis healthy', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
-                    503: { description: 'Redis unavailable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'unavailable' } } } } } },
+                    200: { description: 'Memcached reachable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'ok' } } } } } },
+                    503: { description: 'Memcached unavailable', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', example: 'unavailable' } } } } } },
                 },
             },
         },

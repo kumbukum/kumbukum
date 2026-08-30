@@ -77,8 +77,12 @@ function parseRedisConfig() {
 	return process.env.REDIS_URL || 'redis://localhost:6379';
 }
 
+function parseMemcachedServers() {
+	return [...new Set(String(process.env.MEMCACHED_SERVERS || 'localhost:11211').split(',').map(value => value.trim()).filter(Boolean))];
+}
+
 export function resolveSocketIOConfig(env = process.env, defaults = {}) {
-	const adapter = String(env.SOCKET_IO_ADAPTER || (defaults.redisEnabled ? 'redis' : 'memory')).trim().toLowerCase();
+	const adapter = String(env.SOCKET_IO_ADAPTER || defaults.adapter || 'mongodb').trim().toLowerCase();
 	if (!['memory', 'mongodb', 'redis'].includes(adapter)) {
 		throw new Error('SOCKET_IO_ADAPTER must be memory, mongodb, or redis');
 	}
@@ -201,6 +205,7 @@ const config = {
 	mongoUri,
 	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 	redisOptions: parseRedisConfig(),
+	memcachedServers: parseMemcachedServers(),
 	socketRedis,
 	socketIO: resolveSocketIOConfig(process.env, { mongoUri, redisEnabled: socketRedis }),
 	socketEmitDelay: parseNonNegativeNumberEnv('SOCKET_EMIT_DELAY', 0),

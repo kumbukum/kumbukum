@@ -5,10 +5,9 @@ x-environment: &environment
   API_BASE_URL: http://app:3000
   STREAMIENT_APP: web
   MONGO_URI: mongodb://mongo:27017/streamient
-  SOCKET_IO_ADAPTER: ${SOCKET_IO_ADAPTER:-}
+  SOCKET_IO_ADAPTER: ${SOCKET_IO_ADAPTER:-mongodb}
   SOCKET_IO_MONGO_URL: ${SOCKET_IO_MONGO_URL:-}
-  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-  REDIS_SENTINEL: ${REDIS_SENTINEL:-}
+  MEMCACHED_SERVERS: ${MEMCACHED_SERVERS:-memcached:11211}
   API_RATE_LIMIT_ENABLED: "${API_RATE_LIMIT_ENABLED:-true}"
   API_RATE_LIMIT_WINDOW_MS: "${API_RATE_LIMIT_WINDOW_MS:-60000}"
   API_RATE_LIMIT_GENERAL_PER_MINUTE: "${API_RATE_LIMIT_GENERAL_PER_MINUTE:-120}"
@@ -129,7 +128,7 @@ services:
       start_period: 30s
     depends_on:
       - mongo
-      - redis
+      - memcached
       - typesense
     restart: unless-stopped
 
@@ -150,7 +149,7 @@ services:
       retries: 3
       start_period: 30s
     depends_on:
-      - redis
+      - memcached
       - mongo
       - typesense
     restart: unless-stopped
@@ -184,7 +183,7 @@ services:
       - assets_data:/opt/streamient/assets
     depends_on:
       - mongo
-      - redis
+      - memcached
       - typesense
     restart: unless-stopped
 
@@ -209,11 +208,9 @@ services:
       PERCONA_TELEMETRY_DISABLE: 1
       MONGO_HOST: mongo
 
-  redis:
-    image: redis:8-bookworm
-    command: redis-server --appendonly yes --port 6379 --save ""
-    volumes:
-      - redis_data:/data
+  memcached:
+    image: memcached:1.6.45-trixie@sha256:75c93cc91e76853da7c029e74d6e8dbd44774dd3713c93be8cd1971ad26120a4
+    command: ["memcached", "-m", "256", "-I", "4m", "-c", "1024", "-t", "2"]
     restart: unless-stopped
 
   typesense:
@@ -237,5 +234,4 @@ services:
 volumes:
   mongo_data:
   typesense_data:
-  redis_data:
   assets_data:
