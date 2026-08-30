@@ -15,7 +15,7 @@ import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
 import * as audit from './audit_service.js';
 import { encrypt, decrypt } from '../modules/encryption.js';
-import { getRedisClient } from '../modules/redis.js';
+import { getMongoCoordinator } from '../modules/cache.js';
 import { emitToTenant } from '../modules/socket.js';
 import { createLogger } from '../modules/logger.js';
 
@@ -311,15 +311,11 @@ function importedContentMatchesGit(doc, type, parsed, title) {
 }
 
 async function acquireLock(repoId, ttlSeconds = 600) {
-	const redis = getRedisClient();
-	const key = `git-sync:${repoId}`;
-	const ok = await redis.set(key, '1', 'EX', ttlSeconds, 'NX');
-	return !!ok;
+	return getMongoCoordinator().acquireLock(`git-sync:${repoId}`, { ttlMs: ttlSeconds * 1000 });
 }
 
-async function releaseLock(repoId) {
-	const redis = getRedisClient();
-	await redis.del(`git-sync:${repoId}`);
+async function releaseLock(lock) {
+	await getMongoCoordinator().releaseLock(lock);
 }
 
 // ── CRUD ──
@@ -435,8 +431,8 @@ async function prepareSyncRepo(repoId, userId, hostId, ctx = { channel: 'api' })
 	if (!gitRepoDoc) throw new Error('Git repo not found');
 	if (!gitRepoDoc.enabled) throw new Error('Git sync is disabled for this repo');
 
-	const locked = ctx.skip_lock ? true : await acquireLock(repoId);
-	if (!locked) throw new Error('Sync already in progress');
+	const lock = ctx.skip_lock ? null : await acquireLock(repoId);
+	if (!ctx.skip_lock && !lock) throw new Error('Sync already in progress');
 
 	try {
 		const summary = createSyncSummary();
@@ -446,9 +442,9 @@ async function prepareSyncRepo(repoId, userId, hostId, ctx = { channel: 'api' })
 		await gitRepoDoc.save();
 		await logSyncEvent(gitRepoDoc, 'info', 'Sync started', { channel: ctx.channel || 'api', user_id: userId });
 
-		return { gitRepoDoc, summary };
+		return { gitRepoDoc, summary, lock };
 	} catch (err) {
-		if (!ctx.skip_lock) await releaseLock(repoId);
+		if (lock) await releaseLock(lock);
 		throw err;
 	}
 }
@@ -462,7 +458,7 @@ export async function startSyncRepo(repoId, userId, hostId, ctx = { channel: 'ap
 		} catch (err) {
 			log.error({ err, repo_id: repoId }, 'Git sync failed');
 		} finally {
-			if (!ctx.skip_lock) await releaseLock(repoId);
+			if (prepared.lock) await releaseLock(prepared.lock);
 		}
 	});
 
@@ -474,7 +470,7 @@ export async function syncRepo(repoId, userId, hostId, ctx = { channel: 'api' })
 	try {
 		return await executeSyncRepo(repoId, userId, hostId, ctx, prepared.gitRepoDoc, prepared.summary);
 	} finally {
-		if (!ctx.skip_lock) await releaseLock(repoId);
+		if (prepared.lock) await releaseLock(prepared.lock);
 	}
 }
 

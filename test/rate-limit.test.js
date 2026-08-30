@@ -98,6 +98,31 @@ function deferred() {
 	return { promise, resolve, reject };
 }
 
+function createSemaphoreCoordinator() {
+	const active = new Map();
+	let sequence = 0;
+	return {
+		async acquireSemaphore(key, limit) {
+			const slots = active.get(key) || new Map();
+			for (let slot = 0; slot < limit; slot++) {
+				if (slots.has(slot)) continue;
+				const lease = { semaphoreKey: key, slot, token: String(++sequence) };
+				slots.set(slot, lease.token);
+				active.set(key, slots);
+				return lease;
+			}
+			return null;
+		},
+		async releaseSemaphore(lease) {
+			const slots = active.get(lease.semaphoreKey);
+			if (!slots || slots.get(lease.slot) !== lease.token) return false;
+			slots.delete(lease.slot);
+			if (!slots.size) active.delete(lease.semaphoreKey);
+			return true;
+		},
+	};
+}
+
 beforeEach(() => {
 	savedEnv = {};
 	for (const key of ENV_KEYS) {
@@ -381,9 +406,11 @@ describe('MCP rate-limit helpers', () => {
 		const rateLimitKey = 'user:heavy-concurrency-regression';
 		const firstStarted = deferred();
 		const releaseFirst = deferred();
+		const coordinator = createSemaphoreCoordinator();
 		const first = McpRateLimit.runToolWithLimits({
 			product,
 			rateLimitKey,
+			coordinator,
 			toolName: 'chat',
 			run: async function runFirstHeavyTool() {
 				firstStarted.resolve();
@@ -397,6 +424,7 @@ describe('MCP rate-limit helpers', () => {
 			const second = await McpRateLimit.runToolWithLimits({
 				product,
 				rateLimitKey,
+				coordinator,
 				toolName: 'chat',
 				run: async function runSecondHeavyTool() {
 					return { content: [{ type: 'text', text: 'second heavy' }] };
@@ -414,6 +442,21 @@ describe('MCP rate-limit helpers', () => {
 		const firstResult = await first;
 		assert.equal(firstResult?.isError, undefined);
 		assert.equal(firstResult.content[0].text, 'first heavy');
+	});
+
+	it('fails closed when the MongoDB heavy-tool semaphore is unavailable', async () => {
+		setEnv(MCP_RATE_LIMIT_ENV);
+		let ran = false;
+		const result = await McpRateLimit.runToolWithLimits({
+			product: 'streamient-mongo-failure',
+			rateLimitKey: 'user:mongo-failure',
+			toolName: 'chat',
+			coordinator: { acquireSemaphore: async function() { throw new Error('MongoDB unavailable'); } },
+			run: async function() { ran = true; },
+		});
+		assert.equal(ran, false);
+		assert.equal(result.isError, true);
+		assert.match(JSON.parse(result.content[0].text).error, /concurrency service unavailable/);
 	});
 
 	it('runs startup-created authenticated limiter inside request handlers', async () => {

@@ -22,11 +22,11 @@ function closeSocketServer(io) {
 }
 
 describe('Socket.IO MongoDB transport', () => {
-	it('keeps Redis as the backward-compatible default', () => {
+	it('uses MongoDB as the default even when legacy Redis configuration exists', () => {
 		assert.deepEqual(
 			resolveSocketIOConfig({}, { mongoUri: 'mongodb://mongo:27017/streamient', redisEnabled: true }),
 			{
-				adapter: 'redis',
+			adapter: 'mongodb',
 				mongoUrl: 'mongodb://mongo:27017/streamient',
 			},
 		);

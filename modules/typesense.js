@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import Typesense from 'typesense';
 import config, { getPlanLlmConfig } from '../config.js';
 import { emitToTenant } from './socket.js';
-import { getRedisClient } from './redis.js';
+import { cacheDelete, cacheGet, cacheSet } from './cache.js';
 import { normalizeLlmScope, resolveLlmKeyContext } from '../services/byo_ai_service.js';
 import { sanitizeDeep } from './text_sanitize.js';
 import { buildEmailExcerpt } from './email_display.js';
@@ -178,8 +178,7 @@ function buildConversationModelSignature(modelName, apiKey, maxBytes = 102400) {
 
 async function getStoredConversationModelSignature(modelId) {
 	try {
-		const redis = getRedisClient();
-		return await redis.get(getConversationModelSyncKey(modelId));
+		return await cacheGet(getConversationModelSyncKey(modelId));
 	} catch {
 		return null;
 	}
@@ -187,8 +186,7 @@ async function getStoredConversationModelSignature(modelId) {
 
 async function setStoredConversationModelSignature(modelId, signature) {
 	try {
-		const redis = getRedisClient();
-		await redis.set(getConversationModelSyncKey(modelId), signature, 'EX', 86400);
+		await cacheSet(getConversationModelSyncKey(modelId), signature, 86400);
 	} catch {
 		// ignore cache failures
 	}
@@ -1416,9 +1414,7 @@ function getReindexStatusKey(host_id) {
 
 async function getStoredReindexStatus(host_id) {
 	try {
-		const redis = getRedisClient();
-		const raw = await redis.get(getReindexStatusKey(host_id));
-		return raw ? JSON.parse(raw) : null;
+		return await cacheGet(getReindexStatusKey(host_id));
 	} catch {
 		return null;
 	}
@@ -1426,8 +1422,7 @@ async function getStoredReindexStatus(host_id) {
 
 async function setStoredReindexStatus(host_id, data) {
 	try {
-		const redis = getRedisClient();
-		await redis.set(getReindexStatusKey(host_id), JSON.stringify(data), 'EX', REINDEX_STATUS_TTL_SECONDS);
+		await cacheSet(getReindexStatusKey(host_id), data, REINDEX_STATUS_TTL_SECONDS);
 	} catch {
 		// ignore status cache failures — reindex still works
 	}
@@ -1435,8 +1430,7 @@ async function setStoredReindexStatus(host_id, data) {
 
 async function clearStoredReindexStatus(host_id) {
 	try {
-		const redis = getRedisClient();
-		await redis.del(getReindexStatusKey(host_id));
+		await cacheDelete(getReindexStatusKey(host_id));
 	} catch {
 		// ignore status cache failures
 	}

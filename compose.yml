@@ -3,9 +3,9 @@ x-env: &env
   STREAMIENT_APP: web
   PORT: 3000
   MONGO_URI: ${DEV_STREAMIENT_MONGODB_URI:-${DEV_KUMBUKUM_MONGODB_URI}}
-  SOCKET_IO_ADAPTER: ${SOCKET_IO_ADAPTER:-}
+  SOCKET_IO_ADAPTER: ${SOCKET_IO_ADAPTER:-mongodb}
   SOCKET_IO_MONGO_URL: ${SOCKET_IO_MONGO_URL:-}
-  REDIS_URL: ${DEV_REDIS_URL:-redis://redis:6379}
+  MEMCACHED_SERVERS: ${MEMCACHED_SERVERS:-memcached:11211}
   API_RATE_LIMIT_ENABLED: "${API_RATE_LIMIT_ENABLED:-true}"
   API_RATE_LIMIT_WINDOW_MS: "${API_RATE_LIMIT_WINDOW_MS:-60000}"
   API_RATE_LIMIT_GENERAL_PER_MINUTE: "${API_RATE_LIMIT_GENERAL_PER_MINUTE:-120}"
@@ -120,6 +120,13 @@ x-env: &env
   OBSIDIAN_SYNC_MAX_VAULT_BYTES: "${OBSIDIAN_SYNC_MAX_VAULT_BYTES:-10000000000}"
 
 services:
+  memcached:
+    image: memcached:1.6.45-trixie@sha256:75c93cc91e76853da7c029e74d6e8dbd44774dd3713c93be8cd1971ad26120a4
+    command: ["memcached", "-m", "256", "-I", "4m", "-c", "1024", "-t", "2"]
+    restart: unless-stopped
+    networks:
+      - hmnet16
+
   # ---------------------------------------------------------------
   # One-shot service: installs / syncs node_modules before any app
   # container starts. Every service that needs node_modules must
@@ -170,7 +177,7 @@ services:
         condition: service_completed_successfully
     # mongo-init:
     #     condition: service_completed_successfully
-    # redis:
+    # memcached:
     #     condition: service_started
     # typesense:
     #     condition: service_started
@@ -260,7 +267,6 @@ volumes:
   pnpm_store:
   mongo_data:
   typesense_data:
-  redis_data:
   caddy_data:
   caddy_config:
 

@@ -1,10 +1,8 @@
 import crypto from 'node:crypto';
 import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
-import { getRedisClient } from '../modules/redis.js';
+import { getRateLimitStore } from '../modules/cache.js';
 import { Tenant } from '../modules/tenancy.js';
 import { resolveStoredTenantLimits } from '../modules/tenant_limits.js';
-import config from '../config.js';
 import { createLogger } from '../modules/logger.js';
 import { hasStreamientDemoSessionEntry } from '../services/streamient_demo_service.js';
 
@@ -161,19 +159,11 @@ export function getRateLimitKey(request) {
 	return `ip:${hashValue(getClientIp(request))}`;
 }
 
-function getRedisStore(prefix) {
-	if (!config.socketRedis) return undefined;
-
+function getCacheStore(prefix) {
 	try {
-		const redisClient = getRedisClient();
-		if (!redisClient || typeof redisClient.call !== 'function') return undefined;
-
-		return new RedisStore({
-			sendCommand: (...args) => redisClient.call(...args),
-			prefix: `rl:${prefix}:`,
-		});
+		return getRateLimitStore(prefix, getConfig().windowMs);
 	} catch (err) {
-		log.warn({ err, prefix }, 'API rate limit Redis store unavailable; using memory store');
+		log.warn({ err, prefix }, 'API rate limit Memcached store unavailable; using memory store');
 		return undefined;
 	}
 }
@@ -225,7 +215,8 @@ function createLimiter(options) {
 		windowMs: rateLimitConfig.windowMs,
 		limit: options.limit,
 		keyGenerator: getRateLimitKey,
-		store: getRedisStore(options.name),
+		store: getCacheStore(options.name),
+		passOnStoreError: true,
 		standardHeaders: 'draft-7',
 		legacyHeaders: false,
 		skip: options.skip,
@@ -312,7 +303,8 @@ export function createAiDailyLimiter() {
 		windowMs: 24 * 60 * 60 * 1000,
 		limit: async (request) => Math.max(1, await resolveRequestAiDailyLimit(request)),
 		keyGenerator: (request) => `host:${request.host_id}`,
-		store: getRedisStore('ai-daily'),
+		store: getCacheStore('ai-daily'),
+		passOnStoreError: true,
 		standardHeaders: 'draft-7',
 		legacyHeaders: false,
 		skip: async (request) => {

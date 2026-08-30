@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import mongoose from '../model/mongoose.js';
-import { getRedisClient } from '../modules/redis.js';
+import { getCache } from '../modules/cache.js';
 import { getTypesenseClient } from '../modules/typesense.js';
 import { getIO } from '../modules/socket.js';
 import * as OtelRuntime from '../modules/otel_runtime.js';
@@ -26,17 +26,13 @@ router.get('/mongodb', (_req, res) => {
 });
 
 /**
- * GET /health/redis
- * Returns 200 if Redis is reachable, 503 otherwise.
+ * GET /health/memcached
+ * Returns 200 when at least one Memcached node is reachable.
  */
-router.get('/redis', async (_req, res) => {
+router.get('/memcached', async (_req, res) => {
     try {
-        const redis = getRedisClient();
-        if (redis && redis.status === 'ready') {
-            await redis.ping();
-            return res.json({ status: 'ok' });
-        }
-        res.status(503).json({ status: 'unavailable' });
+        const health = await getCache().health();
+        res.status(health.healthy ? 200 : 503).json({ status: health.healthy ? 'ok' : 'unavailable', degraded: health.degraded, node_count: health.nodes.length, healthy_nodes: health.nodes.filter(node => node.healthy && !node.ejected).length });
     } catch {
         res.status(503).json({ status: 'unavailable' });
     }
