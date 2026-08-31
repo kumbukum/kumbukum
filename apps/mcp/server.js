@@ -7,14 +7,8 @@ import express from 'express';
 import mcpConfig from './config.js';
 import { ApiClient } from './lib/api-client.js';
 import { authenticateHttpRequest, checkRequestScopes } from './lib/http-auth.js';
-import { noteTools } from './tools/notes.js';
-import { memoryTools } from './tools/memory.js';
-import { urlTools } from './tools/urls.js';
-import { emailTools } from './tools/emails.js';
-import { projectTools } from './tools/projects.js';
-import { graphTools } from './tools/graph.js';
-import { gitSyncTools } from './tools/git_sync.js';
-import { applyToolProfile, MCP_TOOL_PROFILES } from './tools/profile.js';
+import { createMcpToolCatalog } from './tools/catalog.js';
+import { MCP_TOOL_PROFILES } from './tools/profile.js';
 import { MCP_SERVER_INSTRUCTIONS } from './instructions.js';
 import { buildProtectedResourceMetadata, getRequestExternalBaseUrl, getRequiredScopesForTool } from '../../modules/oauth.js';
 import McpRateLimit from '../../modules/mcp_rate_limit.js';
@@ -132,16 +126,7 @@ async function createServer(apiAuth, { projectId, oauthClientId, cacheKey, toolP
   });
 
   // Register all tools, wrapping handlers to inject MCP client identity
-  let allTools = {
-    ...noteTools(api, defaultProjectId),
-    ...memoryTools(api, defaultProjectId),
-    ...urlTools(api, defaultProjectId),
-    ...(emailFeatureEnabled ? emailTools(api, defaultProjectId) : {}),
-    ...projectTools(api),
-    ...graphTools(api),
-    ...(gitSyncFeatureEnabled ? gitSyncTools(api, defaultProjectId) : {}),
-  };
-  allTools = applyToolProfile(allTools, toolProfile);
+  const allTools = createMcpToolCatalog(api, { defaultProjectId, emailFeatureEnabled, gitSyncFeatureEnabled, toolProfile });
 
   for (const [name, tool] of Object.entries(allTools)) {
     const originalHandler = tool.handler;

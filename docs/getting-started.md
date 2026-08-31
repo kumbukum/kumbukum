@@ -54,4 +54,5 @@ To rotate outbound mail across several SMTP servers, set `SMTP_SERVERS` to a JSO
 
 - [API Reference](/api/) — REST API for notes, memories, URLs, and search
 - [MCP Server](/mcp/) — 44 tools for Claude Desktop and other LLM clients
+- [Streamient CLI](/cli/) — composable shell access to all 44 Streamient MCP tools
 - [Knowledge Graph](/guide/graph) — Connect your data with manual, tag-based, and semantic links

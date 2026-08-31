@@ -143,7 +143,7 @@ services:
       <<: *env
     restart: "no"
     command: ["/bin/bash", "-c", "
-      if [ ! -d node_modules ] || [ package.json -nt node_modules/.installed ] || [ pnpm-lock.yaml -nt node_modules/.installed ]; then
+      if [ ! -d node_modules ] || [ package.json -nt node_modules/.installed ] || [ pnpm-lock.yaml -nt node_modules/.installed ] || [ pnpm-workspace.yaml -nt node_modules/.installed ] || [ apps/cli/package.json -nt node_modules/.installed ] || [ apps/mcp/package.json -nt node_modules/.installed ] || [ apps/mobile/package.json -nt node_modules/.installed ] || [ docs/package.json -nt node_modules/.installed ]; then
         echo '[init] Installing / syncing dependencies...';
         pnpm install;
         touch node_modules/.installed;

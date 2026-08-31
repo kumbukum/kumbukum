@@ -7,14 +7,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import express from 'express';
 
-import { noteTools } from '../../../apps/mcp/tools/notes.js';
-import { memoryTools } from '../../../apps/mcp/tools/memory.js';
-import { urlTools } from '../../../apps/mcp/tools/urls.js';
-import { emailTools } from '../../../apps/mcp/tools/emails.js';
-import { projectTools } from '../../../apps/mcp/tools/projects.js';
-import { graphTools } from '../../../apps/mcp/tools/graph.js';
-import { gitSyncTools } from '../../../apps/mcp/tools/git_sync.js';
-import { applyToolProfile, MCP_TOOL_PROFILES } from '../../../apps/mcp/tools/profile.js';
+import { createMcpToolCatalog } from '../../../apps/mcp/tools/catalog.js';
+import { MCP_TOOL_PROFILES } from '../../../apps/mcp/tools/profile.js';
 import { getRequiredScopesForTool } from '../../../modules/oauth.js';
 
 import { FIXTURES } from './fixtures.js';
@@ -38,15 +32,7 @@ export function buildMcpServer(api, { toolProfile = MCP_TOOL_PROFILES.FULL } = {
         version: '0.0.1',
     });
 
-    const allTools = applyToolProfile({
-        ...noteTools(api, defaultProjectId),
-        ...memoryTools(api, defaultProjectId),
-        ...urlTools(api, defaultProjectId),
-        ...emailTools(api, defaultProjectId),
-        ...projectTools(api),
-        ...graphTools(api),
-        ...gitSyncTools(api, defaultProjectId),
-    }, toolProfile);
+    const allTools = createMcpToolCatalog(api, { defaultProjectId, toolProfile });
 
     for (const [name, tool] of Object.entries(allTools)) {
         server.registerTool(name, {
@@ -65,51 +51,20 @@ export function buildMcpServer(api, { toolProfile = MCP_TOOL_PROFILES.FULL } = {
  * Start an Express HTTP server with the /mcp Streamable HTTP endpoint.
  * Returns { url, close, app }.
  */
-export async function startTestServer(api) {
+export async function startTestServer(api, { authorize = null } = {}) {
     const app = express();
     app.use(express.json());
 
-    app.post('/mcp', async (req, res) => {
-        const server = buildMcpServer(api);
+    const handleMcp = (toolProfile = MCP_TOOL_PROFILES.FULL) => async (req, res) => {
+        if (authorize && !authorize(req)) return res.status(401).json({ error: 'Invalid access token' });
+        const server = buildMcpServer(api, { toolProfile });
         const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
         await server.connect(transport);
         await transport.handleRequest(req, res, req.body);
-    });
+    };
 
-    app.get('/mcp', async (req, res) => {
-        const server = buildMcpServer(api);
-        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
-    });
-
-    app.delete('/mcp', async (req, res) => {
-        const server = buildMcpServer(api);
-        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
-    });
-
-    app.post('/mcp/app', async (req, res) => {
-        const server = buildMcpServer(api, { toolProfile: MCP_TOOL_PROFILES.APP });
-        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
-    });
-
-    app.get('/mcp/app', async (req, res) => {
-        const server = buildMcpServer(api, { toolProfile: MCP_TOOL_PROFILES.APP });
-        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
-    });
-
-    app.delete('/mcp/app', async (req, res) => {
-        const server = buildMcpServer(api, { toolProfile: MCP_TOOL_PROFILES.APP });
-        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
-    });
+    app.all('/mcp', handleMcp());
+    app.all('/mcp/app', handleMcp(MCP_TOOL_PROFILES.APP));
 
     return new Promise((resolve) => {
         const httpServer = app.listen(0, () => {

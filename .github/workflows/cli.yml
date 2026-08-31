@@ -1,0 +1,59 @@
+name: Test Streamient CLI
+
+on:
+  pull_request:
+    paths:
+      - "apps/cli/**"
+      - "apps/mcp/**"
+      - "docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/cli.yml"
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "apps/cli/**"
+      - "apps/mcp/**"
+      - "docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/cli.yml"
+
+jobs:
+  test-and-pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install pnpm
+        run: npm install --global pnpm@11
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test CLI
+        run: pnpm cli:test
+
+      - name: Check generated CLI documentation
+        run: pnpm cli:docs:check
+
+      - name: Test MCP catalog
+        run: pnpm test:mcp
+
+      - name: Verify npm package contents
+        run: pnpm cli:pack
+
+      - name: Install npm package and smoke-test the binary
+        run: pnpm cli:smoke

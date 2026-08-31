@@ -1,0 +1,54 @@
+{
+	"name": "@streamient/cli",
+	"version": "0.1.0",
+	"description": "Command-line access to Streamient knowledge, memory, projects, and automation",
+	"keywords": [
+		"streamient",
+		"knowledge",
+		"memory",
+		"mcp",
+		"cli",
+		"automation"
+	],
+	"author": {
+		"name": "Helpmonks LLC",
+		"email": "hi@streamient.com",
+		"url": "https://streamient.com"
+	},
+	"homepage": "https://docs.streamient.com/cli/",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/streamient/streamient.git",
+		"directory": "apps/cli"
+	},
+	"bugs": {
+		"url": "https://github.com/streamient/streamient/issues"
+	},
+	"license": "AGPL-3.0",
+	"type": "module",
+	"bin": {
+		"streamient-cli": "./bin/streamient-cli.js"
+	},
+	"files": [
+		"bin",
+		"lib",
+		"README.md"
+	],
+	"engines": {
+		"node": ">=24"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"docs:check": "node scripts/generate-command-reference.mjs --check",
+		"docs:generate": "node scripts/generate-command-reference.mjs",
+		"pack:smoke": "node scripts/pack-smoke.mjs",
+		"test": "node --test test/*.test.js",
+		"pack:check": "npm pack --dry-run"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.30.0",
+		"zod": "^4.4.3"
+	}
+}

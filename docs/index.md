@@ -18,6 +18,9 @@ hero:
         - theme: alt
           text: Self-Hosted
           link: /selfhosted/
+        - theme: alt
+          text: CLI
+          link: /cli/
 
 features:
     - title: Notes
@@ -32,6 +35,8 @@ features:
       details: Search, analyze, and manage your shared memory system with natural language.
     - title: MCP Server
       details: 44 tools for Claude Desktop and other LLM clients via Model Context Protocol.
+    - title: Command-Line Interface
+      details: Search, create, link, synchronize, and automate Streamient from shells, scripts, CI, and coding agents.
     - title: Browser Extension
       details: Save notes and URLs from anywhere, plus an email side panel for Gmail, Outlook, and Fastmail. Chrome only.
     - title: Bidirectional Git Sync

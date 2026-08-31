@@ -68,6 +68,7 @@ export default defineConfig({
             { text: 'Cloud', link: '/cloud/' },
             { text: 'Self-Hosted', link: '/selfhosted/' },
             { text: 'MCP', link: '/mcp/' },
+            { text: 'CLI', link: '/cli/' },
             { text: 'API', link: '/api/' },
         ],
 
@@ -167,6 +168,17 @@ export default defineConfig({
                         { text: 'Agent Configuration', link: '/mcp/agents' },
                         { text: 'Claude Code', link: '/mcp/claude-code' },
                         { text: 'Cursor (IDE)', link: '/mcp/cursor-ide' },
+                    ],
+                },
+            ],
+            '/cli/': [
+                {
+                    text: 'Streamient CLI',
+                    items: [
+                        { text: 'Overview and Installation', link: '/cli/' },
+                        { text: 'Command Reference', link: '/cli/commands' },
+                        { text: 'Using the CLI', link: '/cli/using' },
+                        { text: 'Troubleshooting', link: '/cli/troubleshooting' },
                     ],
                 },
             ],
