@@ -331,6 +331,10 @@ const config = {
 	},
 
 	gitEncryptionKey: process.env.GIT_ENCRYPTION_KEY || '',
+	productUpdates: {
+		ghostBaseUrl: 'https://streamient.com',
+		contentApiKey: process.env.STREAMIENT_GHOST_CONTENT_API_KEY || '',
+	},
 	obsidian: {
 		enabled: process.env.OBSIDIAN_SYNC_ENABLED === 'true',
 		vaultsDir: process.env.OBSIDIAN_VAULTS_DIR || 'assets/obsidian-vaults',

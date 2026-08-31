@@ -25,6 +25,7 @@ export function toSafeUser(user) {
 	delete obj.stripe_subscription_id;
 	delete obj.stripe_free_subscription_id;
 	delete obj.timezone_configured;
+	delete obj.product_updates_seen_at;
 	if (Array.isArray(obj.access_tokens)) obj.access_tokens = safeAccessTokens(obj.access_tokens);
 	return obj;
 }
@@ -73,6 +74,7 @@ const userSchema = new mongoose.Schema(
 			},
 		],
 		last_login: { type: Date },
+		product_updates_seen_at: { type: Date, default: Date.now, select: false },
 	},
 	{ timestamps: true },
 );

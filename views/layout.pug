@@ -1,6 +1,7 @@
 doctype html
 - const layoutDatePreferences = typeof dateFormatPreferences !== 'undefined' && dateFormatPreferences ? dateFormatPreferences : { timeZone: 'UTC', timeFormat: null }
 - const dateSettingsJson = JSON.stringify({ timeZone: layoutDatePreferences.timeZone || 'UTC', timeFormat: layoutDatePreferences.timeFormat || null }).replace(/[<>&]/g, (char) => ({ '<': '\\u003c', '>': '\\u003e', '&': '\\u0026' }[char]))
+- const __productUpdatesEnabled = typeof product_updates_enabled !== 'undefined' && product_updates_enabled
 html(lang="en")
 	head
 		meta(charset="UTF-8")
@@ -88,7 +89,7 @@ html(lang="en")
 										span.st-logo-light
 											include includes/logo_black
 							nav.st-topnav
-								a.st-navbtn(href="/dashboard" class={active: page !== 'graph'}) Projects
+								a.st-navbtn(href="/dashboard" class={active: page !== 'graph' && page !== 'news'} data-streamient-projects-nav) Projects
 								a.st-navbtn(href="/graph" class={active: page === 'graph'}) Graph
 						.st-global-search
 							button.st-global-search-trigger#st-global-search-trigger(type="button" aria-haspopup="dialog" aria-controls="st-search-palette")
@@ -99,6 +100,11 @@ html(lang="en")
 								span.st-global-search-spacer
 						.ms-auto.d-flex.align-items-center.st-navbar-actions
 							if user
+								if __productUpdatesEnabled
+									a.btn.btn-link.btn-sm.d-inline-flex.align-items-center.text-nowrap.position-relative.me-2.product-updates-nav-link(href="/news" title="What's new" class={active: page === 'news'} data-product-updates-nav)
+										!= icon('speakerphone', 'me-1')
+										span.fw-semibold.d-none.d-md-inline What's new
+										span.badge.rounded-pill.text-bg-danger.d-none#product-updates-badge 0
 								if !streamient_demo_mode
 									button.btn.btn-link.btn-sm.d-none.d-md-inline-flex.align-items-center.text-nowrap.st-mobile-beta-link.st-mobile-beta-header-link(type="button" data-bs-toggle="modal" data-bs-target="#mobileBetaModal" data-track="mobile_beta_open")
 										span Try our mobile apps
@@ -414,12 +420,16 @@ html(lang="en")
 							.spinner-border.spinner-border-sm.me-2
 							span Loading project settings...
 
+		if __productUpdatesEnabled
+			#product-updates-modal-root
+
 		if !streamient_demo_mode
 			script(src="/socket.io/socket.io.js")
 		script(src=`/static/v-${v}/js/icons.js`)
 		script(src=`/static/v-${v}/js/autofill_guard.js`)
 		script.
 			var __streamient_demo_mode = #{streamient_demo_mode ? 'true' : 'false'};
+			window.__product_updates_enabled = #{__productUpdatesEnabled ? 'true' : 'false'};
 			var __streamient_demo_scene = !{streamient_demo_scene_json || 'null'};
 			var __ws_url = "#{ws_url}";
 			var __host_id = "#{host_id}";
@@ -445,6 +455,7 @@ html(lang="en")
 		script(src=`/static/v-${v}/js/date_format.js`)
 		script(src=`/static/v-${v}/js/chat.js`)
 		script(src=`/static/v-${v}/js/app.js`)
+		script(src=`/static/v-${v}/js/product_updates.js`)
 		script(src=`/static/v-${v}/js/search_palette.js`)
 		script(src=`/static/v-${v}/js/infinite_scroll.js`)
 		script(src=`/static/v-${v}/js/notes.js`)

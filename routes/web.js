@@ -15,6 +15,7 @@ import { createLogger } from '../modules/logger.js';
 import { createDateFormatters } from '../modules/date_format.js';
 import { getTimezoneOptions } from '../modules/timezones.js';
 import { renderMobileAppsModal } from './mobile_apps.js';
+import productUpdatesRouter, { isProductUpdatesEligible } from './product_updates.js';
 import {
 	buildStreamientDemoFixtures,
 	deactivateStreamientDemoSession,
@@ -140,6 +141,7 @@ router.use(async (req, res, next) => {
 		res.locals.hide_chat_sidebar = req.path === '/settings' || req.path.startsWith('/settings/');
 		res.locals.custom_footer_code = { js_snippet: '', css_snippet: '' };
 		res.locals.managani_browser = null;
+		res.locals.product_updates_enabled = false;
 		res.locals.streamient_demo_scene = scene;
 		res.locals.streamient_demo_scene_json = JSON.stringify(scene).replace(/[<>&]/g, (char) => ({ '<': '\\u003c', '>': '\\u003e', '&': '\\u0026' }[char]));
 		Object.assign(res.locals, dateFormatters);
@@ -196,11 +198,14 @@ router.use(async (req, res, next) => {
 	res.locals.hide_chat_sidebar = req.path === '/settings' || req.path.startsWith('/settings/');
 	res.locals.custom_footer_code = customFooterCode;
 	res.locals.managani_browser = rendersAppLayout ? await managani.getBrowserContext(user, { req, res, billingUser }) : null;
+	res.locals.product_updates_enabled = isProductUpdatesEligible(req);
 	res.locals.streamient_demo_scene = null;
 	res.locals.streamient_demo_scene_json = 'null';
 	Object.assign(res.locals, dateFormatters);
 	next();
 });
+
+router.use(productUpdatesRouter);
 
 // Note: Free is a permanent, fully-usable plan with managed AI included, so
 // there is no global subscription gate and no API-key onboarding gate. Pro-only

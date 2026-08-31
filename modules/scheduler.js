@@ -16,6 +16,7 @@ import { cleanupOrphanedImportFiles, createNoteImportWorker, logImportWorkerErro
 import { startHelpmonksSignupSequenceWorker } from '../services/helpmonks_signup_sequence_service.js';
 import { cleanupOrphanedUploads } from '../services/obsidian_blob_service.js';
 import { cleanupObsidianRetention, createObsidianExtractionWorker } from '../services/obsidian_sync_service.js';
+import { syncProductUpdates } from '../services/product_update_service.js';
 import { createLogger } from './logger.js';
 import config from '../config.js';
 
@@ -104,6 +105,17 @@ export async function runTrialLifecycle({
 	};
 }
 
+export async function runProductUpdateSync(sync = syncProductUpdates) {
+	try {
+		const summary = await sync();
+		if (summary.enabled) log.info({ fetched: summary.fetched, upserted: summary.upserted, deactivated: summary.deactivated }, 'Ghost product updates synchronized');
+		return summary;
+	} catch (err) {
+		log.error({ err }, 'Ghost product update synchronization error');
+		return { enabled: true, error: err.message };
+	}
+}
+
 /**
  * Schedule crawl reindexing for due URLs every 10 minutes.
  * Schedule trial-ending reminders daily at 9 AM.
@@ -111,6 +123,8 @@ export async function runTrialLifecycle({
  * Schedule spam/trash email retention cleanup daily.
  */
 export function startScheduler() {
+	void runProductUpdateSync();
+	new Cron('*/15 * * * *', () => runProductUpdateSync());
 	const noteImportWorker = createNoteImportWorker();
 	noteImportWorker.start().catch(logImportWorkerError);
 	startHelpmonksSignupSequenceWorker().catch((err) => log.error({ err }, 'Helpmonks signup sequence worker failed to start'));
@@ -240,5 +254,5 @@ export function startScheduler() {
 		}
 	});
 
-	log.info('Scheduler started: mobile import worker, due crawl every 10min, trial lifecycle at 09:00, batch index every 20s, export/import cleanup hourly, trash retention daily at 02:30, trash reconciliation daily at 03:10, git sync every 10min');
+	log.info('Scheduler started: Ghost updates every 15min, mobile import worker, due crawl every 10min, trial lifecycle at 09:00, batch index every 20s, export/import cleanup hourly, trash retention daily at 02:30, trash reconciliation daily at 03:10, git sync every 10min');
 }

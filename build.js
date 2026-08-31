@@ -1,11 +1,28 @@
 import { build } from 'esbuild';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
+const materialSymbolsFontPattern = /^material-symbols-outlined-latin-wght-normal-[A-Z0-9]{8}\.woff2$/;
+
+function pruneStaleMaterialSymbolsFonts() {
+	const cssDir = join(__dirname, 'public', 'css');
+	const referenced = new Set();
+	for (const entry of readdirSync(cssDir, { withFileTypes: true })) {
+		if (!entry.isFile() || !entry.name.endsWith('.css')) continue;
+		for (const match of readFileSync(join(cssDir, entry.name), 'utf8').matchAll(/material-symbols-outlined-latin-wght-normal-[A-Z0-9]{8}\.woff2/g)) referenced.add(match[0]);
+	}
+	let removed = 0;
+	for (const entry of readdirSync(cssDir, { withFileTypes: true })) {
+		if (!entry.isFile() || !materialSymbolsFontPattern.test(entry.name) || referenced.has(entry.name)) continue;
+		unlinkSync(join(cssDir, entry.name));
+		removed += 1;
+	}
+	if (removed) console.log(`Removed ${removed} stale Material Symbols font asset${removed === 1 ? '' : 's'}`);
+}
 
 // Vendor bundle: Tabler JS + SweetAlert2
 await build({
@@ -127,6 +144,8 @@ await build({
 	sourcemap: false,
 });
 console.log('Email iframe renderer built → public/js/email_iframe_renderer.js');
+
+pruneStaleMaterialSymbolsFonts();
 
 // Generate build ID from content hash of all static JS + CSS assets
 const hash = createHash('md5');

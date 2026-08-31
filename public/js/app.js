@@ -348,6 +348,7 @@ var ROUTES = {
 	'/memories': { section: 'memories', title: 'Memories', partial: '/ajax/section/memories', batch: true },
 	'/urls': { section: 'urls', title: 'URLs', partial: '/ajax/section/urls', batch: true },
 	'/emails': { section: 'emails', title: 'Emails', partial: '/ajax/section/emails', batch: true },
+	'/news': { section: 'news', title: "What's new", partial: '/ajax/section/news' },
 	'/trash': { section: 'trash', title: 'Trash', partial: '/ajax/section/trash' },
 	'/settings': { title: 'Profile', partial: '/ajax/section/settings/profile' },
 	'/settings/profile': { title: 'Profile', partial: '/ajax/section/settings/profile' },
@@ -369,6 +370,8 @@ function shouldHideChatSidebar(path) {
 
 function syncLayoutForPath(path) {
 	document.body.classList.toggle('st-no-chat-sidebar', shouldHideChatSidebar(path));
+	document.querySelector('[data-product-updates-nav]')?.classList.toggle('active', path === '/news');
+	document.querySelector('[data-streamient-projects-nav]')?.classList.toggle('active', path !== '/graph' && path !== '/news');
 }
 
 // Dashboard section — managed here since it depends on app.js functions
