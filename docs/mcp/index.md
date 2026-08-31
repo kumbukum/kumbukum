@@ -28,6 +28,8 @@ With Streamient MCP, your AI assistant can:
 
 The server exposes **44 tools** across notes, memories, URLs, emails, projects, graph, git sync, and search. See the [Tools reference](./tools) for the full list.
 
+The [Streamient CLI](/cli/) exposes the same live catalog to shells, scripts, CI jobs, and coding agents without duplicating the REST implementation.
+
 Public app submissions can use the curated `/mcp/app` endpoint on the same server. It exposes only private notes, memories, and project metadata tools; URL, email, git sync, graph, broad search, and chat orchestration tools remain available only on the full `/mcp` endpoint.
 
 ## How it works
@@ -54,6 +56,7 @@ Streamient MCP works with any MCP-compatible client, including:
 
 - **[Setup & Authentication](./setup)** — connect your client with OAuth or a token
 - **[Tools](./tools)** — the full reference for all 44 tools
+- **[Streamient CLI](/cli/)** — shell, script, CI, and coding-agent access
 - **[Claude Code](./claude-code)** — hooks for automatic search-before-work and store-after-work
 - **[Cursor (IDE)](./cursor-ide)** — global User Rules and project rules
 - **[Agent configuration](./agents)** — the `AGENTS.md` / `CLAUDE.md` template

@@ -62,6 +62,8 @@ curl https://your-instance.com/api/v1/notes \
 
 Access tokens do not expire and are ideal for integrations and the MCP server.
 
+The [Streamient CLI](/cli/) reads a personal token from `STREAMIENT_CLI_ACCESS_TOKEN` and sends it with the same `Authorization: Token` scheme. Additional accounts can be selected with `--account` or `--token-env`; token values remain in environment variables and are never stored by the CLI.
+
 ## Additional Auth Methods
 
 The web interface also supports:
