@@ -1770,3 +1770,43 @@ body:not(.swal2-shown) > .swal2-container {
 .st-demo-mode #chat-result-modal textarea {
 	pointer-events: none;
 }
+/* Ghost product updates */
+.product-updates-nav-link #product-updates-badge {
+	position: absolute;
+	top: -0.35rem;
+	right: -0.35rem;
+}
+
+.product-update-card {
+	max-width: 52rem;
+	margin-right: auto;
+	margin-left: auto;
+}
+
+.product-update-card-image,
+.product-update-modal-image {
+	max-height: 28rem;
+	object-fit: cover;
+}
+
+.product-update-excerpt {
+	white-space: pre-line;
+}
+
+#productUpdatesModal {
+	z-index: 99999;
+}
+
+#productUpdatesModal .modal-content {
+	overflow: hidden;
+}
+
+#productUpdatesModal .modal-body {
+	min-height: 0;
+	overflow-y: auto;
+}
+
+#productUpdatesModal .modal-header,
+#productUpdatesModal .modal-footer {
+	flex-shrink: 0;
+}

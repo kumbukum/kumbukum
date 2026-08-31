@@ -1,5 +1,6 @@
 x-environment: &environment
   APP_URL: ${APP_URL}
+  STREAMIENT_GHOST_CONTENT_API_KEY: ${STREAMIENT_GHOST_CONTENT_API_KEY:-}
   MCP_BASE_URL: ${MCP_BASE_URL}
   WS_URL: ${WS_URL:-}
   API_BASE_URL: http://app:3000

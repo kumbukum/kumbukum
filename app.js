@@ -36,6 +36,7 @@ import { backfillTypesenseTrashFields } from './services/typesense_backfill_serv
 import { getWhiteLabelAssetsDir, resolveWhiteLabelRequest } from './services/white_label_service.js';
 import { getAuthAssetUrl, getRandomAuthBackgroundUrl, preloadAuthAssets, preloadAuthBackgrounds, serveAuthAsset } from './services/auth_asset_service.js';
 import { hasStreamientDemoSessionEntry } from './services/streamient_demo_service.js';
+import { backfillProductUpdatesSeenAt } from './services/product_update_service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -272,6 +273,7 @@ async function start() {
 	await backfillTypesenseTrashFields();
 	await backfillStarterPlan();
 	await backfillTenantLimits();
+	if (SERVER_MODE === 'app') await backfillProductUpdatesSeenAt();
 	await initCache();
 	if (SERVER_MODE === 'app') {
 		try {
