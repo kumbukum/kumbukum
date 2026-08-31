@@ -14,6 +14,7 @@ import { buildProtectedResourceMetadata, getRequestExternalBaseUrl, getRequiredS
 import McpRateLimit from '../../modules/mcp_rate_limit.js';
 import { recordException, setupExpressErrorHandler as setupOtelExpressErrorHandler } from './tracing.js';
 import { createLogger } from '../../modules/logger.js';
+import { connectDB } from '../../db.js';
 
 const PORT = mcpConfig.port;
 const API_BASE_URL = mcpConfig.apiBaseUrl;
@@ -204,6 +205,7 @@ if (transportArg === '--stdio' || !transportArg) {
   }
 } else {
   // HTTP/SSE transport
+  await connectDB();
   const app = express();
 
   // Health check — no auth, no rate limit
