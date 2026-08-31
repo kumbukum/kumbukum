@@ -38,6 +38,9 @@ export const initializeHyperDX = function(options = {}) {
 		}
 
 		HyperDX.init(initOptions);
+		const { registerInstrumentations } = require('@opentelemetry/instrumentation');
+		const { RuntimeNodeInstrumentation } = require('@opentelemetry/instrumentation-runtime-node');
+		registerInstrumentations({ instrumentations: [new RuntimeNodeInstrumentation()] });
 		_hyperdx = HyperDX;
 		console.log(`[HyperDX] Initialized service=${initOptions.service}`);
 	} catch (error) {
