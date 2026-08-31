@@ -27,7 +27,7 @@
 	"license": "AGPL-3.0",
 	"type": "module",
 	"bin": {
-		"streamient-cli": "./bin/streamient-cli.js"
+		"streamient-cli": "bin/streamient-cli.js"
 	},
 	"files": [
 		"bin",
