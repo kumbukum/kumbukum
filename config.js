@@ -55,36 +55,14 @@ function parseTypesenseConfig() {
 	};
 }
 
-function parseRedisConfig() {
-	let sentinelEnv = (process.env.REDIS_SENTINEL || '').trim();
-	// Strip wrapping quotes (some orchestrators add them)
-	if ((sentinelEnv.startsWith("'") && sentinelEnv.endsWith("'")) || (sentinelEnv.startsWith('"') && sentinelEnv.endsWith('"') && sentinelEnv[1] !== '{')) {
-		sentinelEnv = sentinelEnv.slice(1, -1);
-	}
-	if (sentinelEnv) {
-		try {
-			const parsed = JSON.parse(sentinelEnv);
-			if (!parsed.sentinels || !parsed.name) {
-				throw new Error('REDIS_SENTINEL must include "sentinels" and "name"');
-			}
-			return parsed;
-		} catch (err) {
-			console.error('Invalid REDIS_SENTINEL JSON:', err.message);
-			console.error('REDIS_SENTINEL raw value:', JSON.stringify(sentinelEnv));
-			process.exit(1);
-		}
-	}
-	return process.env.REDIS_URL || 'redis://localhost:6379';
-}
-
 function parseMemcachedServers() {
 	return [...new Set(String(process.env.MEMCACHED_SERVERS || 'localhost:11211').split(',').map(value => value.trim()).filter(Boolean))];
 }
 
 export function resolveSocketIOConfig(env = process.env, defaults = {}) {
 	const adapter = String(env.SOCKET_IO_ADAPTER || defaults.adapter || 'mongodb').trim().toLowerCase();
-	if (!['memory', 'mongodb', 'redis'].includes(adapter)) {
-		throw new Error('SOCKET_IO_ADAPTER must be memory, mongodb, or redis');
+	if (!['memory', 'mongodb'].includes(adapter)) {
+		throw new Error('SOCKET_IO_ADAPTER must be memory or mongodb');
 	}
 	return {
 		adapter,
@@ -180,7 +158,6 @@ const smtpServers = parseSmtpServersFromEnv();
 const primarySmtp = smtpServers[0] || {};
 const appUrl = process.env.APP_URL || 'http://localhost:3000';
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/streamient?replicaSet=rs0';
-const socketRedis = process.env.SOCKET_REDIS !== 'false' && !!(process.env.REDIS_URL || process.env.REDIS_SENTINEL);
 const chatAiProvider = process.env.CHAT_AI_MODEL_PROVIDER || 'google';
 const nlSearchProvider = process.env.NL_SEARCH_MODEL_PROVIDER || 'google';
 const tsConversationProvider = process.env.TS_CONVERSATION_MODEL_PROVIDER || 'google';
@@ -203,11 +180,8 @@ const config = {
 	env: process.env.NODE_ENV || 'development',
 	port: parseInt(process.env.PORT, 10) || 3000,
 	mongoUri,
-	redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
-	redisOptions: parseRedisConfig(),
 	memcachedServers: parseMemcachedServers(),
-	socketRedis,
-	socketIO: resolveSocketIOConfig(process.env, { mongoUri, redisEnabled: socketRedis }),
+	socketIO: resolveSocketIOConfig(process.env, { mongoUri }),
 	socketEmitDelay: parseNonNegativeNumberEnv('SOCKET_EMIT_DELAY', 0),
 	sessionSecret: process.env.SESSION_SECRET || 'change-me',
 	jwtSecret: process.env.JWT_SECRET || 'change-me',

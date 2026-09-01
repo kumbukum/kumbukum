@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 
-import config from '../config.js';
 import { Tenant } from '../modules/tenancy.js';
 import { createAiDailyLimiter } from '../middleware/rate_limit.js';
 
@@ -32,16 +31,16 @@ function closeServer(server) {
 
 describe('stored daily AI limit', () => {
 	const originalTenantFindOne = Tenant.findOne;
-	const originalSocketRedis = config.socketRedis;
+	const hostPrefix = `${Date.now()}-${process.pid}`;
+	let hostSequence = 0;
 	let tenant;
 
-	const hostedAccount = (req) => {
+	const hostedAccount = (req, hostId = 'host-1') => {
 		req.isHosted = true;
-		req.host_id = 'host-1';
+		req.host_id = hostId;
 	};
 
 	beforeEach(() => {
-		config.socketRedis = false;
 		tenant = {
 			host_id: 'host-1',
 			plan: 'free',
@@ -53,11 +52,11 @@ describe('stored daily AI limit', () => {
 
 	afterEach(() => {
 		Tenant.findOne = originalTenantFindOne;
-		config.socketRedis = originalSocketRedis;
 	});
 
 	async function assertCapped(decorate = hostedAccount) {
-		const server = createServer(decorate);
+		const hostId = `host-${hostPrefix}-${++hostSequence}`;
+		const server = createServer((req) => decorate(req, hostId));
 		try {
 			for (let i = 0; i < 3; i++) {
 				assert.equal((await post(server)).status, 200);
@@ -84,8 +83,8 @@ describe('stored daily AI limit', () => {
 		tenant.plan = 'pro';
 		await assertCapped();
 
-		await assertCapped((req) => {
-			hostedAccount(req);
+		await assertCapped((req, hostId) => {
+			hostedAccount(req, hostId);
 			req.billingUser = {
 				subscription_status: 'trialing',
 				trial_source: 'no_card',

@@ -5,7 +5,6 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 
-import config from '../config.js';
 import { NoteImportUpload } from '../model/note_import_upload.js';
 import { Project } from '../model/project.js';
 import { NOTE_IMPORT_ACTIVE_LIMIT, NOTE_IMPORT_CHUNK_SIZE, NoteImportError, appendChunk, completeUpload, createUpload, ensureStorageAvailable, getUpload, processUpload } from '../services/note_import_service.js';
@@ -41,8 +40,6 @@ describe('mobile resumable note imports', () => {
 		originals.create = NoteImportUpload.create;
 		originals.updateOne = NoteImportUpload.updateOne;
 		originals.projectFindOne = Project.findOne;
-		originals.socketRedis = config.socketRedis;
-		config.socketRedis = false;
 
 		const matches = (filter) => String(filter._id) === uploadId && String(filter.user) === userId && filter.host_id === hostId && (!filter.state || (typeof filter.state === 'string' ? filter.state === upload.state : filter.state.$in.includes(upload.state))) && (filter.received_bytes === undefined || filter.received_bytes === upload.received_bytes);
 		NoteImportUpload.findOne = (filter) => queryResult(matches(filter) ? upload : null);
@@ -64,7 +61,6 @@ describe('mobile resumable note imports', () => {
 		NoteImportUpload.create = originals.create;
 		NoteImportUpload.updateOne = originals.updateOne;
 		Project.findOne = originals.projectFindOne;
-		config.socketRedis = originals.socketRedis;
 		await rm(path.resolve('assets', 'import', 'mobile', uploadId), { recursive: true, force: true });
 	});
 

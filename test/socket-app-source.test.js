@@ -28,15 +28,13 @@ describe('Socket.IO app source', () => {
 		assert.ok(!socketJs.includes('socket.join(room);'));
 	});
 
-	it('keeps Redis stream bursts immediate and auto-pipelined', () => {
+	it('keeps local emits immediate and uses MongoDB for out-of-process delivery', () => {
 		const configJs = fs.readFileSync(new URL('../config.js', import.meta.url), 'utf8');
 		const socketJs = fs.readFileSync(new URL('../modules/socket.js', import.meta.url), 'utf8');
 
 		assert.ok(configJs.includes("socketEmitDelay: parseNonNegativeNumberEnv('SOCKET_EMIT_DELAY', 0)"));
-		assert.ok(socketJs.includes('SOCKET_REDIS_COMMAND_TIMEOUT_MS = SOCKET_REDIS_BLOCK_TIME_MS * 2'));
-		assert.ok(socketJs.includes('createRedisClient({ commandTimeout: SOCKET_REDIS_COMMAND_TIMEOUT_MS, enableAutoPipelining: true })'));
-		assert.ok(socketJs.includes('blockTimeInMs: SOCKET_REDIS_BLOCK_TIME_MS'));
-		assert.ok(socketJs.includes('bridge_id: randomUUID()'));
-		assert.ok(socketJs.includes('claimTenantBridgeEvent(getRedisClient(), payload)'));
+		assert.ok(socketJs.includes('ensureMongoEmitter()'));
+		assert.ok(socketJs.includes("emitter.to(`tenant:${host_id}`).emit(event, data)"));
+		assert.doesNotMatch(socketJs, /redis/i);
 	});
 });
