@@ -5,7 +5,7 @@
 # ──────────────────────────────────────────────
 FROM node:lts-trixie-slim AS builder
 
-ARG PNPM_VERSION=11
+ARG PNPM_VERSION=12
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN npm install --global pnpm@${PNPM_VERSION}

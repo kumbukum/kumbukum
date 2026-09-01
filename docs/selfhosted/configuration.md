@@ -1,6 +1,6 @@
 ---
 title: Streamient Self-Hosted Configuration
-description: "Configure self-hosted Streamient with Docker Compose environment variables for URLs, authentication, MongoDB, Redis, Typesense, email, AI, and OAuth."
+description: "Configure self-hosted Streamient with Docker Compose environment variables for URLs, authentication, MongoDB, Memcached, Typesense, email, AI, and OAuth."
 ---
 
 # Configuration
@@ -45,9 +45,8 @@ docker compose -f compose.prod.yml up -d
 | `JWT_SECRET` | JWT signing secret | Yes | — |
 | `NODE_ENV` | Environment mode | No | `production` |
 | `SERVER_MODE` | Run mode: omit for full app, `ws` for WebSocket-only, `scheduler` for background jobs | No | — |
-| `SOCKET_IO_ADAPTER` | Socket.IO cluster transport: `mongodb`, `redis`, or `memory` | No | `redis` when Redis is configured; otherwise `memory` |
+| `SOCKET_IO_ADAPTER` | Socket.IO cluster transport: `mongodb` or `memory` | No | `mongodb` |
 | `SOCKET_IO_MONGO_URL` | Optional MongoDB connection override for the MongoDB adapter | No | `MONGO_URI` |
-| `SOCKET_REDIS` | Set to `false` to disable Redis-backed Socket.IO support | No | Enabled when Redis is configured |
 
 The MongoDB Socket.IO adapter stores events in the `socketio` collection and uses change streams, so it requires a MongoDB replica set or sharded cluster.
 
@@ -76,15 +75,12 @@ Obsidian Sync is available to every self-hosted account. It remains disabled unt
 
 Generate the encryption key once with `openssl rand -hex 32`, store it with the deployment secrets, and retain it for the lifetime of synchronized vault data. Both web and scheduler services must mount the same assets volume.
 
-### Database
+### Database and Cache
 
 | Variable | Description | Required | Default |
 | --- | --- | --- | --- |
 | `MONGO_URI` | MongoDB connection string | No | `mongodb://mongo:27017/streamient` |
-| `REDIS_URL` | Redis connection string | No | `redis://redis:6379` |
-| `REDIS_SENTINEL` | Redis Sentinel config as JSON. Example: `[{"host":"sentinel1","port":26379}]` | No | — |
-
-When `REDIS_SENTINEL` is set, the app connects via Sentinel for automatic failover. The JSON array should contain objects with `host` and `port` for each Sentinel node.
+| `MEMCACHED_SERVERS` | Comma-separated Memcached servers in `host:port` form | No | `memcached:11211` |
 
 ### Search (Typesense)
 

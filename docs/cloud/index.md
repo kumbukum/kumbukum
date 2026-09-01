@@ -16,7 +16,7 @@ Streamient Cloud is the fully managed edition of Streamient. You get the same sh
 
 ## What's Included
 
-- **Managed Infrastructure** — MongoDB, Redis, Typesense, and the MCP endpoint are already running for you
+- **Managed Infrastructure** — MongoDB, Memcached, Typesense, and the MCP endpoint are already running for you
 - **Built-in AI** — AI chat and search work out of the box on every plan, no API key required (bring your own OpenAI/Gemini key any time)
 - **Faster Setup** — Connect Claude Desktop, Cursor, or another MCP client in about a minute
 - **Automatic Updates** — Stay on the latest version without scheduling maintenance windows

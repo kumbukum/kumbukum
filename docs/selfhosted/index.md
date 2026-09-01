@@ -13,7 +13,7 @@ Run Streamient on infrastructure you control. The self-hosted edition is fully o
 - **Docker** & Docker Compose (recommended)
 - **pnpm** 10+
 - **MongoDB** 6+
-- **Redis** 6+
+- **Memcached** 1.6+
 - **Typesense** 31+
 
 ## Quick Links

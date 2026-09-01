@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import express from 'express';
 
 import * as ApiRateLimit from '../middleware/rate_limit.js';
-import config from '../config.js';
 import * as McpRateLimit from '../modules/mcp_rate_limit.js';
 
 const ENV_KEYS = [
@@ -48,7 +47,6 @@ const MCP_RATE_LIMIT_ENV = {
 };
 
 let savedEnv = {};
-let savedSocketRedis = null;
 
 function setEnv(values) {
 	for (const [key, value] of Object.entries(values)) {
@@ -129,8 +127,6 @@ beforeEach(() => {
 		savedEnv[key] = process.env[key];
 		delete process.env[key];
 	}
-	savedSocketRedis = config.socketRedis;
-	config.socketRedis = false;
 });
 
 afterEach(() => {
@@ -141,7 +137,6 @@ afterEach(() => {
 			process.env[key] = savedEnv[key];
 		}
 	}
-	config.socketRedis = savedSocketRedis;
 });
 
 describe('API rate-limit helpers', () => {

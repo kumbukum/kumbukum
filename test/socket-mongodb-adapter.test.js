@@ -22,21 +22,28 @@ function closeSocketServer(io) {
 }
 
 describe('Socket.IO MongoDB transport', () => {
-	it('uses MongoDB as the default even when legacy Redis configuration exists', () => {
+	it('uses MongoDB as the default', () => {
 		assert.deepEqual(
-			resolveSocketIOConfig({}, { mongoUri: 'mongodb://mongo:27017/streamient', redisEnabled: true }),
+			resolveSocketIOConfig({}, { mongoUri: 'mongodb://mongo:27017/streamient' }),
 			{
-			adapter: 'mongodb',
+				adapter: 'mongodb',
 				mongoUrl: 'mongodb://mongo:27017/streamient',
 			},
 		);
+	});
+
+	it('does not ship Redis runtime dependencies', () => {
+		const packageJson = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+		for (const dependency of ['@keyv/valkey', '@socket.io/redis-streams-adapter', 'ioredis', 'iovalkey', 'keyv', 'rate-limit-redis']) {
+			assert.equal(packageJson.dependencies[dependency], undefined);
+		}
 	});
 
 	it('selects MongoDB with the primary connection defaults', () => {
 		assert.deepEqual(
 			resolveSocketIOConfig(
 				{ SOCKET_IO_ADAPTER: 'mongodb' },
-				{ mongoUri: 'mongodb://mongo:27017/streamient?replicaSet=rs0', redisEnabled: true },
+				{ mongoUri: 'mongodb://mongo:27017/streamient?replicaSet=rs0' },
 			),
 			{
 				adapter: 'mongodb',
@@ -49,7 +56,7 @@ describe('Socket.IO MongoDB transport', () => {
 		assert.deepEqual(
 			resolveSocketIOConfig(
 				{ SOCKET_IO_ADAPTER: 'mongodb', SOCKET_IO_MONGO_URL: 'mongodb://mdb-1:27017/socket-events?replicaSet=rs0' },
-				{ mongoUri: 'mongodb://mongo:27017/streamient?replicaSet=rs0', redisEnabled: true },
+				{ mongoUri: 'mongodb://mongo:27017/streamient?replicaSet=rs0' },
 			),
 			{
 				adapter: 'mongodb',
@@ -61,7 +68,14 @@ describe('Socket.IO MongoDB transport', () => {
 	it('rejects unknown adapters', () => {
 		assert.throws(
 			() => resolveSocketIOConfig({ SOCKET_IO_ADAPTER: 'unknown' }),
-			/SOCKET_IO_ADAPTER must be memory, mongodb, or redis/,
+			/SOCKET_IO_ADAPTER must be memory or mongodb/,
+		);
+	});
+
+	it('rejects the removed Redis adapter', () => {
+		assert.throws(
+			() => resolveSocketIOConfig({ SOCKET_IO_ADAPTER: 'redis' }),
+			/SOCKET_IO_ADAPTER must be memory or mongodb/,
 		);
 	});
 
@@ -80,7 +94,8 @@ describe('Socket.IO MongoDB transport', () => {
 		assert.ok(socketSource.includes("new MongoEmitter(await getSocketMongoCollection(), '/', { addCreatedAtField: true })"));
 		assert.ok(socketSource.includes("const SOCKET_MONGO_COLLECTION = 'socketio'"));
 		assert.ok(socketSource.includes("collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: SOCKET_MONGO_TTL_SECONDS, background: true })"));
-		assert.ok(socketSource.includes('if (!usesRedisSocketTransport() || !config.socketRedis || bridgeSubscriber) return;'));
+		assert.ok(socketSource.includes('if (!usesMongoSocketTransport()) return;'));
+		assert.doesNotMatch(socketSource, /redis/i);
 	});
 
 	it('broadcasts between Socket.IO servers through a MongoDB change stream', { skip: !process.env.TEST_SOCKET_MONGO_URI }, async () => {

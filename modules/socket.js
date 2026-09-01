@@ -1,16 +1,10 @@
 import { Server } from 'socket.io';
 import { createAdapter as createMongoAdapter } from '@socket.io/mongo-adapter';
 import { Emitter as MongoEmitter } from '@socket.io/mongo-emitter';
-import { createAdapter as createRedisAdapter } from '@socket.io/redis-streams-adapter';
-import Redis from 'ioredis';
 import { MongoClient } from 'mongodb';
-import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import config from '../config.js';
 import mongoose from '../db.js';
-import { getRedisClient } from './redis.js';
-import { buildRedisConnectionOptions, isTransientRedisError } from './redis_options.js';
-import { startRedisHeartbeat } from './redis_heartbeat.js';
 import { resolveActiveTenantContext } from './tenancy.js';
 import * as OtelRuntime from './otel_runtime.js';
 import { createLogger } from './logger.js';
@@ -18,36 +12,15 @@ import { createLogger } from './logger.js';
 const log = createLogger('socket');
 
 let io;
-let bridgePublisher;
-let bridgeSubscriber;
 let socketMongoClient;
 let socketMongoCollection;
 let socketMongoCollectionPromise;
 let socketMongoEmitter;
 let emailCountsHandler;
-let lastRedisReconnectLogAt = 0;
 
-const TENANT_EVENT_BRIDGE_CHANNEL = 'tenant-events';
-const TENANT_EVENT_BRIDGE_CLAIM_PREFIX = 'streamient:socket:tenant-event:';
-const TENANT_EVENT_BRIDGE_CLAIM_TTL_MS = 60000;
-const REDIS_RECONNECT_LOG_INTERVAL_MS = 10000;
 const SOCKET_ALLOWED_AUDIENCES = new Set(['streamient-api', 'kumbukum-api', 'streamient-socket']);
-const SOCKET_REDIS_BLOCK_TIME_MS = 10000;
-const SOCKET_REDIS_COMMAND_TIMEOUT_MS = SOCKET_REDIS_BLOCK_TIME_MS * 2;
 const SOCKET_MONGO_COLLECTION = 'socketio';
 const SOCKET_MONGO_TTL_SECONDS = 3600;
-
-function createRedisClient(options = {}) {
-	const connection = buildRedisConnectionOptions(config.redisOptions, { lazyConnect: true, ...options });
-	connection.options.protocol = 2;
-	return connection.url
-		? new Redis(connection.url, connection.options)
-		: new Redis(connection.options);
-}
-
-function usesRedisSocketTransport() {
-	return config.socketIO?.adapter === 'redis';
-}
 
 function usesMongoSocketTransport() {
 	return config.socketIO?.adapter === 'mongodb';
@@ -87,40 +60,6 @@ async function ensureMongoEmitter() {
 	if (socketMongoEmitter) return socketMongoEmitter;
 	socketMongoEmitter = new MongoEmitter(await getSocketMongoCollection(), '/', { addCreatedAtField: true });
 	return socketMongoEmitter;
-}
-
-export function attachSocketRedisClientHandlers(redisClient, label) {
-	redisClient.on('error', (err) => {
-		if (err && !err.handled) {
-			err.handled = true;
-		}
-		const msg = err?.message || '';
-		if (isTransientRedisError(msg)) return;
-		log.warn({ msg, label }, 'Socket.IO Redis client error');
-	});
-
-	redisClient.on('ready', () => {
-		log.info({ label }, 'Socket.IO Redis client connected and ready');
-	});
-
-	redisClient.on('reconnecting', (delayMs) => {
-		const now = Date.now();
-		if (now - lastRedisReconnectLogAt < REDIS_RECONNECT_LOG_INTERVAL_MS) return;
-		lastRedisReconnectLogAt = now;
-		log.warn({ label, delay_ms: delayMs }, 'Socket.IO Redis client reconnecting');
-	});
-
-	startRedisHeartbeat(redisClient);
-}
-
-export async function claimTenantBridgeEvent(redisClient, payload) {
-	if (!payload?.bridge_id) return true;
-	try {
-		return await redisClient.set(`${TENANT_EVENT_BRIDGE_CLAIM_PREFIX}${payload.bridge_id}`, '1', 'PX', TENANT_EVENT_BRIDGE_CLAIM_TTL_MS, 'NX') === 'OK';
-	} catch (err) {
-		log.warn({ err, bridge_id: payload.bridge_id }, 'Socket.IO tenant event bridge claim failed open');
-		return true;
-	}
 }
 
 function emitToTenantRoom(host_id, event, data) {
@@ -192,56 +131,12 @@ export function resolveAuthorizedSubscribeRoom(identity, room, requestedUserId =
 	return '';
 }
 
-async function ensureBridgePublisher() {
-	if (!usesRedisSocketTransport() || !config.socketRedis) return null;
-	if (bridgePublisher) return bridgePublisher;
-
-	bridgePublisher = createRedisClient();
-	attachSocketRedisClientHandlers(bridgePublisher, 'Socket.IO bridge publisher');
-	await bridgePublisher.connect();
-	return bridgePublisher;
-}
-
-async function setupTenantEventBridge() {
-	if (!usesRedisSocketTransport() || !config.socketRedis || bridgeSubscriber) return;
-
-	bridgeSubscriber = createRedisClient();
-	attachSocketRedisClientHandlers(bridgeSubscriber, 'Socket.IO bridge subscriber');
-	bridgeSubscriber.on('message', async (channel, message) => {
-		if (channel !== TENANT_EVENT_BRIDGE_CHANNEL) return;
-		try {
-			const payload = JSON.parse(message);
-			if (!payload?.host_id || !payload?.event) return;
-			if (!await claimTenantBridgeEvent(getRedisClient(), payload)) return;
-			emitToTenantRoom(payload.host_id, payload.event, payload.data);
-			if (payload.event === 'counts:refresh') emitEmailCounts(payload.host_id, payload.data || {});
-		} catch (err) {
-			log.warn({ err }, 'Socket.IO bridge payload error');
-		}
-	});
-	await bridgeSubscriber.connect();
-	await bridgeSubscriber.subscribe(TENANT_EVENT_BRIDGE_CHANNEL);
-	log.info('Socket.IO tenant event bridge connected');
-}
-
 function publishTenantEvent(host_id, event, data) {
-	if (usesMongoSocketTransport()) {
-		ensureMongoEmitter()
-			.then((emitter) => emitter.to(`tenant:${host_id}`).emit(event, data))
-			.catch((err) => {
-				log.warn({ err }, 'Socket.IO MongoDB emitter failed');
-			});
-		return;
-	}
-	if (!usesRedisSocketTransport()) return;
-	const payload = JSON.stringify({ bridge_id: randomUUID(), host_id, event, data });
-	ensureBridgePublisher()
-		.then((publisher) => {
-			if (!publisher) return;
-			return publisher.publish(TENANT_EVENT_BRIDGE_CHANNEL, payload);
-		})
+	if (!usesMongoSocketTransport()) return;
+	ensureMongoEmitter()
+		.then((emitter) => emitter.to(`tenant:${host_id}`).emit(event, data))
 		.catch((err) => {
-			log.warn({ err }, 'Socket.IO bridge publish failed');
+			log.warn({ err }, 'Socket.IO MongoDB emitter failed');
 		});
 }
 
@@ -255,7 +150,6 @@ export async function setupSocketIO(httpServer, sessionMiddleware, handlers = {}
 		span.setAttribute('server.mode', process.env.SERVER_MODE || 'app');
 		span.setAttribute('service.app', process.env.STREAMIENT_APP || 'web');
 		span.setAttribute('socket.adapter', config.socketIO.adapter);
-		span.setAttribute('socket.redis.enabled', usesRedisSocketTransport());
 		span.setAttribute('socket.mongodb.enabled', usesMongoSocketTransport());
 
 		io = new Server(httpServer, {
@@ -290,27 +184,11 @@ export async function setupSocketIO(httpServer, sessionMiddleware, handlers = {}
 			}
 		});
 
-		if (usesRedisSocketTransport()) {
-			if (!config.socketRedis) throw new Error('Socket.IO Redis adapter requires REDIS_URL or REDIS_SENTINEL');
-			let redisClient;
-			try {
-				redisClient = createRedisClient({ commandTimeout: SOCKET_REDIS_COMMAND_TIMEOUT_MS, enableAutoPipelining: true });
-				attachSocketRedisClientHandlers(redisClient, 'Socket.IO Redis client');
-				await redisClient.connect();
-				io.adapter(createRedisAdapter(redisClient, { streamCount: 4, blockTimeInMs: SOCKET_REDIS_BLOCK_TIME_MS, heartbeatInterval: 30000, heartbeatTimeout: 90000 }));
-				log.info('Socket.IO Redis streams adapter connected');
-			} catch (err) {
-				span.recordException(err);
-				log.warn({ err }, 'Socket.IO Redis adapter failed, using in-memory');
-				if (redisClient) redisClient.disconnect();
-			}
-		} else if (usesMongoSocketTransport()) {
+		if (usesMongoSocketTransport()) {
 			const mongoCollection = await getSocketMongoCollection();
 			io.adapter(createMongoAdapter(mongoCollection, { addCreatedAtField: true }));
 			log.info({ collection: SOCKET_MONGO_COLLECTION }, 'Socket.IO MongoDB adapter connected');
 		}
-
-		await setupTenantEventBridge();
 
 		io.on('connection', (socket) => {
 			OtelRuntime.createCustomSpan('socketio.connection', (connectionSpan) => {
@@ -360,8 +238,8 @@ export async function setupSocketIO(httpServer, sessionMiddleware, handlers = {}
 /**
  * Emit a CRUD event to a tenant room.
  * Delay (ms) is configurable via SOCKET_EMIT_DELAY to account for
- * replication lag in clustered setups (MongoDB ReplicaSet, Typesense
- * Cluster, Redis Sentinel). Default 0 ms; set a positive delay only when needed.
+ * replication lag in clustered setups (MongoDB replica set or Typesense
+ * cluster). Default 0 ms; set a positive delay only when needed.
  */
 export function emitToTenant(host_id, event, data) {
 	if (io) {

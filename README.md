@@ -90,7 +90,7 @@ Requirements:
 - Docker & Docker Compose
 - pnpm 10+ (for local development)
 - MongoDB 6+
-- Redis 6+
+- Memcached 1.6+
 - Typesense 31+
 
 Grab the production Compose file and pass configuration as shell environment variables:
@@ -158,12 +158,12 @@ Default service ports:
 | WebSocket | `3001` |
 | MCP Server | `3002` |
 | MongoDB | `27017` |
-| Redis | `6379` |
+| Memcached | `11211` |
 | Typesense | `8108` |
 
 ### Local development
 
-For repository development, make sure MongoDB, Redis, and Typesense are available, then run:
+For repository development, make sure MongoDB, Memcached, and Typesense are available, then run:
 
 ```bash
 git clone https://github.com/streamient/streamient.git
@@ -201,7 +201,7 @@ env 'ACCESS-TOKEN'=your-access-token API_BASE_URL=https://your-instance.com node
 - **Backend** — Node.js + Express
 - **Database** — MongoDB
 - **Search** — Typesense for full-text and semantic retrieval
-- **Cache / real-time** — Redis cache + Socket.IO with MongoDB or Redis clustering
+- **Cache / real-time** — Memcached cache + Socket.IO with MongoDB clustering
 - **Frontend** — Pug templates + vanilla JavaScript
 - **MCP app** — `apps/mcp/` for agent integrations
 

@@ -32,7 +32,7 @@ The app will be available at your configured `APP_URL`.
 | WebSocket  | 3001  | Real-time updates             |
 | MCP Server | 3002  | Model Context Protocol server |
 | MongoDB    | 27017 | Database                      |
-| Redis      | 6379  | Caching & pub/sub             |
+| Memcached  | 11211 | Disposable caching            |
 | Typesense  | 8108  | Full-text & vector search     |
 
 ## Environment Variables
@@ -42,7 +42,7 @@ See [Configuration](/selfhosted/configuration) for the full list. Key variables:
 | Variable         | Description                                  |
 | ---------------- | -------------------------------------------- |
 | `MONGO_URI`      | MongoDB connection string                    |
-| `REDIS_URL`      | Redis connection string                      |
+| `MEMCACHED_SERVERS` | Comma-separated Memcached servers         |
 | `SESSION_SECRET` | Express session secret                       |
 | `JWT_SECRET`     | JWT signing secret                           |
 | `APP_URL`        | Public URL of the application                |
