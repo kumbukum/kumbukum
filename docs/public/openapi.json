@@ -1495,6 +1495,45 @@
           }
         }
       },
+      "ObsidianAccount": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "user"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "user": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "email"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          }
+        }
+      },
       "ObsidianManifestEntry": {
         "type": "object",
         "required": [
@@ -1533,6 +1572,55 @@
           },
           "in_trash": {
             "type": "boolean"
+          }
+        }
+      },
+      "ObsidianSyncScopePath": {
+        "type": "object",
+        "required": [
+          "path",
+          "kind"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "file",
+              "folder"
+            ]
+          }
+        }
+      },
+      "ObsidianSyncScope": {
+        "type": "object",
+        "required": [
+          "vault_mode"
+        ],
+        "properties": {
+          "vault_mode": {
+            "type": "string",
+            "enum": [
+              "off",
+              "selected",
+              "all"
+            ]
+          },
+          "selected_paths": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/ObsidianSyncScopePath"
+            }
+          },
+          "excluded_paths": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/ObsidianSyncScopePath"
+            }
           }
         }
       },
@@ -9805,6 +9893,56 @@
         }
       }
     },
+    "/obsidian/account": {
+      "get": {
+        "tags": [
+          "Obsidian Sync"
+        ],
+        "summary": "Identify the account and user authorized by this token",
+        "security": [
+          {
+            "ObsidianOAuth": [
+              "vault:read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized account identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "$ref": "#/components/schemas/ObsidianAccount"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid sync request"
+          },
+          "401": {
+            "description": "Missing or expired OAuth token"
+          },
+          "403": {
+            "description": "Feature disabled, Pro required, or insufficient scope"
+          },
+          "404": {
+            "description": "Connection, upload, or file not found"
+          },
+          "409": {
+            "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
+          }
+        }
+      }
+    },
     "/obsidian/projects": {
       "get": {
         "tags": [
@@ -10181,8 +10319,8 @@
         "tags": [
           "Obsidian Sync"
         ],
-        "summary": "Upload or reconcile a batched full-vault manifest",
-        "description": "Send up to 500 files per numbered batch with complete=false, then finalize the manifest_id with batch_count and complete=true. Preview finalization is non-mutating.",
+        "summary": "Upload or reconcile a batched scoped-vault manifest",
+        "description": "Send up to 500 files per numbered batch with complete=false, then finalize the manifest_id with batch_count and complete=true. Preview finalization is non-mutating. Omit scope for legacy full-vault behavior.",
         "security": [
           {
             "ObsidianOAuth": [
@@ -10227,6 +10365,13 @@
                   "preview": {
                     "type": "boolean"
                   },
+                  "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only aggregate action counts and bytes during preview."
+                  },
+                  "scope": {
+                    "$ref": "#/components/schemas/ObsidianSyncScope"
+                  },
                   "files": {
                     "type": "array",
                     "maxItems": 500,
@@ -10250,7 +10395,7 @@
         },
         "responses": {
           "200": {
-            "description": "Batch acknowledgement or final upload, download, trash, ignore, and no-op actions"
+            "description": "Batch acknowledgement or final scoped actions and aggregate summary"
           },
           "400": {
             "description": "Invalid sync request"

@@ -38,6 +38,8 @@ export const OBSIDIAN_EXTRACTION_QUEUE = 'obsidian-file-extraction';
 export const OBSIDIAN_MANIFEST_BATCH_SIZE = 500;
 export const OBSIDIAN_MANIFEST_EXPIRY_MS = 60 * 60 * 1000;
 export const OBSIDIAN_MAX_MANIFEST_BATCHES = 200;
+export const OBSIDIAN_SCOPE_MAX_PATHS = 1000;
+export const OBSIDIAN_REMOTE_BATCH_SIZE = 2000;
 
 const EXCLUDED_NAMES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
 const DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'txt', 'rtf', 'csv', 'tsv', 'json', 'yaml', 'yml', 'xml', 'html', 'htm']);
@@ -68,6 +70,64 @@ export function isExcludedVaultPath(value) {
 	if (EXCLUDED_NAMES.has(parts.at(-1))) return true;
 	if (parts.some((part) => part.startsWith('.'))) return true;
 	return /(?:^|\/)(?:~[^/]+|[^/]+\.tmp|[^/]+\.temp|[^/]+\.swp)$/.test(normalized);
+}
+
+function normalizeScopePaths(value, label) {
+	const values = Array.isArray(value) ? value : [];
+	if (values.length > OBSIDIAN_SCOPE_MAX_PATHS) throw new ObsidianSyncError(`${label} may contain at most ${OBSIDIAN_SCOPE_MAX_PATHS} paths`, 400, 'scope_too_large');
+	return values.map((entry) => {
+		if (!entry || typeof entry !== 'object') throw new ObsidianSyncError(`${label} entries must be objects`, 400, 'invalid_scope');
+		const path = normalizeVaultPath(entry.path);
+		if (isExcludedVaultPath(path)) throw new ObsidianSyncError(`${label} contains an excluded path`, 400, 'invalid_scope');
+		const kind = entry.kind === 'file' ? 'file' : entry.kind === 'folder' ? 'folder' : '';
+		if (!kind) throw new ObsidianSyncError(`${label} entries require kind file or folder`, 400, 'invalid_scope');
+		return { path, kind };
+	});
+}
+
+function normalizeSyncScope(value, connection) {
+	if (value === undefined || value === null) return null;
+	if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ObsidianSyncError('scope must be an object', 400, 'invalid_scope');
+	const vaultMode = ['off', 'selected', 'all'].includes(value.vault_mode) ? value.vault_mode : '';
+	if (!vaultMode) throw new ObsidianSyncError('scope.vault_mode must be off, selected, or all', 400, 'invalid_scope');
+	const selectedPaths = normalizeScopePaths(value.selected_paths, 'scope.selected_paths');
+	const excludedPaths = normalizeScopePaths(value.excluded_paths, 'scope.excluded_paths');
+	if (vaultMode !== 'selected' && selectedPaths.length) throw new ObsidianSyncError('scope.selected_paths requires selected mode', 400, 'invalid_scope');
+	return { managedFolder: normalizeVaultPath(connection.streamient_folder || 'Streamient'), vaultMode, selectedPaths, excludedPaths };
+}
+
+function matchesScopePath(filePath, entry) {
+	return filePath === entry.path || entry.kind === 'folder' && filePath.startsWith(`${entry.path}/`);
+}
+
+function scopePathFilter(entry) {
+	if (entry.kind === 'file') return { path: entry.path };
+	const escaped = entry.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return { path: { $regex: new RegExp(`^${escaped}(?:/|$)`) } };
+}
+
+function scopeMongoFilter(scope) {
+	if (!scope) return {};
+	if (scope.vaultMode === 'all') return scope.excludedPaths.length ? { $nor: scope.excludedPaths.map(scopePathFilter) } : {};
+	return { $or: [{ path: { $regex: new RegExp(`^${scope.managedFolder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:/|$)`) } }, ...scope.selectedPaths.map(scopePathFilter)] };
+}
+
+function pathInSyncScope(filePath, scope) {
+	if (!scope) return true;
+	if (filePath === scope.managedFolder || filePath.startsWith(`${scope.managedFolder}/`)) return true;
+	if (scope.excludedPaths.some((entry) => matchesScopePath(filePath, entry))) return false;
+	if (scope.vaultMode === 'all') return true;
+	return scope.vaultMode === 'selected' && scope.selectedPaths.some((entry) => matchesScopePath(filePath, entry));
+}
+
+function summarizeActions(actions) {
+	const counts = { upload: 0, download: 0, trash: 0, noop: 0, ignore: 0 };
+	const bytes = { upload: 0, download: 0 };
+	for (const action of actions) {
+		if (Object.hasOwn(counts, action.action)) counts[action.action]++;
+		if (action.action === 'upload' || action.action === 'download') bytes[action.action] += Number(action.size || 0);
+	}
+	return { total: actions.length, counts, bytes };
 }
 
 export function vaultFileKind(value) {
@@ -638,6 +698,69 @@ async function ensureProjectExports(connection) {
 	for (const memory of memories) await exportProjectItem(connection, 'memory', memory);
 }
 
+async function connectionFiles(connection, scope) {
+	const files = [];
+	let lastId = null;
+	while (true) {
+		const query = { connection: connection._id, host_id: connection.host_id, ...scopeMongoFilter(scope) };
+		if (lastId) query._id = { $gt: lastId };
+		const batch = await ObsidianFile.find(query).select('_id path kind mime_type size sha256 revision modified_at in_trash note memory').sort({ _id: 1 }).limit(OBSIDIAN_REMOTE_BATCH_SIZE).read('primary').lean();
+		files.push(...batch);
+		if (batch.length < OBSIDIAN_REMOTE_BATCH_SIZE) return files;
+		lastId = batch.at(-1)._id;
+	}
+}
+
+function reconcileManifestEntries(entries, remoteFiles, scope) {
+	const remoteByPath = new Map(remoteFiles.map((file) => [file.path, file]));
+	const localPaths = new Set();
+	const actions = [];
+	for (const entry of entries) {
+		const filePath = normalizeVaultPath(entry.path);
+		if (isExcludedVaultPath(filePath)) {
+			actions.push({ action: 'ignore', path: filePath, reason: 'excluded' });
+			continue;
+		}
+		if (!pathInSyncScope(filePath, scope)) {
+			actions.push({ action: 'ignore', path: filePath, reason: 'out_of_scope' });
+			continue;
+		}
+		localPaths.add(filePath);
+		const remote = remoteByPath.get(filePath);
+		if (!remote) {
+			actions.push({ action: 'upload', path: filePath, size: Number(entry.size || 0), base_revision: 0 });
+			continue;
+		}
+		if (remote.sha256 === String(entry.sha256 || '').toLowerCase() && remote.in_trash === Boolean(entry.in_trash)) {
+			actions.push({ action: 'noop', ...publicFile(remote) });
+			continue;
+		}
+		const localModifiedAt = normalizedModifiedAt(entry.modified_at);
+		const action = localModifiedAt.getTime() > new Date(remote.modified_at).getTime() ? 'upload' : remote.in_trash ? 'trash' : 'download';
+		actions.push({ action, ...publicFile(remote), size: action === 'upload' ? Number(entry.size || 0) : remote.size, base_revision: remote.revision });
+	}
+	for (const file of remoteFiles) {
+		if (localPaths.has(file.path) || !pathInSyncScope(file.path, scope)) continue;
+		actions.push({ action: file.in_trash ? 'noop' : 'download', ...publicFile(file), base_revision: file.revision });
+	}
+	return actions;
+}
+
+async function registerDeviceOnConnection(connection, data) {
+	const deviceId = String(data.device_id || '').trim().slice(0, 200);
+	if (!deviceId) throw new ObsidianSyncError('device_id is required', 400, 'device_id_required');
+	const existing = connection.devices.find((device) => device.device_id === deviceId);
+	if (existing) {
+		existing.name = String(data.device_name || existing.name || '').slice(0, 200);
+		existing.platform = String(data.platform || existing.platform || '').slice(0, 100);
+		existing.last_seen_at = new Date();
+	} else {
+		connection.devices.push({ device_id: deviceId, name: String(data.device_name || '').slice(0, 200), platform: String(data.platform || '').slice(0, 100), last_seen_at: new Date(), last_cursor: 0 });
+	}
+	await connection.save();
+	return connection;
+}
+
 export async function listConnections(hostId, projectId = null) {
 	const query = { host_id: hostId };
 	if (projectId) query.project = projectId;
@@ -664,25 +787,14 @@ export async function createConnection(userId, hostId, data, ctx = {}) {
 			if (!connection) throw err;
 		}
 	}
-	if (data.device_id) await registerDevice(hostId, connection._id, data);
-	return publicConnection(await ObsidianConnection.findOne({ _id: connection._id, host_id: hostId }).lean());
+	if (data.device_id) await registerDeviceOnConnection(connection, data);
+	return publicConnection(connection);
 }
 
 export async function registerDevice(hostId, connectionId, data) {
 	const connection = await queryForSave(ObsidianConnection.findOne({ _id: connectionId, host_id: hostId }));
 	if (!connection) throw new ObsidianSyncError('Obsidian connection not found', 404, 'connection_not_found');
-	const deviceId = String(data.device_id || '').trim().slice(0, 200);
-	if (!deviceId) throw new ObsidianSyncError('device_id is required', 400, 'device_id_required');
-	const existing = connection.devices.find((device) => device.device_id === deviceId);
-	if (existing) {
-		existing.name = String(data.device_name || existing.name || '').slice(0, 200);
-		existing.platform = String(data.platform || existing.platform || '').slice(0, 100);
-		existing.last_seen_at = new Date();
-	} else {
-		connection.devices.push({ device_id: deviceId, name: String(data.device_name || '').slice(0, 200), platform: String(data.platform || '').slice(0, 100), last_seen_at: new Date(), last_cursor: 0 });
-	}
-	await connection.save();
-	return publicConnection(connection);
+	return publicConnection(await registerDeviceOnConnection(connection, data));
 }
 
 export async function updateConnection(hostId, connectionId, data, ctx = {}) {
@@ -741,6 +853,7 @@ export async function requestSync(hostId, connectionId, ctx = {}) {
 
 export async function reconcileManifest(userId, hostId, connectionId, data) {
 	const connection = await connectionForWrite(hostId, connectionId);
+	const scope = normalizeSyncScope(data.scope, connection);
 	let manifestId = '';
 	if (data.manifest_id) {
 		manifestId = String(data.manifest_id).trim();
@@ -767,8 +880,8 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 	if (data.preview === true) {
 		const [notes, memories] = await pendingProjectItems(connection);
 		previewExports = [
-			...notes.map((note) => ({ action: 'download', path: `${connection.streamient_folder}/${safeFileName(note.title)}.md`, preview: true })),
-			...memories.map((memory) => ({ action: 'download', path: `${connection.streamient_folder}/Memories/${safeFileName(memory.title)}.md`, preview: true })),
+			...notes.map((note) => ({ action: 'download', path: `${connection.streamient_folder}/${safeFileName(note.title)}.md`, size: Buffer.byteLength(itemMarkdown('note', note)), preview: true })),
+			...memories.map((memory) => ({ action: 'download', path: `${connection.streamient_folder}/Memories/${safeFileName(memory.title)}.md`, size: Buffer.byteLength(itemMarkdown('memory', memory)), preview: true })),
 		];
 	} else {
 		const lock = await acquireManifestLock(connection._id);
@@ -780,30 +893,8 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 		}
 	}
 	const entries = Array.isArray(data.files) ? data.files : [];
-	const localPaths = new Set();
-	const actions = [];
-	for (const entry of entries) {
-		const filePath = normalizeVaultPath(entry.path);
-		if (isExcludedVaultPath(filePath)) {
-			actions.push({ action: 'ignore', path: filePath, reason: 'excluded' });
-			continue;
-		}
-		localPaths.add(filePath);
-		const remote = await ObsidianFile.findOne({ connection: connection._id, host_id: hostId, path: filePath }).read('primary').lean();
-		if (!remote) {
-			actions.push({ action: 'upload', path: filePath, base_revision: 0 });
-			continue;
-		}
-		if (remote.sha256 === String(entry.sha256 || '').toLowerCase() && remote.in_trash === Boolean(entry.in_trash)) {
-			actions.push({ action: 'noop', ...publicFile(remote) });
-			continue;
-		}
-		const localModifiedAt = normalizedModifiedAt(entry.modified_at);
-		const action = localModifiedAt.getTime() > new Date(remote.modified_at).getTime() ? 'upload' : remote.in_trash ? 'trash' : 'download';
-		actions.push({ action, ...publicFile(remote), base_revision: remote.revision });
-	}
-	const remoteOnly = await ObsidianFile.find({ connection: connection._id, host_id: hostId, path: { $nin: [...localPaths] } }).read('primary').lean();
-	for (const file of remoteOnly) actions.push({ action: file.in_trash ? 'noop' : 'download', ...publicFile(file), base_revision: file.revision });
+	const remoteFiles = await connectionFiles(connection, scope);
+	const actions = reconcileManifestEntries(entries, remoteFiles, scope);
 	if (data.device_id) await registerDevice(hostId, connection._id, data);
 	if (data.preview !== true) {
 		connection.last_synced_at = new Date();
@@ -812,7 +903,8 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 		connection.sync_requested_at = null;
 		await ObsidianConnection.updateOne({ _id: connection._id, host_id: hostId }, { $set: { last_synced_at: connection.last_synced_at, last_sync_status: 'success', last_sync_error: '', sync_requested_at: null } });
 	}
-	const result = { connection: publicConnection(connection), actions: [...actions, ...previewExports], cursor: connection.sequence || 0, manifest_id: manifestId || undefined, complete: true };
+	const allActions = [...actions, ...previewExports];
+	const result = { connection: publicConnection(connection), actions: data.preview === true && data.summary_only === true ? [] : allActions, summary: summarizeActions(allActions), cursor: connection.sequence || 0, manifest_id: manifestId || undefined, complete: true };
 	if (manifestId) await ObsidianManifestBatch.deleteMany({ host_id: hostId, user: userId, connection: connection._id, manifest_id: manifestId });
 	return result;
 }
@@ -992,4 +1084,4 @@ export async function deleteObsidianHostDirectory(hostId) {
 	for (const area of ['blobs', 'uploads', 'server', 'extract']) await rm(path.resolve(config.obsidian.vaultsDir, area, String(hostId)), { recursive: true, force: true });
 }
 
-export const __test = { normalizedModifiedAt, parsedMarkdown, itemMarkdown, renderCanonicalMarkdown, canvasText, conflictPath, publicFile, publicChange, applyMutation };
+export const __test = { normalizedModifiedAt, parsedMarkdown, itemMarkdown, renderCanonicalMarkdown, canvasText, conflictPath, publicFile, publicChange, applyMutation, normalizeSyncScope, pathInSyncScope, summarizeActions, registerDeviceOnConnection, reconcileManifestEntries, scopeMongoFilter };
