@@ -47,9 +47,15 @@ test('normalizes scoped manifests and keeps the managed project folder active', 
 	assert.equal(syncTest.pathInSyncScope('Anywhere.md', null), true);
 	assert.throws(() => syncTest.normalizeSyncScope({ vault_mode: 'selected', selected_paths: [{ path: '.obsidian/data.json', kind: 'file' }] }, { streamient_folder: 'Streamient/Project' }));
 	const mongoFilter = syncTest.scopeMongoFilter(scope);
-	assert.equal(mongoFilter.$or.length, 3);
-	assert.equal(mongoFilter.$or[0].path.$regex.test('Streamient/Project/Note.md'), true);
-	assert.equal(mongoFilter.$or[0].path.$regex.test('Streamient/Project-2/Note.md'), false);
+	assert.equal(mongoFilter.$and[0].$or.length, 3);
+	assert.equal(mongoFilter.$and[0].$or[0].path.$regex.test('Streamient/Project/Note.md'), true);
+	assert.equal(mongoFilter.$and[0].$or[0].path.$regex.test('Streamient/Project-2/Note.md'), false);
+	const legacyScope = syncTest.normalizeSyncScope({ vault_mode: 'off', excluded_paths: [{ path: 'Streamient/Work', kind: 'folder' }] }, { streamient_folder: 'Streamient' });
+	assert.equal(syncTest.pathInSyncScope('Streamient/Own.md', legacyScope), true);
+	assert.equal(syncTest.pathInSyncScope('Streamient/Work/Other.md', legacyScope), false);
+	const legacyMongoFilter = syncTest.scopeMongoFilter(legacyScope);
+	assert.equal(legacyMongoFilter.$and[0].$or[0].path.$regex.test('Streamient/Own.md'), true);
+	assert.equal(legacyMongoFilter.$and[1].$nor[0].path.$regex.test('Streamient/Work/Other.md'), true);
 });
 
 test('summarizes scoped preview counts and transfer bytes', () => {
