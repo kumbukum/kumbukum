@@ -6,6 +6,7 @@
 	var totalRecordCount = 0;
 	var lastChecked = null;
 	var docListeners = [];
+	var projectPickerOpening = false;
 
 	function addDocListener(event, handler, capture) {
 		document.addEventListener(event, handler, !!capture);
@@ -71,33 +72,25 @@
 		return selectAllRecords ? totalRecordCount : getSelected().length;
 	}
 
-	function formatItemCount(count) {
-		return count + ' item' + (count === 1 ? '' : 's');
-	}
-
 	async function getProjectPickerHtml(action) {
 		var params = new URLSearchParams({ action: action });
 		if (currentProjectId) params.set('current', currentProjectId);
 		var res = await fetch('/ajax/batch-project-picker?' + params);
-		if (isLoginRedirect(res)) return redirectToLogin();
+		if (isLoginRedirect(res)) {
+			redirectToLogin();
+			return '';
+		}
 		if (!res.ok) throw new Error('Failed to load projects');
 		return res.text();
 	}
 
-	function setBatchProgressVisible(action, count) {
-		var progress = document.getElementById('batch-operation-progress');
-		var progressLabel = document.getElementById('batch-operation-progress-label');
-		var progressCount = document.getElementById('batch-operation-progress-count');
-		if (progress) progress.classList.remove('d-none');
-		if (progressLabel) progressLabel.textContent = (action === 'move' ? 'Moving ' : 'Copying ') + formatItemCount(count) + '...';
-		if (progressCount) progressCount.textContent = 'Please wait';
-	}
-
-	function setBatchProgressHidden() {
-		var progress = document.getElementById('batch-operation-progress');
-		var progressCount = document.getElementById('batch-operation-progress-count');
-		if (progress) progress.classList.add('d-none');
-		if (progressCount) progressCount.textContent = '';
+	function setProjectPickerBusy(form, busy) {
+		form.dataset.busy = busy ? 'true' : 'false';
+		form.querySelectorAll('button, select').forEach(function (control) { control.disabled = busy; });
+		var submit = form.querySelector('[data-batch-project-submit]');
+		if (busy) submit?.setAttribute('aria-busy', 'true');
+		else submit?.removeAttribute('aria-busy');
+		form.querySelector('[data-batch-project-spinner]')?.classList.toggle('d-none', !busy);
 	}
 
 	async function onSelectAllChange() {
@@ -182,50 +175,63 @@
 
 	async function pickProject(action) {
 		var count = getActionCount();
-		if (!count) return;
+		if (!count || projectPickerOpening) return;
 
-		var Swal = (await import('/static/js/vendor.js')).Swal;
-		var actionLabel = action === 'move' ? 'Move' : 'Copy';
-		var html = await getProjectPickerHtml(action);
-		var result = await Swal.fire({
-			title: actionLabel + ' to project',
-			html: html,
-			showCancelButton: true,
-			confirmButtonText: actionLabel,
-			showLoaderOnConfirm: true,
-			allowOutsideClick: function () { return !Swal.isLoading(); },
-			allowEscapeKey: function () { return !Swal.isLoading(); },
-			didOpen: function () {
-				var select = document.getElementById('batch-project-select');
-				if (!select || select.options.length === 0) {
-					Swal.showValidationMessage('No other projects available');
-					var confirmButton = Swal.getConfirmButton();
-					if (confirmButton) confirmButton.disabled = true;
-				}
-			},
-			preConfirm: async function () {
-				var select = document.getElementById('batch-project-select');
-				var project = select?.value;
+		var root = document.getElementById('batch-project-modal-root');
+		if (!root) return showError('Project picker is unavailable.');
+		projectPickerOpening = true;
+		try {
+			var html = await getProjectPickerHtml(action);
+			if (!html) return;
+			root.innerHTML = html;
+			var modalEl = root.querySelector('#batchProjectModal');
+			var form = root.querySelector('#batch-project-form');
+			var select = root.querySelector('#batch-project-select');
+			if (!modalEl || !form || !select) throw new Error('Project picker is unavailable');
+
+			var Modal = await ensureBootstrapModal();
+			var modal = Modal.getOrCreateInstance(modalEl);
+			modalEl.addEventListener('hide.bs.modal', function (event) {
+				if (form.dataset.busy === 'true') event.preventDefault();
+			});
+			modalEl.addEventListener('hidden.bs.modal', function () {
+				modal.dispose();
+				root.replaceChildren();
+			}, { once: true });
+			select.addEventListener('change', function () { select.classList.remove('is-invalid'); });
+			form.addEventListener('submit', async function (event) {
+				event.preventDefault();
+				var project = select.value;
 				if (!project) {
-					Swal.showValidationMessage('Project required');
-					return false;
+					select.classList.add('is-invalid');
+					select.focus();
+					return;
 				}
-				setBatchProgressVisible(action, count);
-				try {
-					return await api('POST', '/batch/' + action, buildBatchBody({ project: project }));
-				} catch (err) {
-					setBatchProgressHidden();
-					Swal.showValidationMessage(err.message || 'Batch action failed');
-					return false;
-				}
-			},
-		});
-		if (!result.isConfirmed || !result.value) return;
 
-		var processed = action === 'move' ? result.value.moved : result.value.copied;
-		showSuccess((processed || count) + ' ' + (action === 'move' ? 'moved' : 'copied'));
-		resetBatch();
-		window.dispatchEvent(new CustomEvent('batch-done'));
+				select.classList.remove('is-invalid');
+				setProjectPickerBusy(form, true);
+				try {
+					var result = await api('POST', '/batch/' + action, buildBatchBody({ project: project }));
+					var processed = action === 'move' ? result.moved : result.copied;
+					setProjectPickerBusy(form, false);
+					modalEl.addEventListener('hidden.bs.modal', function () {
+						showSuccess((processed || count) + ' ' + (action === 'move' ? 'moved' : 'copied'));
+					}, { once: true });
+					modal.hide();
+					resetBatch();
+					window.dispatchEvent(new CustomEvent('batch-done'));
+				} catch (err) {
+					setProjectPickerBusy(form, false);
+					showError(err.message || 'Batch action failed');
+				}
+			});
+			modal.show();
+		} catch (err) {
+			root.replaceChildren();
+			showError(err.message || 'Failed to load projects');
+		} finally {
+			projectPickerOpening = false;
+		}
 	}
 
 	function mount() {

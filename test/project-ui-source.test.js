@@ -59,7 +59,7 @@ describe('project dashboard UI source', () => {
 		assert.doesNotMatch(html, /data-project-delete-blocked/);
 	});
 
-	it('renders batch project picker with visible progress markup', () => {
+	it('renders the shared batch project picker as a Bootstrap modal', () => {
 		const render = pug.compileFile(localPath(new URL('../views/ajax/batch_project_picker.pug', import.meta.url)));
 		const html = render({
 			action: 'move',
@@ -68,21 +68,50 @@ describe('project dashboard UI source', () => {
 			],
 		});
 
+		assert.match(html, /class="modal fade" id="batchProjectModal"/);
+		assert.match(html, /class="modal-dialog modal-dialog-centered"/);
+		assert.match(html, /id="batch-project-form"[^>]*data-batch-action="move"/);
+		assert.match(html, /id="batchProjectModalLabel"[^>]*>Move to project</);
 		assert.match(html, /id="batch-project-select"/);
 		assert.match(html, /class="form-select form-select-sm"/);
-		assert.match(html, /id="batch-operation-progress"/);
-		assert.match(html, /progress-bar-striped progress-bar-animated/);
-		assert.match(html, /aria-label="Move progress"/);
+		assert.match(html, /data-batch-project-cancel="data-batch-project-cancel"[^>]*>Cancel</);
+		assert.match(html, /data-batch-project-submit="data-batch-project-submit"/);
+		assert.match(html, /data-batch-project-spinner="data-batch-project-spinner"/);
+		assert.doesNotMatch(html, /swal2|batch-operation-progress/);
 	});
 
-	it('keeps batch move modal open while async progress runs', () => {
+	it('renders Copy labels and disables submission without another project', () => {
+		const render = pug.compileFile(localPath(new URL('../views/ajax/batch_project_picker.pug', import.meta.url)));
+		const copyHtml = render({ action: 'copy', projects: [{ _id: 'project-2', name: 'Project Two' }] });
+		const emptyHtml = render({ action: 'move', projects: [] });
+
+		assert.match(copyHtml, /data-batch-action="copy"/);
+		assert.match(copyHtml, />Copy to project</);
+		assert.match(copyHtml, /data-batch-project-submit="data-batch-project-submit"[^>]*>[\s\S]*?<span>Copy<\/span><\/button>/);
+		assert.match(emptyHtml, /id="batch-project-select"[^>]*disabled="disabled"/);
+		assert.match(emptyHtml, /data-batch-project-submit="data-batch-project-submit"[^>]*disabled="disabled"/);
+		assert.match(emptyHtml, /No other projects available\./);
+	});
+
+	it('runs batch project actions through the Bootstrap modal lifecycle', () => {
 		const source = fs.readFileSync(new URL('../public/js/batch.js', import.meta.url), 'utf8');
+		const picker = source.slice(source.indexOf('async function pickProject'), source.indexOf('\n\tfunction mount'));
 
 		assert.ok(source.includes("fetch('/ajax/batch-project-picker?' + params)"));
-		assert.ok(source.includes('showLoaderOnConfirm: true'));
-		assert.ok(source.includes('preConfirm: async function ()'));
-		assert.ok(source.includes('setBatchProgressVisible(action, count)'));
-		assert.ok(source.includes("window.dispatchEvent(new CustomEvent('batch-done'))"));
+		assert.match(picker, /ensureBootstrapModal\(\)/);
+		assert.match(picker, /Modal\.getOrCreateInstance\(modalEl\)/);
+		assert.match(picker, /form\.addEventListener\('submit', async function/);
+		assert.match(picker, /form\.dataset\.busy === 'true'\) event\.preventDefault\(\)/);
+		assert.match(picker, /setProjectPickerBusy\(form, true\)/);
+		assert.match(picker, /root\.replaceChildren\(\)/);
+		assert.match(picker, /window\.dispatchEvent\(new CustomEvent\('batch-done'\)\)/);
+		assert.doesNotMatch(picker, /Swal|showLoaderOnConfirm|setBatchProgress/);
+	});
+
+	it('provides a persistent mount point for the dynamic batch modal', () => {
+		const layout = fs.readFileSync(new URL('../views/layout.pug', import.meta.url), 'utf8');
+
+		assert.match(layout, /#batch-project-modal-root/);
 	});
 
 	it('navigates dashboard after deleting a project', () => {

@@ -491,6 +491,35 @@ body.st-no-chat-sidebar .st-content-grid {
 	overflow: auto;
 }
 
+.swal2-popup.swal2-st-popup {
+	--swal2-outline: 0 0 0 0.25rem rgba(var(--st-primary-rgb), 0.3);
+	--swal2-border: 2px solid var(--st-border-ink);
+	--swal2-border-radius: var(--tblr-border-radius-lg, 0.5rem);
+	--swal2-background: var(--st-panel);
+	--swal2-color: var(--st-text);
+	--swal2-input-border: 1px solid var(--st-line-strong);
+	--swal2-input-background: var(--st-panel-muted);
+	--swal2-input-focus-border: 1px solid var(--st-primary);
+	--swal2-input-focus-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.06), 0 0 0 0.25rem rgba(var(--st-primary-rgb), 0.3);
+	--swal2-validation-message-background: var(--st-danger-soft);
+	--swal2-validation-message-color: var(--st-text);
+	--swal2-footer-border-color: var(--st-line);
+	--swal2-confirm-button-background-color: var(--st-primary);
+	--swal2-cancel-button-background-color: var(--tblr-secondary, #6b7280);
+	--swal2-timer-progress-bar-background: rgba(var(--st-primary-rgb), 0.55);
+	--swal2-toast-border: 1px solid var(--st-line-strong);
+	--swal2-toast-box-shadow: var(--st-shadow-hard);
+	box-shadow: var(--st-shadow-hard-lg);
+}
+
+.swal2-popup.swal2-st-popup .swal2-loader {
+	border-color: var(--st-primary) transparent var(--st-primary) transparent;
+}
+
+.swal2-popup.swal2-st-popup.swal2-toast {
+	box-shadow: var(--st-shadow-hard);
+}
+
 .swal2-icon.swal2-st-icon {
 	border: 0;
 	background: var(--st-primary-soft);

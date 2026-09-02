@@ -377,13 +377,34 @@ body.st-template1 #mobileBetaModal a.btn-primary:focus {
 
 body.st-template1 #mobileBetaModal,
 body.st-template1 #settingsModal,
-body.st-template1 #projectSettingsModal {
+body.st-template1 #projectSettingsModal,
+body.st-template1 #batchProjectModal {
 	--bs-body-color: var(--st-text);
 	--bs-body-bg: var(--st-panel);
 	--bs-border-color: var(--st-line);
 	--bs-secondary-color: var(--st-muted);
 	--bs-tertiary-bg: var(--st-panel-subtle);
 	color: var(--st-text);
+}
+
+body.st-template1 #batchProjectModal {
+	--tblr-modal-color: var(--st-text);
+	--tblr-modal-bg: var(--st-panel);
+	--tblr-modal-border-color: var(--st-border-ink);
+	--tblr-modal-header-border-color: var(--st-line);
+	--tblr-modal-footer-bg: var(--st-panel-subtle);
+	--tblr-modal-footer-border-color: var(--st-line);
+}
+
+body.st-template1 #batchProjectModal .form-select {
+	background-color: var(--st-panel-muted);
+	border-color: var(--st-line-strong);
+	color: var(--st-text);
+}
+
+body.st-template1 #batchProjectModal .form-select:focus {
+	border-color: var(--st-primary);
+	box-shadow: 0 0 0 0.25rem rgba(var(--st-primary-rgb), 0.3);
 }
 
 body.st-template1 #settingsModal .st-settings-modal-dialog,
@@ -611,17 +632,21 @@ body.st-template1 .huebee__close-button {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 4.25rem;
-	height: 4.25rem;
+	width: 3rem;
+	height: 3rem;
 	margin: 1.5rem auto 0.75rem;
 	font-size: 1rem;
 }
 
 .swal2-icon.swal2-st-icon .st-icon {
 	width: auto;
-	font-size: 4.25rem;
+	font-size: 2rem;
 	line-height: 1;
 	vertical-align: 0;
+}
+
+.swal2-toast .swal2-icon.swal2-st-icon .st-icon {
+	font-size: 1.25rem;
 }
 
 .swal2-icon.swal2-success.swal2-st-icon {
@@ -1683,14 +1708,14 @@ body:not(.swal2-shown) > .swal2-container {
 	text-align: left;
 	font-size: 0.8rem;
 	font-weight: 600;
-	color: #495057;
+	color: var(--st-text);
 	margin: 0.6rem 1em 0.1rem;
 }
 .swal2-html-container .swal-hint {
 	display: block;
 	text-align: left;
 	font-size: 0.75rem;
-	color: #868e96;
+	color: var(--st-muted);
 	margin: 0.05rem 1em 0;
 }
 .swal2-html-container .input-group {
@@ -1699,6 +1724,10 @@ body:not(.swal2-shown) > .swal2-container {
 }
 .swal2-html-container .input-group .form-control {
 	font-size: 0.875rem;
+}
+
+.swal2-st-popup :is(.swal2-input, .swal2-textarea)::placeholder {
+	color: var(--st-muted);
 }
 
 /* Streamient — global search result type badges */
