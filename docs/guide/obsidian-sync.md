@@ -5,7 +5,7 @@ description: Synchronize Markdown, Canvas, Bases, documents, and attachments bet
 
 # Obsidian Sync
 
-Streamient Sync is a first-party Obsidian plugin for two-way synchronization between one vault and one Streamient project. It runs inside Obsidian, connects to hosted or self-hosted Streamient, works on desktop and mobile, and supports multiple devices on the same connection.
+Streamient Sync is a first-party Obsidian plugin for scoped two-way synchronization between one vault and multiple Streamient projects. It runs inside Obsidian, connects to hosted or self-hosted Streamient, works on desktop and mobile, and supports multiple devices on each connection.
 
 ::: info Availability
 Obsidian Sync requires the **Pro** plan or a **self-hosted** installation. The server must enable `OBSIDIAN_SYNC_ENABLED`.
@@ -20,7 +20,9 @@ Obsidian Sync requires the **Pro** plan or a **self-hosted** installation. The s
 - Canvas and Bases content is mirrored and indexed.
 - Supported PDFs, Word documents, and text files are mirrored and text-indexed.
 - Images, audio, video, and other attachments are mirrored and metadata-indexed.
-- Notes created in Streamient are written below `Streamient/`; Memories use `Streamient/Memories/`.
+- Each project defaults to `Streamient/<Project name>`; its project folder always synchronizes both ways.
+- Extra vault content is Off by default. Per project, it can include selected folders/files or the unassigned remainder of the vault.
+- A local path belongs to only one project. Managed project folders and explicit selections are excluded from another project's entire-vault scope.
 
 The plugin excludes `.obsidian`, `.git`, `.trash`, other dot-folders, operating-system metadata, and temporary files.
 
@@ -40,13 +42,20 @@ To test prerelease builds, install [BRAT](https://obsidian.md/plugins?id=obsidia
 
 1. Open **Settings → Streamient Sync**.
 2. Enter the hosted or self-hosted Streamient URL.
-3. Select **Sign in** and approve `vault:read` and `vault:write` access.
-4. Choose any active project.
-5. Review the first-sync upload/download preview and confirm.
+3. Select **Sign in** and approve `vault:read` and `vault:write` access. This becomes the default account.
+4. Add any active projects from that account. Use **Add account** to authorize another work or personal user; each OAuth refresh token remains separate in Obsidian SecretStorage.
+5. Configure optional extra vault content for each project.
+6. Review upload/download/trash counts and transfer bytes, then explicitly start the first sync.
 
 Each device authorizes separately. OAuth refresh credentials use Obsidian SecretStorage and are never stored in the vault plugin configuration.
 
-Large vault manifests are uploaded in ordered batches of 500 entries. The preview pass is non-mutating; Streamient creates export files only after confirmation.
+Large scoped manifests are uploaded in ordered batches of 500 entries. The preview pass is non-mutating and returns a compact summary; Streamient creates export files only after confirmation. Projects run sequentially so one large profile cannot start competing scans or uploads.
+
+## Abort and Resume
+
+Select **Abort** on the active project to stop after the current request or upload chunk. An incomplete upload session is canceled and removed. Already completed changes remain synchronized; no rollback is attempted. The project stays paused until **Resume** is selected.
+
+Removing selected content or a project profile stops further synchronization while retaining both local and Streamient copies. Re-adding it performs normal newest-wins reconciliation.
 
 ## Conflict Handling
 
@@ -60,7 +69,7 @@ Duplicate operations, repeated file hashes, and changes relayed through Obsidian
 
 Deletes move the file and projected Streamient item to trash. Restoring on either side restores the other side. File bytes are removed after the 30-day retention period, while a lightweight tombstone prevents stale offline devices from silently resurrecting old data.
 
-Disconnecting stops synchronization. Existing Streamient knowledge remains until explicitly deleted.
+Signing out stops every profile on that device while retaining profile configuration and existing Streamient knowledge. Each profile can reconnect its own OAuth account later.
 
 Project settings also offers **Remove connection**. This removes the encrypted vault mirror, attachments, revisions, and sync history while retaining the projected Streamient Notes and Memories as normal project content.
 

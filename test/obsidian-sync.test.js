@@ -14,9 +14,11 @@ import { ObsidianFile } from '../model/obsidian_file.js';
 import { ObsidianRevision } from '../model/obsidian_revision.js';
 import { AuditLog } from '../model/audit_log.js';
 import { Tenant } from '../modules/tenancy.js';
+import { Project } from '../model/project.js';
 import { requireObsidianAccess, requireProjectManager } from '../routes/obsidian_api.js';
+import { __test as oauthRouteTest } from '../routes/oauth.js';
 import { readBlob, storeBuffer } from '../services/obsidian_blob_service.js';
-import { normalizeVaultPath, isExcludedVaultPath, vaultFileKind, __test as syncTest } from '../services/obsidian_sync_service.js';
+import { createConnection, normalizeVaultPath, isExcludedVaultPath, vaultFileKind, __test as syncTest } from '../services/obsidian_sync_service.js';
 import { validateAuthorizationRequest } from '../services/oauth_service.js';
 
 test('validates Obsidian vault paths and content kinds', () => {
@@ -27,6 +29,81 @@ test('validates Obsidian vault paths and content kinds', () => {
 	assert.equal(vaultFileKind('Boards/Plan.canvas'), 'canvas');
 	assert.equal(vaultFileKind('Files/Plan.pdf'), 'document');
 	assert.throws(() => normalizeVaultPath('../../outside.md'));
+});
+
+test('normalizes scoped manifests and keeps the managed project folder active', () => {
+	const scope = syncTest.normalizeSyncScope({
+		vault_mode: 'selected',
+		selected_paths: [{ path: 'Readwise', kind: 'folder' }, { path: 'Loose.md', kind: 'file' }],
+		excluded_paths: [{ path: 'Readwise/Private', kind: 'folder' }],
+	}, { streamient_folder: 'Streamient/Project' });
+	assert.equal(syncTest.pathInSyncScope('Streamient/Project/Note.md', scope), true);
+	assert.equal(syncTest.pathInSyncScope('Readwise/Article.md', scope), true);
+	assert.equal(syncTest.pathInSyncScope('Readwise/Private/Secret.md', scope), false);
+	assert.equal(syncTest.pathInSyncScope('Loose.md', scope), true);
+	assert.equal(syncTest.pathInSyncScope('Loose.md.bak', scope), false);
+	assert.equal(syncTest.pathInSyncScope('Anywhere.md', syncTest.normalizeSyncScope({ vault_mode: 'all' }, { streamient_folder: 'Streamient/Project' })), true);
+	assert.equal(syncTest.pathInSyncScope('Anywhere.md', syncTest.normalizeSyncScope({ vault_mode: 'off' }, { streamient_folder: 'Streamient/Project' })), false);
+	assert.equal(syncTest.pathInSyncScope('Anywhere.md', null), true);
+	assert.throws(() => syncTest.normalizeSyncScope({ vault_mode: 'selected', selected_paths: [{ path: '.obsidian/data.json', kind: 'file' }] }, { streamient_folder: 'Streamient/Project' }));
+	const mongoFilter = syncTest.scopeMongoFilter(scope);
+	assert.equal(mongoFilter.$or.length, 3);
+	assert.equal(mongoFilter.$or[0].path.$regex.test('Streamient/Project/Note.md'), true);
+	assert.equal(mongoFilter.$or[0].path.$regex.test('Streamient/Project-2/Note.md'), false);
+});
+
+test('summarizes scoped preview counts and transfer bytes', () => {
+	assert.deepEqual(syncTest.summarizeActions([
+		{ action: 'upload', size: 10 },
+		{ action: 'download', size: 20 },
+		{ action: 'download', size: 30 },
+		{ action: 'noop', size: 40 },
+	]), { total: 4, counts: { upload: 1, download: 2, trash: 0, noop: 1, ignore: 0 }, bytes: { upload: 10, download: 50 } });
+});
+
+test('reconciles only managed and selected manifest paths', () => {
+	const scope = syncTest.normalizeSyncScope({ vault_mode: 'selected', selected_paths: [{ path: 'Work', kind: 'folder' }], excluded_paths: [] }, { streamient_folder: 'Streamient/Project' });
+	const remoteFiles = [
+		{ _id: 'remote-managed', path: 'Streamient/Project/Remote.md', kind: 'markdown', size: 20, sha256: 'b'.repeat(64), revision: 1, modified_at: new Date(), in_trash: false },
+		{ _id: 'remote-dormant', path: 'Personal/Dormant.md', kind: 'markdown', size: 30, sha256: 'c'.repeat(64), revision: 1, modified_at: new Date(), in_trash: false },
+	];
+	const actions = syncTest.reconcileManifestEntries([
+		{ path: 'Work/Local.md', size: 10, sha256: 'a'.repeat(64), modified_at: new Date(), base_revision: 0, in_trash: false },
+		{ path: 'Personal/Ignored.md', size: 40, sha256: 'd'.repeat(64), modified_at: new Date(), base_revision: 0, in_trash: false },
+	], remoteFiles, scope);
+	assert.deepEqual(actions.map((action) => [action.action, action.path]), [
+		['upload', 'Work/Local.md'],
+		['ignore', 'Personal/Ignored.md'],
+		['download', 'Streamient/Project/Remote.md'],
+	]);
+});
+
+test('registers a device on the connection already loaded by connection creation', async () => {
+	let saves = 0;
+	const connection = { devices: [], async save() { saves++; return this; } };
+	await syncTest.registerDeviceOnConnection(connection, { device_id: 'device-1', device_name: 'Laptop', platform: 'desktop' });
+	assert.equal(saves, 1);
+	assert.equal(connection.devices[0].device_id, 'device-1');
+	const source = fs.readFileSync(new URL('../services/obsidian_sync_service.js', import.meta.url), 'utf8');
+	assert.match(source, /if \(data\.device_id\) await registerDeviceOnConnection\(connection, data\);\n\treturn publicConnection\(connection\);/);
+});
+
+test('returns the newly created connection after registering its first device', async (t) => {
+	const originals = { projectFindOne: Project.findOne, connectionFindOne: ObsidianConnection.findOne, connectionCreate: ObsidianConnection.create, auditCreate: AuditLog.create };
+	const connection = { _id: 'connection-1', project: 'project-1', host_id: 'host-1', name: 'Vault', streamient_folder: 'Streamient/Project', enabled: true, sequence: 0, devices: [], async save() { return this; } };
+	Project.findOne = () => ({ select: () => ({ lean: async () => ({ _id: 'project-1' }) }) });
+	ObsidianConnection.findOne = () => mockQuery(null);
+	ObsidianConnection.create = async () => connection;
+	AuditLog.create = async () => ({});
+	t.after(() => {
+		Project.findOne = originals.projectFindOne;
+		ObsidianConnection.findOne = originals.connectionFindOne;
+		ObsidianConnection.create = originals.connectionCreate;
+		AuditLog.create = originals.auditCreate;
+	});
+	const result = await createConnection('user-1', 'host-1', { project_id: 'project-1', name: 'Vault', streamient_folder: 'Streamient/Project', device_id: 'device-1', device_name: 'Desktop', platform: 'desktop' });
+	assert.equal(result.id, 'connection-1');
+	assert.equal(result.devices[0].device_id, 'device-1');
 });
 
 test('keeps canonical Markdown and custom frontmatter intact', () => {
@@ -57,8 +134,8 @@ test('uses primary reads throughout manifest reconciliation', () => {
 	assert.match(source, /Note\.find\(query\)\.read\('primary'\)\.lean\(\)/);
 	assert.match(source, /Memory\.find\(query\)\.read\('primary'\)\.lean\(\)/);
 	assert.match(source, /ObsidianManifestBatch\.find\([\s\S]*?\.read\('primary'\)\.lean\(\)/);
-	assert.match(source, /ObsidianFile\.findOne\(\{ connection:[\s\S]*?\.read\('primary'\)\.lean\(\)/);
-	assert.match(source, /const remoteOnly = await ObsidianFile\.find\([\s\S]*?\.read\('primary'\)\.lean\(\)/);
+	assert.match(source, /const batch = await ObsidianFile\.find\(query\)[\s\S]*?\.read\('primary'\)\.lean\(\)/);
+	assert.doesNotMatch(source, /const remote = await ObsidianFile\.findOne\(\{ connection: connection\._id, host_id: hostId, path: filePath \}\)/);
 });
 
 test('sanitizes rendered canonical Markdown without changing stored source', () => {
@@ -90,6 +167,23 @@ test('authorizes only the first-party Obsidian callback and vault scopes', async
 	assert.deepEqual(result.scopes, OBSIDIAN_ALL_SCOPES.slice().sort());
 	await assert.rejects(() => validateAuthorizationRequest({ ...request, redirect_uri: 'obsidian://other-action' }, { host_id: 'host-1' }));
 	await assert.rejects(() => validateAuthorizationRequest({ ...request, scope: 'knowledge:read' }, { host_id: 'host-1' }));
+});
+
+test('forces a fresh OAuth login without losing the authorization request', () => {
+	const req = { originalUrl: '/oauth/authorize?client_id=streamient-obsidian&state=state-1&prompt=login', session: { userId: 'user-1', tenantId: 'tenant-1', host_id: 'host-1', memberRole: 'owner', lastLoginRecordedAt: 'now' } };
+	const res = { location: '', redirect(value) { this.location = value; return this; } };
+	oauthRouteTest.redirectToAuthorizationLogin(req, res);
+	assert.equal(res.location, '/login');
+	assert.equal(req.session.userId, undefined);
+	assert.equal(req.session.tenantId, undefined);
+	assert.match(req.session.oauthLoginReturnTo, /prompt=consent/);
+	assert.doesNotMatch(req.session.oauthLoginReturnTo, /prompt=login/);
+});
+
+test('exposes the authorized account identity to multi-account Obsidian clients', () => {
+	const source = fs.readFileSync(new URL('../routes/obsidian_api.js', import.meta.url), 'utf8');
+	assert.match(source, /router\.get\('\/account', requireOAuthScopes\('vault:read'\)/);
+	assert.match(source, /User\.findById\(req\.userId\)\.select\('_id name email'\)/);
 });
 
 test('accepts Obsidian sync audit events', () => {

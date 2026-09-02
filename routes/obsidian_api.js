@@ -6,6 +6,7 @@ import config from '../config.js';
 import { requireOAuthScopes } from '../middleware/auth.js';
 import { Tenant } from '../modules/tenancy.js';
 import { Project } from '../model/project.js';
+import { User } from '../model/user.js';
 import { ObsidianConnection } from '../model/obsidian_connection.js';
 import { ObsidianFile } from '../model/obsidian_file.js';
 import { ObsidianBlob } from '../model/obsidian_blob.js';
@@ -70,6 +71,19 @@ export function requireProjectManager(req, res, next) {
 }
 
 router.use(requireObsidianAccess);
+
+router.get('/account', requireOAuthScopes('vault:read'), async (req, res) => {
+	try {
+		const [tenant, user] = await Promise.all([
+			Tenant.findById(req.tenantId).select('_id name').lean(),
+			User.findById(req.userId).select('_id name email').lean(),
+		]);
+		if (!tenant || !user) return res.status(404).json({ error: 'Streamient account not found', code: 'account_not_found' });
+		res.json({ account: { id: String(tenant._id), name: tenant.name, role: req.memberRole, user: { id: String(user._id), name: user.name, email: user.email } } });
+	} catch (err) {
+		sendError(res, err, 'Account lookup failed');
+	}
+});
 
 router.get('/projects', requireOAuthScopes('vault:read'), async (req, res) => {
 	try {

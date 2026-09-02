@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Tenant } from '../modules/tenancy.js';
+import { Tenant, applyTenantContextToSession } from '../modules/tenancy.js';
 import { buildProtectedResourceMetadata, getApiResourceUrl, listScopeDetailsForResource } from '../modules/oauth.js';
 import * as oauthService from '../services/oauth_service.js';
 import { createLogger } from '../modules/logger.js';
@@ -65,6 +65,18 @@ function metadataResponse() {
 	return oauthService.buildAuthorizationServerMetadata();
 }
 
+function redirectToAuthorizationLogin(req, res) {
+	const returnUrl = new URL(req.originalUrl, 'http://streamient.local');
+	returnUrl.searchParams.set('prompt', 'consent');
+	delete req.session.userId;
+	delete req.session.lastLoginRecordedAt;
+	delete req.session.isSysadmin;
+	delete req.session.pending2FA;
+	applyTenantContextToSession(req.session, null);
+	req.session.oauthLoginReturnTo = `${returnUrl.pathname}${returnUrl.search}`;
+	return res.redirect('/login');
+}
+
 router.get('/.well-known/oauth-authorization-server/oauth', (_req, res) => {
 	res.json(metadataResponse());
 });
@@ -82,6 +94,7 @@ router.get('/.well-known/oauth-protected-resource/api/v1', (_req, res) => {
 });
 
 router.get('/oauth/authorize', async (req, res) => {
+	if (req.query.prompt === 'login') return redirectToAuthorizationLogin(req, res);
 	if (!req.session?.userId) {
 		req.session.oauthLoginReturnTo = req.originalUrl;
 		return res.redirect('/login');
@@ -246,5 +259,7 @@ router.post('/oauth/register', async (req, res) => {
 		return sendTokenError(res, err);
 	}
 });
+
+export const __test = { redirectToAuthorizationLogin };
 
 export default router;
