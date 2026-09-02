@@ -32,18 +32,24 @@ const alertGlyphs = {
 	question: 'help-circle',
 };
 
+const currentSwalTheme = () => document.documentElement.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark';
+const withSwalClass = (required, existing) => [required, existing].filter(Boolean).join(' ');
+
 const decorateSwalOptions = (options) => {
 	if (!options || typeof options !== 'object') return options;
-	if (!options.icon || !alertIcons[options.icon] || options.iconHtml) return options;
-	const glyph = alertGlyphs[alertIcons[options.icon]];
-	return {
+	const decorated = {
+		theme: currentSwalTheme(),
 		...options,
-		iconHtml: `<span class="st-icon ti ti-${glyph}" aria-hidden="true"></span>`,
 		customClass: {
 			...options.customClass,
-			icon: ['swal2-st-icon', options.customClass?.icon].filter(Boolean).join(' '),
+			popup: withSwalClass('swal2-st-popup', options.customClass?.popup),
 		},
 	};
+	if (!options.icon || !alertIcons[options.icon] || options.iconHtml) return decorated;
+	const glyph = alertGlyphs[alertIcons[options.icon]];
+	decorated.iconHtml = `<span class="st-icon ti ti-${glyph}" aria-hidden="true"></span>`;
+	decorated.customClass.icon = withSwalClass('swal2-st-icon', options.customClass?.icon);
+	return decorated;
 };
 
 const originalSwalFire = Swal.fire.bind(Swal);
@@ -51,7 +57,7 @@ Swal.fire = (...args) => {
 	if (args.length === 1 && typeof args[0] === 'object') {
 		return originalSwalFire(decorateSwalOptions(args[0]));
 	}
-	if (args.length >= 3 && typeof args[2] === 'string') {
+	if (args.length === 0 || typeof args[0] === 'string') {
 		return originalSwalFire(decorateSwalOptions({
 			title: args[0],
 			html: args[1],

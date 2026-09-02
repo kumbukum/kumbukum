@@ -108,14 +108,16 @@ function scopePathFilter(entry) {
 
 function scopeMongoFilter(scope) {
 	if (!scope) return {};
-	if (scope.vaultMode === 'all') return scope.excludedPaths.length ? { $nor: scope.excludedPaths.map(scopePathFilter) } : {};
-	return { $or: [{ path: { $regex: new RegExp(`^${scope.managedFolder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:/|$)`) } }, ...scope.selectedPaths.map(scopePathFilter)] };
+	const excluded = scope.excludedPaths.length ? { $nor: scope.excludedPaths.map(scopePathFilter) } : null;
+	if (scope.vaultMode === 'all') return excluded || {};
+	const included = { $or: [{ path: { $regex: new RegExp(`^${scope.managedFolder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:/|$)`) } }, ...scope.selectedPaths.map(scopePathFilter)] };
+	return excluded ? { $and: [included, excluded] } : included;
 }
 
 function pathInSyncScope(filePath, scope) {
 	if (!scope) return true;
-	if (filePath === scope.managedFolder || filePath.startsWith(`${scope.managedFolder}/`)) return true;
 	if (scope.excludedPaths.some((entry) => matchesScopePath(filePath, entry))) return false;
+	if (filePath === scope.managedFolder || filePath.startsWith(`${scope.managedFolder}/`)) return true;
 	if (scope.vaultMode === 'all') return true;
 	return scope.vaultMode === 'selected' && scope.selectedPaths.some((entry) => matchesScopePath(filePath, entry));
 }
