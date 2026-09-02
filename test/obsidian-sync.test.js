@@ -135,10 +135,29 @@ test('exports Markdown bodies beginning with a frontmatter delimiter without rep
 	assert.equal(parsed.body, body);
 });
 
+test('round-trips saved URL metadata without including crawler content', () => {
+	const raw = syncTest.itemMarkdown('url', { title: 'Example', url: 'https://example.com/path', description: 'Saved description', tags: ['reference'], text_content: 'Crawler-owned page text' });
+	const parsed = syncTest.parsedMarkdown(raw, 'Streamient/Project/URLs/Example.md');
+	assert.equal(parsed.type, 'url');
+	assert.equal(parsed.title, 'Example');
+	assert.equal(parsed.url, 'https://example.com/path');
+	assert.deepEqual(parsed.tags, ['reference']);
+	assert.equal(parsed.body.trim(), 'Saved description');
+	assert.doesNotMatch(raw, /Crawler-owned page text/);
+
+	const updated = syncTest.itemMarkdown('url', { title: 'Updated', url: 'https://example.com/new', description: 'Updated description', tags: ['new'] }, `${raw}\n`);
+	const parsedUpdate = syncTest.parsedMarkdown(updated, 'Example.md');
+	assert.equal(parsedUpdate.url, 'https://example.com/new');
+	assert.equal(parsedUpdate.body.trim(), 'Updated description');
+	assert.throws(() => syncTest.parsedMarkdown('---\nstreamient_type: url\nurl: javascript:alert(1)\n---\n', 'Unsafe.md'), /HTTP or HTTPS/);
+	assert.throws(() => syncTest.parsedMarkdown('---\nstreamient_type: url\n---\n', 'Missing.md'), /valid url field/);
+});
+
 test('uses primary reads throughout manifest reconciliation', () => {
 	const source = fs.readFileSync(new URL('../services/obsidian_sync_service.js', import.meta.url), 'utf8');
 	assert.match(source, /Note\.find\(query\)\.read\('primary'\)\.lean\(\)/);
 	assert.match(source, /Memory\.find\(query\)\.read\('primary'\)\.lean\(\)/);
+	assert.match(source, /Url\.find\(query\)\.read\('primary'\)\.lean\(\)/);
 	assert.match(source, /ObsidianManifestBatch\.find\([\s\S]*?\.read\('primary'\)\.lean\(\)/);
 	assert.match(source, /const batch = await ObsidianFile\.find\(query\)[\s\S]*?\.read\('primary'\)\.lean\(\)/);
 	assert.doesNotMatch(source, /const remote = await ObsidianFile\.findOne\(\{ connection: connection\._id, host_id: hostId, path: filePath \}\)/);

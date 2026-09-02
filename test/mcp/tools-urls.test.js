@@ -41,10 +41,12 @@ describe('MCP Tools — URLs', () => {
             url: 'https://docs.example.com',
             title: 'Docs',
             description: 'Documentation site',
+            tags: ['reference'],
             crawl_enabled: true,
             project_id: FIXTURES.project._id,
         });
         assert.equal(api.lastCall.body.title, 'Docs');
+        assert.deepEqual(api.lastCall.body.tags, ['reference']);
         assert.equal(api.lastCall.body.crawl_enabled, true);
     });
 
@@ -81,7 +83,7 @@ describe('MCP Tools — URLs', () => {
     it('search_urls — passes optional per_page and requests searchable body fields for excerpts', async () => {
         await tools.search_urls.handler({ query: 'example', per_page: 3 });
         assert.equal(api.lastCall.body.options.perPage, 3);
-        assert.equal(api.lastCall.body.options.include_fields, 'id,source_id,title,url,description,text_content,project_id,created_at,updated_at');
+        assert.equal(api.lastCall.body.options.include_fields, 'id,source_id,title,url,description,text_content,tags,project_id,created_at,updated_at');
         assert.equal(api.lastCall.body.options.exclude_fields, 'embedding');
     });
 
@@ -98,11 +100,13 @@ describe('MCP Tools — URLs', () => {
         const result = await tools.update_url.handler({
             id: FIXTURES.url._id,
             title: 'Updated Title',
+            tags: ['updated'],
             crawl_enabled: true,
         });
         assert.equal(api.lastCall.method, 'PUT');
         assert.ok(api.lastCall.path.includes(FIXTURES.url._id));
         assert.equal(api.lastCall.body.title, 'Updated Title');
+        assert.deepEqual(api.lastCall.body.tags, ['updated']);
         assert.equal(api.lastCall.body.id, undefined);
         const parsed = JSON.parse(result.content[0].text);
         assert.equal(parsed.title, 'Updated Title');

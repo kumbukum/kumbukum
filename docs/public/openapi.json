@@ -798,6 +798,15 @@
             "type": "string",
             "format": "uri"
           },
+          "description": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "screenshot": {
             "type": "string",
             "description": "Screenshot filename (hash)"
@@ -4939,6 +4948,15 @@
                   "title": {
                     "type": "string"
                   },
+                  "description": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "project": {
                     "type": "string"
                   },
@@ -5067,6 +5085,15 @@
                   },
                   "title": {
                     "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   },
                   "project": {
                     "type": "string"
@@ -10175,7 +10202,7 @@
         "tags": [
           "Obsidian Sync"
         ],
-        "summary": "Remove a connection, encrypted mirror, attachments, and history while retaining Notes and Memories",
+        "summary": "Remove a connection, encrypted mirror, attachments, and history while retaining Notes, Memories, and URLs",
         "security": [
           {
             "ObsidianOAuth": [

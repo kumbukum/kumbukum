@@ -7,6 +7,7 @@ const urlSchema = new mongoose.Schema(
 		normalized_url: { type: String, default: '', trim: true },
 		title: { type: String, default: '' },
 		description: { type: String, default: '' },
+		tags: [{ type: String, trim: true }],
 		og_image: { type: String, default: '' },
 		screenshot: { type: String, default: '' },
 		text_content: { type: String, default: '' },
@@ -24,6 +25,10 @@ const urlSchema = new mongoose.Schema(
 		is_indexed: { type: Boolean, default: false },
 		in_trash: { type: Boolean, default: false },
 		trashed_at: { type: Date, default: null },
+		obsidian_source: {
+			connection_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ObsidianConnection' },
+			file_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ObsidianFile' },
+		},
 	},
 	{ timestamps: true },
 );
@@ -33,6 +38,7 @@ urlSchema.index({ host_id: 1, in_trash: 1, project: 1, updatedAt: -1, _id: -1 })
 urlSchema.index({ host_id: 1, project: 1, normalized_url: 1, in_trash: 1 });
 urlSchema.index({ is_indexed: 1, in_trash: 1 });
 urlSchema.index({ crawl_enabled: 1, crawl_partial: 1, last_crawled: 1 });
+urlSchema.index({ 'obsidian_source.connection_id': 1, 'obsidian_source.file_id': 1 }, { sparse: true });
 
 urlSchema.plugin(textSanitizerPlugin);
 

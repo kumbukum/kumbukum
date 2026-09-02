@@ -11,6 +11,7 @@ import { queryForSave } from '../model/mongoose.js';
 import { Project } from '../model/project.js';
 import { Note } from '../model/note.js';
 import { Memory } from '../model/memory.js';
+import { Url } from '../model/url.js';
 import { ObsidianConnection } from '../model/obsidian_connection.js';
 import { ObsidianFile } from '../model/obsidian_file.js';
 import { ObsidianChange } from '../model/obsidian_change.js';
@@ -19,6 +20,7 @@ import { ObsidianUpload } from '../model/obsidian_upload.js';
 import { ObsidianManifestBatch } from '../model/obsidian_manifest_batch.js';
 import { ObsidianBlob } from '../model/obsidian_blob.js';
 import { detectFileType } from '../modules/file_detect.js';
+import { normalizeUrl } from '../modules/screenshot.js';
 import { emitToTenant } from '../modules/socket.js';
 import { getMongoCoordinator } from '../modules/cache.js';
 import { MongoQueue, MongoWorker } from '../modules/mongo_queue.js';
@@ -175,6 +177,7 @@ function publicFile(file) {
 		in_trash: file.in_trash,
 		note_id: file.note ? String(file.note) : null,
 		memory_id: file.memory ? String(file.memory) : null,
+		url_id: file.url ? String(file.url) : null,
 	};
 }
 
@@ -206,12 +209,24 @@ function normalizeTags(value) {
 
 function parsedMarkdown(raw, filePath) {
 	const parsed = matter(raw);
-	const type = parsed.data.streamient_type === 'memory' ? 'memory' : 'note';
+	const requestedType = String(parsed.data.streamient_type || '').trim().toLowerCase();
+	const type = requestedType === 'memory' || requestedType === 'url' ? requestedType : 'note';
+	const savedUrl = type === 'url' ? String(parsed.data.url || '').trim() : '';
+	if (type === 'url') {
+		let protocol = '';
+		try {
+			protocol = new URL(savedUrl).protocol;
+		} catch {
+			throw new ObsidianSyncError('URL Markdown requires a valid url field', 400, 'invalid_url_markdown');
+		}
+		if (!['http:', 'https:'].includes(protocol)) throw new ObsidianSyncError('URL Markdown requires an HTTP or HTTPS url field', 400, 'invalid_url_markdown');
+	}
 	return {
 		type,
 		title: String(parsed.data.title || path.posix.basename(filePath, '.md') || 'Untitled').trim().slice(0, 300),
 		tags: normalizeTags(parsed.data.tags),
 		body: parsed.content,
+		url: savedUrl,
 		frontmatter: parsed.data,
 	};
 }
@@ -225,12 +240,14 @@ function itemMarkdown(type, item, existingRaw = '') {
 		const parsed = matter(existingRaw);
 		parsed.data.title = item.title;
 		parsed.data.tags = item.tags || [];
-		parsed.data.streamient_type = type === 'memory' ? 'memory' : 'note';
-		const body = type === 'memory' ? item.content || '' : parsed.content;
+		parsed.data.streamient_type = type;
+		if (type === 'url') parsed.data.url = item.url;
+		const body = type === 'memory' ? item.content || '' : type === 'url' ? item.description || '' : parsed.content;
 		return matter.stringify({ content: body, data: {} }, parsed.data);
 	}
-	const body = type === 'memory' ? item.content || '' : turndown.turndown(item.content || '');
-	const frontmatter = { title: item.title, streamient_type: type === 'memory' ? 'memory' : 'note' };
+	const body = type === 'memory' ? item.content || '' : type === 'url' ? item.description || '' : turndown.turndown(item.content || '');
+	const frontmatter = { title: item.title, streamient_type: type };
+	if (type === 'url') frontmatter.url = item.url;
 	if (item.tags?.length) frontmatter.tags = item.tags;
 	return matter.stringify({ content: body, data: {} }, frontmatter);
 }
@@ -293,15 +310,55 @@ async function preserveRevision(file, reason) {
 	});
 }
 
+const MARKDOWN_PROJECTIONS = [
+	{ type: 'note', field: 'note', Model: Note },
+	{ type: 'memory', field: 'memory', Model: Memory },
+	{ type: 'url', field: 'url', Model: Url },
+];
+
+async function removeOtherMarkdownProjections(file, retainedType) {
+	for (const projection of MARKDOWN_PROJECTIONS) {
+		if (projection.type === retainedType || !file[projection.field]) continue;
+		await projection.Model.findOneAndDelete({ _id: file[projection.field], host_id: file.host_id });
+		emitToTenant(file.host_id, `${projection.type}:deleted`, { _id: file[projection.field] });
+		file[projection.field] = null;
+	}
+}
+
 async function projectMarkdownFile(file, raw, ownerId) {
 	const parsed = parsedMarkdown(raw, file.path);
 	const now = file.modified_at || new Date();
-	if (parsed.type === 'memory') {
-		if (file.note) {
-			await Note.findOneAndDelete({ _id: file.note, host_id: file.host_id });
-			emitToTenant(file.host_id, 'note:deleted', { _id: file.note });
-			file.note = null;
+	const currentProjectionType = file.url ? 'url' : file.memory ? 'memory' : file.note ? 'note' : '';
+	const changesUrlBoundary = Boolean(currentProjectionType) && (currentProjectionType === 'url') !== (parsed.type === 'url');
+	if (changesUrlBoundary) throw new ObsidianSyncError('Create a separate file instead of changing a saved URL record type', 409, 'url_type_change');
+	await removeOtherMarkdownProjections(file, parsed.type);
+	if (parsed.type === 'url') {
+		let url = file.url ? await queryForSave(Url.findOne({ _id: file.url, host_id: file.host_id })) : null;
+		const created = !url;
+		const data = {
+			url: parsed.url,
+			normalized_url: normalizeUrl(parsed.url),
+			title: parsed.title,
+			description: parsed.body.trim(),
+			tags: parsed.tags,
+			project: file.project,
+			owner: ownerId,
+			host_id: file.host_id,
+			is_indexed: false,
+			in_trash: file.in_trash,
+			trashed_at: file.in_trash ? file.trashed_at || new Date() : null,
+			obsidian_source: { connection_id: file.connection, file_id: file._id },
+			updatedAt: now,
+		};
+		if (url) url = await Url.findByIdAndUpdate(url._id, { $set: data }, { returnDocument: 'after', timestamps: false });
+		else {
+			url = await Url.create(data);
+			file.url = url._id;
 		}
+		emitToTenant(file.host_id, created ? 'url:created' : 'url:updated', url);
+		return url;
+	}
+	if (parsed.type === 'memory') {
 		let memory = file.memory ? await queryForSave(Memory.findOne({ _id: file.memory, host_id: file.host_id })) : null;
 		const data = {
 			title: parsed.title,
@@ -326,11 +383,6 @@ async function projectMarkdownFile(file, raw, ownerId) {
 		return memory;
 	}
 
-	if (file.memory) {
-		await Memory.findOneAndDelete({ _id: file.memory, host_id: file.host_id });
-		emitToTenant(file.host_id, 'memory:deleted', { _id: file.memory });
-		file.memory = null;
-	}
 	const html = renderCanonicalMarkdown(parsed.body);
 	const textContent = striptags(html, [], ' ').replace(/\s+/g, ' ').trim();
 	let note = file.note ? await queryForSave(Note.findOne({ _id: file.note, host_id: file.host_id })) : null;
@@ -396,6 +448,10 @@ async function updateProjection(file, ownerId) {
 		if (file.memory) {
 			await Memory.findOneAndUpdate({ _id: file.memory, host_id: file.host_id }, { $set: { in_trash: true, trashed_at: file.trashed_at || new Date(), is_indexed: false } });
 			emitToTenant(file.host_id, 'memory:deleted', { _id: file.memory });
+		}
+		if (file.url) {
+			await Url.findOneAndUpdate({ _id: file.url, host_id: file.host_id }, { $set: { in_trash: true, trashed_at: file.trashed_at || new Date(), is_indexed: false } });
+			emitToTenant(file.host_id, 'url:deleted', { _id: file.url });
 		}
 		file.is_indexed = file.kind === 'markdown';
 		return;
@@ -640,7 +696,7 @@ async function uniqueExportPath(connection, desired) {
 }
 
 async function exportProjectItem(connection, type, item) {
-	const folder = type === 'memory' ? `${connection.streamient_folder}/Memories` : connection.streamient_folder;
+	const folder = type === 'memory' ? `${connection.streamient_folder}/Memories` : type === 'url' ? `${connection.streamient_folder}/URLs` : connection.streamient_folder;
 	const filePath = await uniqueExportPath(connection, `${folder}/${safeFileName(item.title)}.md`);
 	const file = new ObsidianFile({
 		connection: connection._id,
@@ -655,7 +711,8 @@ async function exportProjectItem(connection, type, item) {
 		last_source: 'streamient',
 		[type]: item._id,
 	});
-	const Model = type === 'memory' ? Memory : Note;
+	const Model = MARKDOWN_PROJECTIONS.find((projection) => projection.type === type)?.Model;
+	if (!Model) throw new ObsidianSyncError('Unsupported Streamient projection type', 400, 'invalid_projection_type');
 	const claimed = await Model.findOneAndUpdate(
 		{ _id: item._id, host_id: connection.host_id, $or: [{ 'obsidian_source.connection_id': { $exists: false } }, { 'obsidian_source.connection_id': null }] },
 		{ $set: { obsidian_source: { connection_id: connection._id, file_id: file._id } } },
@@ -691,13 +748,15 @@ async function pendingProjectItems(connection) {
 	return Promise.all([
 		Note.find(query).read('primary').lean(),
 		Memory.find(query).read('primary').lean(),
+		Url.find(query).read('primary').lean(),
 	]);
 }
 
 async function ensureProjectExports(connection) {
-	const [notes, memories] = await pendingProjectItems(connection);
+	const [notes, memories, urls] = await pendingProjectItems(connection);
 	for (const note of notes) await exportProjectItem(connection, 'note', note);
 	for (const memory of memories) await exportProjectItem(connection, 'memory', memory);
+	for (const url of urls) await exportProjectItem(connection, 'url', url);
 }
 
 async function connectionFiles(connection, scope) {
@@ -706,7 +765,7 @@ async function connectionFiles(connection, scope) {
 	while (true) {
 		const query = { connection: connection._id, host_id: connection.host_id, ...scopeMongoFilter(scope) };
 		if (lastId) query._id = { $gt: lastId };
-		const batch = await ObsidianFile.find(query).select('_id path kind mime_type size sha256 revision modified_at in_trash note memory').sort({ _id: 1 }).limit(OBSIDIAN_REMOTE_BATCH_SIZE).read('primary').lean();
+		const batch = await ObsidianFile.find(query).select('_id path kind mime_type size sha256 revision modified_at in_trash note memory url').sort({ _id: 1 }).limit(OBSIDIAN_REMOTE_BATCH_SIZE).read('primary').lean();
 		files.push(...batch);
 		if (batch.length < OBSIDIAN_REMOTE_BATCH_SIZE) return files;
 		lastId = batch.at(-1)._id;
@@ -822,6 +881,7 @@ export async function removeConnection(hostId, connectionId, ctx = {}) {
 	await Promise.all([
 		Note.updateMany({ host_id: hostId, 'obsidian_source.connection_id': connection._id }, { $unset: { obsidian_source: '' } }),
 		Memory.updateMany({ host_id: hostId, 'obsidian_source.connection_id': connection._id }, { $unset: { obsidian_source: '' } }),
+		Url.updateMany({ host_id: hostId, 'obsidian_source.connection_id': connection._id }, { $unset: { obsidian_source: '' } }),
 		ObsidianChange.deleteMany({ connection: connection._id, host_id: hostId }),
 		ObsidianManifestBatch.deleteMany({ connection: connection._id, host_id: hostId }),
 		ObsidianRevision.deleteMany({ connection: connection._id, host_id: hostId }),
@@ -837,7 +897,7 @@ export async function removeConnection(hostId, connectionId, ctx = {}) {
 	}
 	audit.log({ action: 'delete', resource: 'obsidian_connection', resource_id: String(connectionId), host_id: hostId, ...ctx });
 	emitToTenant(hostId, 'obsidian:connection-removed', { connection_id: String(connectionId), project_id: String(connection.project) });
-	return { removed: true, retained_notes: true };
+	return { removed: true, retained_notes: true, retained_urls: true };
 }
 
 export async function requestSync(hostId, connectionId, ctx = {}) {
@@ -880,10 +940,11 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 	}
 	let previewExports = [];
 	if (data.preview === true) {
-		const [notes, memories] = await pendingProjectItems(connection);
+		const [notes, memories, urls] = await pendingProjectItems(connection);
 		previewExports = [
 			...notes.map((note) => ({ action: 'download', path: `${connection.streamient_folder}/${safeFileName(note.title)}.md`, size: Buffer.byteLength(itemMarkdown('note', note)), preview: true })),
 			...memories.map((memory) => ({ action: 'download', path: `${connection.streamient_folder}/Memories/${safeFileName(memory.title)}.md`, size: Buffer.byteLength(itemMarkdown('memory', memory)), preview: true })),
+			...urls.map((url) => ({ action: 'download', path: `${connection.streamient_folder}/URLs/${safeFileName(url.title)}.md`, size: Buffer.byteLength(itemMarkdown('url', url)), preview: true })),
 		];
 	} else {
 		const lock = await acquireManifestLock(connection._id);
@@ -984,14 +1045,15 @@ export async function resolveVaultPaths(hostId, connectionId, values) {
 			file = await ObsidianFile.findOne({ connection: connectionId, host_id: hostId, in_trash: false, path: { $regex: `(?:^|/)${escapeRegExp(suffix)}$`, $options: 'i' } }).lean();
 		}
 		if (!file) continue;
-		results.push({ input: value, file_id: String(file._id), path: file.path, mime_type: file.mime_type, note_id: file.note ? String(file.note) : null, memory_id: file.memory ? String(file.memory) : null, download_url: `/api/v1/obsidian/files/${file._id}/content` });
+		results.push({ input: value, file_id: String(file._id), path: file.path, mime_type: file.mime_type, note_id: file.note ? String(file.note) : null, memory_id: file.memory ? String(file.memory) : null, url_id: file.url ? String(file.url) : null, download_url: `/api/v1/obsidian/files/${file._id}/content` });
 	}
 	return results;
 }
 
 export async function syncStreamientItem(type, itemId, hostId, options = {}) {
 	if (!config.obsidian.enabled) return null;
-	const Model = type === 'memory' ? Memory : Note;
+	const Model = MARKDOWN_PROJECTIONS.find((projection) => projection.type === type)?.Model;
+	if (!Model) return null;
 	const item = await queryForSave(Model.findOne({ _id: itemId, host_id: hostId }));
 	if (!item) return null;
 	const connection = await queryForSave(ObsidianConnection.findOne({ project: item.project, host_id: hostId, enabled: true }));
@@ -1086,4 +1148,4 @@ export async function deleteObsidianHostDirectory(hostId) {
 	for (const area of ['blobs', 'uploads', 'server', 'extract']) await rm(path.resolve(config.obsidian.vaultsDir, area, String(hostId)), { recursive: true, force: true });
 }
 
-export const __test = { normalizedModifiedAt, parsedMarkdown, itemMarkdown, renderCanonicalMarkdown, canvasText, conflictPath, publicFile, publicChange, applyMutation, normalizeSyncScope, pathInSyncScope, summarizeActions, registerDeviceOnConnection, reconcileManifestEntries, scopeMongoFilter };
+export const __test = { normalizedModifiedAt, parsedMarkdown, itemMarkdown, projectMarkdownFile, renderCanonicalMarkdown, canvasText, conflictPath, publicFile, publicChange, applyMutation, normalizeSyncScope, pathInSyncScope, summarizeActions, registerDeviceOnConnection, reconcileManifestEntries, scopeMongoFilter };
