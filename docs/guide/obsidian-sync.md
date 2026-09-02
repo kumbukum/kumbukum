@@ -1,6 +1,6 @@
 ---
 title: Streamient Obsidian Sync Guide
-description: Synchronize Markdown, Canvas, Bases, documents, and attachments between an Obsidian vault and Streamient.
+description: Synchronize notes, memories, saved URLs, Markdown, Canvas, Bases, documents, and attachments between an Obsidian vault and Streamient.
 ---
 
 # Obsidian Sync
@@ -17,6 +17,7 @@ Obsidian Sync requires the **Pro** plan or a **self-hosted** installation. The s
 
 - Markdown files become Streamient Notes by default.
 - Markdown with `streamient_type: memory` becomes Streamient Memory.
+- Saved URLs synchronize as Markdown under each project's `URLs` folder. URL, title, tags, and description round-trip; extracted and crawled page text stays server-managed.
 - Canvas and Bases content is mirrored and indexed.
 - Supported PDFs, Word documents, and text files are mirrored and text-indexed.
 - Images, audio, video, and other attachments are mirrored and metadata-indexed.
@@ -25,6 +26,21 @@ Obsidian Sync requires the **Pro** plan or a **self-hosted** installation. The s
 - A local path belongs to only one project. Managed project folders and explicit selections are excluded from another project's entire-vault scope.
 
 The plugin excludes `.obsidian`, `.git`, `.trash`, other dot-folders, operating-system metadata, and temporary files.
+
+A synchronized saved URL uses this format:
+
+```markdown
+---
+title: Obsidian
+streamient_type: url
+url: https://obsidian.md/
+tags:
+  - reference
+---
+The free and flexible app for your private thoughts.
+```
+
+Edit the frontmatter to change the title, URL, or tags. Edit the body to change the saved description. Streamient's extracted page text and optional crawl results are not copied into the file and cannot be overwritten from Obsidian.
 
 ## Install the Plugin
 
@@ -71,7 +87,7 @@ Deletes move the file and projected Streamient item to trash. Restoring on eithe
 
 Signing out stops every profile on that device while retaining profile configuration and existing Streamient knowledge. Each profile can reconnect its own OAuth account later.
 
-Project settings also offers **Remove connection**. This removes the encrypted vault mirror, attachments, revisions, and sync history while retaining the projected Streamient Notes and Memories as normal project content.
+Project settings also offers **Remove connection**. This removes the encrypted vault mirror, attachments, revisions, and sync history while retaining projected Streamient Notes, Memories, and saved URLs as normal project content.
 
 ## Privacy
 

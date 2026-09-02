@@ -56,6 +56,21 @@ describe('Typesense chunking', () => {
 		assert.equal(docs[0].content, 'small content');
 	});
 
+	it('indexes saved URL tags alongside extracted page text', () => {
+		const docs = toTypesenseDocs('urls', {
+			_id: 'url-1',
+			title: 'Reference',
+			url: 'https://example.com',
+			description: 'Saved description',
+			text_content: 'Extracted page text',
+			tags: ['research'],
+			project: 'project-1',
+		});
+
+		assert.deepEqual(docs[0].tags, ['research']);
+		assert.equal(docs[0].text_content, 'Extracted page text');
+	});
+
 	it('does not create empty email chunks for missing attachment text', () => {
 		const docs = toTypesenseDocs('emails', {
 			_id: 'email-1',

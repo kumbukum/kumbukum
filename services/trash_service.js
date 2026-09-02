@@ -20,7 +20,7 @@ export const TRASH_MODEL_MAP = {
 const TRASH_INCLUDE_FIELDS = {
 	notes: 'id,source_id,title,project_id,in_trash,trashed_at,created_at,updated_at',
 	memories: 'id,source_id,title,source,project_id,in_trash,trashed_at,created_at,updated_at',
-	urls: 'id,source_id,title,url,description,project_id,in_trash,trashed_at,created_at,updated_at',
+	urls: 'id,source_id,title,url,description,tags,project_id,in_trash,trashed_at,created_at,updated_at',
 	emails: 'id,source_id,subject,from,mailbox,project_id,in_trash,trashed_at,created_at,updated_at',
 };
 
@@ -159,6 +159,7 @@ async function restoreItemsByType(host_id, type, ids, deps = {}) {
 			emitToTenant(host_id, `${eventTypeForTrashType(type)}:created`, doc);
 			if (type === 'notes' && doc.obsidian_source?.file_id) await syncStreamientItem('note', doc._id, host_id);
 			if (type === 'memories' && doc.obsidian_source?.file_id) await syncStreamientItem('memory', doc._id, host_id);
+			if (type === 'urls' && doc.obsidian_source?.file_id) await syncStreamientItem('url', doc._id, host_id);
 		}
 	}
 	if (missingIds.length) {

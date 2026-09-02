@@ -409,7 +409,7 @@ export function toTypesenseDoc(type, doc) {
 		case 'memory':
 			return { ...base, title: doc.title || '', content: doc.content || '', tags: doc.tags || [], source: doc.source || '' };
 		case 'urls':
-			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', text_content: doc.text_content || '' };
+			return { ...base, url: doc.url || '', title: doc.title || '', description: doc.description || '', text_content: doc.text_content || '', tags: doc.tags || [] };
 		case 'vault_files':
 			return { ...base, title: pathTitle(doc.path), path: doc.path || '', kind: doc.kind || 'other', mime_type: doc.mime_type || 'application/octet-stream', size: Number(doc.size || 0), connection_id: doc.connection?.toString?.() || '', text_content: doc.text_content || '' };
 			case 'emails':
@@ -516,6 +516,7 @@ const schemas = {
 			{ name: 'title', type: 'string' },
 			{ name: 'description', type: 'string', optional: true },
 			{ name: 'text_content', type: 'string', optional: true },
+			{ name: 'tags', type: 'string[]', facet: true, optional: true },
 			{ name: 'project_id', type: 'string', facet: true },
 			{ name: 'in_trash', type: 'bool', facet: true, optional: true },
 			{ name: 'trashed_at', type: 'int64', optional: true },
@@ -1161,9 +1162,9 @@ const QUICK_SEARCH_FIELDS = {
 		highlight_fields: 'title,content,source,tags',
 	},
 	urls: {
-		query_by: 'title,url,description,text_content',
-		include_fields: 'id,source_id,title,url,description,text_content,project_id,created_at,updated_at',
-		highlight_fields: 'title,url,description,text_content',
+		query_by: 'title,url,description,text_content,tags',
+		include_fields: 'id,source_id,title,url,description,text_content,tags,project_id,created_at,updated_at',
+		highlight_fields: 'title,url,description,text_content,tags',
 	},
 	emails: {
 		query_by: 'subject,from,to,cc,bcc,from_emails,to_emails,cc_emails,bcc_emails,participant_emails,text_content,attachment_text_content',

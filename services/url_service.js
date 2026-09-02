@@ -8,6 +8,7 @@ import * as audit from './audit_service.js';
 import { saveScreenshot, saveScreenshotDataUrl, signScreenshotUrl } from '../modules/screenshot.js';
 import { normalizeUrl } from '../modules/screenshot.js';
 import { createLogger } from '../modules/logger.js';
+import { syncStreamientItem } from './obsidian_sync_service.js';
 
 const log = createLogger('url');
 
@@ -70,6 +71,7 @@ export async function saveUrl(userId, host_id, data, ctx = {}) {
 		normalized_url: normalizedUrl,
 		title: data.title || extracted.title || rawUrl,
 		description: data.description || extracted.description || '',
+		tags: data.tags || [],
 		og_image: extracted.og_image || '',
 		screenshot: screenshot || '',
 		text_content: extracted.text_content || '',
@@ -82,6 +84,7 @@ export async function saveUrl(userId, host_id, data, ctx = {}) {
 	emitToTenant(host_id, 'url:created', urlDoc);
 	invalidateGraphCache(host_id).catch(() => {});
 	audit.log({ action: 'create', resource: 'url', resource_id: urlDoc._id.toString(), user_id: userId, host_id, ...ctx });
+	await syncStreamientItem('url', urlDoc._id, host_id).catch((err) => log.error({ err, url_id: urlDoc._id }, 'Obsidian URL export deferred'));
 
 	if (!screenshot) {
 		// Fire-and-forget: capture screenshot in background
@@ -136,8 +139,13 @@ export async function getUrl(host_id, urlId) {
 
 export async function updateUrl(host_id, urlId, data, ctx = {}) {
 	const update = {};
+	if (data.url !== undefined) {
+		update.url = String(data.url || '').trim();
+		update.normalized_url = normalizeUrl(update.url);
+	}
 	if (data.title !== undefined) update.title = data.title;
 	if (data.description !== undefined) update.description = data.description;
+	if (data.tags !== undefined) update.tags = data.tags;
 	if (data.crawl_enabled !== undefined) update.crawl_enabled = data.crawl_enabled;
 	if (data.project !== undefined) update.project = data.project;
 	update.is_indexed = false;
@@ -158,6 +166,7 @@ export async function updateUrl(host_id, urlId, data, ctx = {}) {
 			const details = audit.diffSnapshot(before, urlDoc);
 			audit.log({ action: 'update', resource: 'url', resource_id: urlId, host_id, details, ...ctx });
 		}
+		await syncStreamientItem('url', urlId, host_id);
 	}
 
 	return urlDoc;
@@ -175,6 +184,7 @@ export async function deleteUrl(host_id, urlId, ctx = {}) {
 		emitToTenant(host_id, 'url:deleted', { _id: urlId });
 		invalidateGraphCache(host_id).catch(() => {});
 		if (ctx.user_id) audit.log({ action: 'delete', resource: 'url', resource_id: urlId, host_id, ...ctx });
+		await syncStreamientItem('url', urlId, host_id);
 	}
 	return urlDoc;
 }

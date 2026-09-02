@@ -3,7 +3,7 @@ import { MCP_JSON_OUTPUT_SCHEMA, mcpJson } from './output.js';
 import { slimSearchResults } from './search-results.js';
 
 const MCP_URL_SEARCH_EXCLUDE_FIELDS = 'embedding';
-const MCP_URL_SEARCH_INCLUDE_FIELDS = 'id,source_id,title,url,description,text_content,project_id,created_at,updated_at';
+const MCP_URL_SEARCH_INCLUDE_FIELDS = 'id,source_id,title,url,description,text_content,tags,project_id,created_at,updated_at';
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const WRITE_INTERNAL = { readOnlyHint: false, destructiveHint: false, openWorldHint: false };
 const OVERWRITE_INTERNAL = { readOnlyHint: false, destructiveHint: true, openWorldHint: false };
@@ -22,6 +22,7 @@ export function urlTools(api, defaultProjectId) {
         url: z.string().describe('The URL to save'),
         title: z.string().optional().describe('Optional custom title'),
         description: z.string().optional().describe('Optional description'),
+        tags: z.array(z.string()).optional().describe('Optional tags'),
         crawl_enabled: z.boolean().optional().describe('Enable full-site crawling'),
         project_id: z.string().optional().describe('Project ID (defaults to the default project)'),
       },
@@ -93,6 +94,7 @@ export function urlTools(api, defaultProjectId) {
         id: z.string().describe('URL ID'),
         title: z.string().optional(),
         description: z.string().optional(),
+        tags: z.array(z.string()).optional(),
         crawl_enabled: z.boolean().optional(),
       },
       handler: async (args) => {

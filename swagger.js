@@ -316,6 +316,8 @@ const swaggerSpec = {
                     _id: { type: 'string' },
                     title: { type: 'string' },
                     url: { type: 'string', format: 'uri' },
+                    description: { type: 'string' },
+                    tags: { type: 'array', items: { type: 'string' } },
                     screenshot: { type: 'string', description: 'Screenshot filename (hash)' },
                     screenshot_url: { type: 'string', description: 'Signed URL to screenshot image (time-limited)' },
                     project: { type: 'string' },
@@ -1502,7 +1504,7 @@ const swaggerSpec = {
                 summary: 'Save a URL',
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { url: { type: 'string', format: 'uri' }, title: { type: 'string' }, project: { type: 'string' }, crawl_enabled: { type: 'boolean' }, screenshot_data_url: { type: 'string', description: 'Optional browser-captured screenshot data URL for authenticated or paywalled pages.' } }, required: ['url'] } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { url: { type: 'string', format: 'uri' }, title: { type: 'string' }, description: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } }, project: { type: 'string' }, crawl_enabled: { type: 'boolean' }, screenshot_data_url: { type: 'string', description: 'Optional browser-captured screenshot data URL for authenticated or paywalled pages.' } }, required: ['url'] } } },
                 },
                 responses: {
                     201: { description: 'Created', content: { 'application/json': { schema: { type: 'object', properties: { url: { $ref: '#/components/schemas/Url' } } } } } },
@@ -1527,7 +1529,7 @@ const swaggerSpec = {
                 parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
                 requestBody: {
                     required: true,
-                    content: { 'application/json': { schema: { type: 'object', properties: { url: { type: 'string', format: 'uri' }, title: { type: 'string' }, project: { type: 'string' }, crawl_enabled: { type: 'boolean' } } } } },
+                    content: { 'application/json': { schema: { type: 'object', properties: { url: { type: 'string', format: 'uri' }, title: { type: 'string' }, description: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } }, project: { type: 'string' }, crawl_enabled: { type: 'boolean' } } } } },
                 },
                 responses: {
                     200: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { url: { $ref: '#/components/schemas/Url' }, deleted_pages: { type: 'integer', description: 'Number of crawled page documents removed when crawling was disabled.' } } } } } },
@@ -2908,7 +2910,7 @@ Object.assign(swaggerSpec.paths, {
 	},
 	'/obsidian/connections/{connectionId}': {
 		patch: { tags: ['Obsidian Sync'], summary: 'Enable, disconnect, or configure a connection', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { enabled: { type: 'boolean' }, name: { type: 'string' }, streamient_folder: { type: 'string' } } } } } }, responses: { ...obsidianErrors, 200: { description: 'Updated connection' } } },
-		delete: { tags: ['Obsidian Sync'], summary: 'Remove a connection, encrypted mirror, attachments, and history while retaining Notes and Memories', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...obsidianErrors, 200: { description: 'Connection removed and projected knowledge retained' } } },
+		delete: { tags: ['Obsidian Sync'], summary: 'Remove a connection, encrypted mirror, attachments, and history while retaining Notes, Memories, and URLs', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...obsidianErrors, 200: { description: 'Connection removed and projected knowledge retained' } } },
 	},
 	'/obsidian/connections/{connectionId}/devices': { post: { tags: ['Obsidian Sync'], summary: 'Register or refresh a device', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...obsidianErrors, 200: { description: 'Updated device list' } } } },
 	'/obsidian/connections/{connectionId}/request-sync': { post: { tags: ['Obsidian Sync'], summary: 'Request a full sync from online plugin devices', security: obsidianWriteSecurity, parameters: [{ name: 'connectionId', in: 'path', required: true, schema: { type: 'string' } }], responses: { ...obsidianErrors, 202: { description: 'Sync requested' } } } },

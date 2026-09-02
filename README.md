@@ -11,7 +11,7 @@ Stop reset loops. Give every AI tool trusted memory your team can inspect, contr
 
 Streamient is an open-source memory layer for AI-native teams and MCP-compatible tools. Store notes, memories, URLs, and relationships in one place, then let assistants retrieve the right context across sessions, projects, and clients.
 
-[Website](https://streamient.com) · [Cloud](https://app.streamient.com) · [Docs](https://docs.streamient.com) · [Self-Hosted Guide](https://docs.streamient.com/selfhosted/) · [MCP Docs](https://docs.streamient.com/mcp/) · [API Reference](https://docs.streamient.com/api/)
+[Website](https://streamient.com) · [Cloud](https://app.streamient.com) · [Docs](https://docs.streamient.com) · [CLI](https://docs.streamient.com/cli/) · [Obsidian Sync](https://docs.streamient.com/guide/obsidian-sync) · [Self-Hosted Guide](https://docs.streamient.com/selfhosted/) · [MCP Docs](https://docs.streamient.com/mcp/) · [API Reference](https://docs.streamient.com/api/)
 
 ![Streamient homepage preview](docs/assets/readme-hero.jpg)
 
@@ -34,7 +34,9 @@ Streamient gives you a shared, searchable, editable memory layer that sits betwe
 - **Knowledge Graph** — manual, tag-based, and semantic links between items
 - **AI Chat** — search and manage knowledge with natural language
 - **MCP Server** — 44 tools for notes, memories, URLs, projects, graph, and search
+- **CLI** — composable terminal access to the complete MCP tool catalog
 - **Browser Extension** — save notes and URLs from anywhere
+- **Obsidian Sync** — scoped two-way sync for multiple projects and accounts in one vault
 - **Bidirectional Git Sync** — sync project knowledge to and from Git repositories
 
 ## How it works
@@ -196,6 +198,24 @@ Self-hosted example:
 env 'ACCESS-TOKEN'=your-access-token API_BASE_URL=https://your-instance.com node apps/mcp/server.js
 ```
 
+## CLI
+
+The [`@streamient/cli`](https://www.npmjs.com/package/@streamient/cli) package exposes Streamient's complete MCP tool catalog to people, shell scripts, CI jobs, and coding agents. It supports multiple account aliases and discovers command schemas from the connected server.
+
+```fish
+pnpm add --global @streamient/cli
+set -gx STREAMIENT_CLI_ACCESS_TOKEN 'your-personal-access-token'
+streamient-cli doctor
+```
+
+[Install and configure the CLI](https://docs.streamient.com/cli/) · [Browse all commands](https://docs.streamient.com/cli/commands)
+
+## Obsidian Sync
+
+Streamient Sync keeps one Obsidian vault synchronized with multiple Streamient projects and OAuth accounts. Each project has its own managed folder and optional extra-vault scope, with first-sync review, sequential processing, cooperative abort/resume, and newest-wins conflict recovery. Notes, Memories, and saved URLs round-trip as Markdown; Canvas, Bases, documents, and attachments are also mirrored.
+
+[Read the Obsidian Sync guide](https://docs.streamient.com/guide/obsidian-sync) · [Install Streamient Sync from Obsidian Community Plugins](https://obsidian.md/plugins?id=streamient-sync) · [View the plugin source](https://github.com/streamient/streamient-obsidian)
+
 ## Architecture at a glance
 
 - **Backend** — Node.js + Express
@@ -210,6 +230,8 @@ env 'ACCESS-TOKEN'=your-access-token API_BASE_URL=https://your-instance.com node
 - [Guide](https://docs.streamient.com/guide/)
 - [Self-Hosted](https://docs.streamient.com/selfhosted/)
 - [MCP Server](https://docs.streamient.com/mcp/)
+- [CLI](https://docs.streamient.com/cli/)
+- [Obsidian Sync](https://docs.streamient.com/guide/obsidian-sync)
 - [API Reference](https://docs.streamient.com/api/)
 - [Cloud](https://docs.streamient.com/cloud/)
 
