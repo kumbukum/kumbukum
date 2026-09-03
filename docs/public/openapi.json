@@ -10347,7 +10347,7 @@
           "Obsidian Sync"
         ],
         "summary": "Upload or reconcile a batched scoped-vault manifest",
-        "description": "Send up to 500 files per numbered batch with complete=false, then finalize the manifest_id with batch_count and complete=true. Preview finalization is non-mutating. Omit scope for legacy full-vault behavior.",
+        "description": "Send up to 500 files per numbered batch with complete=false, then finalize the manifest_id with batch_count and complete=true. Preview finalization is non-mutating. Omit scope for legacy full-vault behavior. Finalization materializes at most 25 pending project exports and sets exports_pending when more remain.",
         "security": [
           {
             "ObsidianOAuth": [
@@ -10422,7 +10422,133 @@
         },
         "responses": {
           "200": {
-            "description": "Batch acknowledgement or final scoped actions and aggregate summary"
+            "description": "Batch acknowledgement or final scoped actions, aggregate summary, and export continuation state"
+          },
+          "400": {
+            "description": "Invalid sync request"
+          },
+          "401": {
+            "description": "Missing or expired OAuth token"
+          },
+          "403": {
+            "description": "Feature disabled, Pro required, or insufficient scope"
+          },
+          "404": {
+            "description": "Connection, upload, or file not found"
+          },
+          "409": {
+            "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
+          }
+        }
+      }
+    },
+    "/obsidian/connections/{connectionId}/exports": {
+      "post": {
+        "tags": [
+          "Obsidian Sync"
+        ],
+        "summary": "Materialize the next bounded batch of project exports",
+        "description": "Creates at most 25 pending Note, Memory, or URL Markdown exports. Repeat while has_more is true.",
+        "security": [
+          {
+            "ObsidianOAuth": [
+              "vault:read",
+              "vault:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Download actions, aggregate summary, cursor, and continuation state"
+          },
+          "400": {
+            "description": "Invalid sync request"
+          },
+          "401": {
+            "description": "Missing or expired OAuth token"
+          },
+          "403": {
+            "description": "Feature disabled, Pro required, or insufficient scope"
+          },
+          "404": {
+            "description": "Connection, upload, or file not found"
+          },
+          "409": {
+            "description": "Revision, checksum, path, offset, or state conflict"
+          },
+          "503": {
+            "description": "Obsidian encryption is not configured"
+          }
+        }
+      }
+    },
+    "/obsidian/connections/{connectionId}/relocate": {
+      "post": {
+        "tags": [
+          "Obsidian Sync"
+        ],
+        "summary": "Move the managed project folder in resumable batches",
+        "description": "Moves at most 50 synchronized paths per call while retaining content and history. Repeat while has_more is true.",
+        "security": [
+          {
+            "ObsidianOAuth": [
+              "vault:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "streamient_folder"
+                ],
+                "properties": {
+                  "streamient_folder": {
+                    "type": "string"
+                  },
+                  "device_id": {
+                    "type": "string"
+                  },
+                  "device_name": {
+                    "type": "string"
+                  },
+                  "platform": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rename changes, moved and remaining counts, connection, and continuation state"
           },
           "400": {
             "description": "Invalid sync request"

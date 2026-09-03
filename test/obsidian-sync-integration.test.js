@@ -12,7 +12,7 @@ import { TenantMember } from '../model/tenant_member.js';
 import { User } from '../model/user.js';
 import { Tenant } from '../modules/tenancy.js';
 import { getApiResourceUrl, OBSIDIAN_ALL_SCOPES, OBSIDIAN_CLIENT_ID, signMcpAccessToken } from '../modules/oauth.js';
-import { createConnection, deleteObsidianHostDirectory, getMarkdownContent, reconcileManifest, removeConnection, __test as syncTest } from '../services/obsidian_sync_service.js';
+import { createConnection, deleteObsidianHostDirectory, getMarkdownContent, materializeProjectExports, OBSIDIAN_EXPORT_BATCH_SIZE, OBSIDIAN_RELOCATION_BATCH_SIZE, reconcileManifest, relocateConnectionFolder, removeConnection, __test as syncTest } from '../services/obsidian_sync_service.js';
 import { updateUrl } from '../services/url_service.js';
 
 const enabled = process.env.RUN_OBSIDIAN_INTEGRATION === '1';
@@ -110,6 +110,38 @@ test('reconciles scoped projects from two isolated accounts', { skip: !enabled }
 	assert.equal(locallyCreatedUrl.description, 'Created in Obsidian');
 	assert.equal(locallyCreatedUrl.text_content, '');
 	assert.equal(String(locallyCreatedUrl.obsidian_source.file_id), String(localUrlFile._id));
+
+	const batchItems = Array.from({ length: OBSIDIAN_RELOCATION_BATCH_SIZE + 1 }, (_, index) => ({ title: `Batch note ${index}`, content: `<p>${index}</p>`, text_content: String(index), project: accounts[1].project._id, owner: accounts[1].user._id, host_id: accounts[1].hostId }));
+	batchItems[0].obsidian_source = { connection_id: accounts[1].connection.id, file_id: new mongoose.Types.ObjectId() };
+	const insertedBatchItems = await Note.insertMany(batchItems);
+	const incompleteFile = await ObsidianFile.create({ connection: accounts[1].connection.id, project: accounts[1].project._id, host_id: accounts[1].hostId, path: 'Streamient/Personal/incomplete.md', kind: 'markdown', mime_type: 'text/markdown', size: 0, sha256: '', revision: 0, modified_at: new Date(), last_source: 'streamient', note: insertedBatchItems[1]._id, blob: null });
+	await Note.updateOne({ _id: insertedBatchItems[1]._id }, { $set: { obsidian_source: { connection_id: accounts[1].connection.id, file_id: incompleteFile._id } } });
+	const firstBatchStartedAt = Date.now();
+	const firstBatch = await reconcileManifest(accounts[1].user._id, accounts[1].hostId, accounts[1].connection.id, { files: [], preview: false, scope: { vault_mode: 'off', selected_paths: [], excluded_paths: [] }, device_id: 'device-1', device_name: 'Integration test', platform: 'desktop' });
+	assert.ok(Date.now() - firstBatchStartedAt < 30_000);
+	assert.equal(firstBatch.actions.length, OBSIDIAN_EXPORT_BATCH_SIZE);
+	assert.equal(firstBatch.exports_pending, true);
+	let exported = firstBatch.actions.length;
+	let exportsPending = firstBatch.exports_pending;
+	while (exportsPending) {
+		const batch = await materializeProjectExports(accounts[1].hostId, accounts[1].connection.id, { device_id: 'device-1', device_name: 'Integration test', platform: 'desktop' });
+		assert.ok(batch.actions.length <= OBSIDIAN_EXPORT_BATCH_SIZE);
+		exported += batch.actions.length;
+		exportsPending = batch.has_more;
+	}
+	assert.equal(exported, batchItems.length);
+	assert.equal(await ObsidianFile.exists({ _id: incompleteFile._id }), null);
+	assert.equal(await ObsidianFile.countDocuments({ connection: accounts[1].connection.id }), batchItems.length);
+	let relocated = 0;
+	let relocationPending = true;
+	while (relocationPending) {
+		const batch = await relocateConnectionFolder(accounts[1].hostId, accounts[1].connection.id, { streamient_folder: 'Streamient/Personal Archive' }, { channel: 'obsidian', user_id: accounts[1].user._id });
+		assert.ok(batch.changes.length <= OBSIDIAN_RELOCATION_BATCH_SIZE);
+		relocated += batch.moved;
+		relocationPending = batch.has_more;
+	}
+	assert.equal(relocated, batchItems.length);
+	assert.equal(await ObsidianFile.countDocuments({ connection: accounts[1].connection.id, path: { $regex: /^Streamient\/Personal Archive\// } }), batchItems.length);
 
 	const now = new Date().toISOString();
 	const personalPreview = await reconcileManifest(accounts[1].user._id, accounts[1].hostId, accounts[1].connection.id, {
