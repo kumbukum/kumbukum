@@ -151,6 +151,22 @@ router.post('/connections/:connectionId/manifest', requireOAuthScopes('vault:rea
 	}
 });
 
+router.post('/connections/:connectionId/exports', requireOAuthScopes('vault:read', 'vault:write'), requireConnection, async (req, res) => {
+	try {
+		res.json(await syncService.materializeProjectExports(req.host_id, req.params.connectionId, req.body));
+	} catch (err) {
+		sendError(res, err, 'Project export failed');
+	}
+});
+
+router.post('/connections/:connectionId/relocate', requireOAuthScopes('vault:write'), requireProjectManager, requireConnection, async (req, res) => {
+	try {
+		res.json(await syncService.relocateConnectionFolder(req.host_id, req.params.connectionId, req.body, auditCtx(req)));
+	} catch (err) {
+		sendError(res, err, 'Project folder relocation failed');
+	}
+});
+
 router.post('/connections/:connectionId/mutations', requireOAuthScopes('vault:write'), requireConnection, async (req, res) => {
 	try {
 		res.json(await syncService.applyMutations(req.userId, req.host_id, req.params.connectionId, req.body));
@@ -256,7 +272,7 @@ router.get('/files/:id', requireOAuthScopes('vault:read'), async (req, res) => {
 router.get('/files/:id/content', requireOAuthScopes('vault:read'), async (req, res) => {
 	try {
 		const file = await syncService.getFile(req.host_id, req.params.id);
-		if (!file.blob || file.in_trash) return res.status(404).json({ error: 'File content not found', code: 'content_not_found' });
+		if (!file.blob) return res.status(404).json({ error: 'File content not found', code: 'content_not_found' });
 		const blob = await ObsidianBlob.findOne({ _id: file.blob, host_id: req.host_id }).lean();
 		if (!blob) return res.status(404).json({ error: 'File content not found', code: 'content_not_found' });
 		await streamBlobResponse(res, blob, req.host_id, file.mime_type);

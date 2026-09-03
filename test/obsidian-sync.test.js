@@ -67,6 +67,17 @@ test('summarizes scoped preview counts and transfer bytes', () => {
 	]), { total: 4, counts: { upload: 1, download: 2, trash: 0, noop: 1, ignore: 0 }, bytes: { upload: 10, download: 50 } });
 });
 
+test('bounds project export work and exposes resumable continuation routes', () => {
+	const service = fs.readFileSync(new URL('../services/obsidian_sync_service.js', import.meta.url), 'utf8');
+	const routes = fs.readFileSync(new URL('../routes/obsidian_api.js', import.meta.url), 'utf8');
+	assert.match(service, /OBSIDIAN_EXPORT_BATCH_SIZE = 25/);
+	assert.match(service, /exports_pending: exportsPending/);
+	assert.match(routes, /connections\/:connectionId\/exports/);
+	assert.match(routes, /connections\/:connectionId\/relocate/);
+	assert.match(routes, /if \(!file\.blob\) return res\.status\(404\)/);
+	assert.doesNotMatch(routes, /!file\.blob \|\| file\.in_trash/);
+});
+
 test('reconciles only managed and selected manifest paths', () => {
 	const scope = syncTest.normalizeSyncScope({ vault_mode: 'selected', selected_paths: [{ path: 'Work', kind: 'folder' }], excluded_paths: [] }, { streamient_folder: 'Streamient/Project' });
 	const remoteFiles = [

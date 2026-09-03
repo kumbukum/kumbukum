@@ -14,6 +14,11 @@ const obsidianConnectionSchema = new mongoose.Schema({
 	host_id: { type: String, required: true, index: true },
 	name: { type: String, default: 'Obsidian vault', trim: true },
 	streamient_folder: { type: String, default: 'Streamient', trim: true },
+	folder_relocation: {
+		from: { type: String, default: '' },
+		to: { type: String, default: '' },
+		started_at: { type: Date, default: null },
+	},
 	enabled: { type: Boolean, default: true },
 	sequence: { type: Number, default: 0, min: 0 },
 	devices: { type: [obsidianDeviceSchema], default: [] },

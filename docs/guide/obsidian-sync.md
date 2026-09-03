@@ -65,7 +65,9 @@ To test prerelease builds, install [BRAT](https://obsidian.md/plugins?id=obsidia
 
 Each device authorizes separately. OAuth refresh credentials use Obsidian SecretStorage and are never stored in the vault plugin configuration.
 
-Large scoped manifests are uploaded in ordered batches of 500 entries. The preview pass is non-mutating and returns a compact summary; Streamient creates export files only after confirmation. Projects run sequentially so one large profile cannot start competing scans or uploads.
+Large scoped manifests are uploaded in ordered batches of 500 entries. The preview pass is non-mutating and returns a compact summary; Streamient creates export files only after confirmation. Server-side Note, Memory, and URL exports are then materialized in resumable batches of 25 so large projects stay below proxy timeouts. Projects run sequentially so one large profile cannot start competing scans or uploads.
+
+Changing **Project folder** moves existing synchronized files and history in resumable batches instead of disconnecting the old paths. The plugin removes source folders only when they are empty, preserves unrelated content, and requires a fresh review after the move.
 
 ## Abort and Resume
 

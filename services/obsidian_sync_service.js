@@ -42,6 +42,8 @@ export const OBSIDIAN_MANIFEST_EXPIRY_MS = 60 * 60 * 1000;
 export const OBSIDIAN_MAX_MANIFEST_BATCHES = 200;
 export const OBSIDIAN_SCOPE_MAX_PATHS = 1000;
 export const OBSIDIAN_REMOTE_BATCH_SIZE = 2000;
+export const OBSIDIAN_EXPORT_BATCH_SIZE = 25;
+export const OBSIDIAN_RELOCATION_BATCH_SIZE = 50;
 
 const EXCLUDED_NAMES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
 const DOCUMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'txt', 'rtf', 'csv', 'tsv', 'json', 'yaml', 'yml', 'xml', 'html', 'htm']);
@@ -152,6 +154,7 @@ function publicConnection(connection) {
 		project_id: String(connection.project),
 		name: connection.name,
 		streamient_folder: connection.streamient_folder,
+		folder_relocation: connection.folder_relocation?.to ? { from: connection.folder_relocation.from, to: connection.folder_relocation.to, started_at: connection.folder_relocation.started_at } : null,
 		enabled: connection.enabled,
 		sequence: connection.sequence || 0,
 		devices: connection.devices || [],
@@ -315,6 +318,10 @@ const MARKDOWN_PROJECTIONS = [
 	{ type: 'memory', field: 'memory', Model: Memory },
 	{ type: 'url', field: 'url', Model: Url },
 ];
+
+function markdownProjection(type) {
+	return MARKDOWN_PROJECTIONS.find((projection) => projection.type === type);
+}
 
 async function removeOtherMarkdownProjections(file, retainedType) {
 	for (const projection of MARKDOWN_PROJECTIONS) {
@@ -711,7 +718,7 @@ async function exportProjectItem(connection, type, item) {
 		last_source: 'streamient',
 		[type]: item._id,
 	});
-	const Model = MARKDOWN_PROJECTIONS.find((projection) => projection.type === type)?.Model;
+	const Model = markdownProjection(type)?.Model;
 	if (!Model) throw new ObsidianSyncError('Unsupported Streamient projection type', 400, 'invalid_projection_type');
 	const claimed = await Model.findOneAndUpdate(
 		{ _id: item._id, host_id: connection.host_id, $or: [{ 'obsidian_source.connection_id': { $exists: false } }, { 'obsidian_source.connection_id': null }] },
@@ -738,13 +745,17 @@ async function exportProjectItem(connection, type, item) {
 	}
 }
 
-async function pendingProjectItems(connection) {
-	const query = {
+function pendingProjectQuery(connection) {
+	return {
 		host_id: connection.host_id,
 		project: connection.project,
 		in_trash: { $ne: true },
 		$or: [{ 'obsidian_source.connection_id': { $exists: false } }, { 'obsidian_source.connection_id': null }],
 	};
+}
+
+async function pendingProjectItems(connection) {
+	const query = pendingProjectQuery(connection);
 	return Promise.all([
 		Note.find(query).read('primary').lean(),
 		Memory.find(query).read('primary').lean(),
@@ -752,11 +763,71 @@ async function pendingProjectItems(connection) {
 	]);
 }
 
-async function ensureProjectExports(connection) {
-	const [notes, memories, urls] = await pendingProjectItems(connection);
-	for (const note of notes) await exportProjectItem(connection, 'note', note);
-	for (const memory of memories) await exportProjectItem(connection, 'memory', memory);
-	for (const url of urls) await exportProjectItem(connection, 'url', url);
+function staleProjectPipeline(connection, limit) {
+	return [
+		{ $match: { host_id: connection.host_id, project: connection.project, in_trash: { $ne: true }, 'obsidian_source.connection_id': connection._id } },
+		{ $lookup: { from: ObsidianFile.collection.name, let: { file_id: '$obsidian_source.file_id' }, pipeline: [{ $match: { $expr: { $and: [{ $eq: ['$_id', '$$file_id'] }, { $eq: ['$host_id', connection.host_id] }, { $eq: ['$connection', connection._id] }] } } }], as: 'obsidian_files' } },
+		{ $match: { $expr: { $or: [{ $eq: [{ $size: '$obsidian_files' }, 0] }, { $eq: [{ $ifNull: [{ $arrayElemAt: ['$obsidian_files.blob', 0] }, null] }, null] }] } } },
+		{ $limit: limit },
+	];
+}
+
+async function staleProjectItemBatch(connection, limit) {
+	const items = [];
+	for (const projection of MARKDOWN_PROJECTIONS) {
+		const remaining = limit - items.length;
+		if (!remaining) break;
+		const docs = await projection.Model.aggregate(staleProjectPipeline(connection, remaining));
+		if (!docs.length) continue;
+		const fileIds = docs.flatMap((item) => item.obsidian_files || []).map((file) => file._id);
+		if (fileIds.length) {
+			await Promise.all([
+				ObsidianChange.deleteMany({ connection: connection._id, host_id: connection.host_id, file: { $in: fileIds } }),
+				ObsidianFile.deleteMany({ connection: connection._id, host_id: connection.host_id, _id: { $in: fileIds }, blob: null }),
+			]);
+		}
+		await projection.Model.updateMany({ _id: { $in: docs.map((item) => item._id) }, host_id: connection.host_id, 'obsidian_source.connection_id': connection._id }, { $unset: { obsidian_source: '' } });
+		items.push(...docs.map((item) => ({ type: projection.type, item })));
+	}
+	return items;
+}
+
+async function pendingProjectItemBatch(connection, limit = OBSIDIAN_EXPORT_BATCH_SIZE, excluded = []) {
+	const items = [];
+	for (const projection of MARKDOWN_PROJECTIONS) {
+		const remaining = limit - items.length;
+		if (!remaining) break;
+		const excludedIds = excluded.filter((candidate) => candidate.type === projection.type).map((candidate) => candidate.item._id);
+		const query = { ...pendingProjectQuery(connection), ...(excludedIds.length ? { _id: { $nin: excludedIds } } : {}) };
+		const docs = await projection.Model.find(query).sort({ _id: 1 }).limit(remaining).lean();
+		items.push(...docs.map((item) => ({ type: projection.type, item })));
+	}
+	return items;
+}
+
+async function hasPendingProjectItems(connection) {
+	for (const projection of MARKDOWN_PROJECTIONS) {
+		if (await projection.Model.exists(pendingProjectQuery(connection))) return true;
+	}
+	return false;
+}
+
+async function hasStaleProjectItems(connection) {
+	for (const projection of MARKDOWN_PROJECTIONS) {
+		if ((await projection.Model.aggregate(staleProjectPipeline(connection, 1))).length) return true;
+	}
+	return false;
+}
+
+async function exportProjectBatch(connection, limit = OBSIDIAN_EXPORT_BATCH_SIZE) {
+	const files = [];
+	const candidates = await staleProjectItemBatch(connection, limit);
+	candidates.push(...await pendingProjectItemBatch(connection, limit - candidates.length, candidates));
+	for (const { type, item } of candidates) {
+		const file = await exportProjectItem(connection, type, item);
+		if (file) files.push(file);
+	}
+	return { files, hasMore: await hasPendingProjectItems(connection) || await hasStaleProjectItems(connection) };
 }
 
 async function connectionFiles(connection, scope) {
@@ -862,11 +933,87 @@ export async function updateConnection(hostId, connectionId, data, ctx = {}) {
 	const set = {};
 	if (data.enabled !== undefined) set.enabled = Boolean(data.enabled);
 	if (data.name !== undefined) set.name = String(data.name || '').trim().slice(0, 200);
-	if (data.streamient_folder !== undefined) set.streamient_folder = normalizeVaultPath(data.streamient_folder || 'Streamient');
+	if (data.streamient_folder !== undefined) {
+		set.streamient_folder = normalizeVaultPath(data.streamient_folder || 'Streamient');
+		const current = await ObsidianConnection.findOne({ _id: connectionId, host_id: hostId }).select('streamient_folder').lean();
+		if (!current) throw new ObsidianSyncError('Obsidian connection not found', 404, 'connection_not_found');
+		if (set.streamient_folder !== current.streamient_folder && await ObsidianFile.exists({ connection: connectionId, host_id: hostId })) throw new ObsidianSyncError('Use project-folder relocation to move an existing synchronized folder', 409, 'folder_relocation_required');
+	}
 	const connection = await ObsidianConnection.findOneAndUpdate({ _id: connectionId, host_id: hostId }, { $set: set }, { returnDocument: 'after' });
 	if (!connection) throw new ObsidianSyncError('Obsidian connection not found', 404, 'connection_not_found');
 	audit.log({ action: 'update', resource: 'obsidian_connection', resource_id: String(connectionId), host_id: hostId, ...ctx });
 	return publicConnection(connection);
+}
+
+function relocationFileQuery(connection, fromFolder, toFolder) {
+	const source = scopePathFilter({ path: fromFolder, kind: 'folder' });
+	const targetInsideSource = toFolder.startsWith(`${fromFolder}/`);
+	return { connection: connection._id, host_id: connection.host_id, ...(targetInsideSource ? { $and: [source, { $nor: [scopePathFilter({ path: toFolder, kind: 'folder' })] }] } : source) };
+}
+
+export async function relocateConnectionFolder(hostId, connectionId, data, ctx = {}) {
+	const connection = await connectionForWrite(hostId, connectionId);
+	const toFolder = normalizeVaultPath(data.streamient_folder);
+	const activeFrom = connection.folder_relocation?.from || '';
+	const activeTo = connection.folder_relocation?.to || '';
+	if (!activeTo && toFolder === connection.streamient_folder) return { connection: publicConnection(connection), changes: [], moved: 0, remaining: 0, has_more: false };
+	if (activeTo && activeTo !== toFolder) throw new ObsidianSyncError(`Finish moving the project folder to ${activeTo} first`, 409, 'folder_relocation_in_progress');
+	const fromFolder = activeFrom || normalizeVaultPath(connection.streamient_folder);
+	if (fromFolder.startsWith(`${toFolder}/`)) throw new ObsidianSyncError('The new project folder cannot contain the current project folder', 409, 'invalid_folder_relocation');
+	const lock = await acquireManifestLock(connection._id);
+	if (!lock) throw new ObsidianSyncError('Project synchronization is already running', 409, 'sync_in_progress');
+	try {
+		if (!activeTo) {
+			const duplicate = await ObsidianConnection.exists({ _id: { $ne: connection._id }, host_id: hostId, enabled: true, streamient_folder: toFolder });
+			if (duplicate) throw new ObsidianSyncError('Another project already uses that folder', 409, 'folder_already_owned');
+			const targetFile = await ObsidianFile.exists({ connection: connection._id, host_id: hostId, ...scopePathFilter({ path: toFolder, kind: 'folder' }) });
+			if (targetFile) throw new ObsidianSyncError('The destination already contains synchronized files', 409, 'folder_destination_not_empty');
+			connection.folder_relocation = { from: fromFolder, to: toFolder, started_at: new Date() };
+			await connection.save();
+		}
+		const query = relocationFileQuery(connection, fromFolder, toFolder);
+		const files = await ObsidianFile.find(query).sort({ _id: 1 }).limit(OBSIDIAN_RELOCATION_BATCH_SIZE).lean();
+		const moves = files.map((file) => {
+			const relative = file.path.slice(fromFolder.length).replace(/^\//, '');
+			return { file, previousPath: file.path, path: `${toFolder}/${relative}` };
+		});
+		if (moves.length) {
+			const conflicts = await ObsidianFile.find({ connection: connection._id, host_id: hostId, _id: { $nin: moves.map(({ file }) => file._id) }, path: { $in: moves.map((move) => move.path) } }).select('path').lean();
+			if (conflicts.length) throw new ObsidianSyncError(`The destination path ${conflicts[0].path} already exists`, 409, 'folder_path_conflict');
+		}
+		const changes = [];
+		for (const move of moves) {
+			let file;
+			try {
+				file = await ObsidianFile.findOneAndUpdate(
+					{ _id: move.file._id, connection: connection._id, host_id: hostId, path: move.previousPath },
+					{ $set: { path: move.path, kind: vaultFileKind(move.path), modified_at: new Date(), last_source: 'streamient', last_device_id: '' }, $inc: { revision: 1 } },
+					{ returnDocument: 'after' },
+				);
+			} catch (err) {
+				if (err?.code === 11000) throw new ObsidianSyncError(`The destination path ${move.path} already exists`, 409, 'folder_path_conflict');
+				throw err;
+			}
+			if (!file) continue;
+			const change = await recordChange(connection, file, 'rename', { previousPath: move.previousPath, source: 'streamient', operationId: `streamient:folder:${file._id}:${toFolder}` });
+			changes.push(change);
+			emitToTenant(hostId, 'obsidian:file-changed', publicChange(change));
+		}
+		const remaining = await ObsidianFile.countDocuments(relocationFileQuery(connection, fromFolder, toFolder));
+		if (!remaining) {
+			connection.streamient_folder = toFolder;
+			connection.folder_relocation = { from: '', to: '', started_at: null };
+			connection.last_synced_at = new Date();
+			connection.last_sync_status = 'success';
+			connection.last_sync_error = '';
+			await connection.save();
+			audit.log({ action: 'update', resource: 'obsidian_connection', resource_id: String(connectionId), host_id: hostId, details: { streamient_folder: { from: fromFolder, to: toFolder } }, ...ctx });
+		}
+		if (changes.length) emitToTenant(hostId, 'counts:refresh', { project: String(connection.project) });
+		return { connection: publicConnection(connection), changes: changes.map(publicChange), moved: changes.length, remaining, has_more: remaining > 0 };
+	} finally {
+		await releaseManifestLock(lock);
+	}
 }
 
 export async function removeConnection(hostId, connectionId, ctx = {}) {
@@ -939,6 +1086,7 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 		data = { ...data, files: batches.flatMap((batch) => batch.files || []) };
 	}
 	let previewExports = [];
+	let exportsPending = false;
 	if (data.preview === true) {
 		const [notes, memories, urls] = await pendingProjectItems(connection);
 		previewExports = [
@@ -950,7 +1098,8 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 		const lock = await acquireManifestLock(connection._id);
 		if (!lock) throw new ObsidianSyncError('A vault manifest is already being reconciled', 409, 'sync_in_progress');
 		try {
-			await ensureProjectExports(connection);
+			const exported = await exportProjectBatch(connection);
+			exportsPending = exported.hasMore;
 		} finally {
 			await releaseManifestLock(lock);
 		}
@@ -967,9 +1116,23 @@ export async function reconcileManifest(userId, hostId, connectionId, data) {
 		await ObsidianConnection.updateOne({ _id: connection._id, host_id: hostId }, { $set: { last_synced_at: connection.last_synced_at, last_sync_status: 'success', last_sync_error: '', sync_requested_at: null } });
 	}
 	const allActions = [...actions, ...previewExports];
-	const result = { connection: publicConnection(connection), actions: data.preview === true && data.summary_only === true ? [] : allActions, summary: summarizeActions(allActions), cursor: connection.sequence || 0, manifest_id: manifestId || undefined, complete: true };
+	const result = { connection: publicConnection(connection), actions: data.preview === true && data.summary_only === true ? [] : allActions, summary: summarizeActions(allActions), cursor: connection.sequence || 0, exports_pending: exportsPending, manifest_id: manifestId || undefined, complete: true };
 	if (manifestId) await ObsidianManifestBatch.deleteMany({ host_id: hostId, user: userId, connection: connection._id, manifest_id: manifestId });
 	return result;
+}
+
+export async function materializeProjectExports(hostId, connectionId, data = {}) {
+	const connection = await connectionForWrite(hostId, connectionId);
+	const lock = await acquireManifestLock(connection._id);
+	if (!lock) throw new ObsidianSyncError('Project exports are already being prepared', 409, 'sync_in_progress');
+	try {
+		const exported = await exportProjectBatch(connection);
+		if (data.device_id) await registerDeviceOnConnection(connection, data);
+		const actions = exported.files.map((file) => ({ action: 'download', ...publicFile(file) }));
+		return { actions, summary: summarizeActions(actions), cursor: connection.sequence || 0, has_more: exported.hasMore };
+	} finally {
+		await releaseManifestLock(lock);
+	}
 }
 
 export async function applyMutations(userId, hostId, connectionId, data) {
@@ -1052,7 +1215,7 @@ export async function resolveVaultPaths(hostId, connectionId, values) {
 
 export async function syncStreamientItem(type, itemId, hostId, options = {}) {
 	if (!config.obsidian.enabled) return null;
-	const Model = MARKDOWN_PROJECTIONS.find((projection) => projection.type === type)?.Model;
+	const Model = markdownProjection(type)?.Model;
 	if (!Model) return null;
 	const item = await queryForSave(Model.findOne({ _id: itemId, host_id: hostId }));
 	if (!item) return null;
