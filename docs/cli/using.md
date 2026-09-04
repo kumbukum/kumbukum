@@ -34,7 +34,7 @@ IDs and search queries accepted by friendly commands can be positional. Other MC
 Use literal JSON:
 
 ```fish
-streamient-cli tools call search_knowledge --input '{"query":"renewal decision","per_page":3}'
+streamient-cli tools call search_knowledge --input '{"query":"renewal decision"}'
 ```
 
 Read a JSON object from a file or stdin:
@@ -126,7 +126,7 @@ Provide the token through the CI secret store and keep JSON as the default outpu
 
 ```fish
 set -gx STREAMIENT_CLI_ACCESS_TOKEN "$CI_STREAMIENT_TOKEN"
-streamient-cli knowledge search 'deployment failure' --per-page 3 > streamient-results.json
+streamient-cli knowledge search 'deployment failure' > streamient-results.json
 ```
 
 Use `--timeout` to change the default 60-second MCP request timeout:

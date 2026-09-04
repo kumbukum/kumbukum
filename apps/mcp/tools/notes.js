@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MCP_JSON_OUTPUT_SCHEMA, mcpJson } from './output.js';
+import { MCP_PER_PAGE_SCHEMA, mcpPerPage } from './retrieval.js';
 import { slimSearchResults } from './search-results.js';
 
 const MCP_NOTES_SEARCH_EXCLUDE_FIELDS = 'embedding';
@@ -40,7 +41,7 @@ export function noteTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { note } = await api.get(`/notes/${args.id}`);
-        return mcpJson(note, { ephemeral: true });
+        return mcpJson(note);
       },
     },
 
@@ -90,30 +91,30 @@ export function noteTools(api, defaultProjectId) {
         if (args.page) params.set('page', args.page);
         if (args.limit) params.set('limit', args.limit);
         const { notes } = await api.get(`/notes?${params}`);
-        return mcpJson(notes, { ephemeral: true });
+        return mcpJson(notes);
       },
     },
 
     search_notes: {
-      description: 'Search notes using semantic/text search. Use only for specs, docs, ADRs, structured write-ups, or when search_knowledge results point to notes. Use per_page: 3 for first focused retrieval. Omit project_id to search across all projects.',
+      description: 'Search notes using semantic/text search. Use only for specs, docs, ADRs, structured write-ups, or when search_knowledge results point to notes. per_page defaults to 1; increase it only when needed. Omit project_id to search across all projects.',
       annotations: READ_ONLY,
       outputSchema: MCP_JSON_OUTPUT_SCHEMA,
       inputSchema: {
         query: z.string().describe('Search query'),
         project_id: z.string().optional().describe('Filter results to a specific project (optional; omit to search all projects)'),
-        per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
+        per_page: MCP_PER_PAGE_SCHEMA,
       },
       handler: async (args) => {
         const { results } = await api.post('/notes/search', {
           query: args.query,
           project_id: args.project_id,
           options: {
-            perPage: args.per_page,
+            perPage: mcpPerPage(args),
             include_fields: MCP_NOTES_SEARCH_INCLUDE_FIELDS,
             exclude_fields: MCP_NOTES_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return mcpJson(slimSearchResults(results, { type: 'notes' }), { ephemeral: true });
+        return mcpJson(slimSearchResults(results, { type: 'notes' }));
       },
     },
   };

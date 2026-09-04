@@ -14,10 +14,10 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.2",
+    "express-rate-limit": "^8.7.0",
     "vitepress-openapi": "^0.2.4",
     "vitepress-plugin-tabs": "^0.9.1",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

@@ -15,11 +15,11 @@ overrides:
   "@tabler/icons-webfont>svgtofont": "-"
   bufferutil: ^4.1.0
   utf-8-validate: ^5.0.10
-  "@tiptap/core": ^3.30.5
-  "@tiptap/pm": ^3.30.5
-  "@tiptap/extension-code-block": ^3.30.5
-  react: 18.3.1
-  react-dom: 18.3.1
+  "@tiptap/core": ^3.31.2
+  "@tiptap/pm": ^3.31.2
+  "@tiptap/extension-code-block": ^3.31.2
+  react: 19.2.8
+  react-dom: 19.2.8
   # vue@3.5.36 was published with workspace:* internal refs
   "vue@3.5.36>@vue/shared": 3.5.36
   "vue@3.5.36>@vue/compiler-dom": 3.5.36

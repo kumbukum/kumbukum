@@ -34,7 +34,7 @@ describe('MCP Tools — Notes', () => {
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/notes');
         assert.equal(api.lastCall.body.title, 'Test Note');
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(parsed.title);
     });
 
@@ -61,7 +61,7 @@ describe('MCP Tools — Notes', () => {
         const result = await tools.read_note.handler({ id: FIXTURES.note._id });
         assert.equal(api.lastCall.method, 'GET');
         assert.ok(api.lastCall.path.includes(FIXTURES.note._id));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.id, FIXTURES.note._id);
         assert.equal(parsed.host_id, undefined);
     });
@@ -77,7 +77,7 @@ describe('MCP Tools — Notes', () => {
         assert.ok(api.lastCall.path.includes(FIXTURES.note._id));
         assert.equal(api.lastCall.body.title, 'Updated Title');
         assert.equal(api.lastCall.body.id, undefined);
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.title, 'Updated Title');
     });
 
@@ -87,7 +87,7 @@ describe('MCP Tools — Notes', () => {
         const result = await tools.delete_note.handler({ id: FIXTURES.note._id });
         assert.equal(api.lastCall.method, 'DELETE');
         assert.ok(api.lastCall.path.includes(FIXTURES.note._id));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.message, 'Note deleted');
         assert.equal(result.structuredContent.data.message, 'Note deleted');
     });
@@ -102,7 +102,7 @@ describe('MCP Tools — Notes', () => {
         });
         assert.equal(api.lastCall.method, 'GET');
         assert.ok(api.lastCall.path.includes('project='));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(Array.isArray(parsed));
     });
 
@@ -119,7 +119,8 @@ describe('MCP Tools — Notes', () => {
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/notes/search');
         assert.equal(api.lastCall.body.query, 'hello');
-        const parsed = JSON.parse(result.content[0].text);
+        assert.equal(api.lastCall.body.options.perPage, 1);
+        const parsed = result.structuredContent.data;
         assert.ok(Array.isArray(parsed));
     });
 

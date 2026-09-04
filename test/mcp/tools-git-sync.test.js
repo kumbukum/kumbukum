@@ -77,7 +77,7 @@ describe('MCP Tools — Git Sync', () => {
 
 	it('git_sync_status returns rich status fields', async () => {
 		const result = await tools.git_sync_status.handler({ id: repo._id });
-		const parsed = JSON.parse(result.content[0].text);
+		const parsed = result.structuredContent.data;
 
 		assert.equal(api.lastCall.path, `/git-repos/${repo._id}/status`);
 		assert.equal(parsed.summary.imported_commits, 3);
@@ -86,7 +86,7 @@ describe('MCP Tools — Git Sync', () => {
 
 	it('remove_git_repo calls DELETE /git-repos/:id', async () => {
 		const result = await tools.remove_git_repo.handler({ id: repo._id });
-		const parsed = JSON.parse(result.content[0].text);
+		const parsed = result.structuredContent.data;
 
 		assert.equal(api.lastCall.method, 'DELETE');
 		assert.equal(api.lastCall.path, `/git-repos/${repo._id}`);
@@ -96,7 +96,7 @@ describe('MCP Tools — Git Sync', () => {
 
 	it('trigger_git_sync returns structured sync result', async () => {
 		const result = await tools.trigger_git_sync.handler({ id: repo._id });
-		const parsed = JSON.parse(result.content[0].text);
+		const parsed = result.structuredContent.data;
 
 		assert.equal(api.lastCall.method, 'POST');
 		assert.equal(api.lastCall.path, `/git-repos/${repo._id}/sync`);

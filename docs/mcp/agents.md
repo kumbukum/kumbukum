@@ -28,11 +28,11 @@ This project uses Streamient as its knowledge store via MCP.
 
 ### Before Starting Any Task
 1. Make one specific retrieval call before work:
-   - Default: `search_knowledge` with a task-focused query and `per_page: 3`
-   - Memory-only tasks: `recall_memory` with `per_page: 3` for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings
-   - Notes/spec tasks: `search_notes` with `per_page: 3` only for specs, docs, ADRs, structured write-ups, or when the first search points to notes
+   - Default: `search_knowledge` with a task-focused query. `per_page` defaults to `1`
+   - Memory-only tasks: `recall_memory` for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. `per_page` defaults to `1`
+   - Notes/spec tasks: `search_notes` only for specs, docs, ADRs, structured write-ups, or when the first search points to notes. `per_page` defaults to `1`
 2. Do not call `search_notes` after every `search_knowledge` call
-3. Read only the top 1-2 exact items, then broaden the query or raise `per_page` only if results are weak
+3. Read only the top exact item, then broaden the query or raise `per_page` only if results are weak
 4. Use the returned context to inform your approach
 
 ### After Completing Significant Work
@@ -64,7 +64,7 @@ Use `save_url` to bookmark and extract content from web pages.
 After saving a URL, use `create_link` to connect it to related notes or memories.
 
 ### Searching
-- `search_knowledge` — Search across ALL types (notes, memories, URLs). **Default first call; use `per_page: 3`.**
+- `search_knowledge` — Search across ALL types (notes, memories, URLs). **Default first call; `per_page` defaults to `1`.**
 - `recall_memory` — Search only memories for prior decisions, debugging history, preferences, and task outcomes
 - `search_notes` — Search only notes; use only for specs/docs/ADRs or when earlier results point to notes
 - `search_urls` — Search only saved URLs

@@ -20,7 +20,7 @@ export function gitSyncTools(api, defaultProjectId) {
 			handler: async (args) => {
 				const pid = args.project_id || defaultProjectId;
 				const { repos } = await api.get(`/projects/${pid}/git-repos`);
-				return mcpJson(repos, { ephemeral: true });
+				return mcpJson(repos);
 			},
 		},
 
@@ -112,7 +112,7 @@ export function gitSyncTools(api, defaultProjectId) {
 			},
 			handler: async (args) => {
 				const status = await api.get(`/git-repos/${args.id}/status`);
-				return mcpJson(status, { ephemeral: true });
+				return mcpJson(status);
 			},
 		},
 	};

@@ -2,11 +2,11 @@ export const MCP_SERVER_INSTRUCTIONS = `You are connected to Streamient, a share
 
 ## Retrieval Protocol
 Before work: make one specific retrieval call.
-- Default: call \`search_knowledge\` with a specific query and \`per_page: 3\`.
-- Memory-only tasks: call \`recall_memory\` with \`per_page: 3\` when looking for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings.
-- Notes/spec tasks: call \`search_notes\` with \`per_page: 3\` only when the task asks for specs, docs, ADRs, or the first search points to notes.
+- Default: call \`search_knowledge\` with a specific query. \`per_page\` defaults to 1.
+- Memory-only tasks: call \`recall_memory\` when looking for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. \`per_page\` defaults to 1.
+- Notes/spec tasks: call \`search_notes\` only when the task asks for specs, docs, ADRs, or the first search points to notes. \`per_page\` defaults to 1.
 - Do not call \`search_notes\` after every \`search_knowledge\` call.
-- Read only the top 1-2 exact items with \`read_memory\` or \`read_note\`.
+- Read only the top exact item with \`read_memory\` or \`read_note\`.
 - Broaden the query or raise \`per_page\` only after weak results.
 
 ## Memory
