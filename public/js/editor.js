@@ -1,4 +1,4 @@
-// node_modules/.pnpm/@tiptap+core@3.30.5_@tiptap+pm@3.30.5/node_modules/@tiptap/core/dist/rolldown-runtime-D7D4PA-g.js
+// node_modules/.pnpm/@tiptap+core@3.31.2_@tiptap+pm@3.31.2/node_modules/@tiptap/core/dist/rolldown-runtime-D7D4PA-g.js
 var __defProp = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
   let target = {};
@@ -3346,7 +3346,7 @@ function renderSpec(doc3, structure, xmlNS, blockArraysIn) {
   return { dom, contentDOM };
 }
 
-// node_modules/.pnpm/prosemirror-transform@1.12.0/node_modules/prosemirror-transform/dist/index.js
+// node_modules/.pnpm/prosemirror-transform@1.12.1/node_modules/prosemirror-transform/dist/index.js
 var lower16 = 65535;
 var factor16 = Math.pow(2, 16);
 function makeRecover(index, offset) {
@@ -4557,10 +4557,11 @@ var Fitter = class {
   }
   openMore() {
     let { content, openStart, openEnd } = this.unplaced;
-    let inner = contentAt(content, openStart);
-    if (!inner.childCount || inner.firstChild.isLeaf)
+    if (maxOpen(content, -1) <= openStart)
       return false;
-    this.unplaced = new Slice(content, openStart + 1, Math.max(openEnd, inner.size + openStart >= content.size - openEnd ? openStart + 1 : 0));
+    if (this.unplaced.size > 1 && maxOpen(content, 1) > openEnd)
+      openEnd++;
+    this.unplaced = new Slice(content, openStart + 1, openEnd);
     return true;
   }
   dropNode() {
@@ -4714,6 +4715,14 @@ function invalidMarks(type, fragment, start) {
 }
 function definesContent(type) {
   return type.spec.defining || type.spec.definingForContent;
+}
+function maxOpen(frag, side) {
+  for (let count = 0; ; count++) {
+    let ch = side < 0 ? frag.firstChild : frag.lastChild;
+    if (!ch || ch.isAtom)
+      return count;
+    frag = ch.content;
+  }
 }
 function replaceRange(tr2, from2, to, slice2) {
   if (!slice2.size)
@@ -12274,7 +12283,7 @@ function keydownHandler(bindings) {
   };
 }
 
-// node_modules/.pnpm/@tiptap+core@3.30.5_@tiptap+pm@3.30.5/node_modules/@tiptap/core/dist/index.js
+// node_modules/.pnpm/@tiptap+core@3.31.2_@tiptap+pm@3.31.2/node_modules/@tiptap/core/dist/index.js
 function createChainableState(config) {
   const { state, transaction } = config;
   let { selection } = transaction;
@@ -15002,7 +15011,13 @@ function parseIndentedBlocks(src, config, lexer) {
     raw: totalRaw
   };
 }
-function renderNestedMarkdownContent(node, h2, prefixOrGenerator, ctx) {
+var TAB_STOP = 4;
+function columnWidth(text) {
+  let width = 0;
+  for (const character of text) width = character === "	" ? width + TAB_STOP - width % TAB_STOP : width + 1;
+  return width;
+}
+function renderNestedMarkdownContent(node, h2, prefixOrGenerator, ctx, options) {
   if (!node || !Array.isArray(node.content)) return "";
   const prefix = typeof prefixOrGenerator === "function" ? prefixOrGenerator(ctx) : prefixOrGenerator;
   const [content, ...children] = node.content;
@@ -15011,7 +15026,13 @@ function renderNestedMarkdownContent(node, h2, prefixOrGenerator, ctx) {
     var _h$renderChild, _h$renderChild2;
     const childContent = (_h$renderChild = (_h$renderChild2 = h2.renderChild) === null || _h$renderChild2 === void 0 ? void 0 : _h$renderChild2.call(h2, child, index + 1)) !== null && _h$renderChild !== void 0 ? _h$renderChild : h2.renderChildren([child]);
     if (childContent !== void 0 && childContent !== null) {
-      const indentedChild = childContent.split("\n").map((line) => line ? h2.indent(line) : h2.indent("")).join("\n");
+      const indentLine = (line) => {
+        if (!(options === null || options === void 0 ? void 0 : options.alignNestedToPrefix)) return h2.indent(line);
+        const configured = h2.indent("");
+        const prefixWidth = columnWidth(prefix);
+        return (columnWidth(configured) >= prefixWidth ? configured : " ".repeat(prefixWidth)) + line;
+      };
+      const indentedChild = childContent.split("\n").map((line) => line ? indentLine(line) : indentLine("")).join("\n");
       output += child.type === "paragraph" ? `
 
 ${indentedChild}` : `
@@ -17438,7 +17459,7 @@ function markPasteRule(config) {
   });
 }
 
-// node_modules/.pnpm/@tiptap+core@3.30.5_@tiptap+pm@3.30.5/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
+// node_modules/.pnpm/@tiptap+core@3.31.2_@tiptap+pm@3.31.2/node_modules/@tiptap/core/dist/jsx-runtime/jsx-runtime.js
 var jsxElements = /* @__PURE__ */ new WeakSet();
 var jsxFragments = /* @__PURE__ */ new WeakSet();
 function createJSXElement(spec) {
@@ -17489,7 +17510,7 @@ function render(tag, attributes) {
 }
 var h = (tag, attributes) => render(tag, attributes);
 
-// node_modules/.pnpm/@tiptap+extension-blockquote@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-blockquote/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-blockquote@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2__@tiptap+pm@3.31.2/node_modules/@tiptap/extension-blockquote/dist/index.js
 var handleBackspace = (editor, type) => {
   var _previous$lastChild;
   const { state } = editor;
@@ -17583,7 +17604,7 @@ ${prefix}
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-bold@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-bold/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-bold@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-bold/dist/index.js
 var starInputRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))$/;
 var starPasteRegex = /(?:^|\s)(\*\*(?!\s+\*\*)((?:[^*]+))\*\*(?!\s+\*\*))/g;
 var underscoreInputRegex = /(?:^|\s)(__(?!\s+__)((?:[^_]+))__(?!\s+__))$/;
@@ -17666,7 +17687,7 @@ var Bold = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-code/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-code/dist/index.js
 var inputRegexMatch = (text) => {
   const match = /`([^`]+)`(?!`)$/.exec(text);
   if (!match) return null;
@@ -17750,7 +17771,7 @@ var Code = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-code-block@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-code-block/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-code-block@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2__@tiptap+pm@3.31.2/node_modules/@tiptap/extension-code-block/dist/index.js
 var DEFAULT_TAB_SIZE = 4;
 var backtickInputRegex = /^```([a-z]+)?[\s\n]$/;
 var tildeInputRegex = /^~~~([a-z]+)?[\s\n]$/;
@@ -17983,7 +18004,7 @@ var CodeBlock = Node2.create({
 });
 var src_default = CodeBlock;
 
-// node_modules/.pnpm/@tiptap+extension-document@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-document/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-document@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-document/dist/index.js
 var Document = Node2.create({
   name: "doc",
   topNode: true,
@@ -17994,7 +18015,7 @@ var Document = Node2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-hard-break@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-hard-break/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-hard-break@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-hard-break/dist/index.js
 var HardBreak = Node2.create({
   name: "hardBreak",
   markdownTokenName: "br",
@@ -18048,7 +18069,7 @@ var HardBreak = Node2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-heading@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-heading/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-heading@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-heading/dist/index.js
 var Heading = Node2.create({
   name: "heading",
   addOptions() {
@@ -18125,7 +18146,7 @@ var Heading = Node2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-horizontal-rule@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2__@tiptap+pm@3.31.2/node_modules/@tiptap/extension-horizontal-rule/dist/index.js
 var HorizontalRule = Node2.create({
   name: "horizontalRule",
   addOptions() {
@@ -18187,7 +18208,7 @@ var HorizontalRule = Node2.create({
 });
 var src_default2 = HorizontalRule;
 
-// node_modules/.pnpm/@tiptap+extension-italic@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-italic/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-italic@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-italic/dist/index.js
 var starInputRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))$/;
 var starPasteRegex2 = /(?:^|\s)(\*(?!\s+\*)((?:[^*]+))\*(?!\s+\*))/g;
 var underscoreInputRegex2 = /(?:^|\s)(_(?!\s+_)((?:[^_]+))_(?!\s+_))$/;
@@ -19415,7 +19436,7 @@ function find(str, type = null, opts = null) {
   return filtered;
 }
 
-// node_modules/.pnpm/@tiptap+extension-link@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-link/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-link@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2__@tiptap+pm@3.31.2/node_modules/@tiptap/extension-link/dist/index.js
 var UNICODE_WHITESPACE_PATTERN = "[\0- \xA0\u1680\u180E\u2000-\u2029\u205F\u3000]";
 var UNICODE_WHITESPACE_REGEX = new RegExp(UNICODE_WHITESPACE_PATTERN);
 var UNICODE_WHITESPACE_REGEX_END = new RegExp(`${UNICODE_WHITESPACE_PATTERN}$`);
@@ -19861,7 +19882,7 @@ var Link = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-list@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extension-list/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-list@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2__@tiptap+pm@3.31.2/node_modules/@tiptap/extension-list/dist/index.js
 var ListItemName$1 = "listItem";
 var TextStyleName$1 = "textStyle";
 var bulletListInputRegex = /^\s*([-+*])\s$/;
@@ -20218,7 +20239,7 @@ var ListItem = Node2.create({
         return getListMarker((_context$meta2 = context.meta) === null || _context$meta2 === void 0 || (_context$meta2 = _context$meta2.parentAttrs) === null || _context$meta2 === void 0 ? void 0 : _context$meta2.type, start - 1 + (context.index || 0), ". ");
       }
       return "- ";
-    }, ctx);
+    }, ctx, { alignNestedToPrefix: (ctx === null || ctx === void 0 ? void 0 : ctx.parentType) === "orderedList" });
   },
   addExtensions() {
     return [createBranchingListDeleteKeymap(this.name, [this.options.bulletListTypeName, this.options.orderedListTypeName])];
@@ -21067,7 +21088,7 @@ var ListKit = Extension.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-paragraph@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-paragraph/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-paragraph@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-paragraph/dist/index.js
 var EMPTY_PARAGRAPH_MARKDOWN = "&nbsp;";
 var NBSP_CHAR = "\xA0";
 var Paragraph = Node2.create({
@@ -21115,7 +21136,7 @@ var Paragraph = Node2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-strike@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-strike/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-strike@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-strike/dist/index.js
 var inputRegex3 = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))$/;
 var pasteRegex = /(?:^|\s)(~~(?!\s+~~)((?:[^~]+))~~(?!\s+~~))/g;
 var Strike = Mark2.create({
@@ -21179,7 +21200,7 @@ var Strike = Mark2.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+extension-text@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-text/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-text@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-text/dist/index.js
 var Text2 = Node2.create({
   name: "text",
   group: "inline",
@@ -21192,7 +21213,7 @@ var Text2 = Node2.create({
   renderMarkdown: (node) => node.text || ""
 });
 
-// node_modules/.pnpm/@tiptap+extension-underline@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-underline/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-underline@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-underline/dist/index.js
 var Underline = Mark2.create({
   name: "underline",
   addOptions() {
@@ -22153,7 +22174,7 @@ var redo = buildCommand(true, true);
 var undoNoScroll = buildCommand(false, false);
 var redoNoScroll = buildCommand(true, false);
 
-// node_modules/.pnpm/@tiptap+extensions@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5/node_modules/@tiptap/extensions/dist/index.js
+// node_modules/.pnpm/@tiptap+extensions@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2__@tiptap+pm@3.31.2/node_modules/@tiptap/extensions/dist/index.js
 var CharacterCount = Extension.create({
   name: "characterCount",
   addOptions() {
@@ -22677,7 +22698,7 @@ var UndoRedo = Extension.create({
   }
 });
 
-// node_modules/.pnpm/@tiptap+starter-kit@3.30.5/node_modules/@tiptap/starter-kit/dist/index.js
+// node_modules/.pnpm/@tiptap+starter-kit@3.31.2/node_modules/@tiptap/starter-kit/dist/index.js
 var StarterKit = Extension.create({
   name: "starterKit",
   addExtensions() {
@@ -22721,16 +22742,16 @@ var StarterKit = Extension.create({
 });
 var src_default3 = StarterKit;
 
-// node_modules/.pnpm/@tiptap+extension-placeholder@3.30.5_@tiptap+extensions@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5__@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-placeholder/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-placeholder@3.31.2_@tiptap+extensions@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2__@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-placeholder/dist/index.js
 var src_default4 = Placeholder;
 
-// node_modules/.pnpm/@tiptap+extension-task-list@3.30.5_@tiptap+extension-list@3.30.5_@tiptap+core@3.30.5_@t_565ca6af8255e895b14644f423a30d7c/node_modules/@tiptap/extension-task-list/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-task-list@3.31.2_@tiptap+extension-list@3.31.2_@tiptap+core@3.31.2_@t_d4089653b74cd1006ab867a8f15253fb/node_modules/@tiptap/extension-task-list/dist/index.js
 var src_default5 = TaskList;
 
-// node_modules/.pnpm/@tiptap+extension-task-item@3.30.5_@tiptap+extension-list@3.30.5_@tiptap+core@3.30.5_@t_bf9280703e0aff797f8f1952bf6fd784/node_modules/@tiptap/extension-task-item/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-task-item@3.31.2_@tiptap+extension-list@3.31.2_@tiptap+core@3.31.2_@t_256a35a00e52738b42d2543dce386f56/node_modules/@tiptap/extension-task-item/dist/index.js
 var src_default6 = TaskItem;
 
-// node_modules/.pnpm/@tiptap+extension-image@3.30.5_@tiptap+core@3.30.5_@tiptap+pm@3.30.5_/node_modules/@tiptap/extension-image/dist/index.js
+// node_modules/.pnpm/@tiptap+extension-image@3.31.2_@tiptap+core@3.31.2_@tiptap+pm@3.31.2_/node_modules/@tiptap/extension-image/dist/index.js
 var inputRegex4 = /(?:^|\s)(!\[(.+|:?)]\((\S+)(?:(?:\s+)["'](\S+)["'])?\))$/;
 var Image = Node2.create({
   name: "image",

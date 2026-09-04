@@ -18468,7 +18468,7 @@ var E = (e2, t2, s2) => {
 // src/vendor.js
 var FilePond = __toESM(require_filepond(), 1);
 
-// node_modules/.pnpm/@yaireo+tagify@4.38.0_prop-types@15.8.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@yaireo/tagify/dist/tagify.esm.js
+// node_modules/.pnpm/@yaireo+tagify@4.38.0_prop-types@15.8.1_react-dom@19.2.8_react@19.2.8__react@19.2.8/node_modules/@yaireo/tagify/dist/tagify.esm.js
 var t = "&#8203;";
 var e = { isEnabled: () => window.TAGIFY_DEBUG ?? true, log(...t2) {
   this.isEnabled() && console.log("[Tagify]:", ...t2);
