@@ -127,13 +127,13 @@ describe('MCP Search Results', () => {
 		assertNoRawBodyFields(result);
 	});
 
-	it('returns compact JSON text while preserving structuredContent', () => {
+	it('returns sanitized data only through structuredContent', () => {
 		const result = mcpJson({ title: 'Compact', nested: { value: true } });
 
 		assert.deepEqual(result.structuredContent, {
 			data: { title: 'Compact', nested: { value: true } },
 		});
-		assert.equal(result.content[0].text, '{"title":"Compact","nested":{"value":true}}');
+		assert.deepEqual(result.content, []);
 	});
 
 	it('slims grouped Typesense responses to source documents', () => {

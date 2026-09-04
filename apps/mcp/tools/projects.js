@@ -17,7 +17,7 @@ export function projectTools(api) {
       inputSchema: {},
       handler: async () => {
         const { projects } = await api.get('/projects');
-        return mcpJson(projects, { ephemeral: true });
+        return mcpJson(projects);
       },
     },
 
@@ -84,7 +84,7 @@ export function projectTools(api) {
       inputSchema: {},
       handler: async () => {
         const counts = await api.get('/counts');
-        return mcpJson(counts, { ephemeral: true });
+        return mcpJson(counts);
       },
     },
   };

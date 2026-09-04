@@ -36,7 +36,7 @@ export function graphTools(api) {
             },
             handler: async (args) => {
                 const { links } = await api.get(`/links/${args.item_id}`);
-                return mcpJson(links, { ephemeral: true });
+                return mcpJson(links);
             },
         },
 
@@ -57,7 +57,7 @@ export function graphTools(api) {
                 if (args.include_semantic !== undefined) params.set('include_semantic', args.include_semantic);
                 if (args.semantic_threshold !== undefined) params.set('semantic_threshold', args.semantic_threshold);
                 const data = await api.get(`/graph?${params.toString()}`);
-                return mcpJson(data, { ephemeral: true });
+                return mcpJson(data);
             },
         },
 
@@ -80,7 +80,7 @@ export function graphTools(api) {
                     item_id: args.item_id,
                     links,
                     connected_item_ids: [...connectedIds],
-                }, { ephemeral: true });
+                });
             },
         },
 

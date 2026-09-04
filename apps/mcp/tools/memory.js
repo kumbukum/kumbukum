@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MCP_JSON_OUTPUT_SCHEMA, mcpJson } from './output.js';
+import { MCP_PER_PAGE_SCHEMA, mcpPerPage } from './retrieval.js';
 import { slimSearchResults } from './search-results.js';
 
 const MCP_KNOWLEDGE_SEARCH_EXCLUDE_FIELDS = {
@@ -47,48 +48,48 @@ export function memoryTools(api, defaultProjectId) {
     },
 
     recall_memory: {
-      description: 'Search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. Use per_page: 3 for the first focused retrieval. Omit project_id to search across all projects.',
+      description: 'Search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. per_page defaults to 1; increase it only when needed. Omit project_id to search across all projects.',
       annotations: READ_ONLY,
       outputSchema: MCP_JSON_OUTPUT_SCHEMA,
       inputSchema: {
         query: z.string().describe('What to search for'),
         project_id: z.string().optional().describe('Filter results to a specific project (optional; omit to search all projects)'),
-        per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
+        per_page: MCP_PER_PAGE_SCHEMA,
       },
       handler: async (args) => {
         const { results } = await api.post('/memories/search', {
           query: args.query,
           project_id: args.project_id,
           options: {
-            perPage: args.per_page,
+            perPage: mcpPerPage(args),
             include_fields: MCP_MEMORY_SEARCH_INCLUDE_FIELDS,
             exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return mcpJson(slimSearchResults(results, { type: 'memory' }), { ephemeral: true });
+        return mcpJson(slimSearchResults(results, { type: 'memory' }));
       },
     },
 
     search_memory: {
-      description: 'Alias for recall_memory — search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. Use per_page: 3 for the first focused retrieval. Omit project_id to search across all projects.',
+      description: 'Alias for recall_memory — search memories semantically for prior decisions, debugging history, user preferences, task outcomes, or agent-scoped learnings. per_page defaults to 1; increase it only when needed. Omit project_id to search across all projects.',
       annotations: READ_ONLY,
       outputSchema: MCP_JSON_OUTPUT_SCHEMA,
       inputSchema: {
         query: z.string().describe('What to search for'),
         project_id: z.string().optional().describe('Filter results to a specific project (optional; omit to search all projects)'),
-        per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
+        per_page: MCP_PER_PAGE_SCHEMA,
       },
       handler: async (args) => {
         const { results } = await api.post('/memories/search', {
           query: args.query,
           project_id: args.project_id,
           options: {
-            perPage: args.per_page,
+            perPage: mcpPerPage(args),
             include_fields: MCP_MEMORY_SEARCH_INCLUDE_FIELDS,
             exclude_fields: MCP_MEMORY_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return mcpJson(slimSearchResults(results, { type: 'memory' }), { ephemeral: true });
+        return mcpJson(slimSearchResults(results, { type: 'memory' }));
       },
     },
 
@@ -101,7 +102,7 @@ export function memoryTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { memory } = await api.get(`/memories/${args.id}`);
-        return mcpJson(memory, { ephemeral: true });
+        return mcpJson(memory);
       },
     },
 
@@ -154,30 +155,30 @@ export function memoryTools(api, defaultProjectId) {
 
         const qs = params.toString();
         const { tags } = await api.get(`/memories/tags/suggest${qs ? `?${qs}` : ''}`);
-        return mcpJson(tags, { ephemeral: true });
+        return mcpJson(tags);
       },
     },
 
     search_knowledge: {
-      description: 'Search across ALL data types (notes, memories, URLs, crawled pages) — default first retrieval tool. Use a specific query with per_page: 3, then broaden or raise per_page only if results are weak.',
+      description: 'Search across ALL data types (notes, memories, URLs, crawled pages) — default first retrieval tool. per_page defaults to 1; broaden the query or increase it only when results are weak.',
       annotations: READ_ONLY,
       outputSchema: MCP_JSON_OUTPUT_SCHEMA,
       inputSchema: {
         query: z.string().describe('Search query'),
         project_id: z.string().optional().describe('Filter results to a specific project (optional)'),
-        per_page: z.number().optional().describe('Results per collection (default 5)'),
+        per_page: MCP_PER_PAGE_SCHEMA,
       },
       handler: async (args) => {
         const { results } = await api.post('/search/knowledge', {
           query: args.query,
           project_id: args.project_id,
-          per_page: args.per_page,
+          per_page: mcpPerPage(args),
           options: {
             include_fields: MCP_KNOWLEDGE_SEARCH_INCLUDE_FIELDS,
             exclude_fields: MCP_KNOWLEDGE_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return mcpJson(slimSearchResults(results), { ephemeral: true });
+        return mcpJson(slimSearchResults(results));
       },
     },
 
@@ -196,7 +197,7 @@ export function memoryTools(api, defaultProjectId) {
           conversation_id: args.conversation_id,
           project_id: args.project_id,
         });
-        return mcpJson(res, { ephemeral: true });
+        return mcpJson(res);
       },
     },
   };

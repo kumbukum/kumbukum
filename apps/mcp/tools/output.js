@@ -63,14 +63,9 @@ export function sanitizeMcpOutput(value) {
 	return sanitizeDeep(out);
 }
 
-export function mcpJson(value, { ephemeral = false } = {}) {
+export function mcpJson(value) {
 	const structuredContent = {
 		data: sanitizeMcpOutput(value),
 	};
-	const item = {
-		type: 'text',
-		text: JSON.stringify(structuredContent.data),
-	};
-	if (ephemeral) item.cache_control = { type: 'ephemeral' };
-	return { content: [item], structuredContent };
+	return { content: [], structuredContent };
 }

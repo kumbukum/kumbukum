@@ -55,7 +55,7 @@ describe('MCP Tools — Graph', () => {
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/links');
         assert.equal(api.lastCall.body.source_type, 'notes');
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(parsed.source_id);
     });
 
@@ -67,7 +67,7 @@ describe('MCP Tools — Graph', () => {
             target_type: 'urls',
         });
         assert.equal(api.lastCall.body.label, undefined);
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(parsed.source_id);
     });
 
@@ -77,7 +77,7 @@ describe('MCP Tools — Graph', () => {
         const result = await tools.get_links.handler({ item_id: FIXTURES.note._id });
         assert.equal(api.lastCall.method, 'GET');
         assert.ok(api.lastCall.path.includes(`/links/${FIXTURES.note._id}`));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(Array.isArray(parsed));
         assert.equal(parsed.length, 1);
     });
@@ -88,7 +88,7 @@ describe('MCP Tools — Graph', () => {
         const result = await tools.get_graph.handler({});
         assert.equal(api.lastCall.method, 'GET');
         assert.ok(api.lastCall.path.startsWith('/graph'));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(Array.isArray(parsed.nodes));
         assert.ok(Array.isArray(parsed.edges));
     });
@@ -110,7 +110,7 @@ describe('MCP Tools — Graph', () => {
 
     it('traverse_graph — returns item links and connected IDs', async () => {
         const result = await tools.traverse_graph.handler({ item_id: FIXTURES.note._id });
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.item_id, FIXTURES.note._id);
         assert.ok(Array.isArray(parsed.links));
         assert.ok(Array.isArray(parsed.connected_item_ids));
@@ -122,7 +122,7 @@ describe('MCP Tools — Graph', () => {
         const result = await tools.delete_link.handler({ link_id: LINK_FIXTURE._id });
         assert.equal(api.lastCall.method, 'DELETE');
         assert.ok(api.lastCall.path.includes(`/links/${LINK_FIXTURE._id}`));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.message, 'Link deleted');
         assert.equal(result.structuredContent.data.message, 'Link deleted');
     });

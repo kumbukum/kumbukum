@@ -37,10 +37,12 @@ function summarizeToolResult(result) {
     .filter((item) => item?.type === 'text')
     .map((item) => item.text || '')
     .join('\n');
+  const structuredText = result?.structuredContent?.data === undefined ? '' : JSON.stringify(result.structuredContent.data);
   return {
     content_items: content.length,
     text_chars: text.length,
-    estimated_tokens: estimateTokens(text),
+    structured_chars: structuredText.length,
+    estimated_tokens: estimateTokens(structuredText || text),
   };
 }
 
@@ -149,7 +151,7 @@ async function createServer(apiAuth, { projectId, oauthClientId, cacheKey, toolP
           duration_ms: Date.now() - started,
           args_chars: JSON.stringify(params || {}).length,
           args_estimated_tokens: estimateTokens(JSON.stringify(params || {})),
-          requested_per_page: params?.per_page || params?.limit || null,
+          requested_per_page: params?.per_page ?? params?.limit ?? null,
           success: !result?.isError,
           result: summarizeToolResult(result),
           error: result?.isError ? 'tool_error_envelope' : undefined,
@@ -163,7 +165,7 @@ async function createServer(apiAuth, { projectId, oauthClientId, cacheKey, toolP
           duration_ms: Date.now() - started,
           args_chars: JSON.stringify(params || {}).length,
           args_estimated_tokens: estimateTokens(JSON.stringify(params || {})),
-          requested_per_page: params?.per_page || params?.limit || null,
+          requested_per_page: params?.per_page ?? params?.limit ?? null,
           success: false,
           error: err?.message || 'unknown',
         });

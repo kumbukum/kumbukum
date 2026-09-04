@@ -70,7 +70,7 @@ Do not pass a token value with `--token`. Command arguments can be exposed in sh
 
 ```fish
 streamient-cli doctor
-streamient-cli knowledge search 'release decision' --per-page 3 --pretty
+streamient-cli knowledge search 'release decision' --pretty
 ```
 
 Cloud commands use `https://mcp.streamient.com/mcp`. Pass `--server` with a complete MCP endpoint for a self-hosted installation.

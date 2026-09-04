@@ -43,7 +43,7 @@ describe('MCP Tools — Emails', () => {
 		assert.equal(api.lastCall.method, 'POST');
 		assert.equal(api.lastCall.path, '/emails');
 		assert.equal(api.lastCall.body.project, '507f1f77bcf86cd799439011');
-		const parsed = JSON.parse(result.content[0].text);
+		const parsed = result.structuredContent.data;
 		assert.equal(parsed.id, EMAIL_FIXTURE._id);
 		assert.equal(parsed.message_id, undefined);
 	});
@@ -52,7 +52,7 @@ describe('MCP Tools — Emails', () => {
 		const result = await tools.list_emails.handler({ page: 1, limit: 10 });
 		assert.equal(api.lastCall.method, 'GET');
 		assert.ok(api.lastCall.path.startsWith('/emails?'));
-		const parsed = JSON.parse(result.content[0].text);
+		const parsed = result.structuredContent.data;
 		assert.equal(parsed[0].id, EMAIL_FIXTURE._id);
 		assert.equal(parsed[0].message_id, undefined);
 	});
@@ -61,7 +61,8 @@ describe('MCP Tools — Emails', () => {
 		const result = await tools.search_emails.handler({ query: 'hello' });
 		assert.equal(api.lastCall.method, 'POST');
 		assert.equal(api.lastCall.path, '/emails/search');
-		const parsed = JSON.parse(result.content[0].text);
+		assert.equal(api.lastCall.body.options.perPage, 1);
+		const parsed = result.structuredContent.data;
 		assert.equal(parsed[0].id, EMAIL_FIXTURE._id);
 		assert.equal(parsed[0].message_id, undefined);
 	});
@@ -77,7 +78,7 @@ describe('MCP Tools — Emails', () => {
 		const result = await tools.get_email_thread.handler({ id: EMAIL_FIXTURE._id });
 		assert.equal(api.lastCall.method, 'GET');
 		assert.equal(api.lastCall.path, `/emails/${EMAIL_FIXTURE._id}/thread`);
-		const parsed = JSON.parse(result.content[0].text);
+		const parsed = result.structuredContent.data;
 		assert.equal(parsed.length, 1);
 	});
 
@@ -85,7 +86,7 @@ describe('MCP Tools — Emails', () => {
 		const result = await tools.delete_email.handler({ id: EMAIL_FIXTURE._id });
 		assert.equal(api.lastCall.method, 'DELETE');
 		assert.equal(api.lastCall.path, `/emails/${EMAIL_FIXTURE._id}`);
-		const parsed = JSON.parse(result.content[0].text);
+		const parsed = result.structuredContent.data;
 		assert.equal(parsed.message, 'Email deleted');
 		assert.equal(result.structuredContent.data.message, 'Email deleted');
 	});

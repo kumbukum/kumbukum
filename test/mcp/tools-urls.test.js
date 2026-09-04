@@ -32,7 +32,7 @@ describe('MCP Tools — URLs', () => {
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/urls');
         assert.equal(api.lastCall.body.url, 'https://example.com');
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(parsed.url);
     });
 
@@ -63,7 +63,7 @@ describe('MCP Tools — URLs', () => {
         });
         assert.equal(api.lastCall.method, 'GET');
         assert.ok(api.lastCall.path.includes('project='));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.ok(Array.isArray(parsed));
     });
 
@@ -76,7 +76,8 @@ describe('MCP Tools — URLs', () => {
         const result = await tools.search_urls.handler({ query: 'example' });
         assert.equal(api.lastCall.method, 'POST');
         assert.equal(api.lastCall.path, '/urls/search');
-        const parsed = JSON.parse(result.content[0].text);
+        assert.equal(api.lastCall.body.options.perPage, 1);
+        const parsed = result.structuredContent.data;
         assert.ok(Array.isArray(parsed));
     });
 
@@ -91,7 +92,7 @@ describe('MCP Tools — URLs', () => {
         const result = await tools.read_url.handler({ id: FIXTURES.url._id });
         assert.equal(api.lastCall.method, 'GET');
         assert.ok(api.lastCall.path.includes(FIXTURES.url._id));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.id, FIXTURES.url._id);
         assert.equal(parsed.host_id, undefined);
     });
@@ -108,7 +109,7 @@ describe('MCP Tools — URLs', () => {
         assert.equal(api.lastCall.body.title, 'Updated Title');
         assert.deepEqual(api.lastCall.body.tags, ['updated']);
         assert.equal(api.lastCall.body.id, undefined);
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.title, 'Updated Title');
     });
 
@@ -116,7 +117,7 @@ describe('MCP Tools — URLs', () => {
         const result = await tools.delete_url.handler({ id: FIXTURES.url._id });
         assert.equal(api.lastCall.method, 'DELETE');
         assert.ok(api.lastCall.path.includes(FIXTURES.url._id));
-        const parsed = JSON.parse(result.content[0].text);
+        const parsed = result.structuredContent.data;
         assert.equal(parsed.message, 'URL deleted');
         assert.equal(result.structuredContent.data.message, 'URL deleted');
     });

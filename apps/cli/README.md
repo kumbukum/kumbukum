@@ -42,7 +42,7 @@ streamient-cli projects list --token-env CUSTOMER_TOKEN
 
 ```fish
 streamient-cli doctor
-streamient-cli knowledge search 'release decision' --per-page 3 --pretty
+streamient-cli knowledge search 'release decision' --pretty
 streamient-cli notes create --title 'Launch notes' --content '<p>Approved</p>'
 streamient-cli notes delete NOTE_ID --yes
 streamient-cli tools list

@@ -63,7 +63,7 @@ New MCP tools remain usable before a CLI alias release:
 ```fish
 streamient-cli tools list
 streamient-cli tools describe search_knowledge
-streamient-cli tools call search_knowledge --input '{"query":"release decision","per_page":3}'
+streamient-cli tools call search_knowledge --input '{"query":"release decision"}'
 ```
 
 See [Using the CLI](./using) for flags, JSON and file input, safety confirmation, output formats, and automation examples.

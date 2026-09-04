@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MCP_JSON_OUTPUT_SCHEMA, mcpJson } from './output.js';
+import { MCP_PER_PAGE_SCHEMA, mcpPerPage } from './retrieval.js';
 import { slimSearchResults } from './search-results.js';
 
 const MCP_URL_SEARCH_EXCLUDE_FIELDS = 'embedding';
@@ -48,28 +49,28 @@ export function urlTools(api, defaultProjectId) {
         if (args.page) params.set('page', args.page);
         if (args.limit) params.set('limit', args.limit);
         const { urls } = await api.get(`/urls?${params}`);
-        return mcpJson(urls, { ephemeral: true });
+        return mcpJson(urls);
       },
     },
 
     search_urls: {
-      description: 'Search saved URLs using semantic/text search',
+      description: 'Search saved URLs using semantic/text search. per_page defaults to 1; increase it only when needed.',
       annotations: READ_ONLY,
       outputSchema: MCP_JSON_OUTPUT_SCHEMA,
       inputSchema: {
         query: z.string().describe('Search query'),
-        per_page: z.number().optional().describe('Results to return (recommended 3 for first retrieval)'),
+        per_page: MCP_PER_PAGE_SCHEMA,
       },
       handler: async (args) => {
         const { results } = await api.post('/urls/search', {
           query: args.query,
           options: {
-            perPage: args.per_page,
+            perPage: mcpPerPage(args),
             include_fields: MCP_URL_SEARCH_INCLUDE_FIELDS,
             exclude_fields: MCP_URL_SEARCH_EXCLUDE_FIELDS,
           },
         });
-        return mcpJson(slimSearchResults(results, { type: 'urls' }), { ephemeral: true });
+        return mcpJson(slimSearchResults(results, { type: 'urls' }));
       },
     },
 
@@ -82,7 +83,7 @@ export function urlTools(api, defaultProjectId) {
       },
       handler: async (args) => {
         const { url } = await api.get(`/urls/${args.id}`);
-        return mcpJson(url, { ephemeral: true });
+        return mcpJson(url);
       },
     },
 

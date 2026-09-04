@@ -116,6 +116,14 @@ describe('MCP Server — Streamable HTTP transport', () => {
             }
         });
 
+        it('retrieval tools should advertise per_page default 1', async () => {
+            const { tools } = await client.listTools();
+            const names = new Map(tools.map((tool) => [tool.name, tool]));
+            for (const name of ['search_knowledge', 'search_notes', 'recall_memory', 'search_memory', 'search_urls', 'search_emails']) {
+                assert.equal(names.get(name)?.inputSchema?.properties?.per_page?.default, 1, `${name} missing per_page default`);
+            }
+        });
+
         it('every tool should include Apps SDK safety annotations', async () => {
             const { tools } = await client.listTools();
             for (const tool of tools) {
@@ -155,6 +163,17 @@ describe('MCP Server — Streamable HTTP transport', () => {
             assert.deepEqual(names.get('search_notes')?._meta?.securitySchemes, [
                 { type: 'oauth2', scopes: ['mcp:read'] },
             ]);
+        });
+    });
+
+    describe('tools/call', () => {
+        it('should return data only through structuredContent', async () => {
+            const result = await client.callTool({
+                name: 'create_note',
+                arguments: { title: 'Test note' },
+            });
+            assert.deepEqual(result.content, []);
+            assert.equal(result.structuredContent.data.id, FIXTURES.note._id);
         });
     });
 });
