@@ -67,6 +67,7 @@ describe('URL indexed text', () => {
 		assert.match(capturedParams.filter_by, /chunk_index:=0/);
 		assert.equal(capturedParams.page, 2);
 		assert.equal(capturedParams.per_page, 100);
+		assert.equal(capturedParams.sort_by, 'crawled_at:desc');
 		assert.equal(result.found, 2);
 	});
 
@@ -182,6 +183,8 @@ describe('URL indexed text', () => {
 		assert.ok(urlSchema.is_indexed);
 		assert.ok(swaggerSpec.paths['/urls/{id}/pages']?.get);
 		assert.ok(swaggerSpec.paths['/urls/{id}/pages/{pageId}']?.get);
+		assert.match(swaggerSpec.paths['/urls'].get.description, /creation date, newest first/);
+		assert.match(swaggerSpec.paths['/urls/{id}/pages'].get.description, /crawl date with the newest first/);
 		assert.equal(swaggerSpec.paths['/urls/{id}/pages'].get.parameters[2].schema.maximum, 500);
 		assert.ok(swaggerSpec.components.schemas.CrawledPage.properties.index_complete);
 	});

@@ -2,7 +2,43 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Url } from '../model/url.js';
-import { saveUrl } from '../services/url_service.js';
+import { listUrls, saveUrl } from '../services/url_service.js';
+
+describe('URL service listing', () => {
+	it('sorts newest saved URLs first with deterministic pagination and lean results', async () => {
+		const originalFind = Url.find;
+		const calls = [];
+		const docs = [{ _id: 'url-2', title: 'Newest' }, { _id: 'url-1', title: 'Older' }];
+		const chain = {
+			select(value) { calls.push(['select', value]); return this; },
+			sort(value) { calls.push(['sort', value]); return this; },
+			skip(value) { calls.push(['skip', value]); return this; },
+			limit(value) { calls.push(['limit', value]); return this; },
+			lean() { calls.push(['lean']); return docs; },
+		};
+
+		try {
+			Url.find = (query) => {
+				calls.push(['find', query]);
+				return chain;
+			};
+
+			const result = await listUrls('host-1', 'project-1', { page: 2, limit: 25 });
+
+			assert.deepEqual(calls, [
+				['find', { host_id: 'host-1', in_trash: { $ne: true }, project: 'project-1' }],
+				['select', '-text_content'],
+				['sort', { createdAt: -1, _id: -1 }],
+				['skip', 25],
+				['limit', 25],
+				['lean'],
+			]);
+			assert.deepEqual(result, docs);
+		} finally {
+			Url.find = originalFind;
+		}
+	});
+});
 
 describe('URL service duplicate handling', () => {
 	it('returns an existing active URL in the same project instead of creating a duplicate', async () => {

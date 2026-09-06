@@ -1503,6 +1503,7 @@ const swaggerSpec = {
             get: {
                 tags: ['URLs'],
                 summary: 'List URLs',
+				description: 'Returns saved URLs ordered by creation date, newest first.',
                 parameters: [
                     { $ref: '#/components/parameters/page' },
                     { $ref: '#/components/parameters/limit' },
@@ -1563,7 +1564,7 @@ const swaggerSpec = {
             get: {
                 tags: ['URLs'],
                 summary: 'List indexed crawled pages',
-                description: 'Returns one row per indexed crawled URL. Pagination and counts exclude additional text chunks.',
+				description: 'Returns one row per indexed crawled URL, ordered by crawl date with the newest first. Pagination and counts exclude additional text chunks.',
                 parameters: [
                     { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
                     { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
