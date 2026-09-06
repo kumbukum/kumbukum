@@ -8,11 +8,6 @@ const log = createLogger('oauth');
 
 const router = Router();
 
-function denyFraming(res) {
-	res.set('X-Frame-Options', 'DENY');
-	res.set('Content-Security-Policy', "frame-ancestors 'none'");
-}
-
 function redirectWithCode(redirectUri, code, state) {
 	const url = new URL(redirectUri);
 	url.searchParams.set('code', code);
@@ -21,7 +16,6 @@ function redirectWithCode(redirectUri, code, state) {
 }
 
 function renderError(res, status, message) {
-	denyFraming(res);
 	return res.status(status).render('auth/oauth_authorize', {
 		error: message,
 		client: null,
@@ -128,7 +122,6 @@ router.get('/oauth/authorize', async (req, res) => {
 			return res.redirect(redirectWithCode(oauthRequest.redirect_uri, code, oauthRequest.state));
 		}
 
-		denyFraming(res);
 		return res.render('auth/oauth_authorize', {
 			error: null,
 			client: oauthRequest.client,
