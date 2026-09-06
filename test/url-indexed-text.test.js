@@ -154,6 +154,8 @@ describe('URL indexed text', () => {
 		assert.match(layout, /#rm-url-tab-text\(type="button"\) Parsed text/);
 		assert.match(layout, /#rm-url-text-index-status Not indexed/);
 		assert.match(layout, /#rm-url-text-content/);
+		assert.match(layout, /#rm-url-text-help Streamient uses this extracted text for keyword and semantic search\./);
+		assert.match(layout, /#rm-url-pages-help Expanded text is read directly from the search index/);
 		assert.match(layout, /include ajax\/url_crawled_page/);
 	});
 
