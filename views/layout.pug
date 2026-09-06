@@ -267,8 +267,10 @@ html(lang="en")
 								li.nav-item
 									button.nav-link.active#rm-url-tab-details(type="button") Details
 								li.nav-item
+									button.nav-link#rm-url-tab-text(type="button") Parsed text
+								li.nav-item
 									button.nav-link.d-none#rm-url-tab-pages(type="button")
-										| Crawled pages
+										span Crawled pages
 										span.badge.rounded-pill.ms-2#rm-url-tab-pages-count 0
 							#rm-url-pane-details
 								.d-flex.mb-3.w-100.px-3
@@ -299,18 +301,26 @@ html(lang="en")
 										!= icon('search', 'source-search-icon')
 										input.form-control.rm-link-search(type="text" placeholder="Type to search..." autocomplete="off")
 									.rm-link-tags.d-flex.flex-wrap.gap-1.mt-2
+							#rm-url-pane-text.d-none.px-3.pb-2
+								.d-flex.justify-content-between.align-items-center.mb-3
+									.small.text-muted Text parsed from the saved URL and submitted for indexing
+									span.badge.text-bg-secondary#rm-url-text-index-status Not indexed
+								.small.text-muted.d-none#rm-url-text-empty No text was parsed for this URL.
+								pre.border.rounded.p-3.mb-0.d-none#rm-url-text-content
+								.small.text-muted.mt-3#rm-url-text-help Streamient uses this extracted text for keyword and semantic search. Because page design and formatting are removed during extraction, some websites may show joined words.
 							#rm-url-pane-pages.d-none.px-3.pb-2
 								.d-flex.justify-content-between.align-items-center.mb-2
 									.small.text-muted Crawled page URLs (opens in new tab)
 									.d-flex.gap-2
 										button.btn.btn-sm.btn-outline-secondary(type="button")#rm-url-resync-btn
 											!= icon('sync', 'me-1')
-											| Resync now
+											span Resync now
 										button.btn.btn-sm.btn-outline-danger(type="button")#rm-url-delete-pages-btn
 											!= icon('delete', 'me-1')
-											| Delete pages
+											span Delete pages
 								.list-group#rm-url-crawl-list
 								button.btn.btn-sm.btn-outline-secondary.mt-2.d-none(type="button")#rm-url-crawl-load-more-btn Load more
+								.small.text-muted.mt-3#rm-url-pages-help Expanded text is read directly from the search index and used for keyword and semantic search. Because page design and formatting are removed during extraction, some websites may show joined words.
 
 						//- Email details (read-only)
 						#result-modal-email.d-none
@@ -381,6 +391,7 @@ html(lang="en")
 							| Save
 
 		include ajax/link_search_result
+		include ajax/url_crawled_page
 		include ajax/rich_editor
 
 		//- Streamient mobile apps

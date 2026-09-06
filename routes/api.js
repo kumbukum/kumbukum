@@ -19,7 +19,7 @@ import { listConversations, getConversationMessages, deleteConversation } from '
 import * as trashService from '../services/trash_service.js';
 import { crawlSite } from '../modules/crawler.js';
 import { getProjectCounts } from '../services/project_service.js';
-import { reindexHost, getReindexStatus, searchCollection, getFilteredCount, removeDocumentsByFilter } from '../modules/typesense.js';
+import { reindexHost, getReindexStatus, searchCollection, getFilteredCount, getIndexedPage, listIndexedPages, removeDocumentsByFilter } from '../modules/typesense.js';
 import { emitToTenant } from '../modules/socket.js';
 import { queryForSave } from '../model/mongoose.js';
 import { Note } from '../model/note.js';
@@ -518,17 +518,13 @@ router.get('/urls/:id/pages', async (req, res) => {
 	const perPage = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 500);
 
 	try {
-		const results = await searchCollection(req.host_id, 'pages', '*', {
-			queryBy: 'title',
+		const results = await listIndexedPages(req.host_id, req.params.id, {
 			page,
 			perPage,
-			include_fields: 'id,url,title,crawled_at,parent_url_id',
-			filter_by: `parent_url_id:=${req.params.id}`,
-			extra: { sort_by: 'crawled_at:desc' },
 		});
 
 		const pages = (results.hits || []).map((hit) => ({
-			id: hit.document.id,
+			id: hit.document.source_id || hit.document.id,
 			url: hit.document.url,
 			title: hit.document.title,
 			crawled_at: hit.document.crawled_at,
@@ -546,6 +542,20 @@ router.get('/urls/:id/pages', async (req, res) => {
 		}
 		log.error({ err }, 'URL pages fetch error');
 		res.status(500).json({ error: 'Failed to load crawled pages' });
+	}
+});
+
+router.get('/urls/:id/pages/:pageId', async (req, res) => {
+	const url = await urlService.getUrl(req.host_id, req.params.id);
+	if (!url) return res.status(404).json({ error: 'URL not found' });
+
+	try {
+		const page = await getIndexedPage(req.host_id, req.params.id, req.params.pageId);
+		if (!page) return res.status(404).json({ error: 'Crawled page not found' });
+		res.json({ page });
+	} catch (err) {
+		log.error({ err }, 'Crawled page text fetch error');
+		res.status(500).json({ error: 'Failed to load indexed page text' });
 	}
 });
 

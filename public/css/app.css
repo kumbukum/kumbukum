@@ -1427,6 +1427,24 @@ body.backend-admin .navbar-dark .navbar-nav .nav-link:focus {
 	font-weight: 500;
 }
 
+#rm-url-text-content,
+#rm-url-pane-pages .rm-crawl-text {
+	max-height: 28rem;
+	overflow: auto;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	background: var(--st-panel-subtle);
+	border-color: var(--st-line) !important;
+	color: var(--st-text);
+	font-family: inherit;
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+#rm-url-text-content {
+	min-height: 8rem;
+}
+
 #rm-url-pane-pages .rm-crawl-item {
 	background: var(--st-panel-subtle) !important;
 	border-color: var(--st-line) !important;
@@ -1439,6 +1457,11 @@ body.backend-admin .navbar-dark .navbar-nav .nav-link:focus {
 
 #rm-url-pane-pages .rm-crawl-title {
 	color: var(--st-text);
+}
+
+#rm-url-pane-pages .rm-crawl-link {
+	min-width: 0;
+	color: inherit;
 }
 
 #rm-url-pane-pages .rm-crawl-url {

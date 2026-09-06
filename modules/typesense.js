@@ -212,6 +212,40 @@ function chunkString(value) {
 	return chunks;
 }
 
+export function mergeIndexedTextChunks(chunks = []) {
+	const byIndex = new Map();
+	for (const chunk of chunks) {
+		const index = Number.isInteger(chunk?.chunk_index) ? chunk.chunk_index : 0;
+		if (!byIndex.has(index)) byIndex.set(index, chunk);
+	}
+
+	const ordered = [...byIndex.entries()].sort(([left], [right]) => left - right);
+	if (!ordered.length) return { text_content: '', index_complete: false };
+
+	const expectedCount = Math.max(
+		...ordered.map(([index, chunk]) => Math.max(Number(chunk?.chunk_count) || 0, index + 1)),
+	);
+	const indexComplete = expectedCount > 0
+		&& ordered.length === expectedCount
+		&& ordered.every(([index], position) => index === position);
+	let textContent = '';
+	let previousIndex = null;
+
+	for (const [index, chunk] of ordered) {
+		const text = String(chunk?.text_content || '');
+		if (previousIndex === null) {
+			textContent = text;
+		} else if (index === previousIndex + 1) {
+			textContent += text.slice(_chunk_overlap);
+		} else {
+			textContent += `${textContent ? '\n\n' : ''}${text}`;
+		}
+		previousIndex = index;
+	}
+
+	return { text_content: textContent, index_complete: indexComplete };
+}
+
 function chunkTypesenseDoc(type, doc) {
 	const fields = _chunk_fields[type];
 	// Strip control/separator chars so they never reach the Typesense index
@@ -990,6 +1024,101 @@ export async function listDocuments(host_id, type, options = {}) {
 	}
 	if (allHits.length > limit) allHits.length = limit;
 	return { hits: allHits, found };
+}
+
+export async function listIndexedPages(host_id, parentUrlId, options = {}, deps = {}) {
+	const ts = deps.client || getTypesenseClient();
+	const collectionName = buildCollectionName('pages', host_id);
+	const page = Math.max(Number(options.page) || 1, 1);
+	const perPage = Math.min(Math.max(Number(options.perPage) || 100, 1), 500);
+	const baseParams = {
+		q: '*',
+		query_by: 'title',
+		prefix: false,
+		filter_by: combineFilters(`parent_url_id:=${exactFilterValue(parentUrlId)}`, 'chunk_index:=0'),
+		include_fields: 'id,source_id,url,title,crawled_at',
+		sort_by: 'crawled_at:desc',
+	};
+	const searchPage = (typesensePage, size) => withTypesenseResilience(
+		`list indexed pages ${collectionName}`,
+		async () => {
+			try {
+				return await ts.collections(collectionName).documents().search({ ...baseParams, page: typesensePage, per_page: size });
+			} catch (err) {
+				if (err?.httpStatus === 404) return { hits: [], found: 0, page: typesensePage };
+				throw err;
+			}
+		},
+	);
+
+	if (perPage <= TYPESENSE_MAX_PAGE_SIZE) return searchPage(page, perPage);
+
+	const start = (page - 1) * perPage;
+	let typesensePage = Math.floor(start / TYPESENSE_MAX_PAGE_SIZE) + 1;
+	let skip = start % TYPESENSE_MAX_PAGE_SIZE;
+	let found = 0;
+	const hits = [];
+	while (hits.length < perPage) {
+		const result = await searchPage(typesensePage, TYPESENSE_MAX_PAGE_SIZE);
+		found = Number(result?.found) || 0;
+		const pageHits = result?.hits || [];
+		if (!pageHits.length) break;
+		hits.push(...pageHits.slice(skip, skip + (perPage - hits.length)));
+		if (typesensePage * TYPESENSE_MAX_PAGE_SIZE >= found) break;
+		typesensePage++;
+		skip = 0;
+	}
+	return { hits, found, page };
+}
+
+export async function getIndexedPage(host_id, parentUrlId, pageId, deps = {}) {
+	const ts = deps.client || getTypesenseClient();
+	const collectionName = buildCollectionName('pages', host_id);
+	const filterBy = combineFilters(
+		`parent_url_id:=${exactFilterValue(parentUrlId)}`,
+		`source_id:=${exactFilterValue(pageId)}`,
+	);
+	const chunks = [];
+	let page = 1;
+	let found = 0;
+
+	do {
+		let result;
+		try {
+			result = await withTypesenseResilience(
+				`get indexed page ${collectionName}/${pageId}`,
+				() => ts.collections(collectionName).documents().search({
+					q: '*',
+					query_by: 'title',
+					prefix: false,
+					filter_by: filterBy,
+					include_fields: 'id,source_id,url,title,text_content,crawled_at,chunk_index,chunk_count',
+					sort_by: 'chunk_index:asc',
+					page,
+					per_page: TYPESENSE_MAX_PAGE_SIZE,
+				}),
+			);
+		} catch (err) {
+			if (err?.httpStatus === 404) return null;
+			throw err;
+		}
+
+		found = Math.max(Number(result?.found) || 0, found);
+		const hits = result?.hits || [];
+		if (!hits.length) break;
+		chunks.push(...hits.map((hit) => hit.document).filter(Boolean));
+		page++;
+	} while (chunks.length < found);
+
+	if (!chunks.length) return null;
+	const anchor = chunks.find((chunk) => chunk.chunk_index === 0) || chunks[0];
+	return {
+		id: anchor.source_id || pageId,
+		url: anchor.url || '',
+		title: anchor.title || '',
+		crawled_at: anchor.crawled_at || 0,
+		...mergeIndexedTextChunks(chunks),
+	};
 }
 
 function validateTrashMultiSearchResponse(response, expectedResults) {
