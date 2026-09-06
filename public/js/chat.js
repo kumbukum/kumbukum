@@ -447,6 +447,9 @@ let rmUrlPagesTotal = 0;
 let rmUrlPagesLoaded = 0;
 let rmUrlCrawlEnabled = false;
 let rmUrlCrawlDisableConfirmed = false;
+let rmUrlPageTextCache = new Map();
+let rmUrlPageTextRequestSeq = 0;
+let rmUrlCrawlItemCounter = 0;
 let rmEmailBodyText = '';
 let rmEmailHtml = '';
 let rmEmailHtmlHasRemoteImages = false;
@@ -838,6 +841,123 @@ async function openEmailModal(item) {
 	}
 }
 
+function rmSetUrlParsedText(record = {}) {
+	const content = document.getElementById('rm-url-text-content');
+	const empty = document.getElementById('rm-url-text-empty');
+	const status = document.getElementById('rm-url-text-index-status');
+	const text = String(record.text_content || '');
+	if (!content || !empty || !status) return;
+
+	content.textContent = text;
+	content.classList.toggle('d-none', !text);
+	empty.classList.toggle('d-none', !!text);
+	empty.textContent = rmCurrentId ? 'No text was parsed for this URL.' : 'Parsed text will appear after this URL is saved.';
+	status.className = `badge ${record.is_indexed === true ? 'text-bg-success' : 'text-bg-secondary'}`;
+	status.textContent = record.is_indexed === true ? 'Indexed' : 'Not indexed';
+}
+
+function rmSetUrlCrawlItemExpanded(item, expanded) {
+	const button = item.querySelector('.rm-crawl-text-btn');
+	const panel = item.querySelector('.rm-crawl-text-panel');
+	const label = item.querySelector('.rm-crawl-text-label');
+	if (!button || !panel || !label) return;
+
+	button.setAttribute('aria-expanded', String(expanded));
+	panel.classList.toggle('d-none', !expanded);
+	label.textContent = expanded ? 'Hide indexed text' : 'View indexed text';
+}
+
+function rmSetUrlCrawlItemLoading(item, loading) {
+	const button = item.querySelector('.rm-crawl-text-btn');
+	const icon = item.querySelector('.rm-crawl-text-icon');
+	const spinner = item.querySelector('.rm-crawl-text-spinner');
+	const label = item.querySelector('.rm-crawl-text-label');
+	if (!button || !icon || !spinner || !label) return;
+
+	button.disabled = loading;
+	icon.classList.toggle('d-none', loading);
+	spinner.classList.toggle('d-none', !loading);
+	if (loading) label.textContent = 'Loading...';
+	else label.textContent = button.getAttribute('aria-expanded') === 'true' ? 'Hide indexed text' : 'View indexed text';
+}
+
+function rmCollapseUrlCrawlItems(exceptItem = null) {
+	const list = document.getElementById('rm-url-crawl-list');
+	if (!list) return;
+	list.querySelectorAll('.rm-crawl-item').forEach((item) => {
+		if (item !== exceptItem) rmSetUrlCrawlItemExpanded(item, false);
+	});
+}
+
+function rmRenderUrlCrawlText(item, page) {
+	const text = String(page.text_content || '');
+	const content = item.querySelector('.rm-crawl-text');
+	const empty = item.querySelector('.rm-crawl-text-empty');
+	const warning = item.querySelector('.rm-crawl-text-warning');
+	if (!content || !empty || !warning) return;
+
+	content.textContent = text;
+	content.classList.toggle('d-none', !text);
+	empty.classList.toggle('d-none', !!text);
+	warning.classList.toggle('d-none', page.index_complete !== false);
+}
+
+async function rmToggleUrlCrawlText(item, page) {
+	const button = item.querySelector('.rm-crawl-text-btn');
+	if (!button) return;
+	if (button.getAttribute('aria-expanded') === 'true') {
+		rmSetUrlCrawlItemExpanded(item, false);
+		return;
+	}
+
+	const requestSeq = ++rmUrlPageTextRequestSeq;
+	const urlId = rmCurrentId;
+	rmCollapseUrlCrawlItems(item);
+	const cached = rmUrlPageTextCache.get(page.id);
+	if (cached) {
+		rmRenderUrlCrawlText(item, cached);
+		rmSetUrlCrawlItemExpanded(item, true);
+		return;
+	}
+
+	rmSetUrlCrawlItemLoading(item, true);
+	try {
+		const res = await api('GET', `/urls/${urlId}/pages/${encodeURIComponent(page.id)}`);
+		const indexedPage = res.page || res;
+		rmUrlPageTextCache.set(page.id, indexedPage);
+		if (requestSeq !== rmUrlPageTextRequestSeq || rmCurrentType !== 'urls' || rmCurrentId !== urlId || !item.isConnected) return;
+		rmRenderUrlCrawlText(item, indexedPage);
+		rmSetUrlCrawlItemExpanded(item, true);
+	} catch (err) {
+		if (requestSeq === rmUrlPageTextRequestSeq && rmCurrentType === 'urls' && rmCurrentId === urlId) {
+			showError('Could not load indexed text: ' + (err.message || 'Unknown error'));
+		}
+	} finally {
+		rmSetUrlCrawlItemLoading(item, false);
+	}
+}
+
+function rmCreateUrlCrawlItem(page) {
+	const template = document.getElementById('rm-url-crawl-item-template');
+	if (!template?.content?.firstElementChild) return null;
+	const item = template.content.firstElementChild.cloneNode(true);
+	const link = item.querySelector('.rm-crawl-link');
+	const title = item.querySelector('.rm-crawl-title');
+	const url = item.querySelector('.rm-crawl-url');
+	const button = item.querySelector('.rm-crawl-text-btn');
+	const panel = item.querySelector('.rm-crawl-text-panel');
+	const panelId = `rm-url-crawl-text-${++rmUrlCrawlItemCounter}`;
+
+	item.dataset.pageId = page.id || '';
+	link.href = /^https?:\/\//i.test(page.url || '') ? page.url : '#';
+	title.textContent = page.title || page.url || 'Untitled page';
+	url.textContent = page.url || '';
+	panel.id = panelId;
+	button.setAttribute('aria-controls', panelId);
+	button.addEventListener('click', () => rmToggleUrlCrawlText(item, page));
+	return item;
+}
+
 function rmSetUrlPagesState({ visible, metaText, pages = [], append = false, showLoadMore = false, loadingMore = false }) {
 	const wrap = document.getElementById('rm-url-crawl-wrap');
 	const meta = document.getElementById('rm-url-crawl-meta');
@@ -850,23 +970,8 @@ function rmSetUrlPagesState({ visible, metaText, pages = [], append = false, sho
 	if (!append) list.innerHTML = '';
 
 	for (const page of pages) {
-		const item = document.createElement('a');
-		item.className = 'list-group-item list-group-item-action py-2 rm-crawl-item';
-		item.href = page.url || '#';
-		item.target = '_blank';
-		item.rel = 'noopener noreferrer';
-
-		const title = document.createElement('div');
-		title.className = 'small fw-semibold text-truncate rm-crawl-title';
-		title.textContent = page.title || page.url || 'Untitled page';
-
-		const url = document.createElement('div');
-		url.className = 'small text-truncate rm-crawl-url';
-		url.textContent = page.url || '';
-
-		item.appendChild(title);
-		item.appendChild(url);
-		list.appendChild(item);
+		const item = rmCreateUrlCrawlItem(page);
+		if (item) list.appendChild(item);
 	}
 
 	loadMoreBtn.classList.toggle('d-none', !visible || !showLoadMore);
@@ -939,6 +1044,9 @@ async function rmLoadUrlPages(urlId, { append = false } = {}) {
 	const nextPage = append ? (rmUrlPagesPage + 1) : 1;
 
 	if (!append) {
+		rmUrlPageTextRequestSeq++;
+		rmUrlPageTextCache.clear();
+		rmUrlCrawlItemCounter = 0;
 		rmUrlPagesPage = 1;
 		rmUrlPagesTotal = 0;
 		rmUrlPagesLoaded = 0;
@@ -1086,6 +1194,7 @@ function rmPopulate(type, record) {
 		document.getElementById('rm-url-crawl').checked = !!record.crawl_enabled;
 		rmUrlCrawlEnabled = !!record.crawl_enabled;
 		rmUrlCrawlDisableConfirmed = false;
+		rmSetUrlParsedText(record);
 		rmSetUrlPagesTabVisibility();
 		rmSetUrlCrawlActionState();
 
@@ -1209,18 +1318,23 @@ function rmShowMemoryEdit() {
 	if (!rmIsObsidianSynced && !rmEditor) rmInitEditor('rm-memory-editor', rmContent);
 }
 
+function rmShowUrlPane(activePane) {
+	for (const pane of ['details', 'text', 'pages']) {
+		document.getElementById(`rm-url-tab-${pane}`)?.classList.toggle('active', pane === activePane);
+		document.getElementById(`rm-url-pane-${pane}`)?.classList.toggle('d-none', pane !== activePane);
+	}
+}
+
 function rmShowUrlDetails() {
-	document.getElementById('rm-url-tab-details')?.classList.add('active');
-	document.getElementById('rm-url-tab-pages')?.classList.remove('active');
-	document.getElementById('rm-url-pane-details')?.classList.remove('d-none');
-	document.getElementById('rm-url-pane-pages')?.classList.add('d-none');
+	rmShowUrlPane('details');
+}
+
+function rmShowUrlText() {
+	rmShowUrlPane('text');
 }
 
 function rmShowUrlPages() {
-	document.getElementById('rm-url-tab-details')?.classList.remove('active');
-	document.getElementById('rm-url-tab-pages')?.classList.add('active');
-	document.getElementById('rm-url-pane-details')?.classList.add('d-none');
-	document.getElementById('rm-url-pane-pages')?.classList.remove('d-none');
+	rmShowUrlPane('pages');
 }
 
 function rmSetUrlCrawlActionState() {
@@ -1448,11 +1562,14 @@ async function rmSyncLinks(itemId, itemType) {
 
 function rmCleanup() {
 	rmUrlPagesRequestSeq++;
+	rmUrlPageTextRequestSeq++;
 	rmUrlPagesPage = 1;
 	rmUrlPagesTotal = 0;
 	rmUrlPagesLoaded = 0;
 	rmUrlCrawlEnabled = false;
 	rmUrlCrawlDisableConfirmed = false;
+	rmUrlPageTextCache.clear();
+	rmUrlCrawlItemCounter = 0;
 	rmSetUrlPagesTabVisibility(false);
 	rmSetUrlPagesState({ visible: false, metaText: '', pages: [] });
 	rmSetUrlCrawlActionState();
@@ -1460,6 +1577,7 @@ function rmCleanup() {
 	if (rmEditor) { rmEditor.destroy(); rmEditor = null; }
 	rmCurrentId = null;
 	rmCurrentType = null;
+	rmSetUrlParsedText({});
 	rmContent = '';
 	rmTextContent = '';
 	rmMarkdownContent = '';
@@ -1502,6 +1620,7 @@ function initResultModalHandlers() {
 	document.getElementById('rm-memory-tab-preview')?.addEventListener('click', rmShowMemoryPreview);
 	document.getElementById('rm-memory-tab-edit')?.addEventListener('click', rmShowMemoryEdit);
 	document.getElementById('rm-url-tab-details')?.addEventListener('click', rmShowUrlDetails);
+	document.getElementById('rm-url-tab-text')?.addEventListener('click', rmShowUrlText);
 	document.getElementById('rm-url-tab-pages')?.addEventListener('click', rmShowUrlPages);
 	document.getElementById('rm-url-crawl')?.addEventListener('change', rmHandleUrlCrawlChange);
 	document.getElementById('rm-url-input')?.addEventListener('input', (e) => rmSetUrlVisitLink(e.target.value));

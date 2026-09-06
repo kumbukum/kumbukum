@@ -1,0 +1,17 @@
+template#rm-url-crawl-item-template
+	.list-group-item.py-2.rm-crawl-item
+		.d-flex.align-items-center.gap-2
+			a.d-flex.align-items-center.flex-grow-1.overflow-hidden.text-decoration-none.rm-crawl-link(target="_blank" rel="noopener noreferrer")
+				.overflow-hidden.flex-grow-1
+					.small.fw-semibold.text-truncate.rm-crawl-title
+					.small.text-truncate.rm-crawl-url
+				!= icon('external-link', 'ms-2 flex-shrink-0')
+			button.btn.btn-sm.btn-outline-secondary.flex-shrink-0.rm-crawl-text-btn(type="button" aria-expanded="false")
+				span.rm-crawl-text-icon
+					!= icon('description', 'me-1')
+				span.spinner-border.spinner-border-sm.me-1.d-none.rm-crawl-text-spinner(aria-hidden="true")
+				span.rm-crawl-text-label View indexed text
+		.rm-crawl-text-panel.d-none.mt-2
+			.small.text-warning.mb-2.d-none.rm-crawl-text-warning Indexed text is incomplete because one or more chunks are missing.
+			.small.text-muted.mb-2.d-none.rm-crawl-text-empty No text was indexed for this page.
+			pre.border.rounded.p-3.mb-0.rm-crawl-text

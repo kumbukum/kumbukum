@@ -801,6 +801,10 @@
           "description": {
             "type": "string"
           },
+          "text_content": {
+            "type": "string",
+            "description": "Plain text parsed from the saved URL and submitted for indexing."
+          },
           "tags": {
             "type": "array",
             "items": {
@@ -821,6 +825,10 @@
           "crawl_enabled": {
             "type": "boolean"
           },
+          "is_indexed": {
+            "type": "boolean",
+            "description": "Whether the saved URL document was indexed successfully."
+          },
           "host_id": {
             "type": "string"
           },
@@ -831,6 +839,34 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CrawledPage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "crawled_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix timestamp for the indexed crawl."
+          },
+          "text_content": {
+            "type": "string",
+            "description": "Full indexed text reconstructed from stored Typesense chunks."
+          },
+          "index_complete": {
+            "type": "boolean",
+            "description": "Whether every expected indexed text chunk was available."
           }
         }
       },
@@ -5171,6 +5207,157 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/urls/{id}/pages": {
+      "get": {
+        "tags": [
+          "URLs"
+        ],
+        "summary": "List indexed crawled pages",
+        "description": "Returns one row per indexed crawled URL. Pagination and counts exclude additional text chunks.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pages": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CrawledPage"
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "URL not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to load crawled pages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/urls/{id}/pages/{pageId}": {
+      "get": {
+        "tags": [
+          "URLs"
+        ],
+        "summary": "Get indexed crawled-page text",
+        "description": "Returns one crawled page with its full indexed text reconstructed from ordered, overlapping Typesense chunks.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "$ref": "#/components/schemas/CrawledPage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "URL or crawled page not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to load indexed page text",
             "content": {
               "application/json": {
                 "schema": {
