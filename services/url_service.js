@@ -126,9 +126,10 @@ export async function listUrls(host_id, projectId, { page = 1, limit = 50 } = {}
 
 	const docs = await Url.find(query)
 		.select('-text_content')
-		.sort({ updatedAt: -1 })
+		.sort({ createdAt: -1, _id: -1 })
 		.skip((page - 1) * limit)
-		.limit(limit);
+		.limit(limit)
+		.lean();
 	return attachScreenshotUrls(docs);
 }
 

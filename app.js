@@ -18,6 +18,7 @@ import { installIconLocals } from './modules/icons.js';
 import managani from './modules/managani.js';
 
 import { createApiLimiters } from './middleware/rate_limit.js';
+import securityHeaders from './middleware/security_headers.js';
 import { verifyScreenshotSignature, resolveScreenshotPath } from './modules/screenshot.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger.js';
@@ -45,6 +46,9 @@ const SERVER_MODE = process.env.SERVER_MODE || 'app';
 const log = createLogger('app');
 
 const app = express();
+
+app.disable('x-powered-by');
+app.use(securityHeaders);
 
 // Health check — mounted before everything so monitoring tools need no auth/session
 app.use('/health', healthRoutes);

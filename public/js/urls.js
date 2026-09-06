@@ -38,7 +38,7 @@
 			+ '</div>'
 			+ '<div class="text-truncate"><a href="' + escapeHtml(u.url) + '" target="_blank" class="text-muted small url-link">' + escapeHtml(u.url) + '</a></div>'
 			+ '<p class="mb-0 text-muted small text-truncate">' + escapeHtml(u.description?.slice(0, 200) || '') + '</p>'
-			+ (u.crawl_enabled ? '<span class="badge bg-success mt-1">' + kkIcon('sync') + ' Crawling</span>' : '')
+			+ (u.crawl_enabled ? '<span class="badge text-bg-success mt-1">' + kkIcon('sync') + ' Crawling</span>' : '')
 			+ '</div></div>';
 	}
 
